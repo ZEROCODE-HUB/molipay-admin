@@ -9,59 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as RegistroRouteImport } from './routes/registro'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as RegistroValidarEmailRouteImport } from './routes/registro.validar-email'
-import { Route as RegistroValidacionExitosaRouteImport } from './routes/registro.validacion-exitosa'
-import { Route as RegistroExitoRouteImport } from './routes/registro.exito'
-import { Route as RegistroEmpresaRouteImport } from './routes/registro.empresa'
-import { Route as OnboardingKycRouteImport } from './routes/onboarding.kyc'
-import { Route as OnboardingEnProcesoRouteImport } from './routes/onboarding.en-proceso'
-import { Route as OnboardingDatosPersonalesRouteImport } from './routes/onboarding.datos-personales'
-import { Route as OnboardingDatosEmpresaRouteImport } from './routes/onboarding.datos-empresa'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
 import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
 import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
 import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
-import { Route as AppTransferenciasRouteImport } from './routes/app.transferencias'
-import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
-import { Route as AppServiciosRouteImport } from './routes/app.servicios'
-import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
-import { Route as AppQrRouteImport } from './routes/app.qr'
-import { Route as AppLinkPagoRouteImport } from './routes/app.link-pago'
-import { Route as AppHistorialRouteImport } from './routes/app.historial'
-import { Route as AppEcommerceRouteImport } from './routes/app.ecommerce'
-import { Route as AppDestinatariosRouteImport } from './routes/app.destinatarios'
-import { Route as AppCuentaRouteImport } from './routes/app.cuenta'
-import { Route as AppCobrosRouteImport } from './routes/app.cobros'
-import { Route as AppApiConfigRouteImport } from './routes/app.api-config'
-import { Route as AppApiRouteImport } from './routes/app.api'
-import { Route as AppQrIndexRouteImport } from './routes/app.qr.index'
-import { Route as AppLinkPagoIndexRouteImport } from './routes/app.link-pago.index'
-import { Route as AppCobrosIndexRouteImport } from './routes/app.cobros.index'
-import { Route as AppQrPuntosDeVentaRouteImport } from './routes/app.qr.puntos-de-venta'
-import { Route as AppLinkPagoProductosRouteImport } from './routes/app.link-pago.productos'
-import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago.e-commerce'
-import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
-import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
-import { Route as AppCobrosGestionIdRouteImport } from './routes/app.cobros.gestion.$id'
+import { Route as AdminReporteriaRouteImport } from './routes/admin.reporteria'
+import { Route as AdminRecaudacionRouteImport } from './routes/admin.recaudacion'
+import { Route as AdminMovimientosRouteImport } from './routes/admin.movimientos'
+import { Route as AdminMonitoreoRouteImport } from './routes/admin.monitoreo'
+import { Route as AdminKycRouteImport } from './routes/admin.kyc'
+import { Route as AdminConsorcioRouteImport } from './routes/admin.consorcio'
+import { Route as AdminConfigRouteImport } from './routes/admin.config'
+import { Route as AdminComplianceRouteImport } from './routes/admin.compliance'
+import { Route as AdminComisionesRouteImport } from './routes/admin.comisiones'
+import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
+import { Route as AdminCbuRouteImport } from './routes/admin.cbu'
+import { Route as AdminAlquileresRouteImport } from './routes/admin.alquileres'
 
-const RegistroRoute = RegistroRouteImport.update({
-  id: '/registro',
-  path: '/registro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -69,52 +39,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
+const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
-const RegistroValidarEmailRoute = RegistroValidarEmailRouteImport.update({
-  id: '/validar-email',
-  path: '/validar-email',
-  getParentRoute: () => RegistroRoute,
-} as any)
-const RegistroValidacionExitosaRoute =
-  RegistroValidacionExitosaRouteImport.update({
-    id: '/validacion-exitosa',
-    path: '/validacion-exitosa',
-    getParentRoute: () => RegistroRoute,
-  } as any)
-const RegistroExitoRoute = RegistroExitoRouteImport.update({
-  id: '/exito',
-  path: '/exito',
-  getParentRoute: () => RegistroRoute,
-} as any)
-const RegistroEmpresaRoute = RegistroEmpresaRouteImport.update({
-  id: '/empresa',
-  path: '/empresa',
-  getParentRoute: () => RegistroRoute,
-} as any)
-const OnboardingKycRoute = OnboardingKycRouteImport.update({
-  id: '/onboarding/kyc',
-  path: '/onboarding/kyc',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingEnProcesoRoute = OnboardingEnProcesoRouteImport.update({
-  id: '/onboarding/en-proceso',
-  path: '/onboarding/en-proceso',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingDatosPersonalesRoute =
-  OnboardingDatosPersonalesRouteImport.update({
-    id: '/onboarding/datos-personales',
-    path: '/onboarding/datos-personales',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const OnboardingDatosEmpresaRoute = OnboardingDatosEmpresaRouteImport.update({
-  id: '/onboarding/datos-empresa',
-  path: '/onboarding/datos-empresa',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
 const LegalesTerminosRoute = LegalesTerminosRouteImport.update({
   id: '/legales/terminos',
@@ -136,395 +64,211 @@ const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
   path: '/legales/arrepentimiento',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppTransferenciasRoute = AppTransferenciasRouteImport.update({
-  id: '/transferencias',
-  path: '/transferencias',
-  getParentRoute: () => AppRoute,
+const AdminReporteriaRoute = AdminReporteriaRouteImport.update({
+  id: '/reporteria',
+  path: '/reporteria',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppSubcuentasRoute = AppSubcuentasRouteImport.update({
-  id: '/subcuentas',
-  path: '/subcuentas',
-  getParentRoute: () => AppRoute,
+const AdminRecaudacionRoute = AdminRecaudacionRouteImport.update({
+  id: '/recaudacion',
+  path: '/recaudacion',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppServiciosRoute = AppServiciosRouteImport.update({
-  id: '/servicios',
-  path: '/servicios',
-  getParentRoute: () => AppRoute,
+const AdminMovimientosRoute = AdminMovimientosRouteImport.update({
+  id: '/movimientos',
+  path: '/movimientos',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppSeguridadRoute = AppSeguridadRouteImport.update({
-  id: '/seguridad',
-  path: '/seguridad',
-  getParentRoute: () => AppRoute,
+const AdminMonitoreoRoute = AdminMonitoreoRouteImport.update({
+  id: '/monitoreo',
+  path: '/monitoreo',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppQrRoute = AppQrRouteImport.update({
-  id: '/qr',
-  path: '/qr',
-  getParentRoute: () => AppRoute,
+const AdminKycRoute = AdminKycRouteImport.update({
+  id: '/kyc',
+  path: '/kyc',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppLinkPagoRoute = AppLinkPagoRouteImport.update({
-  id: '/link-pago',
-  path: '/link-pago',
-  getParentRoute: () => AppRoute,
+const AdminConsorcioRoute = AdminConsorcioRouteImport.update({
+  id: '/consorcio',
+  path: '/consorcio',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppHistorialRoute = AppHistorialRouteImport.update({
-  id: '/historial',
-  path: '/historial',
-  getParentRoute: () => AppRoute,
+const AdminConfigRoute = AdminConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppEcommerceRoute = AppEcommerceRouteImport.update({
-  id: '/ecommerce',
-  path: '/ecommerce',
-  getParentRoute: () => AppRoute,
+const AdminComplianceRoute = AdminComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppDestinatariosRoute = AppDestinatariosRouteImport.update({
-  id: '/destinatarios',
-  path: '/destinatarios',
-  getParentRoute: () => AppRoute,
+const AdminComisionesRoute = AdminComisionesRouteImport.update({
+  id: '/comisiones',
+  path: '/comisiones',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppCuentaRoute = AppCuentaRouteImport.update({
-  id: '/cuenta',
-  path: '/cuenta',
-  getParentRoute: () => AppRoute,
+const AdminClientesRoute = AdminClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppCobrosRoute = AppCobrosRouteImport.update({
-  id: '/cobros',
-  path: '/cobros',
-  getParentRoute: () => AppRoute,
+const AdminCbuRoute = AdminCbuRouteImport.update({
+  id: '/cbu',
+  path: '/cbu',
+  getParentRoute: () => AdminRoute,
 } as any)
-const AppApiConfigRoute = AppApiConfigRouteImport.update({
-  id: '/api-config',
-  path: '/api-config',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppApiRoute = AppApiRouteImport.update({
-  id: '/api',
-  path: '/api',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppQrIndexRoute = AppQrIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppQrRoute,
-} as any)
-const AppLinkPagoIndexRoute = AppLinkPagoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppLinkPagoRoute,
-} as any)
-const AppCobrosIndexRoute = AppCobrosIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppCobrosRoute,
-} as any)
-const AppQrPuntosDeVentaRoute = AppQrPuntosDeVentaRouteImport.update({
-  id: '/puntos-de-venta',
-  path: '/puntos-de-venta',
-  getParentRoute: () => AppQrRoute,
-} as any)
-const AppLinkPagoProductosRoute = AppLinkPagoProductosRouteImport.update({
-  id: '/productos',
-  path: '/productos',
-  getParentRoute: () => AppLinkPagoRoute,
-} as any)
-const AppLinkPagoECommerceRoute = AppLinkPagoECommerceRouteImport.update({
-  id: '/e-commerce',
-  path: '/e-commerce',
-  getParentRoute: () => AppLinkPagoRoute,
-} as any)
-const AppCobrosNuevoRoute = AppCobrosNuevoRouteImport.update({
-  id: '/nuevo',
-  path: '/nuevo',
-  getParentRoute: () => AppCobrosRoute,
-} as any)
-const AppCobrosGestionRoute = AppCobrosGestionRouteImport.update({
-  id: '/gestion',
-  path: '/gestion',
-  getParentRoute: () => AppCobrosRoute,
-} as any)
-const AppCobrosGestionIdRoute = AppCobrosGestionIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppCobrosGestionRoute,
+const AdminAlquileresRoute = AdminAlquileresRouteImport.update({
+  id: '/alquileres',
+  path: '/alquileres',
+  getParentRoute: () => AdminRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
-  '/login': typeof LoginRoute
-  '/registro': typeof RegistroRouteWithChildren
-  '/app/api': typeof AppApiRoute
-  '/app/api-config': typeof AppApiConfigRoute
-  '/app/cobros': typeof AppCobrosRouteWithChildren
-  '/app/cuenta': typeof AppCuentaRoute
-  '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
-  '/app/historial': typeof AppHistorialRoute
-  '/app/link-pago': typeof AppLinkPagoRouteWithChildren
-  '/app/qr': typeof AppQrRouteWithChildren
-  '/app/seguridad': typeof AppSeguridadRoute
-  '/app/servicios': typeof AppServiciosRoute
-  '/app/subcuentas': typeof AppSubcuentasRoute
-  '/app/transferencias': typeof AppTransferenciasRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/alquileres': typeof AdminAlquileresRoute
+  '/admin/cbu': typeof AdminCbuRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comisiones': typeof AdminComisionesRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/config': typeof AdminConfigRoute
+  '/admin/consorcio': typeof AdminConsorcioRoute
+  '/admin/kyc': typeof AdminKycRoute
+  '/admin/monitoreo': typeof AdminMonitoreoRoute
+  '/admin/movimientos': typeof AdminMovimientosRoute
+  '/admin/recaudacion': typeof AdminRecaudacionRoute
+  '/admin/reporteria': typeof AdminReporteriaRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
-  '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
-  '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
-  '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
-  '/onboarding/kyc': typeof OnboardingKycRoute
-  '/registro/empresa': typeof RegistroEmpresaRoute
-  '/registro/exito': typeof RegistroExitoRoute
-  '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
-  '/registro/validar-email': typeof RegistroValidarEmailRoute
-  '/app/': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
-  '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
-  '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
-  '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
-  '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
-  '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/link-pago/': typeof AppLinkPagoIndexRoute
-  '/app/qr/': typeof AppQrIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/registro': typeof RegistroRouteWithChildren
-  '/app/api': typeof AppApiRoute
-  '/app/api-config': typeof AppApiConfigRoute
-  '/app/cuenta': typeof AppCuentaRoute
-  '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
-  '/app/historial': typeof AppHistorialRoute
-  '/app/seguridad': typeof AppSeguridadRoute
-  '/app/servicios': typeof AppServiciosRoute
-  '/app/subcuentas': typeof AppSubcuentasRoute
-  '/app/transferencias': typeof AppTransferenciasRoute
+  '/admin/alquileres': typeof AdminAlquileresRoute
+  '/admin/cbu': typeof AdminCbuRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comisiones': typeof AdminComisionesRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/config': typeof AdminConfigRoute
+  '/admin/consorcio': typeof AdminConsorcioRoute
+  '/admin/kyc': typeof AdminKycRoute
+  '/admin/monitoreo': typeof AdminMonitoreoRoute
+  '/admin/movimientos': typeof AdminMovimientosRoute
+  '/admin/recaudacion': typeof AdminRecaudacionRoute
+  '/admin/reporteria': typeof AdminReporteriaRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
-  '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
-  '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
-  '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
-  '/onboarding/kyc': typeof OnboardingKycRoute
-  '/registro/empresa': typeof RegistroEmpresaRoute
-  '/registro/exito': typeof RegistroExitoRoute
-  '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
-  '/registro/validar-email': typeof RegistroValidarEmailRoute
-  '/app': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
-  '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
-  '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
-  '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
-  '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
-  '/app/cobros': typeof AppCobrosIndexRoute
-  '/app/link-pago': typeof AppLinkPagoIndexRoute
-  '/app/qr': typeof AppQrIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
-  '/login': typeof LoginRoute
-  '/registro': typeof RegistroRouteWithChildren
-  '/app/api': typeof AppApiRoute
-  '/app/api-config': typeof AppApiConfigRoute
-  '/app/cobros': typeof AppCobrosRouteWithChildren
-  '/app/cuenta': typeof AppCuentaRoute
-  '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
-  '/app/historial': typeof AppHistorialRoute
-  '/app/link-pago': typeof AppLinkPagoRouteWithChildren
-  '/app/qr': typeof AppQrRouteWithChildren
-  '/app/seguridad': typeof AppSeguridadRoute
-  '/app/servicios': typeof AppServiciosRoute
-  '/app/subcuentas': typeof AppSubcuentasRoute
-  '/app/transferencias': typeof AppTransferenciasRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/alquileres': typeof AdminAlquileresRoute
+  '/admin/cbu': typeof AdminCbuRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comisiones': typeof AdminComisionesRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/config': typeof AdminConfigRoute
+  '/admin/consorcio': typeof AdminConsorcioRoute
+  '/admin/kyc': typeof AdminKycRoute
+  '/admin/monitoreo': typeof AdminMonitoreoRoute
+  '/admin/movimientos': typeof AdminMovimientosRoute
+  '/admin/recaudacion': typeof AdminRecaudacionRoute
+  '/admin/reporteria': typeof AdminReporteriaRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
-  '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
-  '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
-  '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
-  '/onboarding/kyc': typeof OnboardingKycRoute
-  '/registro/empresa': typeof RegistroEmpresaRoute
-  '/registro/exito': typeof RegistroExitoRoute
-  '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
-  '/registro/validar-email': typeof RegistroValidarEmailRoute
-  '/app/': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
-  '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
-  '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
-  '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
-  '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
-  '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/link-pago/': typeof AppLinkPagoIndexRoute
-  '/app/qr/': typeof AppQrIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
-    | '/login'
-    | '/registro'
-    | '/app/api'
-    | '/app/api-config'
-    | '/app/cobros'
-    | '/app/cuenta'
-    | '/app/destinatarios'
-    | '/app/ecommerce'
-    | '/app/historial'
-    | '/app/link-pago'
-    | '/app/qr'
-    | '/app/seguridad'
-    | '/app/servicios'
-    | '/app/subcuentas'
-    | '/app/transferencias'
+    | '/admin'
+    | '/admin/alquileres'
+    | '/admin/cbu'
+    | '/admin/clientes'
+    | '/admin/comisiones'
+    | '/admin/compliance'
+    | '/admin/config'
+    | '/admin/consorcio'
+    | '/admin/kyc'
+    | '/admin/monitoreo'
+    | '/admin/movimientos'
+    | '/admin/recaudacion'
+    | '/admin/reporteria'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
-    | '/onboarding/datos-empresa'
-    | '/onboarding/datos-personales'
-    | '/onboarding/en-proceso'
-    | '/onboarding/kyc'
-    | '/registro/empresa'
-    | '/registro/exito'
-    | '/registro/validacion-exitosa'
-    | '/registro/validar-email'
-    | '/app/'
-    | '/app/cobros/gestion'
-    | '/app/cobros/nuevo'
-    | '/app/link-pago/e-commerce'
-    | '/app/link-pago/productos'
-    | '/app/qr/puntos-de-venta'
-    | '/app/cobros/'
-    | '/app/link-pago/'
-    | '/app/qr/'
-    | '/app/cobros/gestion/$id'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/login'
-    | '/registro'
-    | '/app/api'
-    | '/app/api-config'
-    | '/app/cuenta'
-    | '/app/destinatarios'
-    | '/app/ecommerce'
-    | '/app/historial'
-    | '/app/seguridad'
-    | '/app/servicios'
-    | '/app/subcuentas'
-    | '/app/transferencias'
+    | '/admin/alquileres'
+    | '/admin/cbu'
+    | '/admin/clientes'
+    | '/admin/comisiones'
+    | '/admin/compliance'
+    | '/admin/config'
+    | '/admin/consorcio'
+    | '/admin/kyc'
+    | '/admin/monitoreo'
+    | '/admin/movimientos'
+    | '/admin/recaudacion'
+    | '/admin/reporteria'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
-    | '/onboarding/datos-empresa'
-    | '/onboarding/datos-personales'
-    | '/onboarding/en-proceso'
-    | '/onboarding/kyc'
-    | '/registro/empresa'
-    | '/registro/exito'
-    | '/registro/validacion-exitosa'
-    | '/registro/validar-email'
-    | '/app'
-    | '/app/cobros/gestion'
-    | '/app/cobros/nuevo'
-    | '/app/link-pago/e-commerce'
-    | '/app/link-pago/productos'
-    | '/app/qr/puntos-de-venta'
-    | '/app/cobros'
-    | '/app/link-pago'
-    | '/app/qr'
-    | '/app/cobros/gestion/$id'
+    | '/admin'
   id:
     | '__root__'
     | '/'
-    | '/app'
-    | '/login'
-    | '/registro'
-    | '/app/api'
-    | '/app/api-config'
-    | '/app/cobros'
-    | '/app/cuenta'
-    | '/app/destinatarios'
-    | '/app/ecommerce'
-    | '/app/historial'
-    | '/app/link-pago'
-    | '/app/qr'
-    | '/app/seguridad'
-    | '/app/servicios'
-    | '/app/subcuentas'
-    | '/app/transferencias'
+    | '/admin'
+    | '/admin/alquileres'
+    | '/admin/cbu'
+    | '/admin/clientes'
+    | '/admin/comisiones'
+    | '/admin/compliance'
+    | '/admin/config'
+    | '/admin/consorcio'
+    | '/admin/kyc'
+    | '/admin/monitoreo'
+    | '/admin/movimientos'
+    | '/admin/recaudacion'
+    | '/admin/reporteria'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
-    | '/onboarding/datos-empresa'
-    | '/onboarding/datos-personales'
-    | '/onboarding/en-proceso'
-    | '/onboarding/kyc'
-    | '/registro/empresa'
-    | '/registro/exito'
-    | '/registro/validacion-exitosa'
-    | '/registro/validar-email'
-    | '/app/'
-    | '/app/cobros/gestion'
-    | '/app/cobros/nuevo'
-    | '/app/link-pago/e-commerce'
-    | '/app/link-pago/productos'
-    | '/app/qr/puntos-de-venta'
-    | '/app/cobros/'
-    | '/app/link-pago/'
-    | '/app/qr/'
-    | '/app/cobros/gestion/$id'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRouteWithChildren
-  LoginRoute: typeof LoginRoute
-  RegistroRoute: typeof RegistroRouteWithChildren
+  AdminRoute: typeof AdminRouteWithChildren
   LegalesArrepentimientoRoute: typeof LegalesArrepentimientoRoute
   LegalesComisionesRoute: typeof LegalesComisionesRoute
   LegalesPrivacidadRoute: typeof LegalesPrivacidadRoute
   LegalesTerminosRoute: typeof LegalesTerminosRoute
-  OnboardingDatosEmpresaRoute: typeof OnboardingDatosEmpresaRoute
-  OnboardingDatosPersonalesRoute: typeof OnboardingDatosPersonalesRoute
-  OnboardingEnProcesoRoute: typeof OnboardingEnProcesoRoute
-  OnboardingKycRoute: typeof OnboardingKycRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/registro': {
-      id: '/registro'
-      path: '/registro'
-      fullPath: '/registro'
-      preLoaderRoute: typeof RegistroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -534,68 +278,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/': {
-      id: '/app/'
+    '/admin/': {
+      id: '/admin/'
       path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/registro/validar-email': {
-      id: '/registro/validar-email'
-      path: '/validar-email'
-      fullPath: '/registro/validar-email'
-      preLoaderRoute: typeof RegistroValidarEmailRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/validacion-exitosa': {
-      id: '/registro/validacion-exitosa'
-      path: '/validacion-exitosa'
-      fullPath: '/registro/validacion-exitosa'
-      preLoaderRoute: typeof RegistroValidacionExitosaRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/exito': {
-      id: '/registro/exito'
-      path: '/exito'
-      fullPath: '/registro/exito'
-      preLoaderRoute: typeof RegistroExitoRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/empresa': {
-      id: '/registro/empresa'
-      path: '/empresa'
-      fullPath: '/registro/empresa'
-      preLoaderRoute: typeof RegistroEmpresaRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/onboarding/kyc': {
-      id: '/onboarding/kyc'
-      path: '/onboarding/kyc'
-      fullPath: '/onboarding/kyc'
-      preLoaderRoute: typeof OnboardingKycRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/en-proceso': {
-      id: '/onboarding/en-proceso'
-      path: '/onboarding/en-proceso'
-      fullPath: '/onboarding/en-proceso'
-      preLoaderRoute: typeof OnboardingEnProcesoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/datos-personales': {
-      id: '/onboarding/datos-personales'
-      path: '/onboarding/datos-personales'
-      fullPath: '/onboarding/datos-personales'
-      preLoaderRoute: typeof OnboardingDatosPersonalesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/datos-empresa': {
-      id: '/onboarding/datos-empresa'
-      path: '/onboarding/datos-empresa'
-      fullPath: '/onboarding/datos-empresa'
-      preLoaderRoute: typeof OnboardingDatosEmpresaRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/legales/terminos': {
       id: '/legales/terminos'
@@ -625,285 +313,134 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalesArrepentimientoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/transferencias': {
-      id: '/app/transferencias'
-      path: '/transferencias'
-      fullPath: '/app/transferencias'
-      preLoaderRoute: typeof AppTransferenciasRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/reporteria': {
+      id: '/admin/reporteria'
+      path: '/reporteria'
+      fullPath: '/admin/reporteria'
+      preLoaderRoute: typeof AdminReporteriaRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/subcuentas': {
-      id: '/app/subcuentas'
-      path: '/subcuentas'
-      fullPath: '/app/subcuentas'
-      preLoaderRoute: typeof AppSubcuentasRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/recaudacion': {
+      id: '/admin/recaudacion'
+      path: '/recaudacion'
+      fullPath: '/admin/recaudacion'
+      preLoaderRoute: typeof AdminRecaudacionRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/servicios': {
-      id: '/app/servicios'
-      path: '/servicios'
-      fullPath: '/app/servicios'
-      preLoaderRoute: typeof AppServiciosRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/movimientos': {
+      id: '/admin/movimientos'
+      path: '/movimientos'
+      fullPath: '/admin/movimientos'
+      preLoaderRoute: typeof AdminMovimientosRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/seguridad': {
-      id: '/app/seguridad'
-      path: '/seguridad'
-      fullPath: '/app/seguridad'
-      preLoaderRoute: typeof AppSeguridadRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/monitoreo': {
+      id: '/admin/monitoreo'
+      path: '/monitoreo'
+      fullPath: '/admin/monitoreo'
+      preLoaderRoute: typeof AdminMonitoreoRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/qr': {
-      id: '/app/qr'
-      path: '/qr'
-      fullPath: '/app/qr'
-      preLoaderRoute: typeof AppQrRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/kyc': {
+      id: '/admin/kyc'
+      path: '/kyc'
+      fullPath: '/admin/kyc'
+      preLoaderRoute: typeof AdminKycRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/link-pago': {
-      id: '/app/link-pago'
-      path: '/link-pago'
-      fullPath: '/app/link-pago'
-      preLoaderRoute: typeof AppLinkPagoRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/consorcio': {
+      id: '/admin/consorcio'
+      path: '/consorcio'
+      fullPath: '/admin/consorcio'
+      preLoaderRoute: typeof AdminConsorcioRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/historial': {
-      id: '/app/historial'
-      path: '/historial'
-      fullPath: '/app/historial'
-      preLoaderRoute: typeof AppHistorialRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/config': {
+      id: '/admin/config'
+      path: '/config'
+      fullPath: '/admin/config'
+      preLoaderRoute: typeof AdminConfigRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/ecommerce': {
-      id: '/app/ecommerce'
-      path: '/ecommerce'
-      fullPath: '/app/ecommerce'
-      preLoaderRoute: typeof AppEcommerceRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/compliance': {
+      id: '/admin/compliance'
+      path: '/compliance'
+      fullPath: '/admin/compliance'
+      preLoaderRoute: typeof AdminComplianceRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/destinatarios': {
-      id: '/app/destinatarios'
-      path: '/destinatarios'
-      fullPath: '/app/destinatarios'
-      preLoaderRoute: typeof AppDestinatariosRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/comisiones': {
+      id: '/admin/comisiones'
+      path: '/comisiones'
+      fullPath: '/admin/comisiones'
+      preLoaderRoute: typeof AdminComisionesRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/cuenta': {
-      id: '/app/cuenta'
-      path: '/cuenta'
-      fullPath: '/app/cuenta'
-      preLoaderRoute: typeof AppCuentaRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/clientes': {
+      id: '/admin/clientes'
+      path: '/clientes'
+      fullPath: '/admin/clientes'
+      preLoaderRoute: typeof AdminClientesRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/cobros': {
-      id: '/app/cobros'
-      path: '/cobros'
-      fullPath: '/app/cobros'
-      preLoaderRoute: typeof AppCobrosRouteImport
-      parentRoute: typeof AppRoute
+    '/admin/cbu': {
+      id: '/admin/cbu'
+      path: '/cbu'
+      fullPath: '/admin/cbu'
+      preLoaderRoute: typeof AdminCbuRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/app/api-config': {
-      id: '/app/api-config'
-      path: '/api-config'
-      fullPath: '/app/api-config'
-      preLoaderRoute: typeof AppApiConfigRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/api': {
-      id: '/app/api'
-      path: '/api'
-      fullPath: '/app/api'
-      preLoaderRoute: typeof AppApiRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/qr/': {
-      id: '/app/qr/'
-      path: '/'
-      fullPath: '/app/qr/'
-      preLoaderRoute: typeof AppQrIndexRouteImport
-      parentRoute: typeof AppQrRoute
-    }
-    '/app/link-pago/': {
-      id: '/app/link-pago/'
-      path: '/'
-      fullPath: '/app/link-pago/'
-      preLoaderRoute: typeof AppLinkPagoIndexRouteImport
-      parentRoute: typeof AppLinkPagoRoute
-    }
-    '/app/cobros/': {
-      id: '/app/cobros/'
-      path: '/'
-      fullPath: '/app/cobros/'
-      preLoaderRoute: typeof AppCobrosIndexRouteImport
-      parentRoute: typeof AppCobrosRoute
-    }
-    '/app/qr/puntos-de-venta': {
-      id: '/app/qr/puntos-de-venta'
-      path: '/puntos-de-venta'
-      fullPath: '/app/qr/puntos-de-venta'
-      preLoaderRoute: typeof AppQrPuntosDeVentaRouteImport
-      parentRoute: typeof AppQrRoute
-    }
-    '/app/link-pago/productos': {
-      id: '/app/link-pago/productos'
-      path: '/productos'
-      fullPath: '/app/link-pago/productos'
-      preLoaderRoute: typeof AppLinkPagoProductosRouteImport
-      parentRoute: typeof AppLinkPagoRoute
-    }
-    '/app/link-pago/e-commerce': {
-      id: '/app/link-pago/e-commerce'
-      path: '/e-commerce'
-      fullPath: '/app/link-pago/e-commerce'
-      preLoaderRoute: typeof AppLinkPagoECommerceRouteImport
-      parentRoute: typeof AppLinkPagoRoute
-    }
-    '/app/cobros/nuevo': {
-      id: '/app/cobros/nuevo'
-      path: '/nuevo'
-      fullPath: '/app/cobros/nuevo'
-      preLoaderRoute: typeof AppCobrosNuevoRouteImport
-      parentRoute: typeof AppCobrosRoute
-    }
-    '/app/cobros/gestion': {
-      id: '/app/cobros/gestion'
-      path: '/gestion'
-      fullPath: '/app/cobros/gestion'
-      preLoaderRoute: typeof AppCobrosGestionRouteImport
-      parentRoute: typeof AppCobrosRoute
-    }
-    '/app/cobros/gestion/$id': {
-      id: '/app/cobros/gestion/$id'
-      path: '/$id'
-      fullPath: '/app/cobros/gestion/$id'
-      preLoaderRoute: typeof AppCobrosGestionIdRouteImport
-      parentRoute: typeof AppCobrosGestionRoute
+    '/admin/alquileres': {
+      id: '/admin/alquileres'
+      path: '/alquileres'
+      fullPath: '/admin/alquileres'
+      preLoaderRoute: typeof AdminAlquileresRouteImport
+      parentRoute: typeof AdminRoute
     }
   }
 }
 
-interface AppCobrosGestionRouteChildren {
-  AppCobrosGestionIdRoute: typeof AppCobrosGestionIdRoute
+interface AdminRouteChildren {
+  AdminAlquileresRoute: typeof AdminAlquileresRoute
+  AdminCbuRoute: typeof AdminCbuRoute
+  AdminClientesRoute: typeof AdminClientesRoute
+  AdminComisionesRoute: typeof AdminComisionesRoute
+  AdminComplianceRoute: typeof AdminComplianceRoute
+  AdminConfigRoute: typeof AdminConfigRoute
+  AdminConsorcioRoute: typeof AdminConsorcioRoute
+  AdminKycRoute: typeof AdminKycRoute
+  AdminMonitoreoRoute: typeof AdminMonitoreoRoute
+  AdminMovimientosRoute: typeof AdminMovimientosRoute
+  AdminRecaudacionRoute: typeof AdminRecaudacionRoute
+  AdminReporteriaRoute: typeof AdminReporteriaRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
-const AppCobrosGestionRouteChildren: AppCobrosGestionRouteChildren = {
-  AppCobrosGestionIdRoute: AppCobrosGestionIdRoute,
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAlquileresRoute: AdminAlquileresRoute,
+  AdminCbuRoute: AdminCbuRoute,
+  AdminClientesRoute: AdminClientesRoute,
+  AdminComisionesRoute: AdminComisionesRoute,
+  AdminComplianceRoute: AdminComplianceRoute,
+  AdminConfigRoute: AdminConfigRoute,
+  AdminConsorcioRoute: AdminConsorcioRoute,
+  AdminKycRoute: AdminKycRoute,
+  AdminMonitoreoRoute: AdminMonitoreoRoute,
+  AdminMovimientosRoute: AdminMovimientosRoute,
+  AdminRecaudacionRoute: AdminRecaudacionRoute,
+  AdminReporteriaRoute: AdminReporteriaRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 
-const AppCobrosGestionRouteWithChildren =
-  AppCobrosGestionRoute._addFileChildren(AppCobrosGestionRouteChildren)
-
-interface AppCobrosRouteChildren {
-  AppCobrosGestionRoute: typeof AppCobrosGestionRouteWithChildren
-  AppCobrosNuevoRoute: typeof AppCobrosNuevoRoute
-  AppCobrosIndexRoute: typeof AppCobrosIndexRoute
-}
-
-const AppCobrosRouteChildren: AppCobrosRouteChildren = {
-  AppCobrosGestionRoute: AppCobrosGestionRouteWithChildren,
-  AppCobrosNuevoRoute: AppCobrosNuevoRoute,
-  AppCobrosIndexRoute: AppCobrosIndexRoute,
-}
-
-const AppCobrosRouteWithChildren = AppCobrosRoute._addFileChildren(
-  AppCobrosRouteChildren,
-)
-
-interface AppLinkPagoRouteChildren {
-  AppLinkPagoECommerceRoute: typeof AppLinkPagoECommerceRoute
-  AppLinkPagoProductosRoute: typeof AppLinkPagoProductosRoute
-  AppLinkPagoIndexRoute: typeof AppLinkPagoIndexRoute
-}
-
-const AppLinkPagoRouteChildren: AppLinkPagoRouteChildren = {
-  AppLinkPagoECommerceRoute: AppLinkPagoECommerceRoute,
-  AppLinkPagoProductosRoute: AppLinkPagoProductosRoute,
-  AppLinkPagoIndexRoute: AppLinkPagoIndexRoute,
-}
-
-const AppLinkPagoRouteWithChildren = AppLinkPagoRoute._addFileChildren(
-  AppLinkPagoRouteChildren,
-)
-
-interface AppQrRouteChildren {
-  AppQrPuntosDeVentaRoute: typeof AppQrPuntosDeVentaRoute
-  AppQrIndexRoute: typeof AppQrIndexRoute
-}
-
-const AppQrRouteChildren: AppQrRouteChildren = {
-  AppQrPuntosDeVentaRoute: AppQrPuntosDeVentaRoute,
-  AppQrIndexRoute: AppQrIndexRoute,
-}
-
-const AppQrRouteWithChildren = AppQrRoute._addFileChildren(AppQrRouteChildren)
-
-interface AppRouteChildren {
-  AppApiRoute: typeof AppApiRoute
-  AppApiConfigRoute: typeof AppApiConfigRoute
-  AppCobrosRoute: typeof AppCobrosRouteWithChildren
-  AppCuentaRoute: typeof AppCuentaRoute
-  AppDestinatariosRoute: typeof AppDestinatariosRoute
-  AppEcommerceRoute: typeof AppEcommerceRoute
-  AppHistorialRoute: typeof AppHistorialRoute
-  AppLinkPagoRoute: typeof AppLinkPagoRouteWithChildren
-  AppQrRoute: typeof AppQrRouteWithChildren
-  AppSeguridadRoute: typeof AppSeguridadRoute
-  AppServiciosRoute: typeof AppServiciosRoute
-  AppSubcuentasRoute: typeof AppSubcuentasRoute
-  AppTransferenciasRoute: typeof AppTransferenciasRoute
-  AppIndexRoute: typeof AppIndexRoute
-}
-
-const AppRouteChildren: AppRouteChildren = {
-  AppApiRoute: AppApiRoute,
-  AppApiConfigRoute: AppApiConfigRoute,
-  AppCobrosRoute: AppCobrosRouteWithChildren,
-  AppCuentaRoute: AppCuentaRoute,
-  AppDestinatariosRoute: AppDestinatariosRoute,
-  AppEcommerceRoute: AppEcommerceRoute,
-  AppHistorialRoute: AppHistorialRoute,
-  AppLinkPagoRoute: AppLinkPagoRouteWithChildren,
-  AppQrRoute: AppQrRouteWithChildren,
-  AppSeguridadRoute: AppSeguridadRoute,
-  AppServiciosRoute: AppServiciosRoute,
-  AppSubcuentasRoute: AppSubcuentasRoute,
-  AppTransferenciasRoute: AppTransferenciasRoute,
-  AppIndexRoute: AppIndexRoute,
-}
-
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
-
-interface RegistroRouteChildren {
-  RegistroEmpresaRoute: typeof RegistroEmpresaRoute
-  RegistroExitoRoute: typeof RegistroExitoRoute
-  RegistroValidacionExitosaRoute: typeof RegistroValidacionExitosaRoute
-  RegistroValidarEmailRoute: typeof RegistroValidarEmailRoute
-}
-
-const RegistroRouteChildren: RegistroRouteChildren = {
-  RegistroEmpresaRoute: RegistroEmpresaRoute,
-  RegistroExitoRoute: RegistroExitoRoute,
-  RegistroValidacionExitosaRoute: RegistroValidacionExitosaRoute,
-  RegistroValidarEmailRoute: RegistroValidarEmailRoute,
-}
-
-const RegistroRouteWithChildren = RegistroRoute._addFileChildren(
-  RegistroRouteChildren,
-)
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRouteWithChildren,
-  LoginRoute: LoginRoute,
-  RegistroRoute: RegistroRouteWithChildren,
+  AdminRoute: AdminRouteWithChildren,
   LegalesArrepentimientoRoute: LegalesArrepentimientoRoute,
   LegalesComisionesRoute: LegalesComisionesRoute,
   LegalesPrivacidadRoute: LegalesPrivacidadRoute,
   LegalesTerminosRoute: LegalesTerminosRoute,
-  OnboardingDatosEmpresaRoute: OnboardingDatosEmpresaRoute,
-  OnboardingDatosPersonalesRoute: OnboardingDatosPersonalesRoute,
-  OnboardingEnProcesoRoute: OnboardingEnProcesoRoute,
-  OnboardingKycRoute: OnboardingKycRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
