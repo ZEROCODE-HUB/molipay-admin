@@ -4,7 +4,7 @@ import { Save, Info } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/admin/general/alertas/parametros-bloqueos")({
-  head: () => [{ title: "Parámetros de bloqueos — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Parámetros de bloqueos — Admin Panel" }] }),
   component: Page,
 });
 

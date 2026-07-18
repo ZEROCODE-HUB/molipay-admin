@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, Eye, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { BtnPrimary, BtnOutline, Badge, Input } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 
@@ -48,22 +49,17 @@ const estadoBadge = (e: CvuUser["estado"]) => {
   return <Badge tone={m.tone}>{m.label}</Badge>;
 };
 
-const columns: Column<CvuUser>[] = [
-  { key: "legajo", header: "Legajo" },
-  { key: "correo", header: "Correo" },
-  { key: "nombre", header: "Nombre" },
-  { key: "apellido", header: "Apellido" },
-  { key: "cvu", header: "CVU" },
-  { key: "alias", header: "Alias" },
-  {
-    key: "estado",
-    header: "Estado",
-    cell: (row) => estadoBadge(row.estado),
-  },
-];
-
 function CvuPage() {
   const [showNuevoCvu, setShowNuevoCvu] = useState(false);
+
+  const getActions = (_: CvuUser): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    ...(_.estado === "inactivo"
+      ? [{ label: "Activar", icon: Eye, onClick: () => {} }]
+      : [{ label: "Desactivar", icon: XCircle, variant: "danger" as const, onClick: () => {} }]
+    ),
+  ];
 
   return (
     <>
@@ -84,16 +80,19 @@ function CvuPage() {
         }
       />
 
-      <DataTable columns={columns} data={data} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.legajo}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
 
       <FormDialog
         open={showNuevoCvu}
         onClose={() => setShowNuevoCvu(false)}
         title="Nuevo CVU"
         description="Crear una nueva Cuenta Virtual sincronizada con COELSA."
-        onSubmit={() => {
-          setShowNuevoCvu(false);
-        }}
+        onSubmit={() => setShowNuevoCvu(false)}
         submitLabel="Crear CVU"
       >
         <div>
@@ -115,3 +114,17 @@ function CvuPage() {
     </>
   );
 }
+
+const columns: Column<CvuUser>[] = [
+  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
+  { key: "correo", label: "Correo", render: (r) => r.correo },
+  { key: "nombre", label: "Nombre", render: (r) => r.nombre },
+  { key: "apellido", label: "Apellido", render: (r) => r.apellido },
+  { key: "cvu", label: "CVU", render: (r) => r.cvu },
+  { key: "alias", label: "Alias", render: (r) => r.alias },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (row) => estadoBadge(row.estado),
+  },
+];

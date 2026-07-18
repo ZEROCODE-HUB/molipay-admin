@@ -21,7 +21,7 @@ const initialParams: Param[] = [
 ];
 
 export const Route = createFileRoute("/admin/general/alertas/parametros-alertas")({
-  head: () => [{ title: "Parámetros de alertas — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Parámetros de alertas — Admin Panel" }] }),
   component: Page,
 });
 

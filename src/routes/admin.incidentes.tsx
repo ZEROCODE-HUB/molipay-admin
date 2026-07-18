@@ -16,7 +16,7 @@ const historialMock: Mensaje[] = [
 ];
 
 export const Route = createFileRoute("/admin/incidentes")({
-  head: () => [{ title: "Comunicación de incidentes — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Comunicación de incidentes — Admin Panel" }] }),
   component: Page,
 });
 

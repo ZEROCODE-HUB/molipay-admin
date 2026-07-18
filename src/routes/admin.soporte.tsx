@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/admin/soporte")({
-  head: () => [{ title: "Soporte — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Soporte — Admin Panel" }] }),
   component: Page,
 });
 

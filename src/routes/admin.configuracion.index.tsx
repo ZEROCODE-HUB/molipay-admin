@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Users, Activity, ShieldAlert, TrendingDown, CheckCircle2, XCircle } from "lucide-react";
+import { Users, Activity, ShieldAlert, TrendingDown, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Card, Stat, Badge, BtnOutline } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/configuracion/")({
@@ -53,6 +54,10 @@ function Page() {
     if (selected.size === loginData.length) setSelected(new Set());
     else setSelected(new Set(loginData.map((d) => d.id)));
   };
+
+  const getActions = (r: LoginActivity): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+  ];
 
   const columns: Column<LoginActivity>[] = [
     {
@@ -160,11 +165,7 @@ function Page() {
         keyExtractor={(r) => r.id}
         selection={{ selected, onToggle: toggle, onToggleAll: toggleAll }}
         pageSize={10}
-        actions={(r) => (
-          <div className="flex gap-1 justify-end">
-            <BtnOutline type="button" className="h-7 text-xs px-2">Ver detalle</BtnOutline>
-          </div>
-        )}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
     </>
   );

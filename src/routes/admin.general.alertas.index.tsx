@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Edit3 } from "lucide-react";
+import { Search, Eye, Edit3, XCircle, CheckCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
-import { Badge, Input } from "@/components/portal-shell";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
+import { Badge, Input, PageHeader } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/alertas/")({
   head: () => ({
@@ -39,14 +40,20 @@ function ListadoAlertas() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  const getActions = (row: Alerta): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    { label: row.activo === "Sí" ? "Desactivar" : "Activar", icon: row.activo === "Sí" ? XCircle : CheckCircle, onClick: () => {} },
+  ];
+
   const columns: Column<Alerta>[] = [
-    { key: "legajo", header: "Legajo" },
-    { key: "correo", header: "Correo" },
-    { key: "nombre", header: "Nombre" },
-    { key: "tipo", header: "Tipo de alerta" },
+    { key: "legajo", label: "Legajo", render: (r) => r.legajo },
+    { key: "correo", label: "Correo", render: (r) => r.correo },
+    { key: "nombre", label: "Nombre", render: (r) => r.nombre },
+    { key: "tipo", label: "Tipo de alerta", render: (r) => r.tipo },
     {
       key: "estado",
-      header: "Estado",
+      label: "Estado",
       render: (row) => {
         const tone = row.estado === "Resuelto" ? "success" : row.estado === "Revisado" ? "neutral" : "warn";
         return <Badge tone={tone}>{row.estado}</Badge>;
@@ -54,24 +61,19 @@ function ListadoAlertas() {
     },
     {
       key: "activo",
-      header: "Activo",
+      label: "Activo",
       render: (row) => (
         <Badge tone={row.activo === "Sí" ? "success" : "danger"}>{row.activo}</Badge>
-      ),
-    },
-    {
-      key: "acciones",
-      header: "Acciones",
-      render: () => (
-        <button className="text-xs text-primary font-semibold inline-flex items-center gap-1 hover:underline">
-          <Edit3 size={12} /> Editar
-        </button>
       ),
     },
   ];
 
   return (
     <div>
+      <PageHeader
+        title="Listado de alertas"
+        description="Alertas generadas por el sistema de monitoreo."
+      />
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -80,7 +82,12 @@ function ListadoAlertas() {
         <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
         <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
       </div>
-      <DataTable columns={columns} data={MOCK} keyExtractor={(r) => r.legajo} />
+      <DataTable
+        columns={columns}
+        data={MOCK}
+        keyExtractor={(r) => r.legajo}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
     </div>
   );
 }

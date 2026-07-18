@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Eye, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { BtnPrimary, Badge, Input } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 
@@ -36,33 +37,17 @@ const data: Comision[] = [
   { legajo: "COM-007", correo: "gabriel.rios@email.com", operacion: "LNK-2024-112", tipo: "Link de pago", estado: "activa", monto: "$ 60,00", descripcion: "Comisión por link recurrente" },
 ];
 
-const columns: Column<Comision>[] = [
-  { key: "legajo", header: "Legajo" },
-  { key: "correo", header: "Correo" },
-  { key: "operacion", header: "Operación" },
-  { key: "tipo", header: "Tipo" },
-  {
-    key: "estado",
-    header: "Estado",
-    cell: (row) => (
-      <Badge tone={row.estado === "activa" ? "success" : "danger"}>
-        {row.estado === "activa" ? "Activa" : "Inactiva"}
-      </Badge>
-    ),
-  },
-  { key: "monto", header: "Monto" },
-  { key: "descripcion", header: "Descripción" },
-  {
-    key: "accion",
-    header: "Acción",
-    cell: () => (
-      <span className="text-xs text-primary cursor-pointer hover:underline">Editar</span>
-    ),
-  },
-];
-
 function ComisionesPage() {
   const [showNueva, setShowNueva] = useState(false);
+
+  const getActions = (_: Comision): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    ...(_.estado === "activa"
+      ? [{ label: "Desactivar", icon: XCircle, variant: "danger" as const, onClick: () => {} }]
+      : [{ label: "Activar", icon: Eye, onClick: () => {} }]
+    ),
+  ];
 
   return (
     <>
@@ -77,7 +62,12 @@ function ComisionesPage() {
         }
       />
 
-      <DataTable columns={columns} data={data} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.legajo}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
 
       <FormDialog
         open={showNueva}
@@ -123,3 +113,21 @@ function ComisionesPage() {
     </>
   );
 }
+
+const columns: Column<Comision>[] = [
+  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
+  { key: "correo", label: "Correo", render: (r) => r.correo },
+  { key: "operacion", label: "Operación", render: (r) => r.operacion },
+  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (row) => (
+      <Badge tone={row.estado === "activa" ? "success" : "danger"}>
+        {row.estado === "activa" ? "Activa" : "Inactiva"}
+      </Badge>
+    ),
+  },
+  { key: "monto", label: "Monto", render: (r) => r.monto },
+  { key: "descripcion", label: "Descripción", render: (r) => r.descripcion },
+];

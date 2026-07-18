@@ -19,7 +19,7 @@ const rolesIniciales: Rol[] = [
 ];
 
 export const Route = createFileRoute("/admin/administracion/usuarios/roles")({
-  head: () => [{ title: "Roles y permisos — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Roles y permisos — Admin Panel" }] }),
   component: Page,
 });
 

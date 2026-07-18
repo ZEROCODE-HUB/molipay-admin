@@ -97,7 +97,7 @@ function Page() {
             <h3 className="font-semibold flex items-center gap-2">
               <Building2 size={16} className="text-[color:var(--brand-blue)]" /> ultimos registros
             </h3>
-            <Link to="/admin/clientes" className="text-xs text-primary font-semibold">
+            <Link to="/admin/general/usuarios" className="text-xs text-primary font-semibold">
               Ver todos →
             </Link>
           </div>
@@ -140,7 +140,7 @@ function Page() {
             <h3 className="font-semibold flex items-center gap-2">
               <ShieldAlert size={16} className="text-[color:var(--brand-red)]" /> Alertas recientes
             </h3>
-            <Link to="/admin/compliance" className="text-xs text-primary font-semibold">
+            <Link to="/admin/general/alertas/bloqueos" className="text-xs text-primary font-semibold">
               Compliance →
             </Link>
           </div>
@@ -164,7 +164,7 @@ function Page() {
             ))}
           </div>
           <Link
-            to="/admin/movimientos"
+            to="/admin/general/movimientos"
             className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-semibold"
           >
             Ver movimientos en tiempo real <ArrowUpRight size={12} />

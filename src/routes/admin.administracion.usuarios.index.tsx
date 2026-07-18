@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Edit3, KeyRound, X } from "lucide-react";
+import { Plus, Edit3, KeyRound, Eye, X, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 
 type Staff = { nombre: string; apellido: string; email: string; estado: string; rol: string };
@@ -17,12 +18,20 @@ const mock: Staff[] = [
 ];
 
 export const Route = createFileRoute("/admin/administracion/usuarios/")({
-  head: () => [{ title: "Administración de personal — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Administración de personal — Admin Panel" }] }),
   component: Page,
 });
 
 function Page() {
   const [showNew, setShowNew] = useState(false);
+
+  const getActions = (r: Staff): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    { label: "Cambiar contraseña", icon: KeyRound, onClick: () => {} },
+    { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => {} },
+  ];
+
   const columns: Column<Staff>[] = [
     { key: "nombre", label: "Nombre", sortable: true, filterable: true, render: (r) => r.nombre },
     { key: "apellido", label: "Apellido", sortable: true, filterable: true, render: (r) => r.apellido },
@@ -30,6 +39,7 @@ function Page() {
     { key: "estado", label: "Estado", sortable: true, filterable: true, render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "neutral"}>{r.estado}</Badge> },
     { key: "rol", label: "Rol", sortable: true, filterable: true, render: (r) => r.rol },
   ];
+
   return (
     <>
       <PageHeader title="Administración de personal" description="Gestión de usuarios del backoffice" action={
@@ -37,13 +47,12 @@ function Page() {
           <Plus size={14} /> Nuevo usuario
         </button>
       } />
-      <DataTable columns={columns} data={mock} keyExtractor={(r) => r.email} pageSize={10}
-        actions={(r) => (
-          <div className="flex gap-1">
-            <button className="p-1.5 rounded hover:bg-muted" title="Editar"><Edit3 size={14} /></button>
-            <button className="p-1.5 rounded hover:bg-muted" title="Contraseña"><KeyRound size={14} /></button>
-          </div>
-        )}
+      <DataTable
+        columns={columns}
+        data={mock}
+        keyExtractor={(r) => r.email}
+        pageSize={10}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {showNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowNew(false)}>

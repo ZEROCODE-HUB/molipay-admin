@@ -1,12 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Download, Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, Input } from "@/components/portal-shell";
-import { useState } from "react";
-
-// Mejora aplicada: se agregó vista consolidada cuenta madre/subcuentas con indicador de diferencia vs Total de fondos.
-// Zona marcada como "mucho por mejorar" en especificación.
 
 type Fondo = { usuario: string; email: string; cuenta: string; tipo: string; saldo: string; estado: string; alerta?: string };
 
@@ -22,7 +20,7 @@ const mock: Fondo[] = [
 ];
 
 export const Route = createFileRoute("/admin/administracion/registros/")({
-  head: () => [{ title: "Fondos por usuario — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Fondos por usuario — Admin Panel" }] }),
   component: Page,
 });
 
@@ -30,6 +28,10 @@ function Page() {
   const [search, setSearch] = useState("");
 
   const filtered = search ? mock.filter((r) => r.usuario.toLowerCase().includes(search.toLowerCase()) || r.email.toLowerCase().includes(search.toLowerCase())) : mock;
+
+  const getActions = (r: Fondo): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+  ];
 
   const columns: Column<Fondo>[] = [
     { key: "usuario", label: "Usuario", sortable: true, filterable: true, render: (r) => <span className="font-semibold">{r.usuario}</span> },
@@ -48,7 +50,13 @@ function Page() {
       <div className="mb-4 max-w-sm">
         <Input placeholder="Buscar por email o usuario..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
-      <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.usuario + r.cuenta} pageSize={10} />
+      <DataTable
+        columns={columns}
+        data={filtered}
+        keyExtractor={(r) => r.usuario + r.cuenta}
+        pageSize={10}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
     </>
   );
 }

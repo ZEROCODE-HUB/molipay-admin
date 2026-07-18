@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Eye, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { UserModal } from "@/components/user-modal";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/usuarios/")({
@@ -53,6 +54,16 @@ const estadoBadge = (e: Usuario["estado"]) => {
 function PersonasFisicasPage() {
   const [editing, setEditing] = useState<Usuario | null>(null);
 
+  const getActions = (row: Usuario): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => setEditing(row) },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    ...(row.estado === "suspendido"
+      ? [{ label: "Reactivar", icon: RotateCcw, onClick: () => {} }]
+      : [{ label: "Suspender", icon: XCircle, onClick: () => {} }]
+    ),
+    { label: "Eliminar", icon: Trash2, variant: "danger" as const, onClick: () => {} },
+  ];
+
   return (
     <>
       <PageHeader
@@ -66,13 +77,18 @@ function PersonasFisicasPage() {
         }
       />
 
-      <DataTable columns={columns} data={data} onEdit={setEditing} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.legajo}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
 
       {editing && (
         <UserModal
           open={!!editing}
           onClose={() => setEditing(null)}
-          user={editing}
+          user={editing as any}
         />
       )}
     </>
@@ -80,29 +96,14 @@ function PersonasFisicasPage() {
 }
 
 const columns: Column<Usuario>[] = [
-  { key: "legajo", header: "Legajo" },
-  { key: "correo", header: "Correo" },
-  { key: "nombres", header: "Nombres" },
-  { key: "apellidos", header: "Apellidos" },
+  { key: "legajo", label: "Legajo", render: (row) => row.legajo },
+  { key: "correo", label: "Correo", render: (row) => row.correo },
+  { key: "nombres", label: "Nombres", render: (row) => row.nombres },
+  { key: "apellidos", label: "Apellidos", render: (row) => row.apellidos },
   {
     key: "estado",
-    header: "Estado",
-    cell: (row) => estadoBadge(row.estado),
+    label: "Estado",
+    render: (row) => estadoBadge(row.estado),
   },
-  { key: "fechaRegistro", header: "Fecha de registro" },
-  {
-    key: "acciones",
-    header: "Acciones",
-    cell: () => (
-      <div className="flex gap-1">
-        <span className="text-xs text-primary cursor-pointer hover:underline">Editar</span>
-        <span className="text-xs text-muted-foreground">·</span>
-        <span className="text-xs text-amber-600 cursor-pointer hover:underline">Suspender</span>
-        <span className="text-xs text-muted-foreground">·</span>
-        <span className="text-xs text-primary cursor-pointer hover:underline">Reactivar</span>
-        <span className="text-xs text-muted-foreground">·</span>
-        <span className="text-xs text-red-600 cursor-pointer hover:underline">Borrar</span>
-      </div>
-    ),
-  },
+  { key: "fechaRegistro", label: "Fecha de registro", render: (row) => row.fechaRegistro },
 ];

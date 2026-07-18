@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Eye, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 
 type Evento = { evento: string; tipo: string; usuario: string; recurso: string; accion: string; fecha: string; detalle: string };
@@ -26,12 +27,17 @@ const mock: Evento[] = [
 ];
 
 export const Route = createFileRoute("/admin/administracion/registros/actividad")({
-  head: () => [{ title: "Actividad en backoffice — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Actividad en backoffice — Admin Panel" }] }),
   component: Page,
 });
 
 function Page() {
   const [detalle, setDetalle] = useState<Evento | null>(null);
+
+  const getActions = (r: Evento): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => setDetalle(r) },
+  ];
+
   const columns: Column<Evento>[] = [
     { key: "evento", label: "Evento", sortable: true, filterable: true, render: (r) => r.evento },
     { key: "tipo", label: "Tipo", sortable: true, filterable: true, render: (r) => <Badge>{r.tipo}</Badge> },
@@ -40,11 +46,16 @@ function Page() {
     { key: "accion", label: "Acción", filterable: true, render: (r) => r.accion },
     { key: "fecha", label: "Fecha", sortable: true, render: (r) => r.fecha },
   ];
+
   return (
     <>
       <PageHeader title="Actividad en backoffice" description="Registro de eventos del panel administrativo" />
-      <DataTable columns={columns} data={mock} keyExtractor={(r) => r.evento + r.fecha} pageSize={10}
-        actions={(r) => <button onClick={() => setDetalle(r)} className="p-1.5 rounded hover:bg-muted" title="Ver detalles"><Eye size={14} /></button>}
+      <DataTable
+        columns={columns}
+        data={mock}
+        keyExtractor={(r) => r.evento + r.fecha}
+        pageSize={10}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detalle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDetalle(null)}>

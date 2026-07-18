@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, Stat } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/administracion/registros/total")({
-  head: () => [{ title: "Total de fondos — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Total de fondos — Admin Panel" }] }),
   component: Page,
 });
 

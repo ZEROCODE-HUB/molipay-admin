@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Eye, Edit3, X, FileText } from "lucide-react";
+import { Download, Eye, Edit3, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 
 type Bloqueo = {
@@ -83,13 +84,19 @@ function GestionarBloqueo({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
 }
 
 export const Route = createFileRoute("/admin/general/alertas/bloqueos")({
-  head: () => [{ title: "Listado de bloqueos — Admin Panel" }],
+  head: () => ({ meta: [{ title: "Listado de bloqueos — Admin Panel" }] }),
   component: Page,
 });
 
 function Page() {
   const [detail, setDetail] = useState<Bloqueo | null>(null);
   const [gestionar, setGestionar] = useState<Bloqueo | null>(null);
+
+  const getActions = (r: Bloqueo): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
+    { label: "Gestionar", icon: Edit3, onClick: () => setGestionar(r) },
+  ];
+
   const columns: Column<Bloqueo>[] = [
     { key: "legajo", label: "Legajo", sortable: true, filterable: true, render: (r) => <span className="font-mono text-xs">{r.legajo}</span> },
     { key: "usuario", label: "Usuario", sortable: true, filterable: true, render: (r) => r.usuario },
@@ -99,18 +106,18 @@ function Page() {
     { key: "compliance", label: "Compliance", filterable: true, render: (r) => r.compliance },
     { key: "fecha", label: "Fecha", sortable: true, filterable: true, render: (r) => r.fecha },
   ];
+
   return (
     <>
       <PageHeader title="Listado de bloqueos" description="Gestión de cuentas bloqueadas automáticamente" action={
-        <button className="inline-flex items-center gap-2 h-10 px-4 rounded-md border border-input text-sm font-semibold hover:bg-muted" onClick={() => {}}><Download size={14} /> Descargar CSV</button>
+        <button className="inline-flex items-center gap-2 h-10 px-4 rounded-md border border-input text-sm font-semibold hover:bg-muted"><Download size={14} /> Descargar CSV</button>
       } />
-      <DataTable columns={columns} data={mock} keyExtractor={(r) => r.legajo} pageSize={10}
-        actions={(r) => (
-          <div className="flex gap-1">
-            <button onClick={() => setGestionar(r)} className="p-1.5 rounded hover:bg-muted" title="Gestionar"><Edit3 size={14} /></button>
-            <button onClick={() => setDetail(r)} className="p-1.5 rounded hover:bg-muted" title="Ver detalles"><Eye size={14} /></button>
-          </div>
-        )}
+      <DataTable
+        columns={columns}
+        data={mock}
+        keyExtractor={(r) => r.legajo}
+        pageSize={10}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detail && <BloqueoDetail b={detail} onClose={() => setDetail(null)} />}
       {gestionar && <GestionarBloqueo b={gestionar} onClose={() => setGestionar(null)} />}

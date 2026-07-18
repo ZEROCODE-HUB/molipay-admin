@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { Eye, Edit3, CheckCircle, XCircle, FileCheck } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
-import { PageHeader, Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
+import { PageHeader, Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/modulos/transferencia/")({
   component: Page,
@@ -52,6 +54,19 @@ function Page() {
     if (selected.size === data.length) setSelected(new Set());
     else setSelected(new Set(data.map((d) => d.id)));
   };
+
+  const getActions = (r: Comercio): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    ...(r.estado === "activo"
+      ? [{ label: "Suspender", icon: XCircle, variant: "danger" as const, onClick: () => {} }]
+      : [{ label: "Activar", icon: CheckCircle, onClick: () => {} }]
+    ),
+    ...(r.estado === "pendiente"
+      ? [{ label: "Validar", icon: FileCheck, onClick: () => {} }]
+      : []
+    ),
+  ];
 
   const columns: Column<Comercio>[] = [
     {
@@ -104,15 +119,7 @@ function Page() {
         keyExtractor={(r) => r.id}
         selection={{ selected, onToggle: toggle, onToggleAll: toggleAll }}
         pageSize={10}
-        actions={(r) => (
-          <div className="flex gap-1 justify-end flex-wrap">
-            <BtnPrimary type="button" className="h-7 text-xs px-2">Activar</BtnPrimary>
-            <BtnOutline type="button" className="h-7 text-xs px-2">Suspender</BtnOutline>
-            <BtnOutline type="button" className="h-7 text-xs px-2">Validar</BtnOutline>
-            <BtnOutline type="button" className="h-7 text-xs px-2">Editar</BtnOutline>
-            <BtnOutline type="button" className="h-7 text-xs px-2">Ver</BtnOutline>
-          </div>
-        )}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
     </>
   );

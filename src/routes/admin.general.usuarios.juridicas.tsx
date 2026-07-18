@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download } from "lucide-react";
+import { Download, Eye, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { BtnOutline, Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
@@ -46,32 +47,13 @@ const data: Juridica[] = [
   { legajo: "JUR-010", correo: "admin@transporteskappa.com", razonSocial: "Transportes Kappa SRL", tipo: "SRL", estado: "Registrado", fechaRegistro: "20/10/2024", subcuentas: 0 },
 ];
 
-const columns: Column<Juridica>[] = [
-  { key: "legajo", header: "Legajo" },
-  { key: "correo", header: "Correo" },
-  { key: "razonSocial", header: "Razón Social" },
-  { key: "tipo", header: "Tipo" },
-  {
-    key: "estado",
-    header: "Estado",
-    cell: (row) => <Badge tone={toneMap[row.estado] ?? "neutral"}>{row.estado}</Badge>,
-  },
-  { key: "fechaRegistro", header: "Fecha de registro" },
-  { key: "subcuentas", header: "Subcuentas" },
-  {
-    key: "acciones",
-    header: "Acciones",
-    cell: () => (
-      <div className="flex gap-1">
-        <span className="text-xs text-primary cursor-pointer hover:underline">Editar</span>
-        <span className="text-xs text-muted-foreground">·</span>
-        <span className="text-xs text-red-600 cursor-pointer hover:underline">Suspender</span>
-      </div>
-    ),
-  },
-];
-
 function JuridicasPage() {
+  const getActions = (_: Juridica): ActionItem[] => [
+    { label: "Ver detalles", icon: Eye, onClick: () => {} },
+    { label: "Editar", icon: Edit3, onClick: () => {} },
+    { label: "Suspender", icon: XCircle, variant: "danger", onClick: () => {} },
+  ];
+
   return (
     <>
       <PageHeader
@@ -84,7 +66,26 @@ function JuridicasPage() {
           </BtnOutline>
         }
       />
-      <DataTable columns={columns} data={data} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.legajo}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      />
     </>
   );
 }
+
+const columns: Column<Juridica>[] = [
+  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
+  { key: "correo", label: "Correo", render: (r) => r.correo },
+  { key: "razonSocial", label: "Razón Social", render: (r) => r.razonSocial },
+  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (row) => <Badge tone={toneMap[row.estado] ?? "neutral"}>{row.estado}</Badge>,
+  },
+  { key: "fechaRegistro", label: "Fecha de registro", render: (r) => r.fechaRegistro },
+  { key: "subcuentas", label: "Subcuentas", render: (r) => r.subcuentas },
+];
