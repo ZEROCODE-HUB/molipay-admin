@@ -8,8 +8,7 @@ export type NavLeaf = { to: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; icon: LucideIcon; items: NavLeaf[] };
 export type NavItem = NavLeaf | NavGroup;
 
-const isGroup = (item: NavItem): item is NavGroup =>
-  (item as NavGroup).items !== undefined;
+const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !== undefined;
 
 const flattenLeaves = (nav: NavItem[]): NavLeaf[] =>
   nav.flatMap((i) => (isGroup(i) ? i.items : [i]));
@@ -50,7 +49,7 @@ export function PortalShell({
             <Menu size={20} />
           </button>
           <MollyLogo />
-          <span className="hidden md:inline text-sm text-muted-foreground border-l pl-3 ml-1">
+          <span className="hidden lg:inline text-sm text-muted-foreground border-l pl-3 ml-1 truncate max-w-[200px]">
             {title}
           </span>
         </div>
@@ -101,7 +100,6 @@ export function PortalShell({
         <main className="flex-1 min-w-0 overflow-y-auto pb-20 lg:pb-6">
           <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:py-8">{children}</div>
         </main>
-
       </div>
 
       {/* Bottom nav mobile */}
@@ -149,10 +147,20 @@ function SidebarNav({
     <>
       {nav.map((item, idx) =>
         isGroup(item) ? (
-          <SidebarGroup key={`g-${idx}-${item.label}`} group={item} path={path} onNavigate={onNavigate} />
+          <SidebarGroup
+            key={`g-${idx}-${item.label}`}
+            group={item}
+            path={path}
+            onNavigate={onNavigate}
+          />
         ) : (
-          <SidebarLink key={item.to} item={item} active={path === item.to} onNavigate={onNavigate} />
-        )
+          <SidebarLink
+            key={item.to}
+            item={item}
+            active={path === item.to}
+            onNavigate={onNavigate}
+          />
+        ),
       )}
     </>
   );
@@ -216,10 +224,7 @@ function SidebarGroup({
       >
         <Icon size={18} strokeWidth={1.75} />
         <span className="flex-1 text-left">{group.label}</span>
-        <ChevronDown
-          size={14}
-          className={`transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
+        <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
       {expanded && (
         <div className="mt-0.5">
@@ -240,7 +245,15 @@ function SidebarGroup({
 
 /* Utility primitives used by pages */
 
-export function PageHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+export function PageHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
       <div>
@@ -305,7 +318,13 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
   );
 }
 
-export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warn" | "danger" }) {
+export function Badge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "warn" | "danger";
+}) {
   const styles: Record<string, string> = {
     neutral: "bg-muted text-muted-foreground",
     success: "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]",
@@ -313,7 +332,9 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
     danger: "bg-red-100 text-red-700",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${styles[tone]}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${styles[tone]}`}
+    >
       {children}
     </span>
   );

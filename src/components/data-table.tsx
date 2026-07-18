@@ -79,7 +79,7 @@ export function DataTable<T>({
         if (!col) return true;
         const text = String(col.render(row) ?? "");
         return text.toLowerCase().includes(value.toLowerCase());
-      })
+      }),
     );
   }, [data, filters, columns]);
 
@@ -107,11 +107,13 @@ export function DataTable<T>({
   }, [sortedData, safePage, pageSize]);
 
   const filteredKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor]);
-  const allFilteredSelected = selection && filteredKeys.length > 0 && filteredKeys.every((k) => selection.selected.has(k));
+  const allFilteredSelected =
+    selection && filteredKeys.length > 0 && filteredKeys.every((k) => selection.selected.has(k));
   const someSelected = selection && filteredKeys.some((k) => selection.selected.has(k));
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
-    if (sortKey !== columnKey) return <ChevronsUpDown size={14} className="text-muted-foreground" />;
+    if (sortKey !== columnKey)
+      return <ChevronsUpDown size={14} className="text-muted-foreground" />;
     return sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
 
@@ -191,10 +193,13 @@ export function DataTable<T>({
                   {activeFilter === col.key && (
                     <div
                       ref={filterRef}
-                      className="absolute top-full left-0 mt-1 z-20 min-w-[200px] bg-card border rounded-lg shadow-lg p-2"
+                      className="absolute top-full left-0 right-0 sm:left-auto sm:right-0 mt-1 z-20 min-w-[180px] sm:min-w-[220px] bg-card border rounded-lg shadow-lg p-2"
                     >
                       <div className="relative">
-                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Search
+                          size={14}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        />
                         <input
                           className="w-full h-8 pl-8 pr-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
                           placeholder={`Filtrar ${col.label}...`}
@@ -222,7 +227,10 @@ export function DataTable<T>({
                 const key = keyExtractor(row);
                 const checked = selection?.selected.has(key) ?? false;
                 return (
-                  <tr key={key} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={key}
+                    className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+                  >
                     {selection && (
                       <td className="px-4 py-3">
                         <input
@@ -247,27 +255,29 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Filas por página:</span>
+          <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
           <select
             className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
           >
             {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">
-            Página {safePage} de {totalPages}
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <span className="text-muted-foreground text-xs sm:text-sm">
+            Pág. {safePage} de {totalPages}
           </span>
           <div className="flex gap-1">
             <button
               type="button"
-              className="h-8 px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
+              className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
               disabled={safePage <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
@@ -275,7 +285,7 @@ export function DataTable<T>({
             </button>
             <button
               type="button"
-              className="h-8 px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
+              className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
               disabled={safePage >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >

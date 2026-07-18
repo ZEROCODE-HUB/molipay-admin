@@ -18,6 +18,24 @@ export const Route = createFileRoute("/admin/general/alertas/parametros-alertas"
   component: Page,
 });
 
+function Toggle({ enabled, onClick }: { enabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
+        enabled ? "bg-cyan-600" : "bg-gray-300 dark:bg-gray-600"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+          enabled ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
 function Page() {
   const [groups, setGroups] = useState<Group[]>([
     {
@@ -123,7 +141,7 @@ function Page() {
         description="Configuración de umbrales que activan alertas (solo notifican, no bloquean)"
       />
 
-      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6 flex gap-3 max-w-2xl">
+      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6 flex gap-3">
         <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800 dark:text-amber-300">
           Una <strong>alerta</strong> solo notifica y queda pendiente de revisión manual. No
@@ -131,46 +149,40 @@ function Page() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg p-6 max-w-2xl space-y-8">
-        {groups.map((g, gIdx) => (
-          <div key={g.title}>
-            <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
-              {g.title}
-            </h4>
-            <div className="space-y-4">
-              {g.switches?.map((s, sIdx) => (
-                <div key={s.key} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{s.label}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleSwitch(gIdx, sIdx)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${s.enabled ? "bg-primary" : "bg-muted"}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${s.enabled ? "translate-x-5" : "translate-x-0.5"}`}
+      <div className="bg-card border rounded-lg p-4 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {groups.map((g, gIdx) => (
+            <div key={g.title} className="break-inside-avoid">
+              <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
+                {g.title}
+              </h4>
+              <div className="space-y-3">
+                {g.switches?.map((s, sIdx) => (
+                  <div key={s.key} className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">{s.label}</span>
+                    <Toggle enabled={s.enabled} onClick={() => toggleSwitch(gIdx, sIdx)} />
+                  </div>
+                ))}
+                {g.numbers?.map((n, nIdx) => (
+                  <div key={n.key}>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                      {n.label}
+                    </label>
+                    <input
+                      type="number"
+                      value={n.value}
+                      onChange={(e) => updateNumber(gIdx, nIdx, e.target.value)}
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
                     />
-                  </button>
-                </div>
-              ))}
-              {g.numbers?.map((n, nIdx) => (
-                <div key={n.key}>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    {n.label}
-                  </label>
-                  <input
-                    type="number"
-                    value={n.value}
-                    onChange={(e) => updateNumber(gIdx, nIdx, e.target.value)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                  />
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
-        <div className="flex justify-end pt-4 border-t border-border">
-          <button className="inline-flex items-center gap-2 h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90">
+        <div className="flex justify-end pt-6 mt-6 border-t border-border">
+          <button className="inline-flex items-center gap-2 h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition">
             <Save size={14} /> Guardar configuración
           </button>
         </div>
