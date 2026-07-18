@@ -1,13 +1,13 @@
-import { useState, useMemo, type ReactNode } from "react";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "./portal-shell";
+import { useState } from "react";
+import { X, ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { Badge, BtnOutline } from "./portal-shell";
 
 export type UserStatus = "active" | "inactive" | "pending" | "blocked";
 
 export type UserDocument = {
   id: string;
-  tipo: string;
-  url: string;
+  tipo: "id_frente" | "id_dorso" | "servicio" | "selfie";
+  url?: string;
   label: string;
 };
 
@@ -21,18 +21,32 @@ export type Subcuenta = {
 
 export type UserData = {
   id: string;
-  nombre: string;
-  email: string;
-  telefono: string;
-  dni: string;
   status: UserStatus;
-  fechaNacimiento?: string;
-  direccion?: string;
-  cuil?: string;
-  nacionalidad?: string;
+  legajo: string;
+  email: string;
+  tipoCuenta: string;
+  cantidadCuentasBancarias: number;
+  cantidadCuentasVirtuales: number;
+  nombre: string;
+  apellido: string;
+  cuit: string;
+  genero: string;
+  ocupacion: string;
+  origenFondos: string;
+  direccion: string;
+  numeroDireccion: string;
+  ciudad: string;
+  estadoProvincia: string;
+  codigoPostal: string;
+  fechaNacimiento: string;
+  cuitEmpresa: string;
+  tipoEmpresa: string;
+  nombreLegal: string;
+  nombreComercial: string;
+  fechaInscripcion: string;
+  pep: string;
   subcuentas: Subcuenta[];
   documentos: UserDocument[];
-  [key: string]: unknown;
 };
 
 const statusLabel: Record<UserStatus, string> = {
@@ -49,6 +63,13 @@ const statusTone: Record<UserStatus, "success" | "neutral" | "warn" | "danger"> 
   blocked: "danger",
 };
 
+const docLabels: Record<UserDocument["tipo"], string> = {
+  id_frente: "ID Frente",
+  id_dorso: "ID Dorso",
+  servicio: "Servicio",
+  selfie: "Selfie",
+};
+
 export function UserModal({
   open,
   onClose,
@@ -61,6 +82,7 @@ export function UserModal({
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [subPage, setSubPage] = useState(1);
   const subPageSize = 5;
+  const [uploadingTipo, setUploadingTipo] = useState<UserDocument["tipo"] | null>(null);
 
   if (!open || !user) return null;
 
@@ -68,28 +90,76 @@ export function UserModal({
   const safeSubPage = Math.min(subPage, totalSubPages);
   const paginatedSubs = user.subcuentas.slice(
     (safeSubPage - 1) * subPageSize,
-    safeSubPage * subPageSize
+    safeSubPage * subPageSize,
   );
 
   const identityFields: { label: string; value: string }[] = [
-    { label: "Nombre completo", value: user.nombre },
+    { label: "Nombre completo", value: `${user.nombre} ${user.apellido}` },
     { label: "Email", value: user.email },
-    { label: "Teléfono", value: user.telefono },
+    { label: "Tipo de cuenta", value: user.tipoCuenta },
+    { label: "CUIT", value: user.cuit },
+    {
+      label: "Productos",
+      value: `Bancarias: ${user.cantidadCuentasBancarias} · Virtuales: ${user.cantidadCuentasVirtuales}`,
+    },
+    { label: "PEP", value: user.pep },
   ];
 
   const detailFields: { label: string; value: string }[] = [
-    { label: "DNI", value: user.dni },
-    { label: "CUIL", value: user.cuil ?? "-" },
-    { label: "Fecha de nacimiento", value: user.fechaNacimiento ?? "-" },
-    { label: "Nacionalidad", value: user.nacionalidad ?? "-" },
-    { label: "Dirección", value: user.direccion ?? "-" },
+    { label: "Legajo", value: user.legajo },
+    { label: "Email", value: user.email },
+    { label: "Tipo de cuenta", value: user.tipoCuenta },
+    { label: "Estado", value: statusLabel[user.status] },
+    { label: "Cant. cuentas bancarias", value: String(user.cantidadCuentasBancarias) },
+    { label: "Cant. cuentas virtuales", value: String(user.cantidadCuentasVirtuales) },
+    { label: "Nombre", value: user.nombre },
+    { label: "Apellido", value: user.apellido },
+    { label: "CUIT", value: user.cuit },
+    { label: "Género", value: user.genero },
+    { label: "Ocupación", value: user.ocupacion },
+    { label: "Origen de fondos", value: user.origenFondos },
+    { label: "Dirección", value: `${user.direccion} ${user.numeroDireccion}` },
+    { label: "Ciudad", value: user.ciudad },
+    { label: "Estado / Provincia", value: user.estadoProvincia },
+    { label: "Código Postal", value: user.codigoPostal },
+    { label: "Fecha de nacimiento", value: user.fechaNacimiento },
+    { label: "CUIT de la empresa", value: user.cuitEmpresa },
+    { label: "Tipo de empresa", value: user.tipoEmpresa },
+    { label: "Nombre legal", value: user.nombreLegal },
+    { label: "Nombre comercial", value: user.nombreComercial },
+    { label: "Fecha de inscripción", value: user.fechaInscripcion },
+    { label: "PEP", value: user.pep },
   ];
+
+  const existingDocs = user.documentos.filter((d) => d.url);
+  const missingDocTypes: UserDocument["tipo"][] = [
+    "id_frente",
+    "id_dorso",
+    "servicio",
+    "selfie",
+  ].filter((t) => !user.documentos.some((d) => d.tipo === t && d.url)) as UserDocument["tipo"][];
+
+  const handleFileUpload = (tipo: UserDocument["tipo"]) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        user.documentos.push({ id: `doc-${Date.now()}`, tipo, url, label: docLabels[tipo] });
+        setPreviewImg(url);
+      }
+    };
+    input.click();
+    setUploadingTipo(null);
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      <div className="relative bg-card rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col shadow-xl">
+      <div className="relative bg-card rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-xl">
         {/* Header */}
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between z-10 rounded-t-lg">
           <div className="flex items-center gap-3">
@@ -105,7 +175,9 @@ export function UserModal({
         <div className="overflow-y-auto p-6 space-y-6">
           {/* Identity Card */}
           <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ficha de identidad</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Ficha de identidad
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {identityFields.map((f) => (
                 <div key={f.label}>
@@ -118,7 +190,9 @@ export function UserModal({
 
           {/* Full Data */}
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Datos completos</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Datos completos
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
               {detailFields.map((f) => (
                 <div key={f.label} className="flex justify-between border-b border-border pb-2">
@@ -126,6 +200,22 @@ export function UserModal({
                   <span className="text-sm font-medium">{f.value}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Placeholder sections (pendientes de definición) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              Validaciones automáticas — pendiente de definición
+            </div>
+            <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              Contexto operativo — pendiente de definición
+            </div>
+            <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              Riesgo y monitoreo — pendiente de definición
+            </div>
+            <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              Módulos y productos — pendiente de definición
             </div>
           </div>
 
@@ -153,7 +243,9 @@ export function UserModal({
                     {paginatedSubs.map((sub) => (
                       <tr key={sub.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="px-3 py-2 font-medium">{sub.alias}</td>
-                        <td className="px-3 py-2 text-muted-foreground text-xs font-mono">{sub.cvu}</td>
+                        <td className="px-3 py-2 text-muted-foreground text-xs font-mono">
+                          {sub.cvu}
+                        </td>
                         <td className="px-3 py-2 text-right">{sub.saldo}</td>
                         <td className="px-3 py-2 text-center">
                           <Badge tone={sub.estado === "activa" ? "success" : "neutral"}>
@@ -166,9 +258,7 @@ export function UserModal({
                 </table>
                 {totalSubPages > 1 && (
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t text-xs text-muted-foreground">
-                    <span>
-                      {user.subcuentas.length} subcuentas
-                    </span>
+                    <span>{user.subcuentas.length} subcuentas</span>
                     <div className="flex items-center gap-2">
                       <span>
                         Pág. {safeSubPage} de {totalSubPages}
@@ -198,37 +288,56 @@ export function UserModal({
             )}
           </div>
 
-          {/* Documentos */}
+          {/* Documentos del usuario */}
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
               Documentos del usuario
             </div>
-            {user.documentos.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
-                Sin documentos
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {user.documentos.map((doc) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Documentos ya subidos */}
+              {existingDocs.map((doc) => (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => setPreviewImg(doc.url!)}
+                  className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition"
+                >
+                  <img
+                    src={doc.url}
+                    alt={doc.label}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                    <span className="text-[10px] text-white font-medium">{doc.label}</span>
+                  </div>
+                </button>
+              ))}
+
+              {/* Placeholders para documentos faltantes */}
+              {missingDocTypes.map((tipo) => {
+                const placeholderLabels: Record<string, string> = {
+                  id_frente: "ID Frente",
+                  id_dorso: "ID Dorso",
+                  servicio: "Servicio",
+                  selfie: "Selfie",
+                };
+                return (
                   <button
-                    key={doc.id}
+                    key={tipo}
                     type="button"
-                    onClick={() => setPreviewImg(doc.url)}
-                    className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition"
+                    onClick={() => handleFileUpload(tipo)}
+                    className="group relative aspect-[3/4] rounded-lg border-2 border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-2 hover:border-ring hover:bg-muted/50 transition cursor-pointer"
                   >
-                    <img
-                      src={doc.url}
-                      alt={doc.label}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <span className="text-[10px] text-white font-medium">{doc.label}</span>
-                    </div>
+                    <Upload size={20} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      {placeholderLabels[tipo]}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/60">Subir imagen</span>
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
