@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Download, Eye, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
-import { UserModal } from "@/components/user-modal";
+import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -134,6 +134,17 @@ const initialData: Juridica[] = [
   },
 ];
 
+const toUserData = (j: Juridica): UserData => ({
+  id: j.legajo,
+  nombre: j.razonSocial,
+  email: j.correo,
+  telefono: "-",
+  dni: j.tipo,
+  status: "active",
+  subcuentas: [],
+  documentos: [],
+});
+
 function JuridicasPage() {
   const [data, setData] = useState<Juridica[]>(initialData);
   const [viewing, setViewing] = useState<Juridica | null>(null);
@@ -190,16 +201,7 @@ function JuridicasPage() {
         <UserModal
           open={!!viewing}
           onClose={() => setViewing(null)}
-          user={{
-            id: viewing.legajo,
-            nombre: viewing.razonSocial,
-            email: viewing.correo,
-            telefono: "-",
-            dni: viewing.tipo,
-            status: "active",
-            subcuentas: [],
-            documentos: [],
-          }}
+          user={viewing ? toUserData(viewing) : null}
         />
       )}
 

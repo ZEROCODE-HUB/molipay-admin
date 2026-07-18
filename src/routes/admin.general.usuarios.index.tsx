@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Download, Eye, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
-import { UserModal } from "@/components/user-modal";
+import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -137,6 +137,23 @@ const estadoBadge = (e: Usuario["estado"]) => {
   return <Badge tone={m.tone}>{m.label}</Badge>;
 };
 
+const statusMap: Record<Usuario["estado"], UserStatus> = {
+  activo: "active",
+  suspendido: "blocked",
+  pendiente: "pending",
+};
+
+const toUserData = (u: Usuario): UserData => ({
+  id: u.legajo,
+  nombre: `${u.nombres} ${u.apellidos}`,
+  email: u.correo,
+  telefono: "-",
+  dni: "-",
+  status: statusMap[u.estado],
+  subcuentas: [],
+  documentos: [],
+});
+
 function PersonasFisicasPage() {
   const [data, setData] = useState<Usuario[]>(initialData);
   const [editing, setEditing] = useState<Usuario | null>(null);
@@ -223,7 +240,11 @@ function PersonasFisicasPage() {
       />
 
       {editing && (
-        <UserModal open={!!editing} onClose={() => setEditing(null)} user={editing as any} />
+        <UserModal
+          open={!!editing}
+          onClose={() => setEditing(null)}
+          user={editing ? toUserData(editing) : null}
+        />
       )}
 
       {editTarget && (
