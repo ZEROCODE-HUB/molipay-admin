@@ -16,18 +16,48 @@ import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
 import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
 import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
 import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
-import { Route as AdminReporteriaRouteImport } from './routes/admin.reporteria'
-import { Route as AdminRecaudacionRouteImport } from './routes/admin.recaudacion'
-import { Route as AdminMovimientosRouteImport } from './routes/admin.movimientos'
-import { Route as AdminMonitoreoRouteImport } from './routes/admin.monitoreo'
-import { Route as AdminKycRouteImport } from './routes/admin.kyc'
-import { Route as AdminConsorcioRouteImport } from './routes/admin.consorcio'
-import { Route as AdminConfigRouteImport } from './routes/admin.config'
-import { Route as AdminComplianceRouteImport } from './routes/admin.compliance'
-import { Route as AdminComisionesRouteImport } from './routes/admin.comisiones'
-import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
-import { Route as AdminCbuRouteImport } from './routes/admin.cbu'
-import { Route as AdminAlquileresRouteImport } from './routes/admin.alquileres'
+import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
+import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
+import { Route as AdminIncidentesRouteImport } from './routes/admin.incidentes'
+import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
+import { Route as AdminModulosIndexRouteImport } from './routes/admin.modulos.index'
+import { Route as AdminConfiguracionIndexRouteImport } from './routes/admin.configuracion.index'
+import { Route as AdminModulosTransferenciaRouteImport } from './routes/admin.modulos.transferencia'
+import { Route as AdminModulosLinkPagoRouteImport } from './routes/admin.modulos.link-pago'
+import { Route as AdminModulosImpuestosRouteImport } from './routes/admin.modulos.impuestos'
+import { Route as AdminModulosApisRouteImport } from './routes/admin.modulos.apis'
+import { Route as AdminGeneralUsuariosRouteImport } from './routes/admin.general.usuarios'
+import { Route as AdminGeneralMovimientosRouteImport } from './routes/admin.general.movimientos'
+import { Route as AdminGeneralAlertasRouteImport } from './routes/admin.general.alertas'
+import { Route as AdminConfiguracionTelegramRouteImport } from './routes/admin.configuracion.telegram'
+import { Route as AdminConfiguracionMensajesRouteImport } from './routes/admin.configuracion.mensajes'
+import { Route as AdminAdministracionUsuariosRouteImport } from './routes/admin.administracion.usuarios'
+import { Route as AdminAdministracionReportesRouteImport } from './routes/admin.administracion.reportes'
+import { Route as AdminAdministracionRegistrosRouteImport } from './routes/admin.administracion.registros'
+import { Route as AdminModulosTransferenciaIndexRouteImport } from './routes/admin.modulos.transferencia.index'
+import { Route as AdminGeneralUsuariosIndexRouteImport } from './routes/admin.general.usuarios.index'
+import { Route as AdminGeneralMovimientosIndexRouteImport } from './routes/admin.general.movimientos.index'
+import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
+import { Route as AdminAdministracionUsuariosIndexRouteImport } from './routes/admin.administracion.usuarios.index'
+import { Route as AdminAdministracionRegistrosIndexRouteImport } from './routes/admin.administracion.registros.index'
+import { Route as AdminModulosTransferenciaResolversRouteImport } from './routes/admin.modulos.transferencia.resolvers'
+import { Route as AdminModulosTransferenciaCategoriasRouteImport } from './routes/admin.modulos.transferencia.categorias'
+import { Route as AdminGeneralUsuariosJuridicasRouteImport } from './routes/admin.general.usuarios.juridicas'
+import { Route as AdminGeneralUsuariosCvuRouteImport } from './routes/admin.general.usuarios.cvu'
+import { Route as AdminGeneralUsuariosComisionesRouteImport } from './routes/admin.general.usuarios.comisiones'
+import { Route as AdminGeneralMovimientosRetirosRouteImport } from './routes/admin.general.movimientos.retiros'
+import { Route as AdminGeneralMovimientosPagosTarjetaRouteImport } from './routes/admin.general.movimientos.pagos-tarjeta'
+import { Route as AdminGeneralMovimientosPagosQrRouteImport } from './routes/admin.general.movimientos.pagos-qr'
+import { Route as AdminGeneralMovimientosImpuestosRouteImport } from './routes/admin.general.movimientos.impuestos'
+import { Route as AdminGeneralMovimientosDepositosRouteImport } from './routes/admin.general.movimientos.depositos'
+import { Route as AdminGeneralMovimientosComisionesRouteImport } from './routes/admin.general.movimientos.comisiones'
+import { Route as AdminGeneralMovimientosCobrosQrRouteImport } from './routes/admin.general.movimientos.cobros-qr'
+import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './routes/admin.general.alertas.parametros-bloqueos'
+import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
+import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
+import { Route as AdminAdministracionUsuariosRolesRouteImport } from './routes/admin.administracion.usuarios.roles'
+import { Route as AdminAdministracionRegistrosTotalRouteImport } from './routes/admin.administracion.registros.total'
+import { Route as AdminAdministracionRegistrosActividadRouteImport } from './routes/admin.administracion.registros.actividad'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -64,193 +94,536 @@ const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
   path: '/legales/arrepentimiento',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminReporteriaRoute = AdminReporteriaRouteImport.update({
-  id: '/reporteria',
-  path: '/reporteria',
+const AdminSoporteRoute = AdminSoporteRouteImport.update({
+  id: '/soporte',
+  path: '/soporte',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminRecaudacionRoute = AdminRecaudacionRouteImport.update({
-  id: '/recaudacion',
-  path: '/recaudacion',
+const AdminModulosRoute = AdminModulosRouteImport.update({
+  id: '/modulos',
+  path: '/modulos',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminMovimientosRoute = AdminMovimientosRouteImport.update({
-  id: '/movimientos',
-  path: '/movimientos',
+const AdminIncidentesRoute = AdminIncidentesRouteImport.update({
+  id: '/incidentes',
+  path: '/incidentes',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminMonitoreoRoute = AdminMonitoreoRouteImport.update({
-  id: '/monitoreo',
-  path: '/monitoreo',
+const AdminConfiguracionRoute = AdminConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminKycRoute = AdminKycRouteImport.update({
-  id: '/kyc',
-  path: '/kyc',
+const AdminModulosIndexRoute = AdminModulosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminModulosRoute,
+} as any)
+const AdminConfiguracionIndexRoute = AdminConfiguracionIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminConfiguracionRoute,
+} as any)
+const AdminModulosTransferenciaRoute =
+  AdminModulosTransferenciaRouteImport.update({
+    id: '/transferencia',
+    path: '/transferencia',
+    getParentRoute: () => AdminModulosRoute,
+  } as any)
+const AdminModulosLinkPagoRoute = AdminModulosLinkPagoRouteImport.update({
+  id: '/link-pago',
+  path: '/link-pago',
+  getParentRoute: () => AdminModulosRoute,
+} as any)
+const AdminModulosImpuestosRoute = AdminModulosImpuestosRouteImport.update({
+  id: '/impuestos',
+  path: '/impuestos',
+  getParentRoute: () => AdminModulosRoute,
+} as any)
+const AdminModulosApisRoute = AdminModulosApisRouteImport.update({
+  id: '/apis',
+  path: '/apis',
+  getParentRoute: () => AdminModulosRoute,
+} as any)
+const AdminGeneralUsuariosRoute = AdminGeneralUsuariosRouteImport.update({
+  id: '/general/usuarios',
+  path: '/general/usuarios',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminConsorcioRoute = AdminConsorcioRouteImport.update({
-  id: '/consorcio',
-  path: '/consorcio',
+const AdminGeneralMovimientosRoute = AdminGeneralMovimientosRouteImport.update({
+  id: '/general/movimientos',
+  path: '/general/movimientos',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminConfigRoute = AdminConfigRouteImport.update({
-  id: '/config',
-  path: '/config',
+const AdminGeneralAlertasRoute = AdminGeneralAlertasRouteImport.update({
+  id: '/general/alertas',
+  path: '/general/alertas',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminComplianceRoute = AdminComplianceRouteImport.update({
-  id: '/compliance',
-  path: '/compliance',
-  getParentRoute: () => AdminRoute,
+const AdminConfiguracionTelegramRoute =
+  AdminConfiguracionTelegramRouteImport.update({
+    id: '/telegram',
+    path: '/telegram',
+    getParentRoute: () => AdminConfiguracionRoute,
+  } as any)
+const AdminConfiguracionMensajesRoute =
+  AdminConfiguracionMensajesRouteImport.update({
+    id: '/mensajes',
+    path: '/mensajes',
+    getParentRoute: () => AdminConfiguracionRoute,
+  } as any)
+const AdminAdministracionUsuariosRoute =
+  AdminAdministracionUsuariosRouteImport.update({
+    id: '/administracion/usuarios',
+    path: '/administracion/usuarios',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminAdministracionReportesRoute =
+  AdminAdministracionReportesRouteImport.update({
+    id: '/administracion/reportes',
+    path: '/administracion/reportes',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminAdministracionRegistrosRoute =
+  AdminAdministracionRegistrosRouteImport.update({
+    id: '/administracion/registros',
+    path: '/administracion/registros',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminModulosTransferenciaIndexRoute =
+  AdminModulosTransferenciaIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminModulosTransferenciaRoute,
+  } as any)
+const AdminGeneralUsuariosIndexRoute =
+  AdminGeneralUsuariosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminGeneralUsuariosRoute,
+  } as any)
+const AdminGeneralMovimientosIndexRoute =
+  AdminGeneralMovimientosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralAlertasIndexRoute =
+  AdminGeneralAlertasIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminGeneralAlertasRoute,
+  } as any)
+const AdminAdministracionUsuariosIndexRoute =
+  AdminAdministracionUsuariosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdministracionUsuariosRoute,
+  } as any)
+const AdminAdministracionRegistrosIndexRoute =
+  AdminAdministracionRegistrosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdministracionRegistrosRoute,
+  } as any)
+const AdminModulosTransferenciaResolversRoute =
+  AdminModulosTransferenciaResolversRouteImport.update({
+    id: '/resolvers',
+    path: '/resolvers',
+    getParentRoute: () => AdminModulosTransferenciaRoute,
+  } as any)
+const AdminModulosTransferenciaCategoriasRoute =
+  AdminModulosTransferenciaCategoriasRouteImport.update({
+    id: '/categorias',
+    path: '/categorias',
+    getParentRoute: () => AdminModulosTransferenciaRoute,
+  } as any)
+const AdminGeneralUsuariosJuridicasRoute =
+  AdminGeneralUsuariosJuridicasRouteImport.update({
+    id: '/juridicas',
+    path: '/juridicas',
+    getParentRoute: () => AdminGeneralUsuariosRoute,
+  } as any)
+const AdminGeneralUsuariosCvuRoute = AdminGeneralUsuariosCvuRouteImport.update({
+  id: '/cvu',
+  path: '/cvu',
+  getParentRoute: () => AdminGeneralUsuariosRoute,
 } as any)
-const AdminComisionesRoute = AdminComisionesRouteImport.update({
-  id: '/comisiones',
-  path: '/comisiones',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminClientesRoute = AdminClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminCbuRoute = AdminCbuRouteImport.update({
-  id: '/cbu',
-  path: '/cbu',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminAlquileresRoute = AdminAlquileresRouteImport.update({
-  id: '/alquileres',
-  path: '/alquileres',
-  getParentRoute: () => AdminRoute,
-} as any)
+const AdminGeneralUsuariosComisionesRoute =
+  AdminGeneralUsuariosComisionesRouteImport.update({
+    id: '/comisiones',
+    path: '/comisiones',
+    getParentRoute: () => AdminGeneralUsuariosRoute,
+  } as any)
+const AdminGeneralMovimientosRetirosRoute =
+  AdminGeneralMovimientosRetirosRouteImport.update({
+    id: '/retiros',
+    path: '/retiros',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosPagosTarjetaRoute =
+  AdminGeneralMovimientosPagosTarjetaRouteImport.update({
+    id: '/pagos-tarjeta',
+    path: '/pagos-tarjeta',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosPagosQrRoute =
+  AdminGeneralMovimientosPagosQrRouteImport.update({
+    id: '/pagos-qr',
+    path: '/pagos-qr',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosImpuestosRoute =
+  AdminGeneralMovimientosImpuestosRouteImport.update({
+    id: '/impuestos',
+    path: '/impuestos',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosDepositosRoute =
+  AdminGeneralMovimientosDepositosRouteImport.update({
+    id: '/depositos',
+    path: '/depositos',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosComisionesRoute =
+  AdminGeneralMovimientosComisionesRouteImport.update({
+    id: '/comisiones',
+    path: '/comisiones',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralMovimientosCobrosQrRoute =
+  AdminGeneralMovimientosCobrosQrRouteImport.update({
+    id: '/cobros-qr',
+    path: '/cobros-qr',
+    getParentRoute: () => AdminGeneralMovimientosRoute,
+  } as any)
+const AdminGeneralAlertasParametrosBloqueosRoute =
+  AdminGeneralAlertasParametrosBloqueosRouteImport.update({
+    id: '/parametros-bloqueos',
+    path: '/parametros-bloqueos',
+    getParentRoute: () => AdminGeneralAlertasRoute,
+  } as any)
+const AdminGeneralAlertasParametrosAlertasRoute =
+  AdminGeneralAlertasParametrosAlertasRouteImport.update({
+    id: '/parametros-alertas',
+    path: '/parametros-alertas',
+    getParentRoute: () => AdminGeneralAlertasRoute,
+  } as any)
+const AdminGeneralAlertasBloqueosRoute =
+  AdminGeneralAlertasBloqueosRouteImport.update({
+    id: '/bloqueos',
+    path: '/bloqueos',
+    getParentRoute: () => AdminGeneralAlertasRoute,
+  } as any)
+const AdminAdministracionUsuariosRolesRoute =
+  AdminAdministracionUsuariosRolesRouteImport.update({
+    id: '/roles',
+    path: '/roles',
+    getParentRoute: () => AdminAdministracionUsuariosRoute,
+  } as any)
+const AdminAdministracionRegistrosTotalRoute =
+  AdminAdministracionRegistrosTotalRouteImport.update({
+    id: '/total',
+    path: '/total',
+    getParentRoute: () => AdminAdministracionRegistrosRoute,
+  } as any)
+const AdminAdministracionRegistrosActividadRoute =
+  AdminAdministracionRegistrosActividadRouteImport.update({
+    id: '/actividad',
+    path: '/actividad',
+    getParentRoute: () => AdminAdministracionRegistrosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/admin/alquileres': typeof AdminAlquileresRoute
-  '/admin/cbu': typeof AdminCbuRoute
-  '/admin/clientes': typeof AdminClientesRoute
-  '/admin/comisiones': typeof AdminComisionesRoute
-  '/admin/compliance': typeof AdminComplianceRoute
-  '/admin/config': typeof AdminConfigRoute
-  '/admin/consorcio': typeof AdminConsorcioRoute
-  '/admin/kyc': typeof AdminKycRoute
-  '/admin/monitoreo': typeof AdminMonitoreoRoute
-  '/admin/movimientos': typeof AdminMovimientosRoute
-  '/admin/recaudacion': typeof AdminRecaudacionRoute
-  '/admin/reporteria': typeof AdminReporteriaRoute
+  '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
+  '/admin/incidentes': typeof AdminIncidentesRoute
+  '/admin/modulos': typeof AdminModulosRouteWithChildren
+  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/administracion/registros': typeof AdminAdministracionRegistrosRouteWithChildren
+  '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
+  '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
+  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
+  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
+  '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
+  '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
+  '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
+  '/admin/modulos/apis': typeof AdminModulosApisRoute
+  '/admin/modulos/impuestos': typeof AdminModulosImpuestosRoute
+  '/admin/modulos/link-pago': typeof AdminModulosLinkPagoRoute
+  '/admin/modulos/transferencia': typeof AdminModulosTransferenciaRouteWithChildren
+  '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
+  '/admin/modulos/': typeof AdminModulosIndexRoute
+  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
+  '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
+  '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
+  '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
+  '/admin/general/movimientos/cobros-qr': typeof AdminGeneralMovimientosCobrosQrRoute
+  '/admin/general/movimientos/comisiones': typeof AdminGeneralMovimientosComisionesRoute
+  '/admin/general/movimientos/depositos': typeof AdminGeneralMovimientosDepositosRoute
+  '/admin/general/movimientos/impuestos': typeof AdminGeneralMovimientosImpuestosRoute
+  '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
+  '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
+  '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
+  '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
+  '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
+  '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
+  '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
+  '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
+  '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
+  '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
+  '/admin/modulos/transferencia/': typeof AdminModulosTransferenciaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin/alquileres': typeof AdminAlquileresRoute
-  '/admin/cbu': typeof AdminCbuRoute
-  '/admin/clientes': typeof AdminClientesRoute
-  '/admin/comisiones': typeof AdminComisionesRoute
-  '/admin/compliance': typeof AdminComplianceRoute
-  '/admin/config': typeof AdminConfigRoute
-  '/admin/consorcio': typeof AdminConsorcioRoute
-  '/admin/kyc': typeof AdminKycRoute
-  '/admin/monitoreo': typeof AdminMonitoreoRoute
-  '/admin/movimientos': typeof AdminMovimientosRoute
-  '/admin/recaudacion': typeof AdminRecaudacionRoute
-  '/admin/reporteria': typeof AdminReporteriaRoute
+  '/admin/incidentes': typeof AdminIncidentesRoute
+  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
+  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
+  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
+  '/admin/modulos/apis': typeof AdminModulosApisRoute
+  '/admin/modulos/impuestos': typeof AdminModulosImpuestosRoute
+  '/admin/modulos/link-pago': typeof AdminModulosLinkPagoRoute
+  '/admin/configuracion': typeof AdminConfiguracionIndexRoute
+  '/admin/modulos': typeof AdminModulosIndexRoute
+  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
+  '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
+  '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
+  '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
+  '/admin/general/movimientos/cobros-qr': typeof AdminGeneralMovimientosCobrosQrRoute
+  '/admin/general/movimientos/comisiones': typeof AdminGeneralMovimientosComisionesRoute
+  '/admin/general/movimientos/depositos': typeof AdminGeneralMovimientosDepositosRoute
+  '/admin/general/movimientos/impuestos': typeof AdminGeneralMovimientosImpuestosRoute
+  '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
+  '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
+  '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
+  '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
+  '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
+  '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
+  '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
+  '/admin/administracion/registros': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/general/alertas': typeof AdminGeneralAlertasIndexRoute
+  '/admin/general/movimientos': typeof AdminGeneralMovimientosIndexRoute
+  '/admin/general/usuarios': typeof AdminGeneralUsuariosIndexRoute
+  '/admin/modulos/transferencia': typeof AdminModulosTransferenciaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/admin/alquileres': typeof AdminAlquileresRoute
-  '/admin/cbu': typeof AdminCbuRoute
-  '/admin/clientes': typeof AdminClientesRoute
-  '/admin/comisiones': typeof AdminComisionesRoute
-  '/admin/compliance': typeof AdminComplianceRoute
-  '/admin/config': typeof AdminConfigRoute
-  '/admin/consorcio': typeof AdminConsorcioRoute
-  '/admin/kyc': typeof AdminKycRoute
-  '/admin/monitoreo': typeof AdminMonitoreoRoute
-  '/admin/movimientos': typeof AdminMovimientosRoute
-  '/admin/recaudacion': typeof AdminRecaudacionRoute
-  '/admin/reporteria': typeof AdminReporteriaRoute
+  '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
+  '/admin/incidentes': typeof AdminIncidentesRoute
+  '/admin/modulos': typeof AdminModulosRouteWithChildren
+  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
   '/legales/terminos': typeof LegalesTerminosRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/administracion/registros': typeof AdminAdministracionRegistrosRouteWithChildren
+  '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
+  '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
+  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
+  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
+  '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
+  '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
+  '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
+  '/admin/modulos/apis': typeof AdminModulosApisRoute
+  '/admin/modulos/impuestos': typeof AdminModulosImpuestosRoute
+  '/admin/modulos/link-pago': typeof AdminModulosLinkPagoRoute
+  '/admin/modulos/transferencia': typeof AdminModulosTransferenciaRouteWithChildren
+  '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
+  '/admin/modulos/': typeof AdminModulosIndexRoute
+  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
+  '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
+  '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
+  '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
+  '/admin/general/movimientos/cobros-qr': typeof AdminGeneralMovimientosCobrosQrRoute
+  '/admin/general/movimientos/comisiones': typeof AdminGeneralMovimientosComisionesRoute
+  '/admin/general/movimientos/depositos': typeof AdminGeneralMovimientosDepositosRoute
+  '/admin/general/movimientos/impuestos': typeof AdminGeneralMovimientosImpuestosRoute
+  '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
+  '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
+  '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
+  '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
+  '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
+  '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
+  '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
+  '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
+  '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
+  '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
+  '/admin/modulos/transferencia/': typeof AdminModulosTransferenciaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
-    | '/admin/alquileres'
-    | '/admin/cbu'
-    | '/admin/clientes'
-    | '/admin/comisiones'
-    | '/admin/compliance'
-    | '/admin/config'
-    | '/admin/consorcio'
-    | '/admin/kyc'
-    | '/admin/monitoreo'
-    | '/admin/movimientos'
-    | '/admin/recaudacion'
-    | '/admin/reporteria'
+    | '/admin/configuracion'
+    | '/admin/incidentes'
+    | '/admin/modulos'
+    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
     | '/admin/'
+    | '/admin/administracion/registros'
+    | '/admin/administracion/reportes'
+    | '/admin/administracion/usuarios'
+    | '/admin/configuracion/mensajes'
+    | '/admin/configuracion/telegram'
+    | '/admin/general/alertas'
+    | '/admin/general/movimientos'
+    | '/admin/general/usuarios'
+    | '/admin/modulos/apis'
+    | '/admin/modulos/impuestos'
+    | '/admin/modulos/link-pago'
+    | '/admin/modulos/transferencia'
+    | '/admin/configuracion/'
+    | '/admin/modulos/'
+    | '/admin/administracion/registros/actividad'
+    | '/admin/administracion/registros/total'
+    | '/admin/administracion/usuarios/roles'
+    | '/admin/general/alertas/bloqueos'
+    | '/admin/general/alertas/parametros-alertas'
+    | '/admin/general/alertas/parametros-bloqueos'
+    | '/admin/general/movimientos/cobros-qr'
+    | '/admin/general/movimientos/comisiones'
+    | '/admin/general/movimientos/depositos'
+    | '/admin/general/movimientos/impuestos'
+    | '/admin/general/movimientos/pagos-qr'
+    | '/admin/general/movimientos/pagos-tarjeta'
+    | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/comisiones'
+    | '/admin/general/usuarios/cvu'
+    | '/admin/general/usuarios/juridicas'
+    | '/admin/modulos/transferencia/categorias'
+    | '/admin/modulos/transferencia/resolvers'
+    | '/admin/administracion/registros/'
+    | '/admin/administracion/usuarios/'
+    | '/admin/general/alertas/'
+    | '/admin/general/movimientos/'
+    | '/admin/general/usuarios/'
+    | '/admin/modulos/transferencia/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin/alquileres'
-    | '/admin/cbu'
-    | '/admin/clientes'
-    | '/admin/comisiones'
-    | '/admin/compliance'
-    | '/admin/config'
-    | '/admin/consorcio'
-    | '/admin/kyc'
-    | '/admin/monitoreo'
-    | '/admin/movimientos'
-    | '/admin/recaudacion'
-    | '/admin/reporteria'
+    | '/admin/incidentes'
+    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
     | '/admin'
+    | '/admin/administracion/reportes'
+    | '/admin/configuracion/mensajes'
+    | '/admin/configuracion/telegram'
+    | '/admin/modulos/apis'
+    | '/admin/modulos/impuestos'
+    | '/admin/modulos/link-pago'
+    | '/admin/configuracion'
+    | '/admin/modulos'
+    | '/admin/administracion/registros/actividad'
+    | '/admin/administracion/registros/total'
+    | '/admin/administracion/usuarios/roles'
+    | '/admin/general/alertas/bloqueos'
+    | '/admin/general/alertas/parametros-alertas'
+    | '/admin/general/alertas/parametros-bloqueos'
+    | '/admin/general/movimientos/cobros-qr'
+    | '/admin/general/movimientos/comisiones'
+    | '/admin/general/movimientos/depositos'
+    | '/admin/general/movimientos/impuestos'
+    | '/admin/general/movimientos/pagos-qr'
+    | '/admin/general/movimientos/pagos-tarjeta'
+    | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/comisiones'
+    | '/admin/general/usuarios/cvu'
+    | '/admin/general/usuarios/juridicas'
+    | '/admin/modulos/transferencia/categorias'
+    | '/admin/modulos/transferencia/resolvers'
+    | '/admin/administracion/registros'
+    | '/admin/administracion/usuarios'
+    | '/admin/general/alertas'
+    | '/admin/general/movimientos'
+    | '/admin/general/usuarios'
+    | '/admin/modulos/transferencia'
   id:
     | '__root__'
     | '/'
     | '/admin'
-    | '/admin/alquileres'
-    | '/admin/cbu'
-    | '/admin/clientes'
-    | '/admin/comisiones'
-    | '/admin/compliance'
-    | '/admin/config'
-    | '/admin/consorcio'
-    | '/admin/kyc'
-    | '/admin/monitoreo'
-    | '/admin/movimientos'
-    | '/admin/recaudacion'
-    | '/admin/reporteria'
+    | '/admin/configuracion'
+    | '/admin/incidentes'
+    | '/admin/modulos'
+    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
     | '/legales/terminos'
     | '/admin/'
+    | '/admin/administracion/registros'
+    | '/admin/administracion/reportes'
+    | '/admin/administracion/usuarios'
+    | '/admin/configuracion/mensajes'
+    | '/admin/configuracion/telegram'
+    | '/admin/general/alertas'
+    | '/admin/general/movimientos'
+    | '/admin/general/usuarios'
+    | '/admin/modulos/apis'
+    | '/admin/modulos/impuestos'
+    | '/admin/modulos/link-pago'
+    | '/admin/modulos/transferencia'
+    | '/admin/configuracion/'
+    | '/admin/modulos/'
+    | '/admin/administracion/registros/actividad'
+    | '/admin/administracion/registros/total'
+    | '/admin/administracion/usuarios/roles'
+    | '/admin/general/alertas/bloqueos'
+    | '/admin/general/alertas/parametros-alertas'
+    | '/admin/general/alertas/parametros-bloqueos'
+    | '/admin/general/movimientos/cobros-qr'
+    | '/admin/general/movimientos/comisiones'
+    | '/admin/general/movimientos/depositos'
+    | '/admin/general/movimientos/impuestos'
+    | '/admin/general/movimientos/pagos-qr'
+    | '/admin/general/movimientos/pagos-tarjeta'
+    | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/comisiones'
+    | '/admin/general/usuarios/cvu'
+    | '/admin/general/usuarios/juridicas'
+    | '/admin/modulos/transferencia/categorias'
+    | '/admin/modulos/transferencia/resolvers'
+    | '/admin/administracion/registros/'
+    | '/admin/administracion/usuarios/'
+    | '/admin/general/alertas/'
+    | '/admin/general/movimientos/'
+    | '/admin/general/usuarios/'
+    | '/admin/modulos/transferencia/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -313,123 +686,493 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalesArrepentimientoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/reporteria': {
-      id: '/admin/reporteria'
-      path: '/reporteria'
-      fullPath: '/admin/reporteria'
-      preLoaderRoute: typeof AdminReporteriaRouteImport
+    '/admin/soporte': {
+      id: '/admin/soporte'
+      path: '/soporte'
+      fullPath: '/admin/soporte'
+      preLoaderRoute: typeof AdminSoporteRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/recaudacion': {
-      id: '/admin/recaudacion'
-      path: '/recaudacion'
-      fullPath: '/admin/recaudacion'
-      preLoaderRoute: typeof AdminRecaudacionRouteImport
+    '/admin/modulos': {
+      id: '/admin/modulos'
+      path: '/modulos'
+      fullPath: '/admin/modulos'
+      preLoaderRoute: typeof AdminModulosRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/movimientos': {
-      id: '/admin/movimientos'
-      path: '/movimientos'
-      fullPath: '/admin/movimientos'
-      preLoaderRoute: typeof AdminMovimientosRouteImport
+    '/admin/incidentes': {
+      id: '/admin/incidentes'
+      path: '/incidentes'
+      fullPath: '/admin/incidentes'
+      preLoaderRoute: typeof AdminIncidentesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/monitoreo': {
-      id: '/admin/monitoreo'
-      path: '/monitoreo'
-      fullPath: '/admin/monitoreo'
-      preLoaderRoute: typeof AdminMonitoreoRouteImport
+    '/admin/configuracion': {
+      id: '/admin/configuracion'
+      path: '/configuracion'
+      fullPath: '/admin/configuracion'
+      preLoaderRoute: typeof AdminConfiguracionRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/kyc': {
-      id: '/admin/kyc'
-      path: '/kyc'
-      fullPath: '/admin/kyc'
-      preLoaderRoute: typeof AdminKycRouteImport
+    '/admin/modulos/': {
+      id: '/admin/modulos/'
+      path: '/'
+      fullPath: '/admin/modulos/'
+      preLoaderRoute: typeof AdminModulosIndexRouteImport
+      parentRoute: typeof AdminModulosRoute
+    }
+    '/admin/configuracion/': {
+      id: '/admin/configuracion/'
+      path: '/'
+      fullPath: '/admin/configuracion/'
+      preLoaderRoute: typeof AdminConfiguracionIndexRouteImport
+      parentRoute: typeof AdminConfiguracionRoute
+    }
+    '/admin/modulos/transferencia': {
+      id: '/admin/modulos/transferencia'
+      path: '/transferencia'
+      fullPath: '/admin/modulos/transferencia'
+      preLoaderRoute: typeof AdminModulosTransferenciaRouteImport
+      parentRoute: typeof AdminModulosRoute
+    }
+    '/admin/modulos/link-pago': {
+      id: '/admin/modulos/link-pago'
+      path: '/link-pago'
+      fullPath: '/admin/modulos/link-pago'
+      preLoaderRoute: typeof AdminModulosLinkPagoRouteImport
+      parentRoute: typeof AdminModulosRoute
+    }
+    '/admin/modulos/impuestos': {
+      id: '/admin/modulos/impuestos'
+      path: '/impuestos'
+      fullPath: '/admin/modulos/impuestos'
+      preLoaderRoute: typeof AdminModulosImpuestosRouteImport
+      parentRoute: typeof AdminModulosRoute
+    }
+    '/admin/modulos/apis': {
+      id: '/admin/modulos/apis'
+      path: '/apis'
+      fullPath: '/admin/modulos/apis'
+      preLoaderRoute: typeof AdminModulosApisRouteImport
+      parentRoute: typeof AdminModulosRoute
+    }
+    '/admin/general/usuarios': {
+      id: '/admin/general/usuarios'
+      path: '/general/usuarios'
+      fullPath: '/admin/general/usuarios'
+      preLoaderRoute: typeof AdminGeneralUsuariosRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/consorcio': {
-      id: '/admin/consorcio'
-      path: '/consorcio'
-      fullPath: '/admin/consorcio'
-      preLoaderRoute: typeof AdminConsorcioRouteImport
+    '/admin/general/movimientos': {
+      id: '/admin/general/movimientos'
+      path: '/general/movimientos'
+      fullPath: '/admin/general/movimientos'
+      preLoaderRoute: typeof AdminGeneralMovimientosRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/config': {
-      id: '/admin/config'
-      path: '/config'
-      fullPath: '/admin/config'
-      preLoaderRoute: typeof AdminConfigRouteImport
+    '/admin/general/alertas': {
+      id: '/admin/general/alertas'
+      path: '/general/alertas'
+      fullPath: '/admin/general/alertas'
+      preLoaderRoute: typeof AdminGeneralAlertasRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/compliance': {
-      id: '/admin/compliance'
-      path: '/compliance'
-      fullPath: '/admin/compliance'
-      preLoaderRoute: typeof AdminComplianceRouteImport
+    '/admin/configuracion/telegram': {
+      id: '/admin/configuracion/telegram'
+      path: '/telegram'
+      fullPath: '/admin/configuracion/telegram'
+      preLoaderRoute: typeof AdminConfiguracionTelegramRouteImport
+      parentRoute: typeof AdminConfiguracionRoute
+    }
+    '/admin/configuracion/mensajes': {
+      id: '/admin/configuracion/mensajes'
+      path: '/mensajes'
+      fullPath: '/admin/configuracion/mensajes'
+      preLoaderRoute: typeof AdminConfiguracionMensajesRouteImport
+      parentRoute: typeof AdminConfiguracionRoute
+    }
+    '/admin/administracion/usuarios': {
+      id: '/admin/administracion/usuarios'
+      path: '/administracion/usuarios'
+      fullPath: '/admin/administracion/usuarios'
+      preLoaderRoute: typeof AdminAdministracionUsuariosRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/comisiones': {
-      id: '/admin/comisiones'
+    '/admin/administracion/reportes': {
+      id: '/admin/administracion/reportes'
+      path: '/administracion/reportes'
+      fullPath: '/admin/administracion/reportes'
+      preLoaderRoute: typeof AdminAdministracionReportesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/administracion/registros': {
+      id: '/admin/administracion/registros'
+      path: '/administracion/registros'
+      fullPath: '/admin/administracion/registros'
+      preLoaderRoute: typeof AdminAdministracionRegistrosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/modulos/transferencia/': {
+      id: '/admin/modulos/transferencia/'
+      path: '/'
+      fullPath: '/admin/modulos/transferencia/'
+      preLoaderRoute: typeof AdminModulosTransferenciaIndexRouteImport
+      parentRoute: typeof AdminModulosTransferenciaRoute
+    }
+    '/admin/general/usuarios/': {
+      id: '/admin/general/usuarios/'
+      path: '/'
+      fullPath: '/admin/general/usuarios/'
+      preLoaderRoute: typeof AdminGeneralUsuariosIndexRouteImport
+      parentRoute: typeof AdminGeneralUsuariosRoute
+    }
+    '/admin/general/movimientos/': {
+      id: '/admin/general/movimientos/'
+      path: '/'
+      fullPath: '/admin/general/movimientos/'
+      preLoaderRoute: typeof AdminGeneralMovimientosIndexRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/alertas/': {
+      id: '/admin/general/alertas/'
+      path: '/'
+      fullPath: '/admin/general/alertas/'
+      preLoaderRoute: typeof AdminGeneralAlertasIndexRouteImport
+      parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/administracion/usuarios/': {
+      id: '/admin/administracion/usuarios/'
+      path: '/'
+      fullPath: '/admin/administracion/usuarios/'
+      preLoaderRoute: typeof AdminAdministracionUsuariosIndexRouteImport
+      parentRoute: typeof AdminAdministracionUsuariosRoute
+    }
+    '/admin/administracion/registros/': {
+      id: '/admin/administracion/registros/'
+      path: '/'
+      fullPath: '/admin/administracion/registros/'
+      preLoaderRoute: typeof AdminAdministracionRegistrosIndexRouteImport
+      parentRoute: typeof AdminAdministracionRegistrosRoute
+    }
+    '/admin/modulos/transferencia/resolvers': {
+      id: '/admin/modulos/transferencia/resolvers'
+      path: '/resolvers'
+      fullPath: '/admin/modulos/transferencia/resolvers'
+      preLoaderRoute: typeof AdminModulosTransferenciaResolversRouteImport
+      parentRoute: typeof AdminModulosTransferenciaRoute
+    }
+    '/admin/modulos/transferencia/categorias': {
+      id: '/admin/modulos/transferencia/categorias'
+      path: '/categorias'
+      fullPath: '/admin/modulos/transferencia/categorias'
+      preLoaderRoute: typeof AdminModulosTransferenciaCategoriasRouteImport
+      parentRoute: typeof AdminModulosTransferenciaRoute
+    }
+    '/admin/general/usuarios/juridicas': {
+      id: '/admin/general/usuarios/juridicas'
+      path: '/juridicas'
+      fullPath: '/admin/general/usuarios/juridicas'
+      preLoaderRoute: typeof AdminGeneralUsuariosJuridicasRouteImport
+      parentRoute: typeof AdminGeneralUsuariosRoute
+    }
+    '/admin/general/usuarios/cvu': {
+      id: '/admin/general/usuarios/cvu'
+      path: '/cvu'
+      fullPath: '/admin/general/usuarios/cvu'
+      preLoaderRoute: typeof AdminGeneralUsuariosCvuRouteImport
+      parentRoute: typeof AdminGeneralUsuariosRoute
+    }
+    '/admin/general/usuarios/comisiones': {
+      id: '/admin/general/usuarios/comisiones'
       path: '/comisiones'
-      fullPath: '/admin/comisiones'
-      preLoaderRoute: typeof AdminComisionesRouteImport
-      parentRoute: typeof AdminRoute
+      fullPath: '/admin/general/usuarios/comisiones'
+      preLoaderRoute: typeof AdminGeneralUsuariosComisionesRouteImport
+      parentRoute: typeof AdminGeneralUsuariosRoute
     }
-    '/admin/clientes': {
-      id: '/admin/clientes'
-      path: '/clientes'
-      fullPath: '/admin/clientes'
-      preLoaderRoute: typeof AdminClientesRouteImport
-      parentRoute: typeof AdminRoute
+    '/admin/general/movimientos/retiros': {
+      id: '/admin/general/movimientos/retiros'
+      path: '/retiros'
+      fullPath: '/admin/general/movimientos/retiros'
+      preLoaderRoute: typeof AdminGeneralMovimientosRetirosRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
     }
-    '/admin/cbu': {
-      id: '/admin/cbu'
-      path: '/cbu'
-      fullPath: '/admin/cbu'
-      preLoaderRoute: typeof AdminCbuRouteImport
-      parentRoute: typeof AdminRoute
+    '/admin/general/movimientos/pagos-tarjeta': {
+      id: '/admin/general/movimientos/pagos-tarjeta'
+      path: '/pagos-tarjeta'
+      fullPath: '/admin/general/movimientos/pagos-tarjeta'
+      preLoaderRoute: typeof AdminGeneralMovimientosPagosTarjetaRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
     }
-    '/admin/alquileres': {
-      id: '/admin/alquileres'
-      path: '/alquileres'
-      fullPath: '/admin/alquileres'
-      preLoaderRoute: typeof AdminAlquileresRouteImport
-      parentRoute: typeof AdminRoute
+    '/admin/general/movimientos/pagos-qr': {
+      id: '/admin/general/movimientos/pagos-qr'
+      path: '/pagos-qr'
+      fullPath: '/admin/general/movimientos/pagos-qr'
+      preLoaderRoute: typeof AdminGeneralMovimientosPagosQrRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/movimientos/impuestos': {
+      id: '/admin/general/movimientos/impuestos'
+      path: '/impuestos'
+      fullPath: '/admin/general/movimientos/impuestos'
+      preLoaderRoute: typeof AdminGeneralMovimientosImpuestosRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/movimientos/depositos': {
+      id: '/admin/general/movimientos/depositos'
+      path: '/depositos'
+      fullPath: '/admin/general/movimientos/depositos'
+      preLoaderRoute: typeof AdminGeneralMovimientosDepositosRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/movimientos/comisiones': {
+      id: '/admin/general/movimientos/comisiones'
+      path: '/comisiones'
+      fullPath: '/admin/general/movimientos/comisiones'
+      preLoaderRoute: typeof AdminGeneralMovimientosComisionesRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/movimientos/cobros-qr': {
+      id: '/admin/general/movimientos/cobros-qr'
+      path: '/cobros-qr'
+      fullPath: '/admin/general/movimientos/cobros-qr'
+      preLoaderRoute: typeof AdminGeneralMovimientosCobrosQrRouteImport
+      parentRoute: typeof AdminGeneralMovimientosRoute
+    }
+    '/admin/general/alertas/parametros-bloqueos': {
+      id: '/admin/general/alertas/parametros-bloqueos'
+      path: '/parametros-bloqueos'
+      fullPath: '/admin/general/alertas/parametros-bloqueos'
+      preLoaderRoute: typeof AdminGeneralAlertasParametrosBloqueosRouteImport
+      parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/general/alertas/parametros-alertas': {
+      id: '/admin/general/alertas/parametros-alertas'
+      path: '/parametros-alertas'
+      fullPath: '/admin/general/alertas/parametros-alertas'
+      preLoaderRoute: typeof AdminGeneralAlertasParametrosAlertasRouteImport
+      parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/general/alertas/bloqueos': {
+      id: '/admin/general/alertas/bloqueos'
+      path: '/bloqueos'
+      fullPath: '/admin/general/alertas/bloqueos'
+      preLoaderRoute: typeof AdminGeneralAlertasBloqueosRouteImport
+      parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/administracion/usuarios/roles': {
+      id: '/admin/administracion/usuarios/roles'
+      path: '/roles'
+      fullPath: '/admin/administracion/usuarios/roles'
+      preLoaderRoute: typeof AdminAdministracionUsuariosRolesRouteImport
+      parentRoute: typeof AdminAdministracionUsuariosRoute
+    }
+    '/admin/administracion/registros/total': {
+      id: '/admin/administracion/registros/total'
+      path: '/total'
+      fullPath: '/admin/administracion/registros/total'
+      preLoaderRoute: typeof AdminAdministracionRegistrosTotalRouteImport
+      parentRoute: typeof AdminAdministracionRegistrosRoute
+    }
+    '/admin/administracion/registros/actividad': {
+      id: '/admin/administracion/registros/actividad'
+      path: '/actividad'
+      fullPath: '/admin/administracion/registros/actividad'
+      preLoaderRoute: typeof AdminAdministracionRegistrosActividadRouteImport
+      parentRoute: typeof AdminAdministracionRegistrosRoute
     }
   }
 }
 
+interface AdminConfiguracionRouteChildren {
+  AdminConfiguracionMensajesRoute: typeof AdminConfiguracionMensajesRoute
+  AdminConfiguracionTelegramRoute: typeof AdminConfiguracionTelegramRoute
+  AdminConfiguracionIndexRoute: typeof AdminConfiguracionIndexRoute
+}
+
+const AdminConfiguracionRouteChildren: AdminConfiguracionRouteChildren = {
+  AdminConfiguracionMensajesRoute: AdminConfiguracionMensajesRoute,
+  AdminConfiguracionTelegramRoute: AdminConfiguracionTelegramRoute,
+  AdminConfiguracionIndexRoute: AdminConfiguracionIndexRoute,
+}
+
+const AdminConfiguracionRouteWithChildren =
+  AdminConfiguracionRoute._addFileChildren(AdminConfiguracionRouteChildren)
+
+interface AdminModulosTransferenciaRouteChildren {
+  AdminModulosTransferenciaCategoriasRoute: typeof AdminModulosTransferenciaCategoriasRoute
+  AdminModulosTransferenciaResolversRoute: typeof AdminModulosTransferenciaResolversRoute
+  AdminModulosTransferenciaIndexRoute: typeof AdminModulosTransferenciaIndexRoute
+}
+
+const AdminModulosTransferenciaRouteChildren: AdminModulosTransferenciaRouteChildren =
+  {
+    AdminModulosTransferenciaCategoriasRoute:
+      AdminModulosTransferenciaCategoriasRoute,
+    AdminModulosTransferenciaResolversRoute:
+      AdminModulosTransferenciaResolversRoute,
+    AdminModulosTransferenciaIndexRoute: AdminModulosTransferenciaIndexRoute,
+  }
+
+const AdminModulosTransferenciaRouteWithChildren =
+  AdminModulosTransferenciaRoute._addFileChildren(
+    AdminModulosTransferenciaRouteChildren,
+  )
+
+interface AdminModulosRouteChildren {
+  AdminModulosApisRoute: typeof AdminModulosApisRoute
+  AdminModulosImpuestosRoute: typeof AdminModulosImpuestosRoute
+  AdminModulosLinkPagoRoute: typeof AdminModulosLinkPagoRoute
+  AdminModulosTransferenciaRoute: typeof AdminModulosTransferenciaRouteWithChildren
+  AdminModulosIndexRoute: typeof AdminModulosIndexRoute
+}
+
+const AdminModulosRouteChildren: AdminModulosRouteChildren = {
+  AdminModulosApisRoute: AdminModulosApisRoute,
+  AdminModulosImpuestosRoute: AdminModulosImpuestosRoute,
+  AdminModulosLinkPagoRoute: AdminModulosLinkPagoRoute,
+  AdminModulosTransferenciaRoute: AdminModulosTransferenciaRouteWithChildren,
+  AdminModulosIndexRoute: AdminModulosIndexRoute,
+}
+
+const AdminModulosRouteWithChildren = AdminModulosRoute._addFileChildren(
+  AdminModulosRouteChildren,
+)
+
+interface AdminAdministracionRegistrosRouteChildren {
+  AdminAdministracionRegistrosActividadRoute: typeof AdminAdministracionRegistrosActividadRoute
+  AdminAdministracionRegistrosTotalRoute: typeof AdminAdministracionRegistrosTotalRoute
+  AdminAdministracionRegistrosIndexRoute: typeof AdminAdministracionRegistrosIndexRoute
+}
+
+const AdminAdministracionRegistrosRouteChildren: AdminAdministracionRegistrosRouteChildren =
+  {
+    AdminAdministracionRegistrosActividadRoute:
+      AdminAdministracionRegistrosActividadRoute,
+    AdminAdministracionRegistrosTotalRoute:
+      AdminAdministracionRegistrosTotalRoute,
+    AdminAdministracionRegistrosIndexRoute:
+      AdminAdministracionRegistrosIndexRoute,
+  }
+
+const AdminAdministracionRegistrosRouteWithChildren =
+  AdminAdministracionRegistrosRoute._addFileChildren(
+    AdminAdministracionRegistrosRouteChildren,
+  )
+
+interface AdminAdministracionUsuariosRouteChildren {
+  AdminAdministracionUsuariosRolesRoute: typeof AdminAdministracionUsuariosRolesRoute
+  AdminAdministracionUsuariosIndexRoute: typeof AdminAdministracionUsuariosIndexRoute
+}
+
+const AdminAdministracionUsuariosRouteChildren: AdminAdministracionUsuariosRouteChildren =
+  {
+    AdminAdministracionUsuariosRolesRoute:
+      AdminAdministracionUsuariosRolesRoute,
+    AdminAdministracionUsuariosIndexRoute:
+      AdminAdministracionUsuariosIndexRoute,
+  }
+
+const AdminAdministracionUsuariosRouteWithChildren =
+  AdminAdministracionUsuariosRoute._addFileChildren(
+    AdminAdministracionUsuariosRouteChildren,
+  )
+
+interface AdminGeneralAlertasRouteChildren {
+  AdminGeneralAlertasBloqueosRoute: typeof AdminGeneralAlertasBloqueosRoute
+  AdminGeneralAlertasParametrosAlertasRoute: typeof AdminGeneralAlertasParametrosAlertasRoute
+  AdminGeneralAlertasParametrosBloqueosRoute: typeof AdminGeneralAlertasParametrosBloqueosRoute
+  AdminGeneralAlertasIndexRoute: typeof AdminGeneralAlertasIndexRoute
+}
+
+const AdminGeneralAlertasRouteChildren: AdminGeneralAlertasRouteChildren = {
+  AdminGeneralAlertasBloqueosRoute: AdminGeneralAlertasBloqueosRoute,
+  AdminGeneralAlertasParametrosAlertasRoute:
+    AdminGeneralAlertasParametrosAlertasRoute,
+  AdminGeneralAlertasParametrosBloqueosRoute:
+    AdminGeneralAlertasParametrosBloqueosRoute,
+  AdminGeneralAlertasIndexRoute: AdminGeneralAlertasIndexRoute,
+}
+
+const AdminGeneralAlertasRouteWithChildren =
+  AdminGeneralAlertasRoute._addFileChildren(AdminGeneralAlertasRouteChildren)
+
+interface AdminGeneralMovimientosRouteChildren {
+  AdminGeneralMovimientosCobrosQrRoute: typeof AdminGeneralMovimientosCobrosQrRoute
+  AdminGeneralMovimientosComisionesRoute: typeof AdminGeneralMovimientosComisionesRoute
+  AdminGeneralMovimientosDepositosRoute: typeof AdminGeneralMovimientosDepositosRoute
+  AdminGeneralMovimientosImpuestosRoute: typeof AdminGeneralMovimientosImpuestosRoute
+  AdminGeneralMovimientosPagosQrRoute: typeof AdminGeneralMovimientosPagosQrRoute
+  AdminGeneralMovimientosPagosTarjetaRoute: typeof AdminGeneralMovimientosPagosTarjetaRoute
+  AdminGeneralMovimientosRetirosRoute: typeof AdminGeneralMovimientosRetirosRoute
+  AdminGeneralMovimientosIndexRoute: typeof AdminGeneralMovimientosIndexRoute
+}
+
+const AdminGeneralMovimientosRouteChildren: AdminGeneralMovimientosRouteChildren =
+  {
+    AdminGeneralMovimientosCobrosQrRoute: AdminGeneralMovimientosCobrosQrRoute,
+    AdminGeneralMovimientosComisionesRoute:
+      AdminGeneralMovimientosComisionesRoute,
+    AdminGeneralMovimientosDepositosRoute:
+      AdminGeneralMovimientosDepositosRoute,
+    AdminGeneralMovimientosImpuestosRoute:
+      AdminGeneralMovimientosImpuestosRoute,
+    AdminGeneralMovimientosPagosQrRoute: AdminGeneralMovimientosPagosQrRoute,
+    AdminGeneralMovimientosPagosTarjetaRoute:
+      AdminGeneralMovimientosPagosTarjetaRoute,
+    AdminGeneralMovimientosRetirosRoute: AdminGeneralMovimientosRetirosRoute,
+    AdminGeneralMovimientosIndexRoute: AdminGeneralMovimientosIndexRoute,
+  }
+
+const AdminGeneralMovimientosRouteWithChildren =
+  AdminGeneralMovimientosRoute._addFileChildren(
+    AdminGeneralMovimientosRouteChildren,
+  )
+
+interface AdminGeneralUsuariosRouteChildren {
+  AdminGeneralUsuariosComisionesRoute: typeof AdminGeneralUsuariosComisionesRoute
+  AdminGeneralUsuariosCvuRoute: typeof AdminGeneralUsuariosCvuRoute
+  AdminGeneralUsuariosJuridicasRoute: typeof AdminGeneralUsuariosJuridicasRoute
+  AdminGeneralUsuariosIndexRoute: typeof AdminGeneralUsuariosIndexRoute
+}
+
+const AdminGeneralUsuariosRouteChildren: AdminGeneralUsuariosRouteChildren = {
+  AdminGeneralUsuariosComisionesRoute: AdminGeneralUsuariosComisionesRoute,
+  AdminGeneralUsuariosCvuRoute: AdminGeneralUsuariosCvuRoute,
+  AdminGeneralUsuariosJuridicasRoute: AdminGeneralUsuariosJuridicasRoute,
+  AdminGeneralUsuariosIndexRoute: AdminGeneralUsuariosIndexRoute,
+}
+
+const AdminGeneralUsuariosRouteWithChildren =
+  AdminGeneralUsuariosRoute._addFileChildren(AdminGeneralUsuariosRouteChildren)
+
 interface AdminRouteChildren {
-  AdminAlquileresRoute: typeof AdminAlquileresRoute
-  AdminCbuRoute: typeof AdminCbuRoute
-  AdminClientesRoute: typeof AdminClientesRoute
-  AdminComisionesRoute: typeof AdminComisionesRoute
-  AdminComplianceRoute: typeof AdminComplianceRoute
-  AdminConfigRoute: typeof AdminConfigRoute
-  AdminConsorcioRoute: typeof AdminConsorcioRoute
-  AdminKycRoute: typeof AdminKycRoute
-  AdminMonitoreoRoute: typeof AdminMonitoreoRoute
-  AdminMovimientosRoute: typeof AdminMovimientosRoute
-  AdminRecaudacionRoute: typeof AdminRecaudacionRoute
-  AdminReporteriaRoute: typeof AdminReporteriaRoute
+  AdminConfiguracionRoute: typeof AdminConfiguracionRouteWithChildren
+  AdminIncidentesRoute: typeof AdminIncidentesRoute
+  AdminModulosRoute: typeof AdminModulosRouteWithChildren
+  AdminSoporteRoute: typeof AdminSoporteRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAdministracionRegistrosRoute: typeof AdminAdministracionRegistrosRouteWithChildren
+  AdminAdministracionReportesRoute: typeof AdminAdministracionReportesRoute
+  AdminAdministracionUsuariosRoute: typeof AdminAdministracionUsuariosRouteWithChildren
+  AdminGeneralAlertasRoute: typeof AdminGeneralAlertasRouteWithChildren
+  AdminGeneralMovimientosRoute: typeof AdminGeneralMovimientosRouteWithChildren
+  AdminGeneralUsuariosRoute: typeof AdminGeneralUsuariosRouteWithChildren
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAlquileresRoute: AdminAlquileresRoute,
-  AdminCbuRoute: AdminCbuRoute,
-  AdminClientesRoute: AdminClientesRoute,
-  AdminComisionesRoute: AdminComisionesRoute,
-  AdminComplianceRoute: AdminComplianceRoute,
-  AdminConfigRoute: AdminConfigRoute,
-  AdminConsorcioRoute: AdminConsorcioRoute,
-  AdminKycRoute: AdminKycRoute,
-  AdminMonitoreoRoute: AdminMonitoreoRoute,
-  AdminMovimientosRoute: AdminMovimientosRoute,
-  AdminRecaudacionRoute: AdminRecaudacionRoute,
-  AdminReporteriaRoute: AdminReporteriaRoute,
+  AdminConfiguracionRoute: AdminConfiguracionRouteWithChildren,
+  AdminIncidentesRoute: AdminIncidentesRoute,
+  AdminModulosRoute: AdminModulosRouteWithChildren,
+  AdminSoporteRoute: AdminSoporteRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminAdministracionRegistrosRoute:
+    AdminAdministracionRegistrosRouteWithChildren,
+  AdminAdministracionReportesRoute: AdminAdministracionReportesRoute,
+  AdminAdministracionUsuariosRoute:
+    AdminAdministracionUsuariosRouteWithChildren,
+  AdminGeneralAlertasRoute: AdminGeneralAlertasRouteWithChildren,
+  AdminGeneralMovimientosRoute: AdminGeneralMovimientosRouteWithChildren,
+  AdminGeneralUsuariosRoute: AdminGeneralUsuariosRouteWithChildren,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
