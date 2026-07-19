@@ -309,15 +309,15 @@ function JuridicasPage() {
 }
 
 const columns: Column<Juridica>[] = [
-  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
-  { key: "correo", label: "Correo", render: (r) => r.correo },
-  { key: "razonSocial", label: "Razón Social", render: (r) => r.razonSocial },
-  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
+  { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
+  { key: "tipo", label: "Tipo", filterable: true, render: (r) => r.tipo },
   {
     key: "estado",
-    label: "Estado",
+    label: "Estado", filterable: true,
     render: (row) => <Badge tone={toneMap[row.estado] ?? "neutral"}>{row.estado}</Badge>,
   },
-  { key: "fechaRegistro", label: "Fecha de registro", render: (r) => r.fechaRegistro },
-  { key: "subcuentas", label: "Subcuentas", render: (r) => r.subcuentas },
+  { key: "fechaRegistro", label: "Fecha de registro", filterable: true, render: (r) => r.fechaRegistro },
+  { key: "subcuentas", label: "Subcuentas", filterable: true, render: (r) => r.subcuentas },
 ];

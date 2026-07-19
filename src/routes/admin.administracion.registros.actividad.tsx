@@ -190,7 +190,7 @@ function Page() {
       render: (r) => r.recurso,
     },
     { key: "accion", label: "Acción", filterable: true, render: (r) => r.accion },
-    { key: "fecha", label: "Fecha", sortable: true, render: (r) => r.fecha },
+    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
   ];
 
   return (

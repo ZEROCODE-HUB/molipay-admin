@@ -45,11 +45,11 @@ function Page() {
   ];
 
   const impColumns: Column<any>[] = [
-    { key: "periodo", label: "Periodo", render: (r) => r.periodo },
-    { key: "tramo", label: "Tramo", render: (r) => r.tramo },
-    { key: "creado", label: "Fecha de creación", render: (r) => r.creado },
-    { key: "presentado", label: "Presentado", render: (r) => <Badge tone={r.presentado === "Sí" ? "success" : "warn"}>{r.presentado}</Badge> },
-    { key: "pagado", label: "Pagado", render: (r) => <Badge tone={r.pagado === "Sí" ? "success" : "danger"}>{r.pagado}</Badge> },
+    { key: "periodo", label: "Periodo", filterable: true, render: (r) => r.periodo },
+    { key: "tramo", label: "Tramo", filterable: true, render: (r) => r.tramo },
+    { key: "creado", label: "Fecha de creación", filterable: "date", render: (r) => r.creado },
+    { key: "presentado", label: "Presentado", filterable: true, render: (r) => <Badge tone={r.presentado === "Sí" ? "success" : "warn"}>{r.presentado}</Badge> },
+    { key: "pagado", label: "Pagado", filterable: true, render: (r) => <Badge tone={r.pagado === "Sí" ? "success" : "danger"}>{r.pagado}</Badge> },
   ];
 
   return (
@@ -132,11 +132,11 @@ function Page() {
             <p className="text-sm text-muted-foreground">Detalle de comisiones por período y tipo de operación.</p>
             <DataTable
               columns={[
-                { key: "periodo", label: "Período", render: (r: any) => r.periodo },
-                { key: "tipo", label: "Tipo", render: (r: any) => r.tipo },
-                { key: "cantidad", label: "Cantidad", render: (r: any) => r.cantidad },
-                { key: "monto", label: "Monto cobrado", render: (r: any) => r.monto },
-                { key: "comision", label: "Comisión", render: (r: any) => r.comision },
+                { key: "periodo", label: "Período", filterable: true, render: (r: any) => r.periodo },
+                { key: "tipo", label: "Tipo", filterable: true, render: (r: any) => r.tipo },
+                { key: "cantidad", label: "Cantidad", filterable: true, render: (r: any) => r.cantidad },
+                { key: "monto", label: "Monto cobrado", filterable: true, render: (r: any) => r.monto },
+                { key: "comision", label: "Comisión", filterable: true, render: (r: any) => r.comision },
               ]}
               data={[
                 { periodo: "2026-06", tipo: "Depósitos", cantidad: 1245, monto: "$ 12.450.000", comision: "$ 186.750" },
@@ -162,10 +162,10 @@ function Page() {
             </div>
             <DataTable
               columns={[
-                { key: "fecha", label: "Fecha", render: (r: any) => r.fecha },
-                { key: "tipo", label: "Tipo", render: (r: any) => r.tipo },
-                { key: "cantidad", label: "Cantidad", render: (r: any) => r.cantidad },
-                { key: "volumen", label: "Volumen", render: (r: any) => r.volumen },
+                { key: "fecha", label: "Fecha", filterable: "date", render: (r: any) => r.fecha },
+                { key: "tipo", label: "Tipo", filterable: true, render: (r: any) => r.tipo },
+                { key: "cantidad", label: "Cantidad", filterable: true, render: (r: any) => r.cantidad },
+                { key: "volumen", label: "Volumen", filterable: true, render: (r: any) => r.volumen },
               ]}
               data={[
                 { fecha: "15/07/2026", tipo: "Depósitos", cantidad: 42, volumen: "$ 3.250.000" },
@@ -184,11 +184,11 @@ function Page() {
             <p className="text-sm text-muted-foreground">Actividad registrada por legajo de usuario backoffice.</p>
             <DataTable
               columns={[
-                { key: "legajo", label: "Legajo", render: (r: any) => r.legajo },
-                { key: "usuario", label: "Usuario", render: (r: any) => r.usuario },
-                { key: "accion", label: "Acción", render: (r: any) => r.accion },
-                { key: "ip", label: "IP", render: (r: any) => r.ip },
-                { key: "fecha", label: "Fecha", render: (r: any) => r.fecha },
+                { key: "legajo", label: "Legajo", filterable: true, render: (r: any) => r.legajo },
+                { key: "usuario", label: "Usuario", filterable: true, render: (r: any) => r.usuario },
+                { key: "accion", label: "Acción", filterable: true, render: (r: any) => r.accion },
+                { key: "ip", label: "IP", filterable: true, render: (r: any) => r.ip },
+                { key: "fecha", label: "Fecha", filterable: "date", render: (r: any) => r.fecha },
               ]}
               data={[
                 { legajo: "ADM-001", usuario: "M. Rodríguez", accion: "Aprobó bloqueo BL-001", ip: "192.168.1.45", fecha: "15/07/2026 14:32" },

@@ -358,14 +358,14 @@ function PersonasFisicasPage() {
 }
 
 const columns: Column<Usuario>[] = [
-  { key: "legajo", label: "Legajo", render: (row) => row.legajo },
-  { key: "correo", label: "Correo", render: (row) => row.correo },
-  { key: "nombres", label: "Nombres", render: (row) => row.nombres },
-  { key: "apellidos", label: "Apellidos", render: (row) => row.apellidos },
+  { key: "legajo", label: "Legajo", filterable: true, render: (row) => row.legajo },
+  { key: "correo", label: "Correo", filterable: true, render: (row) => row.correo },
+  { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },
+  { key: "apellidos", label: "Apellidos", filterable: true, render: (row) => row.apellidos },
   {
     key: "estado",
-    label: "Estado",
+    label: "Estado", filterable: true,
     render: (row) => estadoBadge(row.estado),
   },
-  { key: "fechaRegistro", label: "Fecha de registro", render: (row) => row.fechaRegistro },
+  { key: "fechaRegistro", label: "Fecha de registro", filterable: true, render: (row) => row.fechaRegistro },
 ];

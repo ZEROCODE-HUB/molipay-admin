@@ -45,14 +45,14 @@ function CobrosQrPage() {
 }
 
 const columns: Column<Movimiento>[] = [
-  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
-  { key: "id", label: "ID", render: (r) => r.id },
-  { key: "cvu", label: "CVU", render: (r) => r.cvu },
-  { key: "email", label: "Email", render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", render: (r) => r.nombreOrigen },
-  { key: "nombreDestino", label: "Destino", render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", render: (r) => r.cuit },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
-  { key: "fecha", label: "Fecha", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", render: (row) => estadoBadge(row.estado) },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "id", label: "ID", filterable: true, render: (r) => r.id },
+  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
+  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
+  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
+  { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
+  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
+  { key: "monto", label: "Monto", filterable: true, render: (r) => r.monto },
+  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+  { key: "estado", label: "Estado", filterable: true, render: (row) => estadoBadge(row.estado) },
 ];

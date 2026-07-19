@@ -311,15 +311,15 @@ function CvuPage() {
 }
 
 const columns: Column<CvuUser>[] = [
-  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
-  { key: "correo", label: "Correo", render: (r) => r.correo },
-  { key: "nombre", label: "Nombre", render: (r) => r.nombre },
-  { key: "apellido", label: "Apellido", render: (r) => r.apellido },
-  { key: "cvu", label: "CVU", render: (r) => r.cvu },
-  { key: "alias", label: "Alias", render: (r) => r.alias },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
+  { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
+  { key: "apellido", label: "Apellido", filterable: true, render: (r) => r.apellido },
+  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
+  { key: "alias", label: "Alias", filterable: true, render: (r) => r.alias },
   {
     key: "estado",
-    label: "Estado",
+    label: "Estado", filterable: true,
     render: (row) => estadoBadge(row.estado),
   },
 ];

@@ -1,16 +1,14 @@
-import { useState, useMemo, useEffect, type ReactNode } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Download } from "lucide-react";
+import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Download, X } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
 
 export type Column<T> = {
   key: string;
   label: string;
   sortable?: boolean;
-  filterable?: boolean;
+  filterable?: boolean | "date";
   render: (row: T) => ReactNode;
 };
-
-type DateRange = { from: string; to: string };
 
 type DataTableProps<T> = {
   columns: Column<T>[];
@@ -26,13 +24,17 @@ type DataTableProps<T> = {
     onToggleAll: () => void;
   };
   onDownloadCSV?: () => void;
-  dateFilter?: {
-    value: DateRange;
-    onChange: (v: DateRange) => void;
-  };
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
+
+function parseDateCell(text: string): Date | null {
+  const dmy = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (dmy) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1]);
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
+  return null;
+}
 
 export function DataTable<T>({
   columns,
@@ -44,13 +46,54 @@ export function DataTable<T>({
   pageSize: defaultPageSize = 10,
   selection,
   onDownloadCSV,
-  dateFilter,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [textFilters, setTextFilters] = useState<Record<string, string>>({});
+  const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
+  const [pendingText, setPendingText] = useState<Record<string, string>>({});
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const filterableColumns = useMemo(
+    () => columns.filter((c) => c.filterable),
+    [columns],
+  );
+
+  const isDateColumn = (col: Column<T>) => col.filterable === "date";
+
+  const commitTextFilter = (key: string, value: string) => {
+    setTextFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      if (!value.trim()) delete next[key];
+      return next;
+    });
+  };
+
+  const setTextFilter = (key: string, value: string) => {
+    setPendingText((prev) => ({ ...prev, [key]: value }));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      commitTextFilter(key, value);
+    }, 300);
+  };
+
+  const setDateFilter = (key: string, range: { from: string; to: string }) => {
+    setDateRanges((prev) => ({ ...prev, [key]: range }));
+    setPage(1);
+  };
+
+  const clearAllFilters = () => {
+    setTextFilters({});
+    setPendingText({});
+    setDateRanges({});
+    setPage(1);
+  };
+
+  const activeFilterCount =
+    Object.values(textFilters).filter((v) => v.trim()).length +
+    Object.values(dateRanges).filter((r) => r.from || r.to).length;
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -62,17 +105,34 @@ export function DataTable<T>({
   };
 
   const filteredData = useMemo(() => {
-    const activeFilters = Object.entries(filters).filter(([, v]) => v.trim());
-    if (activeFilters.length === 0) return data;
-    return data.filter((row) =>
-      activeFilters.every(([key, value]) => {
+    return data.filter((row) => {
+      for (const [key, value] of Object.entries(textFilters)) {
+        if (!value.trim()) continue;
         const col = columns.find((c) => c.key === key);
-        if (!col) return true;
+        if (!col) continue;
         const text = String(col.render(row) ?? "");
-        return text.toLowerCase().includes(value.toLowerCase());
-      }),
-    );
-  }, [data, filters, columns]);
+        if (!text.toLowerCase().includes(value.toLowerCase())) return false;
+      }
+      for (const [key, range] of Object.entries(dateRanges)) {
+        if (!range.from && !range.to) continue;
+        const col = columns.find((c) => c.key === key);
+        if (!col) continue;
+        const text = String(col.render(row) ?? "");
+        const date = parseDateCell(text);
+        if (!date) continue;
+        if (range.from) {
+          const fromDate = new Date(range.from);
+          if (date < fromDate) return false;
+        }
+        if (range.to) {
+          const toDate = new Date(range.to);
+          toDate.setDate(toDate.getDate() + 1);
+          if (date >= toDate) return false;
+        }
+      }
+      return true;
+    });
+  }, [data, textFilters, dateRanges, columns]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
@@ -87,7 +147,7 @@ export function DataTable<T>({
 
   useEffect(() => {
     setPage(1);
-  }, [filters, pageSize]);
+  }, [textFilters, dateRanges, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -127,30 +187,8 @@ export function DataTable<T>({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">
           {sortedData.length} resultados
-          {dateFilter && (dateFilter.value.from || dateFilter.value.to) && (
-            <span className="ml-2 text-xs text-muted-foreground/60">(filtro de fechas activo)</span>
-          )}
         </span>
         <div className="flex items-center gap-3">
-          {dateFilter && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFilter.value.from}
-                onChange={(e) => dateFilter.onChange({ ...dateFilter.value, from: e.target.value })}
-                className="h-8 px-2 rounded-md border border-input bg-card text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                placeholder="Desde"
-              />
-              <span className="text-xs text-muted-foreground">a</span>
-              <input
-                type="date"
-                value={dateFilter.value.to}
-                onChange={(e) => dateFilter.onChange({ ...dateFilter.value, to: e.target.value })}
-                className="h-8 px-2 rounded-md border border-input bg-card text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                placeholder="Hasta"
-              />
-            </div>
-          )}
           {onDownloadCSV && (
             <BtnOutline onClick={onDownloadCSV}>
               <Download size={16} /> CSV
@@ -158,6 +196,71 @@ export function DataTable<T>({
           )}
         </div>
       </div>
+
+      {filterableColumns.length > 0 && (
+        <div className="bg-card border rounded-lg p-4">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Filtros
+            </span>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+              >
+                <X size={14} />
+                Limpiar filtros ({activeFilterCount})
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filterableColumns.map((col) => {
+              if (isDateColumn(col)) {
+                const range = dateRanges[col.key] ?? { from: "", to: "" };
+                return (
+                  <div key={col.key} className="space-y-1 min-w-0">
+                    <label className="text-xs font-medium text-muted-foreground truncate block">
+                      {col.label}
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={range.from}
+                        onChange={(e) => setDateFilter(col.key, { ...range, from: e.target.value })}
+                        className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                        placeholder="Desde"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">→</span>
+                      <input
+                        type="date"
+                        value={range.to}
+                        onChange={(e) => setDateFilter(col.key, { ...range, to: e.target.value })}
+                        className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                        placeholder="Hasta"
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={col.key} className="space-y-1 min-w-0">
+                  <label className="text-xs font-medium text-muted-foreground truncate block">
+                    {col.label}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={`Filtrar ${col.label.toLowerCase()}...`}
+                    value={pendingText[col.key] ?? textFilters[col.key] ?? ""}
+                    onChange={(e) => setTextFilter(col.key, e.target.value)}
+                    className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
@@ -193,26 +296,6 @@ export function DataTable<T>({
               ))}
               {actions && <th className="px-4 py-3 w-20 text-right whitespace-nowrap">Acciones</th>}
             </tr>
-            {columns.some((c) => c.filterable) && (
-              <tr className="border-b bg-muted/20">
-                {selection && <th className="w-10" />}
-                {columns.map((col) => (
-                  <th key={`filter-${col.key}`} className="px-4 py-2">
-                    {col.filterable ? (
-                      <input
-                        className="w-full h-7 px-2 rounded border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
-                        placeholder={`Filtrar ${col.label}...`}
-                        value={filters[col.key] ?? ""}
-                        onChange={(e) => {
-                          setFilters((f) => ({ ...f, [col.key]: e.target.value }));
-                        }}
-                      />
-                    ) : null}
-                  </th>
-                ))}
-                {actions && <th />}
-              </tr>
-            )}
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (

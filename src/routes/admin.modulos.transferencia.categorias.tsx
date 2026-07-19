@@ -96,7 +96,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => (
         <Badge tone={r.estado === "activo" ? "success" : "neutral"}>{r.estado}</Badge>
       ),

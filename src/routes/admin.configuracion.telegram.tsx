@@ -41,11 +41,11 @@ function Page() {
   const [activado, setActivado] = useState(true);
 
   const columns: Column<TelegramMessage>[] = [
-    { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
+    { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
     {
       key: "destino",
       label: "Destino",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => r.destino,
     },
     {
@@ -58,13 +58,13 @@ function Page() {
     {
       key: "fecha",
       label: "Fecha",
-      sortable: true,
+      sortable: true, filterable: "date",
       render: (r) => <span className="text-xs text-muted-foreground">{r.fecha}</span>,
     },
     {
       key: "estado",
       label: "Estado",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => (
         <div className="flex items-center gap-1.5">
           {r.estado === "enviado" ? (

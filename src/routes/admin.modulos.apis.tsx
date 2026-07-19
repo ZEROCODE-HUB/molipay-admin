@@ -52,7 +52,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado de integración",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => <Badge tone={statusBadgeTone(r.estado)}>{r.estado}</Badge>,
     },
     {
@@ -65,7 +65,7 @@ function Page() {
     {
       key: "restricciones",
       label: "Restricciones",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => <span className="text-muted-foreground">{r.restricciones}</span>,
     },
   ];

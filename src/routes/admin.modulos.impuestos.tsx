@@ -39,15 +39,15 @@ const taxData: TaxRecord[] = [
 
 function Page() {
   const columns: Column<TaxRecord>[] = [
-    { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
+    { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
     { key: "tipo", label: "Tipo", sortable: true, filterable: true, render: (r) => r.tipo },
-    { key: "periodo", label: "Periodo", sortable: true, render: (r) => r.periodo },
-    { key: "monto", label: "Monto retenido", sortable: true, render: (r) => <span className="font-semibold">{r.monto}</span> },
-    { key: "transferencia", label: "Fecha transferencia", sortable: true, render: (r) => r.transferencia },
+    { key: "periodo", label: "Periodo", sortable: true, filterable: true, render: (r) => r.periodo },
+    { key: "monto", label: "Monto retenido", sortable: true, filterable: true, render: (r) => <span className="font-semibold">{r.monto}</span> },
+    { key: "transferencia", label: "Fecha transferencia", sortable: true, filterable: true, render: (r) => r.transferencia },
     {
       key: "estado",
       label: "Estado",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => (
         <Badge tone={r.estado === "Transferido" ? "success" : "warn"}>{r.estado}</Badge>
       ),

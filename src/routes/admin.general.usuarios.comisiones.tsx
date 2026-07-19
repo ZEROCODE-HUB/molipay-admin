@@ -311,19 +311,19 @@ function ComisionesPage() {
 }
 
 const columns: Column<Comision>[] = [
-  { key: "legajo", label: "Legajo", render: (r) => r.legajo },
-  { key: "correo", label: "Correo", render: (r) => r.correo },
-  { key: "operacion", label: "Operación", render: (r) => r.operacion },
-  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
+  { key: "operacion", label: "Operación", filterable: true, render: (r) => r.operacion },
+  { key: "tipo", label: "Tipo", filterable: true, render: (r) => r.tipo },
   {
     key: "estado",
-    label: "Estado",
+    label: "Estado", filterable: true,
     render: (row) => (
       <Badge tone={row.estado === "activa" ? "success" : "danger"}>
         {row.estado === "activa" ? "Activa" : "Inactiva"}
       </Badge>
     ),
   },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
-  { key: "descripcion", label: "Descripción", render: (r) => r.descripcion },
+  { key: "monto", label: "Monto", filterable: true, render: (r) => r.monto },
+  { key: "descripcion", label: "Descripción", filterable: true, render: (r) => r.descripcion },
 ];

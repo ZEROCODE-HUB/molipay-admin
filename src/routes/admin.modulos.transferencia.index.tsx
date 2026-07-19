@@ -93,7 +93,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => {
         const tone = r.estado === "activo" ? "success" : r.estado === "suspendido" ? "danger" : "warn";
         return <Badge tone={tone}>{r.estado}</Badge>;
@@ -102,7 +102,7 @@ function Page() {
     {
       key: "nivel",
       label: "Nivel",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => r.nivel,
     },
   ];

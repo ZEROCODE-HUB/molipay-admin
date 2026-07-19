@@ -84,13 +84,13 @@ function Page() {
     {
       key: "fecha",
       label: "Fecha",
-      sortable: true,
+      sortable: true, filterable: "date",
       render: (r) => r.fecha,
     },
     {
       key: "estado",
       label: "Estado",
-      sortable: true,
+      sortable: true, filterable: true,
       render: (r) => (
         <div className="flex items-center gap-1.5">
           {r.estado === "éxito" ? (

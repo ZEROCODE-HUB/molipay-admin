@@ -124,7 +124,6 @@ const initialData: Alerta[] = [
 
 function ListadoAlertas() {
   const [data, setData] = useState(initialData);
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [viewing, setViewing] = useState<Alerta | null>(null);
   const [editTarget, setEditTarget] = useState<Alerta | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
@@ -193,7 +192,6 @@ function ListadoAlertas() {
         data={data}
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-        dateFilter={{ value: dateRange, onChange: setDateRange }}
       />
 
       {viewing && (
