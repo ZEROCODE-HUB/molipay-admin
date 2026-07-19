@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Download, Search } from "lucide-react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Download } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
 
 export type Column<T> = {
@@ -9,6 +9,8 @@ export type Column<T> = {
   filterable?: boolean;
   render: (row: T) => ReactNode;
 };
+
+type DateRange = { from: string; to: string };
 
 type DataTableProps<T> = {
   columns: Column<T>[];
@@ -24,6 +26,10 @@ type DataTableProps<T> = {
     onToggleAll: () => void;
   };
   onDownloadCSV?: () => void;
+  dateFilter?: {
+    value: DateRange;
+    onChange: (v: DateRange) => void;
+  };
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -38,24 +44,13 @@ export function DataTable<T>({
   pageSize: defaultPageSize = 10,
   selection,
   onDownloadCSV,
+  dateFilter,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const filterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setActiveFilter(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -64,10 +59,6 @@ export function DataTable<T>({
       setSortKey(key);
       setSortDir("asc");
     }
-  };
-
-  const toggleFilter = (key: string) => {
-    setActiveFilter((prev) => (prev === key ? null : key));
   };
 
   const filteredData = useMemo(() => {
@@ -133,13 +124,39 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{sortedData.length} resultados</span>
-        {onDownloadCSV && (
-          <BtnOutline onClick={onDownloadCSV}>
-            <Download size={16} /> CSV
-          </BtnOutline>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm text-muted-foreground">
+          {sortedData.length} resultados
+          {dateFilter && (dateFilter.value.from || dateFilter.value.to) && (
+            <span className="ml-2 text-xs text-muted-foreground/60">(filtro de fechas activo)</span>
+          )}
+        </span>
+        <div className="flex items-center gap-3">
+          {dateFilter && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFilter.value.from}
+                onChange={(e) => dateFilter.onChange({ ...dateFilter.value, from: e.target.value })}
+                className="h-8 px-2 rounded-md border border-input bg-card text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                placeholder="Desde"
+              />
+              <span className="text-xs text-muted-foreground">a</span>
+              <input
+                type="date"
+                value={dateFilter.value.to}
+                onChange={(e) => dateFilter.onChange({ ...dateFilter.value, to: e.target.value })}
+                className="h-8 px-2 rounded-md border border-input bg-card text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                placeholder="Hasta"
+              />
+            </div>
+          )}
+          {onDownloadCSV && (
+            <BtnOutline onClick={onDownloadCSV}>
+              <Download size={16} /> CSV
+            </BtnOutline>
+          )}
+        </div>
       </div>
 
       <div className="bg-card border rounded-lg overflow-x-auto">
@@ -160,60 +177,42 @@ export function DataTable<T>({
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-left relative">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      className={`font-semibold text-foreground flex items-center gap-1 ${
-                        col.sortable ? "cursor-pointer hover:text-primary" : ""
-                      }`}
-                      onClick={() => col.sortable && handleSort(col.key)}
-                      disabled={!col.sortable}
-                    >
-                      {col.label}
-                      {col.sortable && <SortIcon columnKey={col.key} />}
-                    </button>
-                    {col.filterable && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFilter(col.key);
-                        }}
-                        className={`p-0.5 rounded ${
-                          activeFilter === col.key || filters[col.key]
-                            ? "text-primary"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Search size={13} />
-                      </button>
-                    )}
-                  </div>
-                  {activeFilter === col.key && (
-                    <div
-                      ref={filterRef}
-                      className="absolute top-full left-0 right-0 sm:left-auto sm:right-0 mt-1 z-20 min-w-[180px] sm:min-w-[220px] bg-card border rounded-lg shadow-lg p-2"
-                    >
-                      <div className="relative">
-                        <Search
-                          size={14}
-                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        />
-                        <input
-                          className="w-full h-8 pl-8 pr-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                          placeholder={`Filtrar ${col.label}...`}
-                          value={filters[col.key] ?? ""}
-                          onChange={(e) => setFilters((f) => ({ ...f, [col.key]: e.target.value }))}
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-                  )}
+                <th key={col.key} className="px-4 py-3 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    className={`font-semibold text-foreground flex items-center gap-1 ${
+                      col.sortable ? "cursor-pointer hover:text-primary" : ""
+                    }`}
+                    onClick={() => col.sortable && handleSort(col.key)}
+                    disabled={!col.sortable}
+                  >
+                    {col.label}
+                    {col.sortable && <SortIcon columnKey={col.key} />}
+                  </button>
                 </th>
               ))}
-              {actions && <th className="px-4 py-3 w-20 text-right">Acciones</th>}
+              {actions && <th className="px-4 py-3 w-20 text-right whitespace-nowrap">Acciones</th>}
             </tr>
+            {columns.some((c) => c.filterable) && (
+              <tr className="border-b bg-muted/20">
+                {selection && <th className="w-10" />}
+                {columns.map((col) => (
+                  <th key={`filter-${col.key}`} className="px-4 py-2">
+                    {col.filterable ? (
+                      <input
+                        className="w-full h-7 px-2 rounded border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
+                        placeholder={`Filtrar ${col.label}...`}
+                        value={filters[col.key] ?? ""}
+                        onChange={(e) => {
+                          setFilters((f) => ({ ...f, [col.key]: e.target.value }));
+                        }}
+                      />
+                    ) : null}
+                  </th>
+                ))}
+                {actions && <th />}
+              </tr>
+            )}
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
