@@ -13,7 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DemoModeProvider } from "../contexts/demo-mode";
 import { Toaster } from "@/components/ui/sonner";
-import ogImageSrc from "@/assets/miniatura.png";
+import ogImageSrc from "@/assets/miniaturaadmin.png";
 
 function NotFoundComponent() {
   return (
@@ -89,8 +89,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "Admin Console — Molly Money Life" },
       { name: "twitter:description", content: "Administration panel for Molly Money Life platform." },
       { property: "og:image", content: ogImageSrc },
-      { property: "og:image:width", content: "1166" },
-      { property: "og:image:height", content: "552" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:image", content: ogImageSrc },
       { name: "twitter:card", content: "summary_large_image" },
     ],
