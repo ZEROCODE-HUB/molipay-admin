@@ -550,8 +550,8 @@ export function UserModal({
             </div>
           </div>
 
-          {/* Sub-section / Tab Navigation */}
-          <div className="flex flex-wrap gap-1 border-b border-border pb-0">
+          {/* Desktop: Tab Navigation */}
+          <div className="hidden md:flex flex-wrap gap-1 border-b border-border pb-0">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.key}
@@ -568,8 +568,20 @@ export function UserModal({
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[200px]">{tabContent[activeTab]}</div>
+          {/* Desktop: Tab Content */}
+          <div className="hidden md:block min-h-[200px]">{tabContent[activeTab]}</div>
+
+          {/* Mobile: stacked sections */}
+          <div className="block md:hidden space-y-6">
+            {visibleTabs.map((tab) => (
+              <div key={tab.key}>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  {tab.label}
+                </div>
+                {tabContent[tab.key]}
+              </div>
+            ))}
+          </div>
 
           {/* Placeholder sections */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
