@@ -100,7 +100,7 @@ function AdminLogin() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      className="h-screen w-screen flex items-center justify-center relative overflow-hidden"
       style={{
         background: "linear-gradient(160deg, #0A1628 0%, #0F1B38 40%, #142050 70%, #1A2550 100%)",
         color: "#F5F6F8",
@@ -147,16 +147,16 @@ function AdminLogin() {
       <ParticleCanvas />
 
       {/* Main card */}
-      <div className="relative z-10 w-full max-w-[420px] px-4 py-8">
+      <div className="relative z-10 w-full max-w-[420px] mx-auto px-4 py-6">
         <div
           className="relative rounded-2xl p-8 md:p-10 overflow-hidden"
           style={{
-            background: "rgba(255,255,255,0.08)",
-            backdropFilter: "blur(48px) saturate(1.3)",
-            WebkitBackdropFilter: "blur(48px) saturate(1.3)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.06) 100%)",
+            backdropFilter: "blur(32px)",
+            WebkitBackdropFilter: "blur(32px)",
+            border: "1px solid rgba(255,255,255,0.10)",
             boxShadow:
-              "0 32px 100px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.03)",
+              "0 24px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
           }}
         >
           {/* Animated gradient border */}
