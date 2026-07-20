@@ -7,8 +7,8 @@ import { useDemoMode } from "@/contexts/demo-mode";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Administrator Portal — Molly Money Life" },
-      { name: "description", content: "Admin panel for Molly Money Life platform." },
+      { title: "Panel de Administración — Molly Money Life" },
+      { name: "description", content: "Panel de administración de la plataforma Molly Money Life." },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -180,7 +180,7 @@ function AdminLogin() {
                 className="uppercase tracking-[0.3em] text-[0.6rem] font-semibold text-blue-400"
                 style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
               >
-                Admin Console
+                Panel de Administración
               </span>
               <span className="w-6 h-px bg-blue-500/40" />
             </div>
@@ -195,10 +195,10 @@ function AdminLogin() {
                 color: "#F5F6F8",
               }}
             >
-              Administrator Portal
+              Portal de Administración
             </h1>
             <p className="mt-2 text-sm" style={{ color: "rgba(245,246,248,0.5)" }}>
-              Sign in to continue.
+              Inicia sesión para continuar.
             </p>
           </div>
 
@@ -209,7 +209,7 @@ function AdminLogin() {
                 className="block mb-1.5 text-xs font-semibold tracking-wide"
                 style={{ color: "rgba(245,246,248,0.6)" }}
               >
-                Email
+                Correo electrónico
               </label>
               <div className="relative">
                 <Mail
@@ -251,7 +251,7 @@ function AdminLogin() {
                 className="block mb-1.5 text-xs font-semibold tracking-wide"
                 style={{ color: "rgba(245,246,248,0.6)" }}
               >
-                Password
+                Contraseña
               </label>
               <div className="relative">
                 <Lock
@@ -264,7 +264,7 @@ function AdminLogin() {
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Ingresa tu contraseña"
                   required
                   autoComplete="current-password"
                   className="w-full h-11 pl-10 pr-10 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-white/20"
@@ -289,7 +289,7 @@ function AdminLogin() {
                   onClick={() => setShowPw((v) => !v)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:opacity-80"
                   style={{ color: "rgba(245,246,248,0.35)" }}
-                  aria-label={showPw ? "Hide password" : "Show password"}
+                  aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -318,7 +318,7 @@ function AdminLogin() {
               ) : (
                 <>
                   <LogIn size={16} />
-                  Sign In
+                  Iniciar sesión
                 </>
               )}
             </button>
@@ -350,7 +350,7 @@ function AdminLogin() {
               className="text-center text-[11px] leading-relaxed"
               style={{ color: "rgba(245,246,248,0.25)" }}
             >
-              Authorized administrators only.
+              Solo administradores autorizados.
               <br />
               Molly Money Life &copy; {new Date().getFullYear()}
             </p>
