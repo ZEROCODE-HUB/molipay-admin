@@ -48,8 +48,8 @@ function Page() {
     { key: "periodo", label: "Periodo", filterable: true, render: (r) => r.periodo },
     { key: "tramo", label: "Tramo", filterable: true, render: (r) => r.tramo },
     { key: "creado", label: "Fecha de creación", filterable: "date", render: (r) => r.creado },
-    { key: "presentado", label: "Presentado", filterable: true, render: (r) => <Badge tone={r.presentado === "Sí" ? "success" : "warn"}>{r.presentado}</Badge> },
-    { key: "pagado", label: "Pagado", filterable: true, render: (r) => <Badge tone={r.pagado === "Sí" ? "success" : "danger"}>{r.pagado}</Badge> },
+    { key: "presentado", label: "Presentado", filterable: "enum", filterOptions: ["Sí", "No"], render: (r) => <Badge tone={r.presentado === "Sí" ? "success" : "warn"}>{r.presentado}</Badge> },
+    { key: "pagado", label: "Pagado", filterable: "enum", filterOptions: ["Sí", "No"], render: (r) => <Badge tone={r.pagado === "Sí" ? "success" : "danger"}>{r.pagado}</Badge> },
   ];
 
   return (

@@ -1,12 +1,15 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Download, X } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Download, X, Search } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
+
+export type FilterType = "text" | "date" | "enum";
 
 export type Column<T> = {
   key: string;
   label: string;
   sortable?: boolean;
-  filterable?: boolean | "date";
+  filterable?: boolean | FilterType;
+  filterOptions?: string[];
   render: (row: T) => ReactNode;
 };
 
@@ -36,6 +39,14 @@ function parseDateCell(text: string): Date | null {
   return null;
 }
 
+function isTextFilterable(col: Column<any>): boolean {
+  return col.filterable === true || col.filterable === "text";
+}
+
+function isBoolOrText(val: Column<any>["filterable"]): val is boolean | "text" {
+  return val === true || val === "text";
+}
+
 export function DataTable<T>({
   columns,
   data,
@@ -51,49 +62,57 @@ export function DataTable<T>({
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [textFilters, setTextFilters] = useState<Record<string, string>>({});
+  const [globalQuery, setGlobalQuery] = useState("");
+  const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
-  const [pendingText, setPendingText] = useState<Record<string, string>>({});
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filterableColumns = useMemo(
-    () => columns.filter((c) => c.filterable),
+  const textSearchableCols = useMemo(
+    () => columns.filter((c) => isTextFilterable(c)),
     [columns],
   );
 
-  const isDateColumn = (col: Column<T>) => col.filterable === "date";
+  const dateCols = useMemo(
+    () => columns.filter((c) => c.filterable === "date"),
+    [columns],
+  );
 
-  const commitTextFilter = (key: string, value: string) => {
-    setTextFilters((prev) => {
-      const next = { ...prev, [key]: value };
-      if (!value.trim()) delete next[key];
-      return next;
-    });
-  };
+  const enumCols = useMemo(
+    () => columns.filter((c) => c.filterable === "enum"),
+    [columns],
+  );
 
-  const setTextFilter = (key: string, value: string) => {
-    setPendingText((prev) => ({ ...prev, [key]: value }));
+  const specificFilterCount =
+    Object.values(enumFilters).filter((v) => v).length +
+    Object.values(dateRanges).filter((r) => r.from || r.to).length;
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      commitTextFilter(key, value);
+      setDebouncedQuery(globalQuery);
     }, 300);
-  };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [globalQuery]);
 
-  const setDateFilter = (key: string, range: { from: string; to: string }) => {
-    setDateRanges((prev) => ({ ...prev, [key]: range }));
-    setPage(1);
-  };
+  const searchPlaceholder =
+    textSearchableCols.length > 0
+      ? `Buscar por ${textSearchableCols
+          .slice(0, 4)
+          .map((c) => c.label.toLowerCase())
+          .join(", ")}${textSearchableCols.length > 4 ? ` +${textSearchableCols.length - 4} más` : ""}...`
+      : "Buscar...";
 
   const clearAllFilters = () => {
-    setTextFilters({});
-    setPendingText({});
+    setGlobalQuery("");
+    setDebouncedQuery("");
+    setEnumFilters({});
     setDateRanges({});
     setPage(1);
   };
-
-  const activeFilterCount =
-    Object.values(textFilters).filter((v) => v.trim()).length +
-    Object.values(dateRanges).filter((r) => r.from || r.to).length;
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -106,12 +125,20 @@ export function DataTable<T>({
 
   const filteredData = useMemo(() => {
     return data.filter((row) => {
-      for (const [key, value] of Object.entries(textFilters)) {
-        if (!value.trim()) continue;
+      if (debouncedQuery.trim()) {
+        const q = debouncedQuery.toLowerCase();
+        const matched = textSearchableCols.some((col) => {
+          const text = String(col.render(row) ?? "");
+          return text.toLowerCase().includes(q);
+        });
+        if (!matched) return false;
+      }
+      for (const [key, value] of Object.entries(enumFilters)) {
+        if (!value) continue;
         const col = columns.find((c) => c.key === key);
         if (!col) continue;
         const text = String(col.render(row) ?? "");
-        if (!text.toLowerCase().includes(value.toLowerCase())) return false;
+        if (text !== value) return false;
       }
       for (const [key, range] of Object.entries(dateRanges)) {
         if (!range.from && !range.to) continue;
@@ -132,7 +159,7 @@ export function DataTable<T>({
       }
       return true;
     });
-  }, [data, textFilters, dateRanges, columns]);
+  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRanges, columns]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
@@ -147,7 +174,7 @@ export function DataTable<T>({
 
   useEffect(() => {
     setPage(1);
-  }, [textFilters, dateRanges, pageSize]);
+  }, [debouncedQuery, enumFilters, dateRanges, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -181,6 +208,7 @@ export function DataTable<T>({
   }
 
   const colspan = columns.length + (selection ? 1 : 0) + (actions ? 1 : 0);
+  const showSpecificFilters = dateCols.length > 0 || enumCols.length > 0;
 
   return (
     <div className="space-y-4">
@@ -197,68 +225,102 @@ export function DataTable<T>({
         </div>
       </div>
 
-      {filterableColumns.length > 0 && (
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Filtros
-            </span>
-            {activeFilterCount > 0 && (
+      {(textSearchableCols.length > 0 || showSpecificFilters) && (
+        <div className="bg-card border rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            {textSearchableCols.length > 0 && (
+              <div className="relative flex-1 max-w-md">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={globalQuery}
+                  onChange={(e) => setGlobalQuery(e.target.value)}
+                  className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
+                />
+                {globalQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setGlobalQuery(""); setDebouncedQuery(""); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+            {specificFilterCount > 0 && (
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors shrink-0"
               >
                 <X size={14} />
-                Limpiar filtros ({activeFilterCount})
+                Limpiar filtros ({specificFilterCount + (debouncedQuery ? 1 : 0)})
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filterableColumns.map((col) => {
-              if (isDateColumn(col)) {
+
+          {showSpecificFilters && (
+            <div className="flex flex-wrap items-end gap-3">
+              {dateCols.map((col) => {
                 const range = dateRanges[col.key] ?? { from: "", to: "" };
                 return (
                   <div key={col.key} className="space-y-1 min-w-0">
-                    <label className="text-xs font-medium text-muted-foreground truncate block">
-                      {col.label}
-                    </label>
+                    <label className="text-xs font-medium text-muted-foreground">{col.label}</label>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="date"
                         value={range.from}
-                        onChange={(e) => setDateFilter(col.key, { ...range, from: e.target.value })}
-                        className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                        placeholder="Desde"
+                        onChange={(e) =>
+                          setDateRanges((prev) => ({
+                            ...prev,
+                            [col.key]: { ...range, from: e.target.value },
+                          }))
+                        }
+                        className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                       />
                       <span className="text-xs text-muted-foreground shrink-0">→</span>
                       <input
                         type="date"
                         value={range.to}
-                        onChange={(e) => setDateFilter(col.key, { ...range, to: e.target.value })}
-                        className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                        placeholder="Hasta"
+                        onChange={(e) =>
+                          setDateRanges((prev) => ({
+                            ...prev,
+                            [col.key]: { ...range, to: e.target.value },
+                          }))
+                        }
+                        className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                       />
                     </div>
                   </div>
                 );
-              }
-              return (
+              })}
+              {enumCols.map((col) => (
                 <div key={col.key} className="space-y-1 min-w-0">
-                  <label className="text-xs font-medium text-muted-foreground truncate block">
-                    {col.label}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={`Filtrar ${col.label.toLowerCase()}...`}
-                    value={pendingText[col.key] ?? textFilters[col.key] ?? ""}
-                    onChange={(e) => setTextFilter(col.key, e.target.value)}
-                    className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
-                  />
+                  <label className="text-xs font-medium text-muted-foreground">{col.label}</label>
+                  <select
+                    value={enumFilters[col.key] ?? ""}
+                    onChange={(e) =>
+                      setEnumFilters((prev) => {
+                        const next = { ...prev, [col.key]: e.target.value };
+                        if (!e.target.value) delete next[col.key];
+                        return next;
+                      })
+                    }
+                    className="h-8 min-w-[130px] px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                  >
+                    <option value="">Todos</option>
+                    {(col.filterOptions ?? []).map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

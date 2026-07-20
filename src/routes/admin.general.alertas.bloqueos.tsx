@@ -102,7 +102,7 @@ function Page() {
     { key: "usuario", label: "Usuario", sortable: true, filterable: true, render: (r) => r.usuario },
     { key: "nombre", label: "Nombre", sortable: true, filterable: true, render: (r) => r.nombre },
     { key: "tipo", label: "Tipo", sortable: true, filterable: true, render: (r) => r.tipo },
-    { key: "estado", label: "Estado", sortable: true, filterable: true, render: (r) => <Badge tone={r.estado === "Resuelto" ? "success" : r.estado === "Activo" ? "danger" : "warn"}>{r.estado}</Badge> },
+    { key: "estado", label: "Estado", sortable: true, filterable: "enum", filterOptions: ["Activo", "Pendiente", "Resuelto"], render: (r) => <Badge tone={r.estado === "Resuelto" ? "success" : r.estado === "Activo" ? "danger" : "warn"}>{r.estado}</Badge> },
     { key: "compliance", label: "Compliance", filterable: true, render: (r) => r.compliance },
     { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
   ];

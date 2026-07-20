@@ -134,7 +134,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      filterable: true,
+      filterable: "enum", filterOptions: ["Activo", "Suspendido"],
       render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "danger"}>{r.estado}</Badge>,
     },
   ];

@@ -314,16 +314,16 @@ const columns: Column<Comision>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
   { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
   { key: "operacion", label: "Operación", filterable: true, render: (r) => r.operacion },
-  { key: "tipo", label: "Tipo", filterable: true, render: (r) => r.tipo },
+  { key: "tipo", label: "Tipo", filterable: "enum", filterOptions: ["Depósito", "Retiro", "Link de pago", "E-commerce"], render: (r) => r.tipo },
   {
     key: "estado",
-    label: "Estado", filterable: true,
+    label: "Estado", filterable: "enum", filterOptions: ["activa", "inactiva"],
     render: (row) => (
       <Badge tone={row.estado === "activa" ? "success" : "danger"}>
         {row.estado === "activa" ? "Activa" : "Inactiva"}
       </Badge>
     ),
   },
-  { key: "monto", label: "Monto", filterable: true, render: (r) => r.monto },
+  { key: "monto", label: "Monto", render: (r) => r.monto },
   { key: "descripcion", label: "Descripción", filterable: true, render: (r) => r.descripcion },
 ];

@@ -52,7 +52,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado de integración",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["conectado", "desconectado", "error", "pendiente"],
       render: (r) => <Badge tone={statusBadgeTone(r.estado)}>{r.estado}</Badge>,
     },
     {

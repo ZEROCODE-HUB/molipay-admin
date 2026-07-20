@@ -90,7 +90,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["éxito", "fallo"],
       render: (r) => (
         <div className="flex items-center gap-1.5">
           {r.estado === "éxito" ? (

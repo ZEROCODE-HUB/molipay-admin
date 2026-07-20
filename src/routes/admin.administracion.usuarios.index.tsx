@@ -107,10 +107,10 @@ function Page() {
       key: "estado",
       label: "Estado",
       sortable: true,
-      filterable: true,
+      filterable: "enum", filterOptions: ["Activo", "Inactivo"],
       render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "neutral"}>{r.estado}</Badge>,
     },
-    { key: "rol", label: "Rol", sortable: true, filterable: true, render: (r) => r.rol },
+    { key: "rol", label: "Rol", sortable: true, filterable: "enum", filterOptions: ["Admin", "Compliance", "Management", "Accounting", "Reader", "User"], render: (r) => r.rol },
   ];
 
   return (

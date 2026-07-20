@@ -164,7 +164,7 @@ function ListadoAlertas() {
     {
       key: "estado",
       label: "Estado",
-      filterable: true,
+      filterable: "enum", filterOptions: ["Pendiente", "Revisado", "Resuelto"],
       render: (row) => {
         const tone =
           row.estado === "Resuelto" ? "success" : row.estado === "Revisado" ? "neutral" : "warn";
@@ -174,7 +174,7 @@ function ListadoAlertas() {
     {
       key: "activo",
       label: "Activo",
-      filterable: true,
+      filterable: "enum", filterOptions: ["Sí", "No"],
       render: (row) => (
         <Badge tone={row.activo === "Sí" ? "success" : "danger"}>{row.activo}</Badge>
       ),

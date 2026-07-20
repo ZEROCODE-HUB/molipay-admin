@@ -45,7 +45,7 @@ function nivelBadgeTone(nivel: ErrorRecord["nivel"]): "danger" | "warn" | "neutr
 
 function Page() {
   const columns: Column<ErrorRecord>[] = [
-    { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
+    { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
     {
       key: "codigo",
       label: "Código",
@@ -63,7 +63,7 @@ function Page() {
     {
       key: "frecuencia",
       label: "Frecuencia",
-      sortable: true, filterable: true,
+      sortable: true,
       render: (r) => (
         <span className="font-semibold">{r.frecuencia.toLocaleString()}</span>
       ),
@@ -71,13 +71,13 @@ function Page() {
     {
       key: "ultimaOcurrencia",
       label: "Última ocurrencia",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "date",
       render: (r) => <span className="text-xs text-muted-foreground">{r.ultimaOcurrencia}</span>,
     },
     {
       key: "nivel",
       label: "Nivel",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["crítico", "alto", "medio", "bajo"],
       render: (r) => <Badge tone={nivelBadgeTone(r.nivel)}>{r.nivel}</Badge>,
     },
   ];

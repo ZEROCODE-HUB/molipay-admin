@@ -52,7 +52,7 @@ const columns: Column<Movimiento>[] = [
   { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
   { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
   { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
-  { key: "monto", label: "Monto", filterable: true, render: (r) => r.monto },
+  { key: "monto", label: "Monto", render: (r) => r.monto },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: true, render: (row) => estadoBadge(row.estado) },
+  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
 ];

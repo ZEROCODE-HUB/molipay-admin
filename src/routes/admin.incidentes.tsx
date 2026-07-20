@@ -27,11 +27,11 @@ function Page() {
   const [ver, setVer] = useState<Mensaje | null>(null);
 
   const columns: Column<Mensaje>[] = [
-    { key: "id", label: "ID", sortable: true, filterable: true, render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", label: "ID", sortable: true, render: (r) => <span className="font-mono text-xs">{r.id}</span> },
     { key: "asunto", label: "Asunto", sortable: true, filterable: true, render: (r) => r.asunto },
-    { key: "segmento", label: "Segmento", filterable: true, render: (r) => r.segmento },
+    { key: "segmento", label: "Segmento", filterable: "enum", filterOptions: ["Todos", "Módulo QR", "Módulo Link de pago", "Comercios", "Usuarios activos"], render: (r) => r.segmento },
     { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
-    { key: "estado", label: "Estado", filterable: true, render: (r) => <Badge tone={r.estado === "Enviado" ? "success" : "warn"}>{r.estado}</Badge> },
+    { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Enviado", "Borrador"], render: (r) => <Badge tone={r.estado === "Enviado" ? "success" : "warn"}>{r.estado}</Badge> },
   ];
 
   return (

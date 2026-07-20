@@ -41,7 +41,7 @@ function Page() {
   const [activado, setActivado] = useState(true);
 
   const columns: Column<TelegramMessage>[] = [
-    { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
+    { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
     {
       key: "destino",
       label: "Destino",
@@ -64,7 +64,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["enviado", "fallido"],
       render: (r) => (
         <div className="flex items-center gap-1.5">
           {r.estado === "enviado" ? (

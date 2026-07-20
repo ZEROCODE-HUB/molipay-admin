@@ -364,8 +364,8 @@ const columns: Column<Usuario>[] = [
   { key: "apellidos", label: "Apellidos", filterable: true, render: (row) => row.apellidos },
   {
     key: "estado",
-    label: "Estado", filterable: true,
+    label: "Estado", filterable: "enum", filterOptions: ["activo", "suspendido", "pendiente"],
     render: (row) => estadoBadge(row.estado),
   },
-  { key: "fechaRegistro", label: "Fecha de registro", filterable: true, render: (row) => row.fechaRegistro },
+  { key: "fechaRegistro", label: "Fecha de registro", filterable: "date", render: (row) => row.fechaRegistro },
 ];

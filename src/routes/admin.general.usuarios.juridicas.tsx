@@ -312,12 +312,12 @@ const columns: Column<Juridica>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
   { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
   { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
-  { key: "tipo", label: "Tipo", filterable: true, render: (r) => r.tipo },
+  { key: "tipo", label: "Tipo", filterable: "enum", filterOptions: ["SA", "SRL"], render: (r) => r.tipo },
   {
     key: "estado",
-    label: "Estado", filterable: true,
+    label: "Estado", filterable: "enum", filterOptions: ["Activado", "Registrado", "Pre-activado", "En progreso", "Pendiente de verificación de email", "Pendiente de aprobación"],
     render: (row) => <Badge tone={toneMap[row.estado] ?? "neutral"}>{row.estado}</Badge>,
   },
-  { key: "fechaRegistro", label: "Fecha de registro", filterable: true, render: (r) => r.fechaRegistro },
-  { key: "subcuentas", label: "Subcuentas", filterable: true, render: (r) => r.subcuentas },
+  { key: "fechaRegistro", label: "Fecha de registro", filterable: "date", render: (r) => r.fechaRegistro },
+  { key: "subcuentas", label: "Subcuentas", render: (r) => r.subcuentas },
 ];

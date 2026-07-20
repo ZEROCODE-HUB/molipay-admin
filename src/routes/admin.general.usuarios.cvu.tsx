@@ -319,7 +319,7 @@ const columns: Column<CvuUser>[] = [
   { key: "alias", label: "Alias", filterable: true, render: (r) => r.alias },
   {
     key: "estado",
-    label: "Estado", filterable: true,
+    label: "Estado", filterable: "enum", filterOptions: ["activo", "inactivo", "pendiente"],
     render: (row) => estadoBadge(row.estado),
   },
 ];

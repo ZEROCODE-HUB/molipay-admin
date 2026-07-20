@@ -93,7 +93,7 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["activo", "suspendido", "pendiente"],
       render: (r) => {
         const tone = r.estado === "activo" ? "success" : r.estado === "suspendido" ? "danger" : "warn";
         return <Badge tone={tone}>{r.estado}</Badge>;
@@ -102,7 +102,7 @@ function Page() {
     {
       key: "nivel",
       label: "Nivel",
-      sortable: true, filterable: true,
+      sortable: true, filterable: "enum", filterOptions: ["Premium", "Estándar", "Básico", "Enterprise"],
       render: (r) => r.nivel,
     },
   ];
