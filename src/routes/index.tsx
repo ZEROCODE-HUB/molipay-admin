@@ -46,7 +46,7 @@ function ParticleCanvas() {
         if (p.y > h) p.y = 0;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(8, 145, 178, ${p.a})`;
+        ctx.fillStyle = `rgba(37, 99, 235, ${p.a})`;
         ctx.fill();
       }
       for (let i = 0; i < particles.length; i++) {
@@ -58,7 +58,7 @@ function ParticleCanvas() {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(8, 145, 178, ${0.04 * (1 - dist / 150)})`;
+            ctx.strokeStyle = `rgba(37, 99, 235, ${0.04 * (1 - dist / 150)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -102,7 +102,7 @@ function AdminLogin() {
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
       style={{
-        background: "linear-gradient(160deg, #0A1628 0%, #111D35 40%, #162240 70%, #1A2747 100%)",
+        background: "linear-gradient(160deg, #0A1628 0%, #0F1B38 40%, #142050 70%, #1A2550 100%)",
         color: "#F5F6F8",
       }}
     >
@@ -112,7 +112,7 @@ function AdminLogin() {
         className="absolute inset-0 z-0"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(8,145,178,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(8,145,178,0.04) 1px, transparent 1px)",
+            "linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
@@ -122,7 +122,7 @@ function AdminLogin() {
         aria-hidden
         className="absolute top-1/4 -right-32 w-[600px] h-[600px] rounded-full z-0"
         style={{
-          background: "radial-gradient(circle, rgba(8,145,178,0.15) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)",
           filter: "blur(100px)",
         }}
       />
@@ -138,7 +138,7 @@ function AdminLogin() {
         aria-hidden
         className="absolute top-1/2 left-1/3 w-[400px] h-[400px] rounded-full z-0"
         style={{
-          background: "radial-gradient(circle, rgba(8,145,178,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)",
           filter: "blur(120px)",
         }}
       />
@@ -151,12 +151,12 @@ function AdminLogin() {
         <div
           className="relative rounded-2xl p-8 md:p-10 overflow-hidden"
           style={{
-            background: "rgba(255,255,255,0.03)",
-            backdropFilter: "blur(32px) saturate(1.5)",
-            WebkitBackdropFilter: "blur(32px) saturate(1.5)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(48px) saturate(1.3)",
+            WebkitBackdropFilter: "blur(48px) saturate(1.3)",
+            border: "1px solid rgba(255,255,255,0.12)",
             boxShadow:
-              "0 24px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(255,255,255,0.02)",
+              "0 32px 100px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.03)",
           }}
         >
           {/* Animated gradient border */}
@@ -165,7 +165,7 @@ function AdminLogin() {
             style={{
               padding: "1px",
               background:
-                "linear-gradient(135deg, rgba(8,145,178,0.3), rgba(8,145,178,0.05), rgba(196,30,58,0.1), rgba(8,145,178,0.3))",
+                "linear-gradient(135deg, rgba(37,99,235,0.3), rgba(37,99,235,0.05), rgba(196,30,58,0.1), rgba(37,99,235,0.3))",
               WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
               WebkitMaskComposite: "xor",
               maskComposite: "exclude",
@@ -175,14 +175,14 @@ function AdminLogin() {
           {/* Logo + title */}
           <div className="flex flex-col items-center mb-8">
             <div className="mb-5 flex items-center gap-3">
-              <span className="w-6 h-px bg-cyan-500/40" />
+              <span className="w-6 h-px bg-blue-500/40" />
               <span
-                className="uppercase tracking-[0.3em] text-[0.6rem] font-semibold text-cyan-400"
+                className="uppercase tracking-[0.3em] text-[0.6rem] font-semibold text-blue-400"
                 style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
               >
                 Admin Console
               </span>
-              <span className="w-6 h-px bg-cyan-500/40" />
+              <span className="w-6 h-px bg-blue-500/40" />
             </div>
             <MollyLogo variant="light" size={42} />
             <h1
@@ -232,9 +232,9 @@ function AdminLogin() {
                     color: "#F5F6F8",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "rgba(8,145,178,0.4)";
+                    e.target.style.borderColor = "rgba(37,99,235,0.5)";
                     e.target.style.background = "rgba(255,255,255,0.07)";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(8,145,178,0.08)";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "rgba(255,255,255,0.06)";
@@ -274,9 +274,9 @@ function AdminLogin() {
                     color: "#F5F6F8",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "rgba(8,145,178,0.4)";
+                    e.target.style.borderColor = "rgba(37,99,235,0.5)";
                     e.target.style.background = "rgba(255,255,255,0.07)";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(8,145,178,0.08)";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "rgba(255,255,255,0.06)";
@@ -328,19 +328,19 @@ function AdminLogin() {
             <div
               className="inline-flex items-center gap-2 px-4 py-1.5"
               style={{
-                border: "1px solid rgba(8,145,178,0.15)",
+                border: "1px solid rgba(37,99,235,0.2)",
                 borderRadius: 6,
-                background: "rgba(8,145,178,0.04)",
+                background: "rgba(37,99,235,0.06)",
               }}
             >
-              <ShieldCheck size={12} strokeWidth={1.5} color="#0891B2" />
+              <ShieldCheck size={12} strokeWidth={1.5} color="#3B82F6" />
               <span
                 style={{
                   fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
                   fontSize: "0.6rem",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  color: "#0891B2",
+                  color: "#3B82F6",
                 }}
               >
                 Registrado ante BCRA

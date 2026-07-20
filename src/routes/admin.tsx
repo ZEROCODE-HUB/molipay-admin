@@ -21,6 +21,7 @@ import {
   Bot,
   ChevronDown,
   UserCog,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 import { PortalShell, type NavItem } from "@/components/portal-shell";
@@ -46,6 +47,16 @@ const nav: NavItem[] = [
     ],
   },
   {
+    label: "Comercios",
+    icon: Store,
+    items: [
+      { to: "/admin/modulos/transferencia", label: "Pago con transferencia", icon: CreditCard },
+      { to: "/admin/modulos/link-pago", label: "Link de pago", icon: Link2 },
+      { to: "/admin/modulos/impuestos", label: "Impuestos", icon: Receipt },
+      { to: "/admin/modulos/apis", label: "APIs externas", icon: Code2 },
+    ],
+  },
+  {
     label: "Administración",
     icon: Shield,
     items: [
@@ -55,20 +66,10 @@ const nav: NavItem[] = [
     ],
   },
   {
-    label: "Módulos",
-    icon: Puzzle,
-    items: [
-      { to: "/admin/modulos", label: "Módulos", icon: Puzzle },
-      { to: "/admin/modulos/transferencia", label: "Pago con transferencia", icon: CreditCard },
-      { to: "/admin/modulos/link-pago", label: "Link de pago", icon: Link2 },
-      { to: "/admin/modulos/impuestos", label: "Impuestos", icon: Receipt },
-      { to: "/admin/modulos/apis", label: "APIs externas", icon: Code2 },
-    ],
-  },
-  {
-    label: "Configuración",
+    label: "Sistema",
     icon: Settings,
     items: [
+      { to: "/admin/modulos", label: "Salud de módulos", icon: Puzzle },
       { to: "/admin/configuracion", label: "Gestor de Logins", icon: LogIn },
       { to: "/admin/configuracion/mensajes", label: "Mensajes de error", icon: MessageSquare },
       { to: "/admin/configuracion/telegram", label: "Telegram", icon: Send },
