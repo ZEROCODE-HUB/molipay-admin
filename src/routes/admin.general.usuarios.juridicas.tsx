@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Eye, Edit3, XCircle } from "lucide-react";
+import { Download, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
-import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { BtnOutline, Badge, Input } from "@/components/portal-shell";
+import { BtnOutline, Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
   head: () => ({
@@ -137,6 +136,7 @@ const initialData: Juridica[] = [
 const toUserData = (j: Juridica): UserData => ({
   id: j.legajo,
   status: "active",
+  tipoPersona: "juridica",
   legajo: j.legajo,
   email: j.correo,
   tipoCuenta: "Empresarial",
@@ -162,6 +162,8 @@ const toUserData = (j: Juridica): UserData => ({
   pep: "No",
   subcuentas: Array.from({ length: j.subcuentas }, (_, i) => ({
     id: `SUB-${j.legajo}-${i + 1}`,
+    legajo: `SUB-${j.legajo}-${i + 1}`,
+    email: j.correo,
     alias: `sub.${(j.razonSocial.split(" ")[0] ?? "empresa").toLowerCase()}.${i + 1}`,
     cvu: `0000003100087654321${String(i + 1).padStart(4, "0")}`,
     saldo: `$ ${(Math.random() * 500000 + 10000).toFixed(2)}`,
@@ -191,8 +193,7 @@ const toUserData = (j: Juridica): UserData => ({
 
 function JuridicasPage() {
   const [data, setData] = useState<Juridica[]>(initialData);
-  const [viewing, setViewing] = useState<Juridica | null>(null);
-  const [editTarget, setEditTarget] = useState<Juridica | null>(null);
+  const [viewing, setViewing] = useState<UserData | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -201,9 +202,23 @@ function JuridicasPage() {
     onConfirm: () => void;
   } | null>(null);
 
+  const handleUserChange = (updated: UserData) => {
+    setViewing(updated);
+    setData((prev) =>
+      prev.map((j) =>
+        j.legajo === updated.legajo
+          ? {
+              ...j,
+              correo: updated.email,
+              razonSocial: updated.nombreLegal || updated.nombre,
+            }
+          : j,
+      ),
+    );
+  };
+
   const getActions = (row: Juridica): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
-    { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
+    { label: "Ver / Editar", icon: Edit3, onClick: () => setViewing(toUserData(row)) },
     {
       label: "Suspender",
       icon: XCircle,
@@ -241,57 +256,12 @@ function JuridicasPage() {
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 
-      {viewing && (
-        <UserModal
-          open={!!viewing}
-          onClose={() => setViewing(null)}
-          user={viewing ? toUserData(viewing) : null}
-        />
-      )}
-
-      {editTarget && (
-        <FormDialog
-          open={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          title="Editar persona jurídica"
-          description={`Editando a ${editTarget.razonSocial}`}
-          onSubmit={() => {
-            setData((prev) => prev.map((j) => (j.legajo === editTarget.legajo ? editTarget : j)));
-            setEditTarget(null);
-          }}
-          submitLabel="Guardar cambios"
-        >
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Correo</label>
-            <Input
-              value={editTarget.correo}
-              onChange={(e) => setEditTarget({ ...editTarget, correo: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">
-              Razón Social
-            </label>
-            <Input
-              value={editTarget.razonSocial}
-              onChange={(e) => setEditTarget({ ...editTarget, razonSocial: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
-            <select
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
-              value={editTarget.tipo}
-              onChange={(e) =>
-                setEditTarget({ ...editTarget, tipo: e.target.value as "SA" | "SRL" })
-              }
-            >
-              <option value="SA">SA</option>
-              <option value="SRL">SRL</option>
-            </select>
-          </div>
-        </FormDialog>
-      )}
+      <UserModal
+        open={!!viewing}
+        onClose={() => setViewing(null)}
+        user={viewing}
+        onUserChange={handleUserChange}
+      />
 
       {confirmAction && (
         <ConfirmDialog

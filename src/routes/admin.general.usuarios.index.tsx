@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Eye, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
+import { Download, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
-import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { BtnPrimary, BtnOutline, Badge, Input } from "@/components/portal-shell";
+import { BtnOutline, Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/usuarios/")({
   head: () => ({
@@ -146,6 +145,7 @@ const statusMap: Record<Usuario["estado"], UserStatus> = {
 const toUserData = (u: Usuario): UserData => ({
   id: u.legajo,
   status: statusMap[u.estado],
+  tipoPersona: "fisica",
   legajo: u.legajo,
   email: u.correo,
   tipoCuenta: "Individual",
@@ -163,15 +163,17 @@ const toUserData = (u: Usuario): UserData => ({
   estadoProvincia: "Buenos Aires",
   codigoPostal: "C1043",
   fechaNacimiento: "15/03/1990",
-  cuitEmpresa: "30-98765432-1",
-  tipoEmpresa: "SA",
-  nombreLegal: "Empresa Ejemplo SA",
-  nombreComercial: "Ejemplo Corp",
-  fechaInscripcion: "10/01/2024",
+  cuitEmpresa: "",
+  tipoEmpresa: "",
+  nombreLegal: "",
+  nombreComercial: "",
+  fechaInscripcion: "",
   pep: "No",
   subcuentas: [
     {
       id: "SUB-001",
+      legajo: "SUB-001",
+      email: "juan.perez@email.com",
       alias: "mi.cuenta",
       cvu: "0000003100087654321012",
       saldo: "$ 150.000",
@@ -179,6 +181,8 @@ const toUserData = (u: Usuario): UserData => ({
     },
     {
       id: "SUB-002",
+      legajo: "SUB-002",
+      email: "juan.perez@email.com",
       alias: "ahorros.juan",
       cvu: "0000003100087654321013",
       saldo: "$ 85.000",
@@ -213,10 +217,15 @@ const toUserData = (u: Usuario): UserData => ({
   ],
 });
 
+const statusRev: Record<string, Usuario["estado"]> = {
+  active: "activo",
+  blocked: "suspendido",
+  pending: "pendiente",
+};
+
 function PersonasFisicasPage() {
   const [data, setData] = useState<Usuario[]>(initialData);
-  const [editing, setEditing] = useState<Usuario | null>(null);
-  const [editTarget, setEditTarget] = useState<Usuario | null>(null);
+  const [viewing, setViewing] = useState<UserData | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -225,9 +234,27 @@ function PersonasFisicasPage() {
     onConfirm: () => void;
   } | null>(null);
 
+  const openModal = (u: Usuario) => setViewing(toUserData(u));
+
+  const handleUserChange = (updated: UserData) => {
+    setViewing(updated);
+    setData((prev) =>
+      prev.map((u) =>
+        u.legajo === updated.legajo
+          ? {
+              ...u,
+              correo: updated.email,
+              nombres: updated.nombre,
+              apellidos: updated.apellido,
+              estado: statusRev[updated.status] ?? u.estado,
+            }
+          : u,
+      ),
+    );
+  };
+
   const getActions = (row: Usuario): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => setEditing(row) },
-    { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
+    { label: "Ver / Editar", icon: Edit3, onClick: () => openModal(row) },
     ...(row.estado === "suspendido"
       ? [
           {
@@ -298,49 +325,12 @@ function PersonasFisicasPage() {
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 
-      {editing && (
-        <UserModal
-          open={!!editing}
-          onClose={() => setEditing(null)}
-          user={editing ? toUserData(editing) : null}
-        />
-      )}
-
-      {editTarget && (
-        <FormDialog
-          open={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          title="Editar usuario"
-          description={`Editando a ${editTarget.nombres} ${editTarget.apellidos}`}
-          onSubmit={() => {
-            setData((prev) => prev.map((u) => (u.legajo === editTarget.legajo ? editTarget : u)));
-            setEditTarget(null);
-          }}
-          submitLabel="Guardar cambios"
-        >
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Correo</label>
-            <Input
-              value={editTarget.correo}
-              onChange={(e) => setEditTarget({ ...editTarget, correo: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Nombres</label>
-            <Input
-              value={editTarget.nombres}
-              onChange={(e) => setEditTarget({ ...editTarget, nombres: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Apellidos</label>
-            <Input
-              value={editTarget.apellidos}
-              onChange={(e) => setEditTarget({ ...editTarget, apellidos: e.target.value })}
-            />
-          </div>
-        </FormDialog>
-      )}
+      <UserModal
+        open={!!viewing}
+        onClose={() => setViewing(null)}
+        user={viewing}
+        onUserChange={handleUserChange}
+      />
 
       {confirmAction && (
         <ConfirmDialog
