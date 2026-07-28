@@ -7,12 +7,12 @@ const KB = [
   {
     keywords: ["transacción", "movimiento", "estado", "COELSA", "pendiente", "aprobada", "rechazada"],
     response:
-      "Una transacción nace Pendiente: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a Aprobada. Si no, pasa a Rechazada y el saldo se revierte. MoliPay solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
+      "Una transacción nace Pendiente: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a Aprobada. Si no, pasa a Rechazada y el saldo se revierte. Moli solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
   },
   {
     keywords: ["impuesto", "ganancias", "ingresos brutos", "retención", "débito", "crédito"],
     response:
-      "MoliPay maneja dos tipos de impuestos, totalmente separados.\n\n(1) Impuestos propios de Molly: Ganancias (anual) e Ingresos Brutos sobre su comisión — es ganancia del negocio, gestionada por su contabilidad, no afecta al cliente.\n\n(2) Impuestos retenidos al cliente: Molly es agente de retención, no pagador. Se retienen dos impuestos por operación — Débito/crédito (0,6% en ingresos, 0,6% en egresos, transferido mensualmente) e Ingresos Brutos del cliente (porcentaje variable según base del organismo fiscal, transferido cada 10 días). Ese dinero nunca es ganancia de Molly: se retiene transitoriamente y se transfiere al organismo.",
+      "Moli maneja dos tipos de impuestos, totalmente separados.\n\n(1) Impuestos propios de Molly: Ganancias (anual) e Ingresos Brutos sobre su comisión — es ganancia del negocio, gestionada por su contabilidad, no afecta al cliente.\n\n(2) Impuestos retenidos al cliente: Molly es agente de retención, no pagador. Se retienen dos impuestos por operación — Débito/crédito (0,6% en ingresos, 0,6% en egresos, transferido mensualmente) e Ingresos Brutos del cliente (porcentaje variable según base del organismo fiscal, transferido cada 10 días). Ese dinero nunca es ganancia de Molly: se retiene transitoriamente y se transfiere al organismo.",
   },
   {
     keywords: ["alerta", "bloqueo", "compliance", "suspender"],
@@ -91,7 +91,7 @@ export function AdminChatbot() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-brand-dark text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-all cursor-pointer"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-moli-blue text-white shadow-lg flex items-center justify-center hover:bg-moli-blue-dark transition-all cursor-pointer"
         aria-label="Abrir chat"
       >
         {open ? <X size={24} /> : <MessageCircle size={24} />}
@@ -99,10 +99,10 @@ export function AdminChatbot() {
 
       {open && (
         <div className="fixed bottom-24 right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] h-[520px] max-h-[calc(100vh-8rem)] bg-card border rounded-xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="bg-brand-dark text-white px-4 py-3 flex items-center gap-3 shrink-0">
+          <div className="bg-moli-blue text-white px-4 py-3 flex items-center gap-3 shrink-0">
             <Bot size={20} />
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold">Asistente MoliPay</div>
+              <div className="text-sm font-semibold">Asistente Moli</div>
               <div className="text-[11px] text-white/70">Soporte administrativo</div>
             </div>
             <button
@@ -117,7 +117,7 @@ export function AdminChatbot() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="text-sm text-muted-foreground text-center py-6">
-                ¡Hola! Soy el asistente virtual de MoliPay. Seleccioná una consulta o escribí tu
+                ¡Hola! Soy el asistente virtual de Moli. Seleccioná una consulta o escribí tu
                 pregunta.
               </div>
             )}
@@ -127,12 +127,12 @@ export function AdminChatbot() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                     msg.role === "bot"
-                      ? "bg-brand-soft text-brand-dark"
+                      ? "bg-moli-blue-light text-moli-blue"
                       : "bg-primary text-primary-foreground"
-                  }`}
-                >
-                  {msg.role === "bot" ? <Bot size={14} /> : <User size={14} />}
-                </div>
+                    }`}
+                  >
+                    {msg.role === "bot" ? <Bot size={14} /> : <User size={14} />}
+                  </div>
                 <div
                   className={`max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "bot"
@@ -147,7 +147,7 @@ export function AdminChatbot() {
 
             {typing && (
               <div className="flex gap-2">
-                <div className="w-7 h-7 rounded-full bg-brand-soft text-brand-dark flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-full bg-moli-blue-light text-moli-blue flex items-center justify-center shrink-0">
                   <Bot size={14} />
                 </div>
                 <div className="bg-muted px-4 py-3 rounded-lg">

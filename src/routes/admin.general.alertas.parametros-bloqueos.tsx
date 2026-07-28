@@ -21,9 +21,9 @@ function Page() {
         description="Umbrales que activan bloqueo automático de cuenta hasta revisión de compliance"
       />
 
-      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 flex gap-3 max-w-2xl">
-        <ShieldAlert size={18} className="text-red-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-red-800 dark:text-red-300">
+      <div className="bg-moli-red-light border border-moli-red/20 rounded-lg p-4 mb-6 flex gap-3 max-w-2xl">
+        <ShieldAlert size={18} className="text-moli-red shrink-0 mt-0.5" />
+        <div className="text-sm text-moli-red-dark">
           <strong>Importante:</strong> Un <strong>bloqueo</strong> suspende la cuenta
           automáticamente al cumplirse el umbral. La cuenta queda bloqueada hasta que compliance la
           revise y la reactive manualmente.

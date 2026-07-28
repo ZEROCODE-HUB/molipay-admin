@@ -6,7 +6,7 @@ export const Route = createFileRoute("/admin/modulos/apis")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "APIs externas — Admin — Molly Money Life" },
+      { title: "APIs externas — Admin — Moli" },
       { name: "description", content: "Integraciones con APIs externas de la plataforma." },
     ],
   }),

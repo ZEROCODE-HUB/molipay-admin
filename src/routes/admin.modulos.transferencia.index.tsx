@@ -9,7 +9,7 @@ export const Route = createFileRoute("/admin/modulos/transferencia/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Comercios — Admin — Molly Money Life" },
+      { title: "Comercios — Admin — Moli" },
       { name: "description", content: "Gestión de comercios habilitados para pago con transferencia." },
     ],
   }),

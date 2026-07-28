@@ -6,7 +6,7 @@ export const Route = createFileRoute("/admin/configuracion/mensajes")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Gestor de mensajes de error — Admin — Molly Money Life" },
+      { title: "Gestor de mensajes de error — Admin — Moli" },
       { name: "description", content: "Trazabilidad de mensajes de error del sistema." },
     ],
   }),

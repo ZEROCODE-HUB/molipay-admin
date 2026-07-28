@@ -24,7 +24,7 @@ function Toggle({ enabled, onClick }: { enabled: boolean; onClick: () => void })
       type="button"
       onClick={onClick}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
-        enabled ? "bg-cyan-600" : "bg-gray-300 dark:bg-gray-600"
+        enabled ? "bg-moli-blue" : "bg-gray-300 dark:bg-gray-600"
       }`}
     >
       <span

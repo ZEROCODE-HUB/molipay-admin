@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/legales/arrepentimiento")({
   head: () => ({
     meta: [
-      { title: "Boton de Arrepentimiento — Molly Money Life" },
+      { title: "Botón de Arrepentimiento — Moli" },
       { name: "description", content: "Ejerce tu derecho de arrepentimiento conforme al articulo 34 de la Ley 24.240." },
     ],
   }),
@@ -27,7 +27,7 @@ function Page() {
         </div>
       </header>
       <article className="max-w-2xl mx-auto px-6 py-16">
-        <div className="w-12 h-12 rounded-lg bg-[color:var(--brand-soft)] text-primary grid place-items-center mb-4">
+        <div className="w-12 h-12 rounded-lg bg-moli-red-light text-moli-red grid place-items-center mb-4">
           <ShieldAlert size={22} />
         </div>
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Boton de Arrepentimiento</h1>

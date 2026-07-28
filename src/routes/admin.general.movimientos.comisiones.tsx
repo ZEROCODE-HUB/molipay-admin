@@ -10,15 +10,15 @@ export const Route = createFileRoute("/admin/general/movimientos/comisiones")({
   head: () => ({
     meta: [
       { title: "Cobro de comisiones — Movimientos — Admin Molly" },
-      { name: "description", content: "Comisiones cobradas por la plataforma Molly Money Life." },
+      { name: "description", content: "Comisiones cobradas por la plataforma Moli." },
     ],
   }),
   component: ComisionesPage,
 });
 
 const data: Movimiento[] = [
-  { legajo: "MOV-003", id: "TXN-003", tipo: "Cobro de comisiones", cvu: "0000003100087654321034", email: "carlos.m@email.com", nombreOrigen: "Carlos Alberto Martínez", nombreDestino: "Molly Money Life SA", cuit: "20-34567890-1", monto: "$ 12.500,00", fecha: "14/01/2025 09:15", estado: "Aprobada" },
-  { legajo: "MOV-012", id: "TXN-012", tipo: "Cobro de comisiones", cvu: "0000003100087654321034", email: "carlos.m@email.com", nombreOrigen: "Carlos Alberto Martínez", nombreDestino: "Molly Money Life SA", cuit: "20-34567890-1", monto: "$ 5.000,00", fecha: "11/01/2025 11:20", estado: "Rechazada" },
+  { legajo: "MOV-003", id: "TXN-003", tipo: "Cobro de comisiones", cvu: "0000003100087654321034", email: "carlos.m@email.com", nombreOrigen: "Carlos Alberto Martínez", nombreDestino: "Moli SA", cuit: "20-34567890-1", monto: "$ 12.500,00", fecha: "14/01/2025 09:15", estado: "Aprobada" },
+  { legajo: "MOV-012", id: "TXN-012", tipo: "Cobro de comisiones", cvu: "0000003100087654321034", email: "carlos.m@email.com", nombreOrigen: "Carlos Alberto Martínez", nombreDestino: "Moli SA", cuit: "20-34567890-1", monto: "$ 5.000,00", fecha: "11/01/2025 11:20", estado: "Rechazada" },
 ];
 
 function ComisionesPage() {

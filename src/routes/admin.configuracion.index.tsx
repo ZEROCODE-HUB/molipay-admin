@@ -9,7 +9,7 @@ export const Route = createFileRoute("/admin/configuracion/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Gestor de Logins — Admin — Molly Money Life" },
+      { title: "Gestor de Logins — Admin — Moli" },
       { name: "description", content: "Gestión de inicios de sesión y actividad de usuarios." },
     ],
   }),
@@ -148,8 +148,8 @@ function Page() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <TrendingDown size={20} className="text-blue-600" />
+            <div className="w-10 h-10 rounded-lg bg-moli-blue-light flex items-center justify-center">
+              <TrendingDown size={20} className="text-moli-blue" />
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Tiempo promedio</div>

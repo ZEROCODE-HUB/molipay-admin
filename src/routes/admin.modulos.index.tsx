@@ -7,7 +7,7 @@ export const Route = createFileRoute("/admin/modulos/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Salud de módulos — Admin — Molly Money Life" },
+      { title: "Salud de módulos — Admin — Moli" },
       { name: "description", content: "Estado operativo de todos los módulos de la plataforma." },
     ],
   }),

@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Building2,
   ShieldAlert,
@@ -23,10 +23,10 @@ function Page() {
     <>
       <PageHeader
         title="Dashboard administrativo"
-        description="Estado global de la plataforma Molly Money Life."
+        description="Estado global de la plataforma Moli."
         action={
           <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-            <Activity size={14} className="text-[color:var(--brand-red)]" /> Sistema operativo · 99,98%
+            <Activity size={14} className="text-moli-red" /> Sistema operativo · 99,98%
           </div>
         }
       />
@@ -55,7 +55,7 @@ function Page() {
             {volumeData.map((v, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div
-                  className="w-full rounded-t bg-gradient-to-t from-[color:var(--brand-blue)] to-[color:var(--brand-red)]"
+                  className="w-full rounded-t bg-gradient-to-t from-moli-blue to-moli-red"
                   style={{ height: `${(v / max) * 100}%` }}
                 />
                 <span className="text-[10px] text-muted-foreground">{i + 1}</span>
@@ -95,10 +95,10 @@ function Page() {
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <Building2 size={16} className="text-[color:var(--brand-blue)]" /> ultimos registros
+              <Building2 size={16} className="text-moli-blue" /> Últimos registros
             </h3>
             <Link to="/admin/general/usuarios" className="text-xs text-primary font-semibold">
-              Ver todos →
+              Ver todos ?
             </Link>
           </div>
           <div className="overflow-x-auto -mx-5">
@@ -138,10 +138,10 @@ function Page() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <ShieldAlert size={16} className="text-[color:var(--brand-red)]" /> Alertas recientes
+              <ShieldAlert size={16} className="text-moli-red" /> Alertas recientes
             </h3>
             <Link to="/admin/general/alertas/bloqueos" className="text-xs text-primary font-semibold">
-              Compliance →
+              Compliance ?
             </Link>
           </div>
           <div className="divide-y">

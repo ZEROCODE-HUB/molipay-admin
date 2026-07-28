@@ -1,85 +1,19 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { Eye, EyeOff, LogIn, ShieldCheck, Lock, Mail } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Panel de Administración — Molly Money Life" },
-      { name: "description", content: "Panel de administración de la plataforma Molly Money Life." },
+      { title: "Panel de Administración — Moli" },
+      { name: "description", content: "Panel de administración de la plataforma Moli." },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: AdminLogin,
 });
-
-function ParticleCanvas() {
-  useEffect(() => {
-    const canvas = document.getElementById("particle-canvas") as HTMLCanvasElement;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    let anim: number;
-    let w = (canvas.width = window.innerWidth);
-    let h = (canvas.height = window.innerHeight);
-    const particles: { x: number; y: number; vx: number; vy: number; r: number; a: number }[] = [];
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: Math.random() * 2 + 0.5,
-        a: Math.random() * 0.3 + 0.05,
-      });
-    }
-    const draw = () => {
-      ctx.clearRect(0, 0, w, h);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = w;
-        if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        if (p.y > h) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(37, 99, 235, ${p.a})`;
-        ctx.fill();
-      }
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(37, 99, 235, ${0.04 * (1 - dist / 150)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-      anim = requestAnimationFrame(draw);
-    };
-    const resize = () => {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", resize);
-    draw();
-    return () => {
-      cancelAnimationFrame(anim);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return <canvas id="particle-canvas" className="absolute inset-0 pointer-events-none z-[1]" />;
-}
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -99,166 +33,50 @@ function AdminLogin() {
   };
 
   return (
-    <div
-      className="h-screen w-screen flex items-center justify-center relative overflow-hidden"
-      style={{
-        background: "linear-gradient(160deg, #0A1628 0%, #0F1B38 40%, #142050 70%, #1A2550 100%)",
-        color: "#F5F6F8",
-      }}
-    >
-      {/* Grid overlay */}
-      <div
-        aria-hidden
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-
-      {/* Gradient orbs */}
-      <div
-        aria-hidden
-        className="absolute top-1/4 -right-32 w-[600px] h-[600px] rounded-full z-0"
-        style={{
-          background: "radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)",
-          filter: "blur(100px)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full z-0"
-        style={{
-          background: "radial-gradient(circle, rgba(196,30,58,0.1) 0%, transparent 70%)",
-          filter: "blur(100px)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute top-1/2 left-1/3 w-[400px] h-[400px] rounded-full z-0"
-        style={{
-          background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)",
-          filter: "blur(120px)",
-        }}
-      />
-
-      {/* Particles */}
-      <ParticleCanvas />
-
-      {/* Main card */}
-      <div className="relative z-10 w-full max-w-[420px] mx-auto px-4 py-6">
-        <div
-          className="relative rounded-2xl p-8 md:p-10 overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.06) 100%)",
-            backdropFilter: "blur(32px)",
-            WebkitBackdropFilter: "blur(32px)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            boxShadow:
-              "0 24px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
-          }}
-        >
-          {/* Animated gradient border */}
-          <div
-            className="absolute inset-0 rounded-2xl pointer-events-none"
-            style={{
-              padding: "1px",
-              background:
-                "linear-gradient(135deg, rgba(37,99,235,0.3), rgba(37,99,235,0.05), rgba(196,30,58,0.1), rgba(37,99,235,0.3))",
-              WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-              WebkitMaskComposite: "xor",
-              maskComposite: "exclude",
-            }}
-          />
-
-          {/* Logo + title */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="w-6 h-px bg-blue-500/40" />
-              <span
-                className="uppercase tracking-[0.3em] text-[0.6rem] font-semibold text-blue-400"
-                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
-              >
-                Panel de Administración
-              </span>
-              <span className="w-6 h-px bg-blue-500/40" />
-            </div>
-            <MollyLogo variant="light" size={42} />
-            <h1
-              className="mt-5 text-center leading-[1.12]"
-              style={{
-                fontFamily: "'Fraunces', Georgia, serif",
-                fontSize: "clamp(1.5rem, 2.4vw, 2rem)",
-                fontWeight: 300,
-                letterSpacing: "-0.01em",
-                color: "#F5F6F8",
-              }}
-            >
-              Portal de Administración
-            </h1>
-            <p className="mt-2 text-sm" style={{ color: "rgba(245,246,248,0.5)" }}>
-              Inicia sesión para continuar.
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-[400px]">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <div className="flex justify-center mb-4">
+            <MollyLogo size={44} />
           </div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Panel de Administración
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            Inicia sesión para continuar.
+          </p>
+        </div>
 
+        {/* Card */}
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="group">
-              <label
-                htmlFor="email"
-                className="block mb-1.5 text-xs font-semibold tracking-wide"
-                style={{ color: "rgba(245,246,248,0.6)" }}
-              >
+
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-foreground mb-1.5">
                 Correo electrónico
               </label>
               <div className="relative">
-                <Mail
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: "rgba(245,246,248,0.25)" }}
-                />
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@molipay.com"
+                  placeholder="admin@Moli.com"
                   required
                   autoComplete="email"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-white/20"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    color: "#F5F6F8",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "rgba(37,99,235,0.5)";
-                    e.target.style.background = "rgba(255,255,255,0.07)";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "rgba(255,255,255,0.06)";
-                    e.target.style.background = "rgba(255,255,255,0.04)";
-                    e.target.style.boxShadow = "none";
-                  }}
+                  className="w-full h-11 pl-9 pr-3.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-all duration-200 focus:border-ring focus:ring-2 focus:ring-ring/20"
                 />
               </div>
             </div>
 
-            <div className="group">
-              <label
-                htmlFor="password"
-                className="block mb-1.5 text-xs font-semibold tracking-wide"
-                style={{ color: "rgba(245,246,248,0.6)" }}
-              >
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold text-foreground mb-1.5">
                 Contraseña
               </label>
               <div className="relative">
-                <Lock
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: "rgba(245,246,248,0.25)" }}
-                />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
                 <input
                   id="password"
                   type={showPw ? "text" : "password"}
@@ -267,28 +85,12 @@ function AdminLogin() {
                   placeholder="Ingresa tu contraseña"
                   required
                   autoComplete="current-password"
-                  className="w-full h-11 pl-10 pr-10 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-white/20"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    color: "#F5F6F8",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "rgba(37,99,235,0.5)";
-                    e.target.style.background = "rgba(255,255,255,0.07)";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "rgba(255,255,255,0.06)";
-                    e.target.style.background = "rgba(255,255,255,0.04)";
-                    e.target.style.boxShadow = "none";
-                  }}
+                  className="w-full h-11 pl-9 pr-10 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-all duration-200 focus:border-ring focus:ring-2 focus:ring-ring/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:opacity-80"
-                  style={{ color: "rgba(245,246,248,0.35)" }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition cursor-pointer"
                   aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -299,20 +101,8 @@ function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 transition-all duration-300 hover:opacity-90 active:scale-[0.98] disabled:opacity-60 relative overflow-hidden group/btn"
-              style={{
-                background: "linear-gradient(135deg, #C41E3A 0%, #A00D26 100%)",
-                color: "#fff",
-                letterSpacing: "0.03em",
-                boxShadow: "0 4px 20px rgba(196,30,58,0.3)",
-              }}
+              className="w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 transition-all duration-200 hover:bg-moli-red-dark active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              <span
-                className="absolute inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"
-                style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%)",
-                }}
-              />
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
@@ -324,35 +114,17 @@ function AdminLogin() {
             </button>
           </form>
 
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <div
-              className="inline-flex items-center gap-2 px-4 py-1.5"
-              style={{
-                border: "1px solid rgba(37,99,235,0.2)",
-                borderRadius: 6,
-                background: "rgba(37,99,235,0.06)",
-              }}
-            >
-              <ShieldCheck size={12} strokeWidth={1.5} color="#3B82F6" />
-              <span
-                style={{
-                  fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                  fontSize: "0.6rem",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "#3B82F6",
-                }}
-              >
+          <div className="mt-6 flex flex-col items-center gap-4 pt-4 border-t border-border">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted">
+              <ShieldCheck size={12} className="text-moli-blue" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-moli-blue">
                 Registrado ante BCRA
               </span>
             </div>
-            <p
-              className="text-center text-[11px] leading-relaxed"
-              style={{ color: "rgba(245,246,248,0.25)" }}
-            >
+            <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
               Solo administradores autorizados.
               <br />
-              Molly Money Life &copy; {new Date().getFullYear()}
+              Moli &copy; {new Date().getFullYear()}
             </p>
           </div>
         </div>

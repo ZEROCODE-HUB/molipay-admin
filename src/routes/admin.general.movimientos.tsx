@@ -5,7 +5,7 @@ export const Route = createFileRoute("/admin/general/movimientos")({
   head: () => ({
     meta: [
       { title: "Movimientos — Admin Molly" },
-      { name: "description", content: "Historial de movimientos de la plataforma Molly Money Life." },
+      { name: "description", content: "Historial de movimientos de la plataforma Moli." },
     ],
   }),
   component: MovimientosLayout,

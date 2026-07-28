@@ -5,7 +5,7 @@ export const Route = createFileRoute("/admin/modulos/transferencia")({
   component: TransferenciaLayout,
   head: () => ({
     meta: [
-      { title: "Pago con transferencia — Admin — Molly Money Life" },
+      { title: "Pago con transferencia — Admin — Moli" },
       { name: "description", content: "Gestión del módulo de pago con transferencia." },
     ],
   }),

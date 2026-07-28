@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
   head: () => ({
     meta: [
       { title: "Impuestos cobrados — Movimientos — Admin Molly" },
-      { name: "description", content: "Impuestos cobrados a través de la plataforma Molly Money Life." },
+      { name: "description", content: "Impuestos cobrados a través de la plataforma Moli." },
     ],
   }),
   component: ImpuestosPage,

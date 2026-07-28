@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-qr")({
   head: () => ({
     meta: [
       { title: "Pagos QR — Movimientos — Admin Molly" },
-      { name: "description", content: "Pagos realizados mediante código QR en la plataforma Molly Money Life." },
+      { name: "description", content: "Pagos realizados mediante código QR en la plataforma Moli." },
     ],
   }),
   component: PagosQrPage,

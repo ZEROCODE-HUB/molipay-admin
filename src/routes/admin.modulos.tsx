@@ -5,7 +5,7 @@ export const Route = createFileRoute("/admin/modulos")({
   component: ModulosLayout,
   head: () => ({
     meta: [
-      { title: "Módulos — Admin — Molly Money Life" },
+      { title: "Módulos — Admin — Moli" },
       { name: "description", content: "Gestión de módulos de la plataforma Molly." },
     ],
   }),

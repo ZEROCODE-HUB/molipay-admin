@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/configuracion/telegram")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Mensajes de Telegram — Admin — Molly Money Life" },
+      { title: "Mensajes de Telegram — Admin — Moli" },
       { name: "description", content: "Configuración de alertas administrativas por Telegram." },
     ],
   }),

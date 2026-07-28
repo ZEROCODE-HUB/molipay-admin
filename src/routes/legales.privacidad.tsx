@@ -1,11 +1,11 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 
 export const Route = createFileRoute("/legales/privacidad")({
   head: () => ({
     meta: [
-      { title: "Politica de Privacidad — Molly Money Life" },
+      { title: "Política de Privacidad — Moli" },
       { name: "description", content: "Politica de privacidad y tratamiento de datos personales." },
     ],
   }),
@@ -30,7 +30,7 @@ function Page() {
         <section className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-2">1. Responsable del tratamiento</h2>
-            <p>Molly Money Life SA, CUIT 30-71000000-0, con domicilio en Av. Corrientes 1234, CABA, Argentina, es la responsable del tratamiento de los datos personales.</p>
+            <p>Moli SA, CUIT 30-71000000-0, con domicilio en Av. Corrientes 1234, CABA, Argentina, es la responsable del tratamiento de los datos personales.</p>
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-2">2. Datos recolectados</h2>

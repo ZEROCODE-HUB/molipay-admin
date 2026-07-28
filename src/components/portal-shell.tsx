@@ -42,13 +42,13 @@ export function PortalShell({
       <header className="h-14 border-b bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 -ml-2"
+            className="lg:hidden p-2 -ml-2 text-foreground"
             onClick={() => setOpen((v) => !v)}
             aria-label="Abrir menú"
           >
             <Menu size={20} />
           </button>
-          <MollyLogo />
+          <MollyLogo size={28} />
           <span className="hidden lg:inline text-sm text-muted-foreground border-l pl-3 ml-1 truncate max-w-[200px]">
             {title}
           </span>
@@ -56,17 +56,17 @@ export function PortalShell({
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-xs text-muted-foreground">Sesión demo</span>
-            <span className="text-sm font-semibold">Empresa Demo SA</span>
+            <span className="text-sm font-semibold text-foreground">Empresa Demo SA</span>
           </div>
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
-            style={{ background: "var(--brand-soft)", color: "var(--brand-dark)" }}
+            style={{ background: "var(--moli-red-light)", color: "var(--moli-red-dark)" }}
           >
             ED
           </div>
           <button
             onClick={onLogout}
-            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <LogOut size={14} /> Salir
           </button>
@@ -75,8 +75,8 @@ export function PortalShell({
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar desktop */}
-        <aside className="hidden lg:flex flex-col w-60 border-r bg-sidebar shrink-0">
-          <nav className="p-3 flex-1 overflow-y-auto">
+        <aside className="hidden lg:flex flex-col w-56 border-r bg-sidebar shrink-0">
+          <nav className="p-2 flex-1 overflow-y-auto">
             <SidebarNav nav={nav} path={path} />
           </nav>
         </aside>
@@ -86,10 +86,10 @@ export function PortalShell({
           <div className="lg:hidden fixed inset-0 z-40">
             <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
             <aside className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r flex flex-col">
-              <div className="p-4 border-b">
-                <MollyLogo />
+              <div className="p-4 border-b border-sidebar-border">
+                <MollyLogo size={28} />
               </div>
-              <nav className="p-3 flex-1 overflow-y-auto">
+              <nav className="p-2 flex-1 overflow-y-auto">
                 <SidebarNav nav={nav} path={path} onNavigate={() => setOpen(false)} />
               </nav>
             </aside>
@@ -98,7 +98,7 @@ export function PortalShell({
 
         {/* Main */}
         <main className="flex-1 min-w-0 overflow-y-auto pb-20 lg:pb-6">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:py-8">{children}</div>
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-8 lg:py-6">{children}</div>
         </main>
       </div>
 
@@ -123,7 +123,7 @@ export function PortalShell({
         {more.length > 0 && (
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] text-muted-foreground"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] text-muted-foreground cursor-pointer"
           >
             <MoreHorizontal size={20} strokeWidth={1.75} />
             <span>Más</span>
@@ -182,7 +182,7 @@ function SidebarLink({
     <Link
       to={item.to}
       onClick={onNavigate}
-      className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm mb-0.5 transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors ${
         nested ? "pl-9" : ""
       } ${
         active
@@ -215,7 +215,7 @@ function SidebarGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
           containsActive
             ? "text-sidebar-accent-foreground font-semibold"
             : "text-sidebar-foreground hover:bg-sidebar-accent/60"
@@ -227,7 +227,7 @@ function SidebarGroup({
         <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
       {expanded && (
-        <div className="mt-0.5">
+        <div className="mt-0.5 ml-1.5 border-l border-sidebar-border pl-1.5">
           {group.items.map((it) => (
             <SidebarLink
               key={it.to}
@@ -257,7 +257,7 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
       </div>
       {action}
@@ -266,14 +266,14 @@ export function PageHeader({
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-card border rounded-lg p-6 ${className}`}>{children}</div>;
+  return <div className={`bg-card border border-border rounded-xl p-5 ${className}`}>{children}</div>;
 }
 
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <Card>
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="text-2xl md:text-3xl font-semibold mt-1">{value}</div>
+      <div className="text-xl md:text-2xl font-semibold text-foreground mt-1">{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
     </Card>
   );
@@ -283,7 +283,7 @@ export function BtnPrimary({ children, ...p }: React.ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...p}
-      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition ${p.className ?? ""}`}
+      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-moli-red-dark active:bg-moli-red-darker transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${p.className ?? ""}`}
     >
       {children}
     </button>
@@ -294,7 +294,7 @@ export function BtnOutline({ children, ...p }: React.ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...p}
-      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md border border-border bg-card text-foreground text-sm font-semibold hover:bg-accent transition ${p.className ?? ""}`}
+      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-border bg-card text-foreground text-sm font-semibold hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${p.className ?? ""}`}
     >
       {children}
     </button>
@@ -305,7 +305,7 @@ export function Input(p: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...p}
-      className={`w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring ${p.className ?? ""}`}
+      className={`w-full h-10 px-3 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-all duration-200 focus:border-ring focus:ring-2 focus:ring-ring/20 ${p.className ?? ""}`}
     />
   );
 }
@@ -318,6 +318,13 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
   );
 }
 
+const badgeStyles: Record<string, string> = {
+  neutral: "bg-muted text-muted-foreground",
+  success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
+  warn: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+  danger: "bg-moli-red-light text-moli-red-dark dark:bg-red-950/30 dark:text-red-400",
+};
+
 export function Badge({
   children,
   tone = "neutral",
@@ -325,15 +332,9 @@ export function Badge({
   children: ReactNode;
   tone?: "neutral" | "success" | "warn" | "danger";
 }) {
-  const styles: Record<string, string> = {
-    neutral: "bg-muted text-muted-foreground",
-    success: "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]",
-    warn: "bg-amber-100 text-amber-800",
-    danger: "bg-red-100 text-red-700",
-  };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${styles[tone]}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeStyles[tone]}`}
     >
       {children}
     </span>

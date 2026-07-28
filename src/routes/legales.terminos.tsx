@@ -1,12 +1,12 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 
 export const Route = createFileRoute("/legales/terminos")({
   head: () => ({
     meta: [
-      { title: "Terminos y Condiciones — Molly Money Life" },
-      { name: "description", content: "Terminos y condiciones de uso de la plataforma Molly Money Life." },
+      { title: "Términos y Condiciones — Moli" },
+      { name: "description", content: "Términos y condiciones de uso de la plataforma Moli." },
     ],
   }),
   component: Page,
@@ -30,7 +30,7 @@ function Page() {
         <section className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-2">1. Objeto</h2>
-            <p>Molly Money Life SA (en adelante "Molly") es un Proveedor de Servicios de Pago con Cuentas de Pago (PSPCP) inscripto ante el Banco Central de la Republica Argentina. Estos terminos regulan el uso de la plataforma por parte de personas juridicas.</p>
+            <p>Moli SA (en adelante "Moli") es un Proveedor de Servicios de Pago con Cuentas de Pago (PSPCP) inscripto ante el Banco Central de la Republica Argentina. Estos términos regulan el uso de la plataforma por parte de personas jurídicas.</p>
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-2">2. Registro y verificacion</h2>

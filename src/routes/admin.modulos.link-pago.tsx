@@ -6,7 +6,7 @@ export const Route = createFileRoute("/admin/modulos/link-pago")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Link de pago — Admin — Molly Money Life" },
+      { title: "Link de pago — Admin — Moli" },
       { name: "description", content: "Gestión del módulo de link de pago." },
     ],
   }),

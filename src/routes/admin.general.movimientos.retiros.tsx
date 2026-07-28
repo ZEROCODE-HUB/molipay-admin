@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/general/movimientos/retiros")({
   head: () => ({
     meta: [
       { title: "Retiros — Movimientos — Admin Molly" },
-      { name: "description", content: "Retiros realizados desde la plataforma Molly Money Life." },
+      { name: "description", content: "Retiros realizados desde la plataforma Moli." },
     ],
   }),
   component: RetirosPage,

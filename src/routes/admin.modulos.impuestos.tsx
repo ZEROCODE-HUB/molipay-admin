@@ -7,7 +7,7 @@ export const Route = createFileRoute("/admin/modulos/impuestos")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Impuestos — Admin — Molly Money Life" },
+      { title: "Impuestos — Admin — Moli" },
       { name: "description", content: "Gestión de impuestos retenidos y propios de la plataforma." },
     ],
   }),
@@ -61,9 +61,9 @@ function Page() {
         description="Gestión de impuestos retenidos y propios de la plataforma."
       />
       <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 flex gap-3 items-start">
-        <Info size={20} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">
-          MoliPay maneja dos tipos de impuestos, totalmente separados. (1) Impuestos propios de
+        <Info size={20} className="text-moli-blue shrink-0 mt-0.5" />
+          <p className="text-sm text-moli-blue-dark dark:text-moli-light-blue leading-relaxed">
+          Moli maneja dos tipos de impuestos, totalmente separados. (1) Impuestos propios de
           Molly: Ganancias (anual) e Ingresos Brutos sobre su comisión — es ganancia del negocio,
           gestionada por su contabilidad, no afecta al cliente. (2) Impuestos retenidos al cliente:
           Molly es agente de retención, no pagador. Se retienen dos impuestos por operación —

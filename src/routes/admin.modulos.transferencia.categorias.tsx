@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/modulos/transferencia/categorias")(
   component: Page,
   head: () => ({
     meta: [
-      { title: "Códigos de categoría — Admin — Molly Money Life" },
+      { title: "Códigos de categoría — Admin — Moli" },
       { name: "description", content: "Administración de códigos de categoría para organizaciones." },
     ],
   }),

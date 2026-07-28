@@ -6,7 +6,7 @@ export const Route = createFileRoute("/admin/modulos/transferencia/resolvers")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Resolvers — Admin — Molly Money Life" },
+      { title: "Resolvers — Admin — Moli" },
       { name: "description", content: "Gestión de resolvers del módulo de transferencias." },
     ],
   }),

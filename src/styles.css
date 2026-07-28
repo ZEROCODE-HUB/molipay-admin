@@ -5,20 +5,37 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Inter", system-ui, sans-serif;
+  --font-sans: "Josefin Sans", system-ui, sans-serif;
+  --font-display: "Josefin Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --color-navy-950: var(--navy-950);
-  --color-navy-800: var(--navy-800);
-  --color-paper: var(--paper);
-  --color-ink: var(--ink);
-  --color-crimson: var(--crimson);
-  --color-brass: var(--brass);
-  --color-line: var(--line);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+
+  --color-moli-red: var(--moli-red);
+  --color-moli-blue: var(--moli-blue);
+  --color-moli-light-blue: var(--moli-light-blue);
+  --color-moli-gray: var(--moli-gray);
+  --color-moli-red-dark: var(--moli-red-dark);
+  --color-moli-red-darker: var(--moli-red-darker);
+  --color-moli-red-light: var(--moli-red-light);
+  --color-moli-blue-dark: var(--moli-blue-dark);
+  --color-moli-blue-darker: var(--moli-blue-darker);
+  --color-moli-blue-light: var(--moli-blue-light);
+  --color-moli-white: var(--moli-white);
+  --color-moli-black: var(--moli-black);
+  --color-moli-text: var(--moli-text);
+  --color-moli-text-muted: var(--moli-text-muted);
+  --color-moli-border: var(--moli-border);
+  --color-moli-bg: var(--moli-bg);
+  --color-moli-surface: var(--moli-surface);
+  --color-moli-sidebar-bg: var(--moli-sidebar-bg);
+  --color-moli-sidebar-active: var(--moli-sidebar-active);
+  --color-moli-sidebar-text: var(--moli-sidebar-text);
+  --color-moli-sidebar-icon: var(--moli-sidebar-icon);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -35,11 +52,6 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-brand-dark: var(--brand-dark);
-  --color-brand: var(--brand);
-  --color-brand-soft: var(--brand-soft);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -54,91 +66,112 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.375rem;
 
-  /* Institutional palette */
-  --navy-950: #0A1628;
-  --navy-800: #16213E;
-  --paper: #F5F6F8;
-  --ink: #131A2A;
-  --crimson: #C8102E;
-  --brass: #0891B2;
-  --line: #D8DCE3;
+  /* ── Brand palette (IDENTIDAD/BrandRules.md) ── */
+  --moli-red: #D21523;
+  --moli-blue: #334596;
+  --moli-light-blue: #9CB0D9;
+  --moli-gray: #8C9297;
 
-  /* Molly brand — legacy aliases mapped to institutional palette */
-  --brand-red: var(--crimson);
-  --brand-red-dark: #A00D26;
-  --brand-blue: var(--navy-800);
-  --brand-blue-dark: var(--navy-950);
-  --brand-soft: #FBEAEC;
-  --brand-blue-soft: #E6EAF3;
+  --moli-red-dark: #A8101C;
+  --moli-red-darker: #7E0C15;
+  --moli-red-light: #FEF2F3;
+  --moli-blue-dark: #25336B;
+  --moli-blue-darker: #1A244D;
+  --moli-blue-light: #EEEFF8;
+  --moli-white: #FFFFFF;
+  --moli-black: #1D1D1B;
+  --moli-text: #2D2D2D;
+  --moli-text-muted: #6B7280;
+  --moli-border: #D8DCE3;
+  --moli-bg: #F5F6F8;
+  --moli-surface: #FFFFFF;
+  --moli-sidebar-bg: #FFFFFF;
+  --moli-sidebar-active: #EEEFF8;
+  --moli-sidebar-text: #4B5563;
+  --moli-sidebar-icon: #6B7280;
 
-  --brand: var(--crimson);
-  --brand-dark: var(--navy-950);
+  --brand: var(--moli-red);
+  --brand-dark: var(--moli-blue-darker);
+  --brand-soft: var(--moli-red-light);
+  --brand-blue-soft: var(--moli-blue-light);
 
-  --background: #FFFFFF;
-  --foreground: var(--ink);
+  /* ── shadcn semantic tokens (light) ── */
+  --background: var(--moli-bg);
+  --foreground: var(--moli-black);
 
+  --card: var(--moli-white);
+  --card-foreground: var(--moli-text);
+  --popover: var(--moli-white);
+  --popover-foreground: var(--moli-text);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 165);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 165);
+  --primary: var(--moli-red);
+  --primary-foreground: var(--moli-white);
 
-  --primary: var(--brand);
-  --primary-foreground: oklch(1 0 0);
+  --secondary: var(--moli-blue);
+  --secondary-foreground: var(--moli-white);
 
-  --secondary: oklch(0.96 0.006 150);
-  --secondary-foreground: var(--brand-dark);
+  --muted: var(--moli-bg);
+  --muted-foreground: var(--moli-text-muted);
 
-  --muted: oklch(0.96 0.006 150);
-  --muted-foreground: oklch(0.55 0.02 250); /* #6B7280 */
+  --accent: var(--moli-blue-light);
+  --accent-foreground: var(--moli-blue);
 
-  --accent: oklch(0.94 0.03 155);
-  --accent-foreground: var(--brand-dark);
+  --destructive: var(--moli-red);
+  --destructive-foreground: var(--moli-white);
 
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(1 0 0);
+  --border: var(--moli-border);
+  --input: var(--moli-border);
+  --ring: var(--moli-red);
 
-  --success: var(--brand-soft);
-  --success-foreground: var(--brand-dark);
-
-  --border: oklch(0.92 0.005 150);
-  --input: oklch(0.92 0.005 150);
-  --ring: var(--brand);
-
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.25 0.02 165);
-  --sidebar-primary: var(--brand);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.95 0.02 155);
-  --sidebar-accent-foreground: var(--brand-dark);
-  --sidebar-border: oklch(0.92 0.005 150);
-  --sidebar-ring: var(--brand);
+  /* ── Sidebar ── */
+  --sidebar: var(--moli-sidebar-bg);
+  --sidebar-foreground: var(--moli-sidebar-text);
+  --sidebar-primary: var(--moli-blue);
+  --sidebar-primary-foreground: var(--moli-white);
+  --sidebar-accent: var(--moli-sidebar-active);
+  --sidebar-accent-foreground: var(--moli-blue);
+  --sidebar-border: var(--moli-border);
+  --sidebar-ring: var(--moli-red);
 }
 
 .dark {
-  --background: oklch(0.18 0.02 165);
-  --foreground: oklch(0.98 0.003 100);
-  --card: oklch(0.22 0.02 165);
-  --card-foreground: oklch(0.98 0.003 100);
-  --popover: oklch(0.22 0.02 165);
-  --popover-foreground: oklch(0.98 0.003 100);
-  --primary: var(--brand-soft);
-  --primary-foreground: var(--brand-dark);
-  --secondary: oklch(0.28 0.03 165);
-  --secondary-foreground: oklch(0.98 0.003 100);
-  --muted: oklch(0.28 0.03 165);
-  --muted-foreground: oklch(0.7 0.02 150);
-  --accent: oklch(0.28 0.03 165);
-  --accent-foreground: oklch(0.98 0.003 100);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --sidebar: oklch(0.22 0.02 165);
-  --sidebar-foreground: oklch(0.98 0.003 100);
-  --sidebar-accent: oklch(0.28 0.03 165);
-  --sidebar-accent-foreground: oklch(0.98 0.003 100);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --background: #131A2A;
+  --foreground: #F5F6F8;
+
+  --card: #1A244D;
+  --card-foreground: #F5F6F8;
+  --popover: #1A244D;
+  --popover-foreground: #F5F6F8;
+
+  --primary: var(--moli-red);
+  --primary-foreground: var(--moli-white);
+
+  --secondary: var(--moli-blue-dark);
+  --secondary-foreground: var(--moli-white);
+
+  --muted: #1E2A4A;
+  --muted-foreground: var(--moli-light-blue);
+
+  --accent: #25336B;
+  --accent-foreground: var(--moli-light-blue);
+
+  --destructive: #C62828;
+  --destructive-foreground: var(--moli-white);
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: var(--moli-red);
+
+  --sidebar: #0F1A37;
+  --sidebar-foreground: #EEEFF8;
+  --sidebar-primary: var(--moli-blue);
+  --sidebar-primary-foreground: var(--moli-white);
+  --sidebar-accent: #25336B;
+  --sidebar-accent-foreground: var(--moli-light-blue);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: var(--moli-red);
 }
 
 @layer base {
@@ -152,9 +185,15 @@
     font-family: var(--font-sans);
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6, .font-semibold, strong, b {
     font-weight: 600;
+  }
+
+  ::selection {
+    background-color: var(--moli-red-light);
+    color: var(--moli-red-dark);
   }
 }

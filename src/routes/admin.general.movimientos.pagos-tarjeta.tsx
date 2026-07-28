@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")
   head: () => ({
     meta: [
       { title: "Pagos con tarjeta — Movimientos — Admin Molly" },
-      { name: "description", content: "Pagos realizados con tarjeta a través de la plataforma Molly Money Life." },
+      { name: "description", content: "Pagos realizados con tarjeta a través de la plataforma Moli." },
     ],
   }),
   component: PagosTarjetaPage,

@@ -1,11 +1,11 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 
 export const Route = createFileRoute("/legales/comisiones")({
   head: () => ({
     meta: [
-      { title: "Tabla de Comisiones — Molly Money Life" },
+      { title: "Tabla de Comisiones — Moli" },
       { name: "description", content: "Detalle de comisiones y aranceles vigentes de la plataforma." },
     ],
   }),

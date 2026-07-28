@@ -1,0 +1,242 @@
+/* ============================================================
+   MOLI Design Tokens — Tailwind CSS v4 + shadcn/ui (New York)
+   Source of truth: IDENTIDAD/BrandRules.md
+   Framework: React 19 · TanStack Start · Tailwind v4 · shadcn/ui
+   ============================================================
+   INSTRUCCIONES:
+   - Copia este bloque @theme inline dentro de src/styles.css
+     reemplazando el bloque @theme inline existente.
+   - Ajusta las reglas :root y .dark para que coincidan con las
+     nuevas variables CSS.
+   - Cambia la fuente en @theme inline a Josefin Sans.
+   - Instala Josefin Sans desde Google Fonts o self-hosted.
+   ============================================================ */
+
+@theme inline {
+  /* ---- Typography ---- */
+  --font-sans: "Josefin Sans", system-ui, sans-serif;
+  --font-display: "Josefin Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* ---- Border radius ---- */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ---- Brand primaries ---- */
+  --color-moli-red: var(--moli-red);
+  --color-moli-blue: var(--moli-blue);
+
+  /* ---- Brand secondaries ---- */
+  --color-moli-light-blue: var(--moli-light-blue);
+  --color-moli-gray: var(--moli-gray);
+
+  /* ---- Extended palette ---- */
+  --color-moli-red-dark: var(--moli-red-dark);
+  --color-moli-red-darker: var(--moli-red-darker);
+  --color-moli-red-light: var(--moli-red-light);
+  --color-moli-blue-dark: var(--moli-blue-dark);
+  --color-moli-blue-darker: var(--moli-blue-darker);
+  --color-moli-blue-light: var(--moli-blue-light);
+  --color-moli-white: var(--moli-white);
+  --color-moli-black: var(--moli-black);
+  --color-moli-text: var(--moli-text);
+  --color-moli-text-muted: var(--moli-text-muted);
+  --color-moli-border: var(--moli-border);
+  --color-moli-bg: var(--moli-bg);
+
+  /* ---- State colors ---- */
+  --color-moli-success: var(--moli-success);
+  --color-moli-success-light: var(--moli-success-light);
+  --color-moli-error: var(--moli-error);
+  --color-moli-error-light: var(--moli-error-light);
+  --color-moli-warning: var(--moli-warning);
+  --color-moli-warning-light: var(--moli-warning-light);
+  --color-moli-info: var(--moli-info);
+  --color-moli-info-light: var(--moli-info-light);
+
+  /* ---- shadcn semantic slots ---- */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--moli-success-light);
+  --color-success-foreground: var(--moli-success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* ---- Border radius base ---- */
+  --radius: 0.375rem;
+
+  /* ================================================================
+     BRAND PALETTE (source: IDENTIDAD/BrandRules.md)
+     ================================================================ */
+
+  /* Primaries */
+  --moli-red: #D21523;
+  --moli-blue: #334596;
+
+  /* Secondaries */
+  --moli-light-blue: #9CB0D9;
+  --moli-gray: #8C9297;
+
+  /* Extended palette — derived from primaries */
+  --moli-red-dark: #A8101C;
+  --moli-red-darker: #7E0C15;
+  --moli-red-light: #FEF2F3;
+  --moli-blue-dark: #25336B;
+  --moli-blue-darker: #1A244D;
+  --moli-blue-light: #EEEFF8;
+  --moli-white: #FFFFFF;
+  --moli-black: #1D1D1B;
+  --moli-text: #2D2D2D;
+  --moli-text-muted: #6B7280;
+  --moli-border: #D8DCE3;
+  --moli-bg: #F5F6F8;
+
+  /* State colors */
+  --moli-success: #2E7D32;
+  --moli-success-light: #E8F5E9;
+  --moli-error: var(--moli-red);
+  --moli-error-light: var(--moli-red-light);
+  --moli-warning: #E67E22;
+  --moli-warning-light: #FFF8E1;
+  --moli-info: var(--moli-blue);
+  --moli-info-light: var(--moli-blue-light);
+
+  /* ---- Brand aliases ---- */
+  --brand: var(--moli-red);
+  --brand-dark: var(--moli-blue-dark);
+  --brand-soft: var(--moli-red-light);
+  --brand-blue-soft: var(--moli-blue-light);
+
+  /* ---- shadcn semantic tokens (light mode) ---- */
+  --background: var(--moli-white);
+  --foreground: var(--moli-black);
+
+  --card: var(--moli-white);
+  --card-foreground: var(--moli-text);
+  --popover: var(--moli-white);
+  --popover-foreground: var(--moli-text);
+
+  --primary: var(--moli-red);
+  --primary-foreground: var(--moli-white);
+
+  --secondary: var(--moli-blue);
+  --secondary-foreground: var(--moli-white);
+
+  --muted: var(--moli-bg);
+  --muted-foreground: var(--moli-text-muted);
+
+  --accent: var(--moli-blue-light);
+  --accent-foreground: var(--moli-blue);
+
+  --destructive: var(--moli-error);
+  --destructive-foreground: var(--moli-white);
+
+  --border: var(--moli-border);
+  --input: var(--moli-border);
+  --ring: var(--moli-red);
+
+  /* ---- Sidebar ---- */
+  --sidebar: var(--moli-white);
+  --sidebar-foreground: var(--moli-text);
+  --sidebar-primary: var(--moli-blue);
+  --sidebar-primary-foreground: var(--moli-white);
+  --sidebar-accent: var(--moli-blue-light);
+  --sidebar-accent-foreground: var(--moli-blue);
+  --sidebar-border: var(--moli-border);
+  --sidebar-ring: var(--moli-red);
+}
+
+.dark {
+  /* ---- shadcn semantic tokens (dark mode) ---- */
+  --background: #131A2A;
+  --foreground: #F5F6F8;
+
+  --card: #1A244D;
+  --card-foreground: #F5F6F8;
+  --popover: #1A244D;
+  --popover-foreground: #F5F6F8;
+
+  --primary: var(--moli-red);
+  --primary-foreground: var(--moli-white);
+
+  --secondary: var(--moli-blue-dark);
+  --secondary-foreground: var(--moli-white);
+
+  --muted: #1E2A4A;
+  --muted-foreground: #9CB0D9;
+
+  --accent: #25336B;
+  --accent-foreground: #9CB0D9;
+
+  --destructive: #C62828;
+  --destructive-foreground: var(--moli-white);
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: var(--moli-red);
+
+  /* ---- Sidebar (dark) ---- */
+  --sidebar: #0F1A37;
+  --sidebar-foreground: #EEEFF8;
+  --sidebar-primary: var(--moli-blue);
+  --sidebar-primary-foreground: var(--moli-white);
+  --sidebar-accent: #25336B;
+  --sidebar-accent-foreground: #9CB0D9;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: var(--moli-red);
+}
+
+/* ================================================================
+   BASE LAYER (copia esto dentro de @layer base en styles.css)
+   ================================================================ */
+/*
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-semibold, strong, b {
+    font-weight: 600;
+  }
+
+  ::selection {
+    background-color: var(--moli-red-light);
+    color: var(--moli-red-dark);
+  }
+}
+*/
