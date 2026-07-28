@@ -60,21 +60,21 @@ function AdminLogin() {
           <div className="flex justify-center mb-4">
             <MollyLogo size={44} variant="light" />
           </div>
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">
             Panel de Administración
           </h1>
-          <p className="text-sm text-white/50 mt-1.5">
+          <p className="text-base text-white/50 mt-2">
             Inicia sesión para continuar.
           </p>
         </div>
 
         {/* Glass card */}
-        <div className="rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+        <div className="rounded-2xl p-8 shadow-[0_16px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl"
           style={{
-            background: "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            background: "rgba(255, 255, 255, 0.75)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
           }}
         >
           <form onSubmit={handleSubmit} className="space-y-5">
