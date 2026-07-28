@@ -20,7 +20,7 @@ const volumeData = [
 function Page() {
   const max = Math.max(...volumeData);
   return (
-    <>
+    <div className="bg-white -m-4 md:-m-6 lg:-mx-8 lg:-my-6 p-4 md:p-6 lg:p-8 min-h-[calc(100vh-3.5rem)]">
       <PageHeader
         title="Dashboard administrativo"
         description="Estado global de la plataforma Moli."
@@ -171,6 +171,6 @@ function Page() {
           </Link>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

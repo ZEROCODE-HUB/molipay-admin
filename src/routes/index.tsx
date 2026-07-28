@@ -33,12 +33,16 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{
-        background: "linear-gradient(170deg, #EEEFF8 0%, #F5F6F8 40%, #FFFFFF 100%)",
-      }}
-    >
-      <div className="w-full max-w-[400px]">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-10 relative overflow-hidden">
+      {/* Decorative brand element — soft blue glow */}
+      <div aria-hidden className="absolute top-1/2 -translate-y-1/2 -left-40 w-[500px] h-[500px] rounded-full opacity-[0.04] pointer-events-none"
+        style={{ background: "radial-gradient(circle, #334596 0%, transparent 70%)" }}
+      />
+      <div aria-hidden className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-[0.03] pointer-events-none"
+        style={{ background: "radial-gradient(circle, #D21523 0%, transparent 70%)" }}
+      />
+
+      <div className="w-full max-w-[400px] relative">
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-4">
@@ -52,8 +56,9 @@ function AdminLogin() {
           </p>
         </div>
 
-        {/* Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-md shadow-moli-blue/5">
+        {/* Card with top accent line */}
+        <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.04)] relative overflow-hidden">
+          <div className="absolute top-0 left-4 right-4 h-[3px] rounded-full bg-moli-red" />
           <form onSubmit={handleSubmit} className="space-y-5">
 
             <div>
