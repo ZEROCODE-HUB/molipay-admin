@@ -35,22 +35,22 @@ function AdminLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden select-none"
       style={{
-        background: "linear-gradient(160deg, #1A244D 0%, #25336B 40%, #2B3D7A 100%)",
+        background: "linear-gradient(160deg, #0A1628 0%, #1A244D 50%, #25336B 100%)",
       }}
     >
       {/* Subtle grid pattern */}
-      <div aria-hidden className="absolute inset-0 opacity-[0.04] pointer-events-none"
+      <div aria-hidden className="absolute inset-0 opacity-[0.05] pointer-events-none"
         style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
 
       {/* Decorative orbs */}
-      <div aria-hidden className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.06] pointer-events-none"
+      <div aria-hidden className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.08] pointer-events-none"
         style={{ background: "radial-gradient(circle, #D21523 0%, transparent 70%)" }}
       />
-      <div aria-hidden className="absolute -bottom-40 -left-20 w-[400px] h-[400px] rounded-full opacity-[0.05] pointer-events-none"
+      <div aria-hidden className="absolute -bottom-40 -left-20 w-[400px] h-[400px] rounded-full opacity-[0.06] pointer-events-none"
         style={{ background: "radial-gradient(circle, #9CB0D9 0%, transparent 70%)" }}
       />
 
@@ -68,8 +68,15 @@ function AdminLogin() {
           </p>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
+        {/* Glass card */}
+        <div className="rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+          style={{
+            background: "rgba(255, 255, 255, 0.9)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+          }}
+        >
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-foreground mb-1.5">

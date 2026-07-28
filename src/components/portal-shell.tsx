@@ -54,15 +54,12 @@ export function PortalShell({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-xs text-muted-foreground">Sesión demo</span>
-            <span className="text-sm font-semibold text-foreground">Empresa Demo SA</span>
-          </div>
+          <span className="hidden sm:inline text-xs text-muted-foreground">Admin</span>
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
             style={{ background: "var(--moli-red-light)", color: "var(--moli-red-dark)" }}
           >
-            ED
+            AD
           </div>
           <button
             onClick={onLogout}
