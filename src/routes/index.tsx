@@ -33,7 +33,11 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{
+        background: "linear-gradient(170deg, #EEEFF8 0%, #F5F6F8 40%, #FFFFFF 100%)",
+      }}
+    >
       <div className="w-full max-w-[400px]">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -49,7 +53,7 @@ function AdminLogin() {
         </div>
 
         {/* Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-md shadow-moli-blue/5">
           <form onSubmit={handleSubmit} className="space-y-5">
 
             <div>
