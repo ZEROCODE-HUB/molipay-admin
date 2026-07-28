@@ -69,14 +69,25 @@ function AdminLogin() {
         </div>
 
         {/* Glass card */}
-        <div className="rounded-2xl p-8 shadow-[0_16px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+        <div className="rounded-2xl p-8 shadow-[0_16px_48px_rgba(0,0,0,0.35)] relative overflow-hidden"
           style={{
-            background: "rgba(255, 255, 255, 0.75)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            background: "rgba(255, 255, 255, 0.55)",
+            backdropFilter: "blur(32px)",
+            WebkitBackdropFilter: "blur(32px)",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
           }}
         >
+          {/* Light reflection highlight */}
+          <div aria-hidden className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-30 pointer-events-none"
+            style={{
+              background: "radial-gradient(circle, rgba(255,255,255,0.6) 0%, transparent 70%)",
+            }}
+          />
+          <div aria-hidden className="absolute -bottom-16 -left-16 w-32 h-32 rounded-full opacity-20 pointer-events-none"
+            style={{
+              background: "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
+            }}
+          />
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-foreground mb-1.5">
