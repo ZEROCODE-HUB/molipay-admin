@@ -39,11 +39,11 @@ function parseDateCell(text: string): Date | null {
   return null;
 }
 
-function isTextFilterable(col: Column<any>): boolean {
+function isTextFilterable(col: Column<unknown>): boolean {
   return col.filterable === true || col.filterable === "text";
 }
 
-function isBoolOrText(val: Column<any>["filterable"]): val is boolean | "text" {
+function isBoolOrText(val: Column<unknown>["filterable"]): val is boolean | "text" {
   return val === true || val === "text";
 }
 
@@ -66,20 +66,11 @@ export function DataTable<T>({
   const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
 
-  const textSearchableCols = useMemo(
-    () => columns.filter((c) => isTextFilterable(c)),
-    [columns],
-  );
+  const textSearchableCols = useMemo(() => columns.filter((c) => isTextFilterable(c)), [columns]);
 
-  const dateCols = useMemo(
-    () => columns.filter((c) => c.filterable === "date"),
-    [columns],
-  );
+  const dateCols = useMemo(() => columns.filter((c) => c.filterable === "date"), [columns]);
 
-  const enumCols = useMemo(
-    () => columns.filter((c) => c.filterable === "enum"),
-    [columns],
-  );
+  const enumCols = useMemo(() => columns.filter((c) => c.filterable === "enum"), [columns]);
 
   const specificFilterCount =
     Object.values(enumFilters).filter((v) => v).length +
@@ -103,7 +94,9 @@ export function DataTable<T>({
       ? `Buscar por ${textSearchableCols
           .slice(0, 4)
           .map((c) => c.label.toLowerCase())
-          .join(", ")}${textSearchableCols.length > 4 ? ` +${textSearchableCols.length - 4} más` : ""}...`
+          .join(
+            ", ",
+          )}${textSearchableCols.length > 4 ? ` +${textSearchableCols.length - 4} más` : ""}...`
       : "Buscar...";
 
   const clearAllFilters = () => {
@@ -112,6 +105,37 @@ export function DataTable<T>({
     setEnumFilters({});
     setDateRanges({});
     setPage(1);
+  };
+
+  const exportCSV = () => {
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const exportCols = columns.filter((c) => c.key !== "acciones");
+    const header = exportCols.map((c) => escape(c.label));
+    const lines = sortedData.map((row) =>
+      exportCols
+        .map((c) => {
+          let val = (row as Record<string, unknown>)[c.key];
+          if (val === undefined) {
+            const rendered = c.render(row);
+            val = typeof rendered === "string" || typeof rendered === "number" ? rendered : "";
+          }
+          return escape(val);
+        })
+        .join(","),
+    );
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "datos.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSort = (key: string) => {
@@ -213,15 +237,11 @@ export function DataTable<T>({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm text-muted-foreground">
-          {sortedData.length} resultados
-        </span>
+        <span className="text-sm text-muted-foreground">{sortedData.length} resultados</span>
         <div className="flex items-center gap-3">
-          {onDownloadCSV && (
-            <BtnOutline onClick={onDownloadCSV}>
-              <Download size={16} /> CSV
-            </BtnOutline>
-          )}
+          <BtnOutline onClick={onDownloadCSV ?? exportCSV}>
+            <Download size={16} /> Descargar CSV
+          </BtnOutline>
         </div>
       </div>
 
@@ -230,7 +250,10 @@ export function DataTable<T>({
           <div className="flex items-center justify-between gap-2">
             {textSearchableCols.length > 0 && (
               <div className="relative flex-1 max-w-md">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Search
+                  size={14}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
                 <input
                   type="text"
                   placeholder={searchPlaceholder}
@@ -241,7 +264,10 @@ export function DataTable<T>({
                 {globalQuery && (
                   <button
                     type="button"
-                    onClick={() => { setGlobalQuery(""); setDebouncedQuery(""); }}
+                    onClick={() => {
+                      setGlobalQuery("");
+                      setDebouncedQuery("");
+                    }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X size={14} />
