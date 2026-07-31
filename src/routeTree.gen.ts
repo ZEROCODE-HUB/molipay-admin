@@ -16,7 +16,6 @@ import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
 import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
 import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
 import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
-import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminIncidentesRouteImport } from './routes/admin.incidentes'
 import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
@@ -32,6 +31,7 @@ import { Route as AdminGeneralAlertasRouteImport } from './routes/admin.general.
 import { Route as AdminConfiguracionTelegramRouteImport } from './routes/admin.configuracion.telegram'
 import { Route as AdminConfiguracionMensajesRouteImport } from './routes/admin.configuracion.mensajes'
 import { Route as AdminAdministracionUsuariosRouteImport } from './routes/admin.administracion.usuarios'
+import { Route as AdminAdministracionSoporteRouteImport } from './routes/admin.administracion.soporte'
 import { Route as AdminAdministracionReportesRouteImport } from './routes/admin.administracion.reportes'
 import { Route as AdminAdministracionRegistrosRouteImport } from './routes/admin.administracion.registros'
 import { Route as AdminModulosTransferenciaIndexRouteImport } from './routes/admin.modulos.transferencia.index'
@@ -39,6 +39,7 @@ import { Route as AdminGeneralUsuariosIndexRouteImport } from './routes/admin.ge
 import { Route as AdminGeneralMovimientosIndexRouteImport } from './routes/admin.general.movimientos.index'
 import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
 import { Route as AdminAdministracionUsuariosIndexRouteImport } from './routes/admin.administracion.usuarios.index'
+import { Route as AdminAdministracionSoporteIndexRouteImport } from './routes/admin.administracion.soporte.index'
 import { Route as AdminAdministracionRegistrosIndexRouteImport } from './routes/admin.administracion.registros.index'
 import { Route as AdminModulosTransferenciaResolversRouteImport } from './routes/admin.modulos.transferencia.resolvers'
 import { Route as AdminModulosTransferenciaCategoriasRouteImport } from './routes/admin.modulos.transferencia.categorias'
@@ -56,6 +57,7 @@ import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './rou
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
 import { Route as AdminAdministracionUsuariosRolesRouteImport } from './routes/admin.administracion.usuarios.roles'
+import { Route as AdminAdministracionSoporteBloqueoRouteImport } from './routes/admin.administracion.soporte.bloqueo'
 import { Route as AdminAdministracionRegistrosTotalRouteImport } from './routes/admin.administracion.registros.total'
 import { Route as AdminAdministracionRegistrosActividadRouteImport } from './routes/admin.administracion.registros.actividad'
 
@@ -93,11 +95,6 @@ const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
   id: '/legales/arrepentimiento',
   path: '/legales/arrepentimiento',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AdminSoporteRoute = AdminSoporteRouteImport.update({
-  id: '/soporte',
-  path: '/soporte',
-  getParentRoute: () => AdminRoute,
 } as any)
 const AdminModulosRoute = AdminModulosRouteImport.update({
   id: '/modulos',
@@ -178,6 +175,12 @@ const AdminAdministracionUsuariosRoute =
     path: '/administracion/usuarios',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminAdministracionSoporteRoute =
+  AdminAdministracionSoporteRouteImport.update({
+    id: '/administracion/soporte',
+    path: '/administracion/soporte',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminAdministracionReportesRoute =
   AdminAdministracionReportesRouteImport.update({
     id: '/administracion/reportes',
@@ -219,6 +222,12 @@ const AdminAdministracionUsuariosIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AdminAdministracionUsuariosRoute,
+  } as any)
+const AdminAdministracionSoporteIndexRoute =
+  AdminAdministracionSoporteIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdministracionSoporteRoute,
   } as any)
 const AdminAdministracionRegistrosIndexRoute =
   AdminAdministracionRegistrosIndexRouteImport.update({
@@ -321,6 +330,12 @@ const AdminAdministracionUsuariosRolesRoute =
     path: '/roles',
     getParentRoute: () => AdminAdministracionUsuariosRoute,
   } as any)
+const AdminAdministracionSoporteBloqueoRoute =
+  AdminAdministracionSoporteBloqueoRouteImport.update({
+    id: '/bloqueo',
+    path: '/bloqueo',
+    getParentRoute: () => AdminAdministracionSoporteRoute,
+  } as any)
 const AdminAdministracionRegistrosTotalRoute =
   AdminAdministracionRegistrosTotalRouteImport.update({
     id: '/total',
@@ -340,7 +355,6 @@ export interface FileRoutesByFullPath {
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
   '/admin/modulos': typeof AdminModulosRouteWithChildren
-  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -348,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/admin/administracion/registros': typeof AdminAdministracionRegistrosRouteWithChildren
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
+  '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
   '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
   '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
@@ -362,6 +377,7 @@ export interface FileRoutesByFullPath {
   '/admin/modulos/': typeof AdminModulosIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -379,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
   '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
   '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
@@ -388,7 +405,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/incidentes': typeof AdminIncidentesRoute
-  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -404,6 +420,7 @@ export interface FileRoutesByTo {
   '/admin/modulos': typeof AdminModulosIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -421,6 +438,7 @@ export interface FileRoutesByTo {
   '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
   '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
   '/admin/administracion/registros': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/soporte': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos': typeof AdminGeneralMovimientosIndexRoute
@@ -434,7 +452,6 @@ export interface FileRoutesById {
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
   '/admin/modulos': typeof AdminModulosRouteWithChildren
-  '/admin/soporte': typeof AdminSoporteRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -442,6 +459,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/admin/administracion/registros': typeof AdminAdministracionRegistrosRouteWithChildren
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
+  '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
   '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
   '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
@@ -456,6 +474,7 @@ export interface FileRoutesById {
   '/admin/modulos/': typeof AdminModulosIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
+  '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -473,6 +492,7 @@ export interface FileRoutesById {
   '/admin/modulos/transferencia/categorias': typeof AdminModulosTransferenciaCategoriasRoute
   '/admin/modulos/transferencia/resolvers': typeof AdminModulosTransferenciaResolversRoute
   '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
+  '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
@@ -487,7 +507,6 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/incidentes'
     | '/admin/modulos'
-    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -495,6 +514,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/administracion/registros'
     | '/admin/administracion/reportes'
+    | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/configuracion/mensajes'
     | '/admin/configuracion/telegram'
@@ -509,6 +529,7 @@ export interface FileRouteTypes {
     | '/admin/modulos/'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
+    | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -526,6 +547,7 @@ export interface FileRouteTypes {
     | '/admin/modulos/transferencia/categorias'
     | '/admin/modulos/transferencia/resolvers'
     | '/admin/administracion/registros/'
+    | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
@@ -535,7 +557,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin/incidentes'
-    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -551,6 +572,7 @@ export interface FileRouteTypes {
     | '/admin/modulos'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
+    | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -568,6 +590,7 @@ export interface FileRouteTypes {
     | '/admin/modulos/transferencia/categorias'
     | '/admin/modulos/transferencia/resolvers'
     | '/admin/administracion/registros'
+    | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
@@ -580,7 +603,6 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/incidentes'
     | '/admin/modulos'
-    | '/admin/soporte'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -588,6 +610,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/administracion/registros'
     | '/admin/administracion/reportes'
+    | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/configuracion/mensajes'
     | '/admin/configuracion/telegram'
@@ -602,6 +625,7 @@ export interface FileRouteTypes {
     | '/admin/modulos/'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
+    | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -619,6 +643,7 @@ export interface FileRouteTypes {
     | '/admin/modulos/transferencia/categorias'
     | '/admin/modulos/transferencia/resolvers'
     | '/admin/administracion/registros/'
+    | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
@@ -685,13 +710,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/legales/arrepentimiento'
       preLoaderRoute: typeof LegalesArrepentimientoRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/admin/soporte': {
-      id: '/admin/soporte'
-      path: '/soporte'
-      fullPath: '/admin/soporte'
-      preLoaderRoute: typeof AdminSoporteRouteImport
-      parentRoute: typeof AdminRoute
     }
     '/admin/modulos': {
       id: '/admin/modulos'
@@ -798,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdministracionUsuariosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/administracion/soporte': {
+      id: '/admin/administracion/soporte'
+      path: '/administracion/soporte'
+      fullPath: '/admin/administracion/soporte'
+      preLoaderRoute: typeof AdminAdministracionSoporteRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/administracion/reportes': {
       id: '/admin/administracion/reportes'
       path: '/administracion/reportes'
@@ -846,6 +871,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/administracion/usuarios/'
       preLoaderRoute: typeof AdminAdministracionUsuariosIndexRouteImport
       parentRoute: typeof AdminAdministracionUsuariosRoute
+    }
+    '/admin/administracion/soporte/': {
+      id: '/admin/administracion/soporte/'
+      path: '/'
+      fullPath: '/admin/administracion/soporte/'
+      preLoaderRoute: typeof AdminAdministracionSoporteIndexRouteImport
+      parentRoute: typeof AdminAdministracionSoporteRoute
     }
     '/admin/administracion/registros/': {
       id: '/admin/administracion/registros/'
@@ -966,6 +998,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdministracionUsuariosRolesRouteImport
       parentRoute: typeof AdminAdministracionUsuariosRoute
     }
+    '/admin/administracion/soporte/bloqueo': {
+      id: '/admin/administracion/soporte/bloqueo'
+      path: '/bloqueo'
+      fullPath: '/admin/administracion/soporte/bloqueo'
+      preLoaderRoute: typeof AdminAdministracionSoporteBloqueoRouteImport
+      parentRoute: typeof AdminAdministracionSoporteRoute
+    }
     '/admin/administracion/registros/total': {
       id: '/admin/administracion/registros/total'
       path: '/total'
@@ -1059,6 +1098,23 @@ const AdminAdministracionRegistrosRouteWithChildren =
     AdminAdministracionRegistrosRouteChildren,
   )
 
+interface AdminAdministracionSoporteRouteChildren {
+  AdminAdministracionSoporteBloqueoRoute: typeof AdminAdministracionSoporteBloqueoRoute
+  AdminAdministracionSoporteIndexRoute: typeof AdminAdministracionSoporteIndexRoute
+}
+
+const AdminAdministracionSoporteRouteChildren: AdminAdministracionSoporteRouteChildren =
+  {
+    AdminAdministracionSoporteBloqueoRoute:
+      AdminAdministracionSoporteBloqueoRoute,
+    AdminAdministracionSoporteIndexRoute: AdminAdministracionSoporteIndexRoute,
+  }
+
+const AdminAdministracionSoporteRouteWithChildren =
+  AdminAdministracionSoporteRoute._addFileChildren(
+    AdminAdministracionSoporteRouteChildren,
+  )
+
 interface AdminAdministracionUsuariosRouteChildren {
   AdminAdministracionUsuariosRolesRoute: typeof AdminAdministracionUsuariosRolesRoute
   AdminAdministracionUsuariosIndexRoute: typeof AdminAdministracionUsuariosIndexRoute
@@ -1149,10 +1205,10 @@ interface AdminRouteChildren {
   AdminConfiguracionRoute: typeof AdminConfiguracionRouteWithChildren
   AdminIncidentesRoute: typeof AdminIncidentesRoute
   AdminModulosRoute: typeof AdminModulosRouteWithChildren
-  AdminSoporteRoute: typeof AdminSoporteRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAdministracionRegistrosRoute: typeof AdminAdministracionRegistrosRouteWithChildren
   AdminAdministracionReportesRoute: typeof AdminAdministracionReportesRoute
+  AdminAdministracionSoporteRoute: typeof AdminAdministracionSoporteRouteWithChildren
   AdminAdministracionUsuariosRoute: typeof AdminAdministracionUsuariosRouteWithChildren
   AdminGeneralAlertasRoute: typeof AdminGeneralAlertasRouteWithChildren
   AdminGeneralMovimientosRoute: typeof AdminGeneralMovimientosRouteWithChildren
@@ -1163,11 +1219,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminConfiguracionRoute: AdminConfiguracionRouteWithChildren,
   AdminIncidentesRoute: AdminIncidentesRoute,
   AdminModulosRoute: AdminModulosRouteWithChildren,
-  AdminSoporteRoute: AdminSoporteRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminAdministracionRegistrosRoute:
     AdminAdministracionRegistrosRouteWithChildren,
   AdminAdministracionReportesRoute: AdminAdministracionReportesRoute,
+  AdminAdministracionSoporteRoute: AdminAdministracionSoporteRouteWithChildren,
   AdminAdministracionUsuariosRoute:
     AdminAdministracionUsuariosRouteWithChildren,
   AdminGeneralAlertasRoute: AdminGeneralAlertasRouteWithChildren,

@@ -43,7 +43,6 @@ const nav: NavItem[] = [
       { to: "/admin/general/usuarios", label: "Usuarios", icon: Users },
       { to: "/admin/general/movimientos", label: "Movimientos", icon: Activity },
       { to: "/admin/general/alertas", label: "Alertas", icon: Bell },
-      { to: "/admin/soporte", label: "Soporte", icon: Headphones },
     ],
   },
   {
@@ -63,6 +62,7 @@ const nav: NavItem[] = [
       { to: "/admin/administracion/usuarios", label: "Usuarios backoffice", icon: UserCog },
       { to: "/admin/administracion/reportes", label: "Reportes", icon: FileBarChart2 },
       { to: "/admin/administracion/registros", label: "Registros", icon: BookOpen },
+      { to: "/admin/administracion/soporte", label: "Soporte", icon: Headphones },
     ],
   },
   {
