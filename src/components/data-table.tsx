@@ -64,17 +64,22 @@ export function DataTable<T>({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [globalQuery, setGlobalQuery] = useState("");
   const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
-  const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
+  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
 
   const textSearchableCols = useMemo(() => columns.filter((c) => isTextFilterable(c)), [columns]);
 
-  const dateCols = useMemo(() => columns.filter((c) => c.filterable === "date"), [columns]);
+  const dateCols = useMemo(
+    () =>
+      columns.filter(
+        (c) => c.filterable === "date" || /fecha|creado|registro|venc|vigencia/i.test(c.label),
+      ),
+    [columns],
+  );
 
   const enumCols = useMemo(() => columns.filter((c) => c.filterable === "enum"), [columns]);
 
   const specificFilterCount =
-    Object.values(enumFilters).filter((v) => v).length +
-    Object.values(dateRanges).filter((r) => r.from || r.to).length;
+    Object.values(enumFilters).filter((v) => v).length + (dateRange.from || dateRange.to ? 1 : 0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -103,7 +108,7 @@ export function DataTable<T>({
     setGlobalQuery("");
     setDebouncedQuery("");
     setEnumFilters({});
-    setDateRanges({});
+    setDateRange({ from: "", to: "" });
     setPage(1);
   };
 
@@ -164,26 +169,28 @@ export function DataTable<T>({
         const text = String(col.render(row) ?? "");
         if (text !== value) return false;
       }
-      for (const [key, range] of Object.entries(dateRanges)) {
-        if (!range.from && !range.to) continue;
-        const col = columns.find((c) => c.key === key);
-        if (!col) continue;
-        const text = String(col.render(row) ?? "");
-        const date = parseDateCell(text);
-        if (!date) continue;
-        if (range.from) {
-          const fromDate = new Date(range.from);
-          if (date < fromDate) return false;
-        }
-        if (range.to) {
-          const toDate = new Date(range.to);
-          toDate.setDate(toDate.getDate() + 1);
-          if (date >= toDate) return false;
+      if (dateRange.from || dateRange.to) {
+        const key = dateCols[0]?.key;
+        const col = key ? columns.find((c) => c.key === key) : undefined;
+        if (col) {
+          const text = String(col.render(row) ?? "");
+          const date = parseDateCell(text);
+          if (date) {
+            if (dateRange.from) {
+              const fromDate = new Date(dateRange.from);
+              if (date < fromDate) return false;
+            }
+            if (dateRange.to) {
+              const toDate = new Date(dateRange.to);
+              toDate.setDate(toDate.getDate() + 1);
+              if (date >= toDate) return false;
+            }
+          }
         }
       }
       return true;
     });
-  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRanges, columns]);
+  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRange, dateCols, columns]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
@@ -198,7 +205,7 @@ export function DataTable<T>({
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, enumFilters, dateRanges, pageSize]);
+  }, [debouncedQuery, enumFilters, dateRange, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -289,39 +296,28 @@ export function DataTable<T>({
 
           {showSpecificFilters && (
             <div className="flex flex-wrap items-end gap-3">
-              {dateCols.map((col) => {
-                const range = dateRanges[col.key] ?? { from: "", to: "" };
-                return (
-                  <div key={col.key} className="space-y-1 min-w-0">
-                    <label className="text-xs font-medium text-muted-foreground">{col.label}</label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="date"
-                        value={range.from}
-                        onChange={(e) =>
-                          setDateRanges((prev) => ({
-                            ...prev,
-                            [col.key]: { ...range, from: e.target.value },
-                          }))
-                        }
-                        className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                      />
-                      <span className="text-xs text-muted-foreground shrink-0">→</span>
-                      <input
-                        type="date"
-                        value={range.to}
-                        onChange={(e) =>
-                          setDateRanges((prev) => ({
-                            ...prev,
-                            [col.key]: { ...range, to: e.target.value },
-                          }))
-                        }
-                        className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                      />
-                    </div>
+              {dateCols.length > 0 && (
+                <div className="space-y-1 min-w-0">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {dateCols[0].label} (desde – hasta)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={dateRange.from}
+                      onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
+                      className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">→</span>
+                    <input
+                      type="date"
+                      value={dateRange.to}
+                      onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
+                      className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                    />
                   </div>
-                );
-              })}
+                </div>
+              )}
               {enumCols.map((col) => (
                 <div key={col.key} className="space-y-1 min-w-0">
                   <label className="text-xs font-medium text-muted-foreground">{col.label}</label>
