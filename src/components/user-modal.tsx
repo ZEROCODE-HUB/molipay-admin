@@ -62,6 +62,7 @@ export type UserData = {
   nombreLegal: string;
   nombreComercial: string;
   fechaInscripcion: string;
+  fechaRegistro: string;
   pep: string;
   subcuentas: Subcuenta[];
   documentos: UserDocument[];
@@ -108,6 +109,7 @@ type FieldDef = {
 const personalFields: FieldDef[] = [
   { key: "legajo", label: "Legajo" },
   { key: "email", label: "Email" },
+  { key: "fechaRegistro", label: "Fecha de registro" },
   { key: "tipoCuenta", label: "Tipo de cuenta" },
   {
     key: "status",
@@ -259,11 +261,11 @@ export function UserModal({
       (f) => f.key === key,
     );
     if (fieldDef?.type === "number") {
-      (updated as any)[key] = Number(editingValue);
+      (updated as Record<string, unknown>)[key] = Number(editingValue);
     } else if (key === "status") {
       updated.status = editingValue as UserStatus;
     } else {
-      (updated as any)[key] = editingValue;
+      (updated as Record<string, unknown>)[key] = editingValue;
     }
     onUserChange(updated);
     setEditingField(null);
@@ -418,9 +420,7 @@ export function UserModal({
                     <td className="px-3 py-2 font-medium text-xs">{sub.id}</td>
                     <td className="px-3 py-2 text-xs">{sub.legajo}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{sub.email}</td>
-                    <td className="px-3 py-2 text-muted-foreground text-xs font-mono">
-                      {sub.cvu}
-                    </td>
+                    <td className="px-3 py-2 text-muted-foreground text-xs font-mono">{sub.cvu}</td>
                     <td className="px-3 py-2 text-center">
                       <Badge tone={sub.estado === "activa" ? "success" : "neutral"}>
                         {sub.estado}

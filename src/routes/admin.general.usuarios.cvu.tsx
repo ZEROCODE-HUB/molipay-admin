@@ -24,8 +24,9 @@ type CvuUser = {
   nombre: string;
   apellido: string;
   cvu: string;
+  cbk: string;
   alias: string;
-  estado: "activo" | "inactivo" | "pendiente";
+  estado: "Habilitado" | "Deshabilitado" | "Suspendido";
 };
 
 const initialData: CvuUser[] = [
@@ -35,8 +36,9 @@ const initialData: CvuUser[] = [
     nombre: "Juan Carlos",
     apellido: "Pérez",
     cvu: "0000003100087654321012",
+    cbk: "CBK-3100087654321012",
     alias: "juan.perez",
-    estado: "activo",
+    estado: "Habilitado",
   },
   {
     legajo: "CVU-002",
@@ -44,8 +46,9 @@ const initialData: CvuUser[] = [
     nombre: "María Elena",
     apellido: "López",
     cvu: "0000003100087654321023",
+    cbk: "CBK-3100087654321023",
     alias: "maria.lopez",
-    estado: "activo",
+    estado: "Habilitado",
   },
   {
     legajo: "CVU-003",
@@ -53,8 +56,9 @@ const initialData: CvuUser[] = [
     nombre: "Carlos Alberto",
     apellido: "Martínez",
     cvu: "0000003100087654321034",
+    cbk: "CBK-3100087654321034",
     alias: "carlos.mtz",
-    estado: "inactivo",
+    estado: "Deshabilitado",
   },
   {
     legajo: "CVU-004",
@@ -62,8 +66,9 @@ const initialData: CvuUser[] = [
     nombre: "Ana Sofía",
     apellido: "García",
     cvu: "0000003100087654321045",
+    cbk: "CBK-3100087654321045",
     alias: "ana.garcia",
-    estado: "activo",
+    estado: "Habilitado",
   },
   {
     legajo: "CVU-005",
@@ -71,8 +76,9 @@ const initialData: CvuUser[] = [
     nombre: "Pedro Antonio",
     apellido: "Rodríguez",
     cvu: "0000003100087654321056",
+    cbk: "CBK-3100087654321056",
     alias: "pedro.rod",
-    estado: "pendiente",
+    estado: "Suspendido",
   },
   {
     legajo: "CVU-006",
@@ -80,8 +86,9 @@ const initialData: CvuUser[] = [
     nombre: "Lucía Belén",
     apellido: "Mendoza",
     cvu: "0000003100087654321067",
+    cbk: "CBK-3100087654321067",
     alias: "lucia.mend",
-    estado: "activo",
+    estado: "Habilitado",
   },
   {
     legajo: "CVU-007",
@@ -89,8 +96,9 @@ const initialData: CvuUser[] = [
     nombre: "Gabriel Esteban",
     apellido: "Ríos",
     cvu: "0000003100087654321078",
+    cbk: "CBK-3100087654321078",
     alias: "gabriel.rios",
-    estado: "activo",
+    estado: "Habilitado",
   },
   {
     legajo: "CVU-008",
@@ -98,8 +106,9 @@ const initialData: CvuUser[] = [
     nombre: "Valentina",
     apellido: "Castro",
     cvu: "0000003100087654321089",
+    cbk: "CBK-3100087654321089",
     alias: "vale.castro",
-    estado: "inactivo",
+    estado: "Deshabilitado",
   },
   {
     legajo: "CVU-009",
@@ -107,16 +116,17 @@ const initialData: CvuUser[] = [
     nombre: "Diego Martín",
     apellido: "Fernández",
     cvu: "0000003100087654321090",
+    cbk: "CBK-3100087654321090",
     alias: "diego.fer",
-    estado: "activo",
+    estado: "Habilitado",
   },
 ];
 
 const estadoBadge = (e: CvuUser["estado"]) => {
   const map = {
-    activo: { label: "Activo", tone: "success" as const },
-    inactivo: { label: "Inactivo", tone: "danger" as const },
-    pendiente: { label: "Pendiente", tone: "warn" as const },
+    Habilitado: { label: "Habilitado", tone: "success" as const },
+    Deshabilitado: { label: "Deshabilitado", tone: "danger" as const },
+    Suspendido: { label: "Suspendido", tone: "warn" as const },
   };
   const m = map[e];
   return <Badge tone={m.tone}>{m.label}</Badge>;
@@ -138,38 +148,40 @@ function CvuPage() {
   const getActions = (row: CvuUser): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
     { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
-    ...(row.estado === "inactivo"
+    ...(row.estado === "Deshabilitado"
       ? [
           {
-            label: "Activar",
+            label: "Habilitar",
             icon: Eye,
             onClick: () =>
               setConfirmAction({
-                title: "Activar CVU",
-                message: `¿Estás seguro de activar el CVU de ${row.nombre} ${row.apellido}?`,
-                confirmLabel: "Activar",
+                title: "Habilitar CVU",
+                message: `¿Estás seguro de habilitar el CVU de ${row.nombre} ${row.apellido}?`,
+                confirmLabel: "Habilitar",
                 variant: "default",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "activo" } : u)),
+                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "Habilitado" } : u)),
                   ),
               }),
           },
         ]
       : [
           {
-            label: "Desactivar",
+            label: "Deshabilitar",
             icon: XCircle,
             variant: "danger" as const,
             onClick: () =>
               setConfirmAction({
-                title: "Desactivar CVU",
-                message: `¿Estás seguro de desactivar el CVU de ${row.nombre} ${row.apellido}?`,
-                confirmLabel: "Desactivar",
+                title: "Deshabilitar CVU",
+                message: `¿Estás seguro de deshabilitar el CVU de ${row.nombre} ${row.apellido}?`,
+                confirmLabel: "Deshabilitar",
                 variant: "danger",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "inactivo" } : u)),
+                    prev.map((u) =>
+                      u.legajo === row.legajo ? { ...u, estado: "Deshabilitado" } : u,
+                    ),
                   ),
               }),
           },
@@ -231,6 +243,10 @@ function CvuPage() {
             <div>
               <span className="text-muted-foreground">CVU:</span>{" "}
               <span className="font-medium font-mono">{viewing.cvu}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">CBK:</span>{" "}
+              <span className="font-medium font-mono">{viewing.cbk}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Alias:</span>{" "}
@@ -312,14 +328,17 @@ function CvuPage() {
 
 const columns: Column<CvuUser>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
+  { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
   { key: "apellido", label: "Apellido", filterable: true, render: (r) => r.apellido },
   { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
+  { key: "cbk", label: "CBK", filterable: true, render: (r) => r.cbk },
   { key: "alias", label: "Alias", filterable: true, render: (r) => r.alias },
   {
     key: "estado",
-    label: "Estado", filterable: "enum", filterOptions: ["activo", "inactivo", "pendiente"],
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: ["Habilitado", "Deshabilitado", "Suspendido"],
     render: (row) => estadoBadge(row.estado),
   },
 ];

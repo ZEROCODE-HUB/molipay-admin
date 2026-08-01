@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Edit3, XCircle } from "lucide-react";
+import { Download, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
@@ -38,6 +38,9 @@ const toneMap: Record<string, "success" | "warn" | "danger" | "neutral"> = {
   "En progreso": "warn",
   "Pendiente de verificación de email": "warn",
   "Pendiente de aprobación": "danger",
+  Suspendido: "danger",
+  Rechazado: "danger",
+  Deshabilitado: "neutral",
 };
 
 const initialData: Juridica[] = [
@@ -139,6 +142,7 @@ const toUserData = (j: Juridica): UserData => ({
   tipoPersona: "juridica",
   legajo: j.legajo,
   email: j.correo,
+  fechaRegistro: j.fechaRegistro,
   tipoCuenta: "Empresarial",
   cantidadCuentasBancarias: 3,
   cantidadCuentasVirtuales: 2,
@@ -219,20 +223,53 @@ function JuridicasPage() {
 
   const getActions = (row: Juridica): ActionItem[] => [
     { label: "Ver / Editar", icon: Edit3, onClick: () => setViewing(toUserData(row)) },
+    ...(row.estado === "Suspendido"
+      ? [
+          {
+            label: "Reactivar",
+            icon: RotateCcw,
+            onClick: () =>
+              setConfirmAction({
+                title: "Reactivar persona jurídica",
+                message: `¿Estás seguro de reactivar a ${row.razonSocial}?`,
+                confirmLabel: "Reactivar",
+                variant: "default",
+                onConfirm: () =>
+                  setData((prev) =>
+                    prev.map((j) => (j.legajo === row.legajo ? { ...j, estado: "Activado" } : j)),
+                  ),
+              }),
+          },
+        ]
+      : [
+          {
+            label: "Suspender",
+            icon: XCircle,
+            variant: "danger",
+            onClick: () =>
+              setConfirmAction({
+                title: "Suspender persona jurídica",
+                message: `¿Estás seguro de suspender a ${row.razonSocial}?`,
+                confirmLabel: "Suspender",
+                variant: "danger",
+                onConfirm: () =>
+                  setData((prev) =>
+                    prev.map((j) => (j.legajo === row.legajo ? { ...j, estado: "Suspendido" } : j)),
+                  ),
+              }),
+          },
+        ]),
     {
-      label: "Suspender",
-      icon: XCircle,
-      variant: "danger",
+      label: "Borrar",
+      icon: Trash2,
+      variant: "danger" as const,
       onClick: () =>
         setConfirmAction({
-          title: "Suspender persona jurídica",
-          message: `¿Estás seguro de suspender a ${row.razonSocial}?`,
-          confirmLabel: "Suspender",
+          title: "Borrar persona jurídica",
+          message: `¿Estás seguro de borrar a ${row.razonSocial}? Esta acción no se puede deshacer.`,
+          confirmLabel: "Borrar",
           variant: "danger",
-          onConfirm: () =>
-            setData((prev) =>
-              prev.map((j) => (j.legajo === row.legajo ? { ...j, estado: "Suspendido" } : j)),
-            ),
+          onConfirm: () => setData((prev) => prev.filter((j) => j.legajo !== row.legajo)),
         }),
     },
   ];
@@ -280,14 +317,37 @@ function JuridicasPage() {
 
 const columns: Column<Juridica>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
+  { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
-  { key: "tipo", label: "Tipo", filterable: "enum", filterOptions: ["SA", "SRL"], render: (r) => r.tipo },
+  {
+    key: "tipo",
+    label: "Tipo",
+    filterable: "enum",
+    filterOptions: ["SA", "SRL"],
+    render: (r) => r.tipo,
+  },
   {
     key: "estado",
-    label: "Estado", filterable: "enum", filterOptions: ["Activado", "Registrado", "Pre-activado", "En progreso", "Pendiente de verificación de email", "Pendiente de aprobación"],
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: [
+      "Activado",
+      "Registrado",
+      "Pre-activado",
+      "En progreso",
+      "Pendiente de verificación de email",
+      "Pendiente de aprobación",
+      "Suspendido",
+      "Rechazado",
+      "Deshabilitado",
+    ],
     render: (row) => <Badge tone={toneMap[row.estado] ?? "neutral"}>{row.estado}</Badge>,
   },
-  { key: "fechaRegistro", label: "Fecha de registro", filterable: "date", render: (r) => r.fechaRegistro },
+  {
+    key: "fechaRegistro",
+    label: "Fecha de registro",
+    filterable: "date",
+    render: (r) => r.fechaRegistro,
+  },
   { key: "subcuentas", label: "Subcuentas", render: (r) => r.subcuentas },
 ];

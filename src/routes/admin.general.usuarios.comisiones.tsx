@@ -26,7 +26,8 @@ type Comision = {
   correo: string;
   operacion: string;
   tipo: string;
-  estado: "activa" | "inactiva";
+  modalidad: "Fijo" | "Porcentaje";
+  estado: "Habilitado" | "Deshabilitado";
   monto: string;
   descripcion: string;
 };
@@ -37,7 +38,8 @@ const initialData: Comision[] = [
     correo: "juan.perez@email.com",
     operacion: "DEP-2024-001",
     tipo: "Depósito",
-    estado: "activa",
+    modalidad: "Fijo",
+    estado: "Habilitado",
     monto: "$ 150,00",
     descripcion: "Comisión por depósito estándar",
   },
@@ -46,7 +48,8 @@ const initialData: Comision[] = [
     correo: "maria.lopez@email.com",
     operacion: "RET-2024-015",
     tipo: "Retiro",
-    estado: "activa",
+    modalidad: "Porcentaje",
+    estado: "Habilitado",
     monto: "$ 220,50",
     descripcion: "Comisión por retiro express",
   },
@@ -55,7 +58,8 @@ const initialData: Comision[] = [
     correo: "carlos.m@email.com",
     operacion: "LNK-2024-032",
     tipo: "Link de pago",
-    estado: "inactiva",
+    modalidad: "Fijo",
+    estado: "Deshabilitado",
     monto: "$ 75,00",
     descripcion: "Comisión por link de pago",
   },
@@ -64,7 +68,8 @@ const initialData: Comision[] = [
     correo: "ana.garcia@email.com",
     operacion: "ECO-2024-008",
     tipo: "E-commerce",
-    estado: "activa",
+    modalidad: "Porcentaje",
+    estado: "Habilitado",
     monto: "$ 340,00",
     descripcion: "Comisión por transacción e-commerce",
   },
@@ -73,7 +78,8 @@ const initialData: Comision[] = [
     correo: "pedro.rodriguez@email.com",
     operacion: "DEP-2024-056",
     tipo: "Depósito",
-    estado: "activa",
+    modalidad: "Fijo",
+    estado: "Habilitado",
     monto: "$ 95,00",
     descripcion: "Comisión por depósito prioritario",
   },
@@ -82,7 +88,8 @@ const initialData: Comision[] = [
     correo: "lucia.mendoza@email.com",
     operacion: "RET-2024-089",
     tipo: "Retiro",
-    estado: "inactiva",
+    modalidad: "Porcentaje",
+    estado: "Deshabilitado",
     monto: "$ 180,00",
     descripcion: "Comisión por retiro programado",
   },
@@ -91,7 +98,8 @@ const initialData: Comision[] = [
     correo: "gabriel.rios@email.com",
     operacion: "LNK-2024-112",
     tipo: "Link de pago",
-    estado: "activa",
+    modalidad: "Fijo",
+    estado: "Habilitado",
     monto: "$ 60,00",
     descripcion: "Comisión por link recurrente",
   },
@@ -113,38 +121,40 @@ function ComisionesPage() {
   const getActions = (row: Comision): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
     { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
-    ...(row.estado === "activa"
+    ...(row.estado === "Habilitado"
       ? [
           {
-            label: "Desactivar",
+            label: "Deshabilitar",
             icon: XCircle,
             variant: "danger" as const,
             onClick: () =>
               setConfirmAction({
-                title: "Desactivar comisión",
-                message: `¿Estás seguro de desactivar la comisión ${row.legajo}?`,
-                confirmLabel: "Desactivar",
+                title: "Deshabilitar comisión",
+                message: `¿Estás seguro de deshabilitar la comisión ${row.legajo}?`,
+                confirmLabel: "Deshabilitar",
                 variant: "danger",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((c) => (c.legajo === row.legajo ? { ...c, estado: "inactiva" } : c)),
+                    prev.map((c) =>
+                      c.legajo === row.legajo ? { ...c, estado: "Deshabilitado" } : c,
+                    ),
                   ),
               }),
           },
         ]
       : [
           {
-            label: "Activar",
+            label: "Habilitar",
             icon: Eye,
             onClick: () =>
               setConfirmAction({
-                title: "Activar comisión",
-                message: `¿Estás seguro de activar la comisión ${row.legajo}?`,
-                confirmLabel: "Activar",
+                title: "Habilitar comisión",
+                message: `¿Estás seguro de habilitar la comisión ${row.legajo}?`,
+                confirmLabel: "Habilitar",
                 variant: "default",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((c) => (c.legajo === row.legajo ? { ...c, estado: "activa" } : c)),
+                    prev.map((c) => (c.legajo === row.legajo ? { ...c, estado: "Habilitado" } : c)),
                   ),
               }),
           },
@@ -230,6 +240,35 @@ function ComisionesPage() {
           size="lg"
         >
           <div>
+            <label className="text-xs font-semibold text-foreground mb-1.5 block">Operación</label>
+            <select
+              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+              value={editTarget.tipo}
+              onChange={(e) => setEditTarget({ ...editTarget, tipo: e.target.value })}
+            >
+              <option>Depósito</option>
+              <option>Retiro</option>
+              <option>Link de pago</option>
+              <option>E-commerce</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
+            <select
+              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+              value={editTarget.modalidad}
+              onChange={(e) =>
+                setEditTarget({
+                  ...editTarget,
+                  modalidad: e.target.value as "Fijo" | "Porcentaje",
+                })
+              }
+            >
+              <option>Fijo</option>
+              <option>Porcentaje</option>
+            </select>
+          </div>
+          <div>
             <label className="text-xs font-semibold text-foreground mb-1.5 block">Monto</label>
             <Input
               value={editTarget.monto}
@@ -255,17 +294,15 @@ function ComisionesPage() {
         title="Nueva comisión"
         description="Asignar una nueva comisión a un usuario."
         onSubmit={() => setShowNueva(false)}
-        submitLabel="Crear comisión"
+        submitLabel="Guardar"
         size="lg"
       >
         <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">
-            Email de usuario
-          </label>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Email</label>
           <Input placeholder="usuario@email.com" />
         </div>
         <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Operación</label>
           <select className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring">
             <option>Depósito</option>
             <option>Retiro</option>
@@ -274,16 +311,14 @@ function ComisionesPage() {
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Modo</label>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
           <select className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring">
             <option>Fijo</option>
             <option>Porcentaje</option>
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">
-            Valor numérico
-          </label>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Monto</label>
           <Input type="number" step="0.01" placeholder="250.00" />
         </div>
         <div>
@@ -312,15 +347,30 @@ function ComisionesPage() {
 
 const columns: Column<Comision>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
-  { key: "operacion", label: "Operación", filterable: true, render: (r) => r.operacion },
-  { key: "tipo", label: "Tipo", filterable: "enum", filterOptions: ["Depósito", "Retiro", "Link de pago", "E-commerce"], render: (r) => r.tipo },
+  { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
+  { key: "operacion", label: "Código de operación", filterable: true, render: (r) => r.operacion },
+  {
+    key: "tipo",
+    label: "Operación",
+    filterable: "enum",
+    filterOptions: ["Depósito", "Retiro", "Link de pago", "E-commerce"],
+    render: (r) => r.tipo,
+  },
+  {
+    key: "modalidad",
+    label: "Tipo",
+    filterable: "enum",
+    filterOptions: ["Fijo", "Porcentaje"],
+    render: (r) => r.modalidad,
+  },
   {
     key: "estado",
-    label: "Estado", filterable: "enum", filterOptions: ["activa", "inactiva"],
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: ["Habilitado", "Deshabilitado"],
     render: (row) => (
-      <Badge tone={row.estado === "activa" ? "success" : "danger"}>
-        {row.estado === "activa" ? "Activa" : "Inactiva"}
+      <Badge tone={row.estado === "Habilitado" ? "success" : "danger"}>
+        {row.estado === "Habilitado" ? "Habilitado" : "Deshabilitado"}
       </Badge>
     ),
   },

@@ -18,12 +18,23 @@ export const Route = createFileRoute("/admin/general/usuarios/")({
   component: PersonasFisicasPage,
 });
 
+type EstadoUsuario =
+  | "Pendiente de verificación de email"
+  | "Registrado"
+  | "Activado"
+  | "Pre-activado"
+  | "En progreso"
+  | "Pendiente de aprobación"
+  | "Suspendido"
+  | "Rechazado"
+  | "Deshabilitado";
+
 type Usuario = {
   legajo: string;
   correo: string;
   nombres: string;
   apellidos: string;
-  estado: "activo" | "suspendido" | "pendiente";
+  estado: EstadoUsuario;
   fechaRegistro: string;
 };
 
@@ -33,7 +44,7 @@ const initialData: Usuario[] = [
     correo: "juan.perez@email.com",
     nombres: "Juan Carlos",
     apellidos: "Pérez González",
-    estado: "activo",
+    estado: "Activado",
     fechaRegistro: "12/01/2024",
   },
   {
@@ -41,7 +52,7 @@ const initialData: Usuario[] = [
     correo: "maria.lopez@email.com",
     nombres: "María Elena",
     apellidos: "López Fernández",
-    estado: "activo",
+    estado: "Activado",
     fechaRegistro: "23/02/2024",
   },
   {
@@ -49,7 +60,7 @@ const initialData: Usuario[] = [
     correo: "carlos.martinez@email.com",
     nombres: "Carlos Alberto",
     apellidos: "Martínez Ruiz",
-    estado: "suspendido",
+    estado: "Suspendido",
     fechaRegistro: "05/03/2024",
   },
   {
@@ -57,7 +68,7 @@ const initialData: Usuario[] = [
     correo: "ana.garcia@email.com",
     nombres: "Ana Sofía",
     apellidos: "García Díaz",
-    estado: "activo",
+    estado: "Registrado",
     fechaRegistro: "18/04/2024",
   },
   {
@@ -65,7 +76,7 @@ const initialData: Usuario[] = [
     correo: "pedro.rodriguez@email.com",
     nombres: "Pedro Antonio",
     apellidos: "Rodríguez Silva",
-    estado: "pendiente",
+    estado: "Pendiente de verificación de email",
     fechaRegistro: "30/05/2024",
   },
   {
@@ -73,7 +84,7 @@ const initialData: Usuario[] = [
     correo: "lucia.mendoza@email.com",
     nombres: "Lucía Belén",
     apellidos: "Mendoza Torres",
-    estado: "activo",
+    estado: "Activado",
     fechaRegistro: "14/06/2024",
   },
   {
@@ -81,7 +92,7 @@ const initialData: Usuario[] = [
     correo: "gabriel.rios@email.com",
     nombres: "Gabriel Esteban",
     apellidos: "Ríos Morales",
-    estado: "activo",
+    estado: "En progreso",
     fechaRegistro: "02/07/2024",
   },
   {
@@ -89,7 +100,7 @@ const initialData: Usuario[] = [
     correo: "valentina.castro@email.com",
     nombres: "Valentina Alejandra",
     apellidos: "Castro Vega",
-    estado: "suspendido",
+    estado: "Suspendido",
     fechaRegistro: "19/08/2024",
   },
   {
@@ -97,7 +108,7 @@ const initialData: Usuario[] = [
     correo: "diego.fernandez@email.com",
     nombres: "Diego Martín",
     apellidos: "Fernández Acosta",
-    estado: "pendiente",
+    estado: "Pendiente de aprobación",
     fechaRegistro: "11/09/2024",
   },
   {
@@ -105,7 +116,7 @@ const initialData: Usuario[] = [
     correo: "florencia.dominguez@email.com",
     nombres: "Florencia Beatriz",
     apellidos: "Domínguez Páez",
-    estado: "activo",
+    estado: "Pre-activado",
     fechaRegistro: "25/10/2024",
   },
   {
@@ -113,7 +124,7 @@ const initialData: Usuario[] = [
     correo: "andres.molina@email.com",
     nombres: "Andrés Sebastián",
     apellidos: "Molina Rivas",
-    estado: "activo",
+    estado: "Activado",
     fechaRegistro: "07/11/2024",
   },
   {
@@ -121,25 +132,47 @@ const initialData: Usuario[] = [
     correo: "camila.sosa@email.com",
     nombres: "Camila Andrea",
     apellidos: "Sosa Guzmán",
-    estado: "suspendido",
+    estado: "Deshabilitado",
     fechaRegistro: "15/12/2024",
   },
 ];
 
 const estadoBadge = (e: Usuario["estado"]) => {
-  const map: Record<string, { label: string; tone: "success" | "warn" | "danger" }> = {
-    activo: { label: "Activo", tone: "success" },
-    suspendido: { label: "Suspendido", tone: "danger" },
-    pendiente: { label: "Pendiente", tone: "warn" },
+  const map: Record<string, { label: string; tone: "success" | "warn" | "danger" | "neutral" }> = {
+    Activado: { label: "Activado", tone: "success" },
+    Registrado: { label: "Registrado", tone: "neutral" },
+    "Pre-activado": { label: "Pre-activado", tone: "warn" },
+    "En progreso": { label: "En progreso", tone: "warn" },
+    "Pendiente de verificación de email": {
+      label: "Pendiente de verificación de email",
+      tone: "warn",
+    },
+    "Pendiente de aprobación": { label: "Pendiente de aprobación", tone: "danger" },
+    Suspendido: { label: "Suspendido", tone: "danger" },
+    Rechazado: { label: "Rechazado", tone: "danger" },
+    Deshabilitado: { label: "Deshabilitado", tone: "neutral" },
   };
-  const m = map[e];
+  const m = map[e] ?? { label: e, tone: "neutral" as const };
   return <Badge tone={m.tone}>{m.label}</Badge>;
 };
 
 const statusMap: Record<Usuario["estado"], UserStatus> = {
-  activo: "active",
-  suspendido: "blocked",
-  pendiente: "pending",
+  Activado: "active",
+  Registrado: "active",
+  "Pre-activado": "active",
+  "En progreso": "pending",
+  "Pendiente de verificación de email": "pending",
+  "Pendiente de aprobación": "pending",
+  Suspendido: "blocked",
+  Rechazado: "blocked",
+  Deshabilitado: "inactive",
+};
+
+const statusRev: Record<UserStatus, Usuario["estado"]> = {
+  active: "Activado",
+  blocked: "Suspendido",
+  pending: "Pendiente de aprobación",
+  inactive: "Deshabilitado",
 };
 
 const toUserData = (u: Usuario): UserData => ({
@@ -148,6 +181,7 @@ const toUserData = (u: Usuario): UserData => ({
   tipoPersona: "fisica",
   legajo: u.legajo,
   email: u.correo,
+  fechaRegistro: u.fechaRegistro,
   tipoCuenta: "Individual",
   cantidadCuentasBancarias: 2,
   cantidadCuentasVirtuales: 1,
@@ -217,12 +251,6 @@ const toUserData = (u: Usuario): UserData => ({
   ],
 });
 
-const statusRev: Record<string, Usuario["estado"]> = {
-  active: "activo",
-  blocked: "suspendido",
-  pending: "pendiente",
-};
-
 function PersonasFisicasPage() {
   const [data, setData] = useState<Usuario[]>(initialData);
   const [viewing, setViewing] = useState<UserData | null>(null);
@@ -268,7 +296,7 @@ function PersonasFisicasPage() {
                 variant: "default",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "activo" } : u)),
+                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "Activado" } : u)),
                   ),
               }),
           },
@@ -285,7 +313,7 @@ function PersonasFisicasPage() {
                 variant: "danger",
                 onConfirm: () =>
                   setData((prev) =>
-                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "suspendido" } : u)),
+                    prev.map((u) => (u.legajo === row.legajo ? { ...u, estado: "Suspendido" } : u)),
                   ),
               }),
           },
@@ -349,13 +377,30 @@ function PersonasFisicasPage() {
 
 const columns: Column<Usuario>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (row) => row.legajo },
-  { key: "correo", label: "Correo", filterable: true, render: (row) => row.correo },
+  { key: "correo", label: "Usuario", filterable: true, render: (row) => row.correo },
   { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },
   { key: "apellidos", label: "Apellidos", filterable: true, render: (row) => row.apellidos },
   {
     key: "estado",
-    label: "Estado", filterable: "enum", filterOptions: ["activo", "suspendido", "pendiente"],
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: [
+      "Pendiente de verificación de email",
+      "Registrado",
+      "Activado",
+      "Pre-activado",
+      "En progreso",
+      "Pendiente de aprobación",
+      "Suspendido",
+      "Rechazado",
+      "Deshabilitado",
+    ],
     render: (row) => estadoBadge(row.estado),
   },
-  { key: "fechaRegistro", label: "Fecha de registro", filterable: "date", render: (row) => row.fechaRegistro },
+  {
+    key: "fechaRegistro",
+    label: "Fecha de registro",
+    filterable: "date",
+    render: (row) => row.fechaRegistro,
+  },
 ];
