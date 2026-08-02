@@ -17,9 +17,45 @@ export const Route = createFileRoute("/admin/general/movimientos/depositos")({
 });
 
 const data: Movimiento[] = [
-  { legajo: "MOV-001", id: "TXN-001", tipo: "Depósito", cvu: "0000003100087654321012", email: "juan.perez@email.com", nombreOrigen: "Juan Carlos Pérez", nombreDestino: "Moli SA", cuit: "20-12345678-9", monto: "$ 150.000,00", fecha: "15/01/2025 10:32", estado: "Aprobada" },
-  { legajo: "MOV-004", id: "TXN-004", tipo: "Depósito", cvu: "0000003100087654321045", email: "ana.garcia@email.com", nombreOrigen: "Ana Sofía García", nombreDestino: "Moli SA", cuit: "27-45678901-2", monto: "$ 320.000,00", fecha: "14/01/2025 14:22", estado: "Aprobada" },
-  { legajo: "MOV-010", id: "TXN-010", tipo: "Depósito", cvu: "0000003100087654321012", email: "juan.perez@email.com", nombreOrigen: "Juan Carlos Pérez", nombreDestino: "Moli SA", cuit: "20-12345678-9", monto: "$ 500.000,00", fecha: "12/01/2025 09:00", estado: "Aprobada" },
+  {
+    legajo: "MOV-001",
+    id: "TXN-001",
+    tipo: "Depósito",
+    cvu: "0000003100087654321012",
+    usuario: "juan.perez@email.com",
+    nombreOrigen: "Juan Carlos Pérez",
+    nombreDestino: "Moli SA",
+    cuit: "20-12345678-9",
+    monto: "$ 150.000,00",
+    fecha: "15/01/2025 10:32",
+    estado: "Aprobada",
+  },
+  {
+    legajo: "MOV-004",
+    id: "TXN-004",
+    tipo: "Depósito",
+    cvu: "0000003100087654321045",
+    usuario: "ana.garcia@email.com",
+    nombreOrigen: "Ana Sofía García",
+    nombreDestino: "Moli SA",
+    cuit: "27-45678901-2",
+    monto: "$ 320.000,00",
+    fecha: "14/01/2025 14:22",
+    estado: "Aprobada",
+  },
+  {
+    legajo: "MOV-010",
+    id: "TXN-010",
+    tipo: "Depósito",
+    cvu: "0000003100087654321012",
+    usuario: "juan.perez@email.com",
+    nombreOrigen: "Juan Carlos Pérez",
+    nombreDestino: "Moli SA",
+    cuit: "20-12345678-9",
+    monto: "$ 500.000,00",
+    fecha: "12/01/2025 09:00",
+    estado: "Aprobada",
+  },
 ];
 
 function DepositosPage() {
@@ -49,12 +85,23 @@ function DepositosPage() {
 const columns: Column<Movimiento>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
   { key: "id", label: "ID", filterable: true, render: (r) => r.id },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
+  { key: "cvu", label: "CVU/CBU", filterable: true, render: (r) => r.cvu },
+  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
+  {
+    key: "nombreOrigen",
+    label: "Nombre completo",
+    filterable: true,
+    render: (r) => r.nombreOrigen,
+  },
   { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
+  { key: "cuit", label: "CUIT destino", filterable: true, render: (r) => r.cuit },
   { key: "monto", label: "Monto", render: (r) => r.monto },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
+  {
+    key: "estado",
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: ["Aprobada", "Pendiente", "Rechazada", "Bloqueado"],
+    render: (row) => estadoBadge(row.estado),
+  },
 ];

@@ -4,27 +4,58 @@ import { Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
+import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")({
   head: () => ({
     meta: [
       { title: "Pagos con tarjeta — Movimientos — Admin Molly" },
-      { name: "description", content: "Pagos realizados con tarjeta a través de la plataforma Moli." },
+      {
+        name: "description",
+        content: "Pagos realizados con tarjeta a través de la plataforma Moli.",
+      },
     ],
   }),
   component: PagosTarjetaPage,
 });
 
-const data: Movimiento[] = [
-  { legajo: "MOV-007", id: "TXN-007", tipo: "Pagos con tarjeta", cvu: "0000003100087654321078", email: "gabriel.rios@email.com", nombreOrigen: "Gabriel Esteban Ríos", nombreDestino: "Mercado Pago", cuit: "20-78901234-5", monto: "$ 22.400,00", fecha: "13/01/2025 10:00", estado: "Aprobada" },
-  { legajo: "MOV-013", id: "TXN-013", tipo: "Pagos con tarjeta", cvu: "0000003100087654321045", email: "ana.garcia@email.com", nombreOrigen: "Ana Sofía García", nombreDestino: "Netflix Argentina", cuit: "30-01234567-8", monto: "$ 12.499,00", fecha: "10/01/2025 20:15", estado: "Aprobada" },
+const estados = ["Creado", "Abierto", "Pendiente", "Completado", "Expirado", "Rechazado"];
+
+type PagoTarjeta = {
+  legajo: string;
+  usuario: string;
+  monto: string;
+  medioPago: string;
+  cuotas: string;
+  estado: string;
+  fecha: string;
+};
+
+const data: PagoTarjeta[] = [
+  {
+    legajo: "MOV-007",
+    usuario: "gabriel.rios@email.com",
+    monto: "$ 22.400,00",
+    medioPago: "Visa",
+    cuotas: "3",
+    estado: "Completado",
+    fecha: "13/01/2025 10:00",
+  },
+  {
+    legajo: "MOV-013",
+    usuario: "ana.garcia@email.com",
+    monto: "$ 12.499,00",
+    medioPago: "Mastercard",
+    cuotas: "1",
+    estado: "Pendiente",
+    fecha: "10/01/2025 20:15",
+  },
 ];
 
 function PagosTarjetaPage() {
-  const [detail, setDetail] = useState<Movimiento | null>(null);
+  const [detail, setDetail] = useState<PagoTarjeta | null>(null);
 
-  const getActions = (row: Movimiento): ActionItem[] => [
+  const getActions = (row: PagoTarjeta): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
   ];
 
@@ -40,20 +71,37 @@ function PagosTarjetaPage() {
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
-      {detail && <MovimientoDetail m={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <DetailModal
+          title="Detalle de pago con tarjeta"
+          onClose={() => setDetail(null)}
+          rows={[
+            { label: "Legajo", value: detail.legajo },
+            { label: "Usuario", value: detail.usuario },
+            { label: "Monto", value: detail.monto },
+            { label: "Medio de pago", value: detail.medioPago },
+            { label: "Cuotas", value: detail.cuotas },
+            { label: "Estado", value: estadoBadge(detail.estado) },
+            { label: "Fecha", value: detail.fecha },
+          ]}
+        />
+      )}
     </>
   );
 }
 
-const columns: Column<Movimiento>[] = [
+const columns: Column<PagoTarjeta>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "id", label: "ID", filterable: true, render: (r) => r.id },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
-  { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
+  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   { key: "monto", label: "Monto", render: (r) => r.monto },
+  { key: "medioPago", label: "Medio de pago", filterable: true, render: (r) => r.medioPago },
+  { key: "cuotas", label: "Cuotas", filterable: true, render: (r) => r.cuotas },
+  {
+    key: "estado",
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: estados,
+    render: (r) => estadoBadge(r.estado),
+  },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
 ];

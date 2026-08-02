@@ -4,7 +4,8 @@ import { Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
+import { DetailModal } from "@/components/movimiento-detail";
+import { impuestosIniciales } from "@/data/impuestos";
 
 export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
   head: () => ({
@@ -16,15 +17,46 @@ export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
   component: ImpuestosPage,
 });
 
-const data: Movimiento[] = [
-  { legajo: "MOV-006", id: "TXN-006", tipo: "Impuestos cobrados", cvu: "0000003100087654321067", email: "lucia.mendoza@email.com", nombreOrigen: "Lucía Belén Mendoza", nombreDestino: "AFIP", cuit: "27-67890123-4", monto: "$ 8.250,00", fecha: "13/01/2025 08:30", estado: "Aprobada" },
-  { legajo: "MOV-014", id: "TXN-014", tipo: "Impuestos cobrados", cvu: "0000003100087654321056", email: "pedro.rodriguez@email.com", nombreOrigen: "Pedro Antonio Rodríguez", nombreDestino: "ARBA", cuit: "20-56789012-3", monto: "$ 3.200,00", fecha: "10/01/2025 08:00", estado: "Pendiente" },
+const impuestos = impuestosIniciales.map((i) => i.nombre);
+
+type ImpuestoCobrado = {
+  legajo: string;
+  usuario: string;
+  nombreCompleto: string;
+  idTransaccion: string;
+  impuesto: string;
+  montoOriginal: string;
+  montoImpuesto: string;
+  fechaCobro: string;
+};
+
+const data: ImpuestoCobrado[] = [
+  {
+    legajo: "MOV-006",
+    usuario: "lucia.mendoza@email.com",
+    nombreCompleto: "Lucía Belén Mendoza",
+    idTransaccion: "TXN-006",
+    impuesto: "Ingresos Brutos",
+    montoOriginal: "$ 8.250,00",
+    montoImpuesto: "$ 330,00",
+    fechaCobro: "13/01/2025 08:30",
+  },
+  {
+    legajo: "MOV-014",
+    usuario: "pedro.rodriguez@email.com",
+    nombreCompleto: "Pedro Antonio Rodríguez",
+    idTransaccion: "TXN-014",
+    impuesto: "Débito/Crédito (Sellos)",
+    montoOriginal: "$ 3.200,00",
+    montoImpuesto: "$ 19,20",
+    fechaCobro: "10/01/2025 08:00",
+  },
 ];
 
 function ImpuestosPage() {
-  const [detail, setDetail] = useState<Movimiento | null>(null);
+  const [detail, setDetail] = useState<ImpuestoCobrado | null>(null);
 
-  const getActions = (row: Movimiento): ActionItem[] => [
+  const getActions = (row: ImpuestoCobrado): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
   ];
 
@@ -40,20 +72,49 @@ function ImpuestosPage() {
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
-      {detail && <MovimientoDetail m={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <DetailModal
+          title="Detalle de impuesto cobrado"
+          onClose={() => setDetail(null)}
+          rows={[
+            { label: "Legajo", value: detail.legajo },
+            { label: "Usuario", value: detail.usuario },
+            { label: "Nombre completo", value: detail.nombreCompleto },
+            { label: "ID de transacción", value: detail.idTransaccion },
+            { label: "Impuesto", value: detail.impuesto },
+            { label: "Monto original", value: detail.montoOriginal },
+            { label: "Monto impuesto", value: detail.montoImpuesto },
+            { label: "Fecha de cobro", value: detail.fechaCobro },
+          ]}
+        />
+      )}
     </>
   );
 }
 
-const columns: Column<Movimiento>[] = [
+const columns: Column<ImpuestoCobrado>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "id", label: "ID", filterable: true, render: (r) => r.id },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
-  { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
+  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
+  {
+    key: "nombreCompleto",
+    label: "Nombre completo",
+    filterable: true,
+    render: (r) => r.nombreCompleto,
+  },
+  {
+    key: "idTransaccion",
+    label: "ID de transacción",
+    filterable: true,
+    render: (r) => r.idTransaccion,
+  },
+  {
+    key: "impuesto",
+    label: "Impuesto",
+    filterable: "enum",
+    filterOptions: impuestos,
+    render: (r) => r.impuesto,
+  },
+  { key: "montoOriginal", label: "Monto original", render: (r) => r.montoOriginal },
+  { key: "montoImpuesto", label: "Monto impuesto", render: (r) => r.montoImpuesto },
+  { key: "fechaCobro", label: "Fecha de cobro", filterable: "date", render: (r) => r.fechaCobro },
 ];

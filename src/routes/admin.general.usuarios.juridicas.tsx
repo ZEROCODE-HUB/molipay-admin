@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
+import { Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { BtnOutline, Badge } from "@/components/portal-shell";
+import { Badge } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
   head: () => ({
@@ -279,12 +279,6 @@ function JuridicasPage() {
       <PageHeader
         title="Personas jurídicas"
         description="Empresas y organizaciones registradas en la plataforma."
-        action={
-          <BtnOutline>
-            <Download size={16} />
-            Descargar CSV
-          </BtnOutline>
-        }
       />
       <DataTable
         columns={columns}

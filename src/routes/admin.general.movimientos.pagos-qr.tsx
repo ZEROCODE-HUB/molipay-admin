@@ -4,26 +4,49 @@ import { Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
+import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-qr")({
   head: () => ({
     meta: [
       { title: "Pagos QR — Movimientos — Admin Molly" },
-      { name: "description", content: "Pagos realizados mediante código QR en la plataforma Moli." },
+      {
+        name: "description",
+        content: "Pagos realizados mediante código QR en la plataforma Moli.",
+      },
     ],
   }),
   component: PagosQrPage,
 });
 
-const data: Movimiento[] = [
-  { legajo: "MOV-008", id: "TXN-008", tipo: "Pagos QR", cvu: "0000003100087654321089", email: "valentina.castro@email.com", nombreOrigen: "Valentina Castro", nombreDestino: "Supermercado El Colono", cuit: "30-89012345-6", monto: "$ 3.750,00", fecha: "13/01/2025 12:15", estado: "Aprobada" },
+const estados = ["Pendiente", "Completado", "Fallido", "Reembolsado"];
+
+type PagoQr = {
+  usuario: string;
+  legajo: string;
+  qrIdTx: string;
+  monto: string;
+  cuitMerchant: string;
+  estado: string;
+  fecha: string;
+};
+
+const data: PagoQr[] = [
+  {
+    usuario: "valentina.castro@email.com",
+    legajo: "MOV-008",
+    qrIdTx: "QR-TX-008",
+    monto: "$ 3.750,00",
+    cuitMerchant: "30-89012345-6",
+    estado: "Completado",
+    fecha: "13/01/2025 12:15",
+  },
 ];
 
 function PagosQrPage() {
-  const [detail, setDetail] = useState<Movimiento | null>(null);
+  const [detail, setDetail] = useState<PagoQr | null>(null);
 
-  const getActions = (row: Movimiento): ActionItem[] => [
+  const getActions = (row: PagoQr): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
   ];
 
@@ -39,20 +62,37 @@ function PagosQrPage() {
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
-      {detail && <MovimientoDetail m={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <DetailModal
+          title="Detalle de pago QR"
+          onClose={() => setDetail(null)}
+          rows={[
+            { label: "Usuario", value: detail.usuario },
+            { label: "Legajo", value: detail.legajo },
+            { label: "QR ID TX", value: detail.qrIdTx },
+            { label: "Monto", value: detail.monto },
+            { label: "CUIT Merchant", value: detail.cuitMerchant },
+            { label: "Estado", value: estadoBadge(detail.estado) },
+            { label: "Fecha", value: detail.fecha },
+          ]}
+        />
+      )}
     </>
   );
 }
 
-const columns: Column<Movimiento>[] = [
+const columns: Column<PagoQr>[] = [
+  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "id", label: "ID", filterable: true, render: (r) => r.id },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
-  { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
+  { key: "qrIdTx", label: "QR ID TX", filterable: true, render: (r) => r.qrIdTx },
   { key: "monto", label: "Monto", render: (r) => r.monto },
+  { key: "cuitMerchant", label: "CUIT Merchant", filterable: true, render: (r) => r.cuitMerchant },
+  {
+    key: "estado",
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: estados,
+    render: (r) => estadoBadge(r.estado),
+  },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
 ];

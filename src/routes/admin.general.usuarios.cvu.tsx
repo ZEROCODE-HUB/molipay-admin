@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Plus, Eye, Edit3, XCircle } from "lucide-react";
+import { Plus, Eye, Edit3, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { BtnPrimary, BtnOutline, Badge, Input } from "@/components/portal-shell";
+import { BtnPrimary, Badge, Input } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 
 export const Route = createFileRoute("/admin/general/usuarios/cvu")({
@@ -194,16 +194,10 @@ function CvuPage() {
         title="Usuarios con CVU"
         description="Usuarios que poseen una Cuenta Virtual habilitada."
         action={
-          <div className="flex gap-2">
-            <BtnOutline>
-              <Download size={16} />
-              Descargar CSV
-            </BtnOutline>
-            <BtnPrimary onClick={() => setShowNuevoCvu(true)}>
-              <Plus size={16} />
-              Nuevo CVU
-            </BtnPrimary>
-          </div>
+          <BtnPrimary onClick={() => setShowNuevoCvu(true)}>
+            <Plus size={16} />
+            Nuevo CVU
+          </BtnPrimary>
         }
       />
 

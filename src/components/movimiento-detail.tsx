@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Badge } from "@/components/portal-shell";
 
 export type Movimiento = {
@@ -5,54 +6,107 @@ export type Movimiento = {
   id: string;
   tipo: string;
   cvu: string;
-  email: string;
+  usuario: string;
   nombreOrigen: string;
   nombreDestino: string;
   cuit: string;
   monto: string;
   fecha: string;
-  estado: "Pendiente" | "Aprobada" | "Rechazada";
+  estado: "Pendiente" | "Aprobada" | "Rechazada" | "Bloqueado";
 };
 
 const lifecycleTooltip =
   "Una transacción nace Pendiente: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a Aprobada. Si no, pasa a Rechazada y el saldo se revierte.";
 
-export const estadoBadge = (e: Movimiento["estado"]) => {
-  const map: Record<string, { label: string; tone: "success" | "warn" | "danger" }> = {
-    Aprobada: { label: "Aprobada", tone: "success" },
-    Pendiente: { label: "Pendiente", tone: "warn" },
-    Rechazada: { label: "Rechazada", tone: "danger" },
-  };
-  const m = map[e];
-  return (
+const estadoMap: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warn" | "danger" }
+> = {
+  Aprobada: { label: "Aprobada", tone: "success" },
+  Pendiente: { label: "Pendiente", tone: "warn" },
+  Rechazada: { label: "Rechazada", tone: "danger" },
+  Bloqueado: { label: "Bloqueado", tone: "danger" },
+  Creado: { label: "Creado", tone: "neutral" },
+  Abierto: { label: "Abierto", tone: "warn" },
+  Completado: { label: "Completado", tone: "success" },
+  Expirado: { label: "Expirado", tone: "neutral" },
+  Rechazado: { label: "Rechazado", tone: "danger" },
+  Fallido: { label: "Fallido", tone: "danger" },
+  Reembolsado: { label: "Reembolsado", tone: "warn" },
+  Activo: { label: "Activo", tone: "success" },
+  Usado: { label: "Usado", tone: "neutral" },
+  Cancelado: { label: "Cancelado", tone: "danger" },
+};
+
+export const estadoBadge = (e: string) => {
+  const m = estadoMap[e] ?? { label: e, tone: "neutral" as const };
+  const badge = <Badge tone={m.tone}>{m.label}</Badge>;
+  return e === "Pendiente" || e === "Aprobada" || e === "Rechazada" ? (
     <span title={lifecycleTooltip} className="cursor-help">
-      <Badge tone={m.tone}>{m.label}</Badge>
+      {badge}
     </span>
+  ) : (
+    badge
   );
 };
 
-export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () => void }) {
+export type DetailRow = { label: string; value: ReactNode };
+
+export function DetailModal({
+  title,
+  rows,
+  onClose,
+}: {
+  title: string;
+  rows: DetailRow[];
+  onClose: () => void;
+}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-card border rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card border rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Detalle de movimiento</h3>
-          <button onClick={onClose} className="p-1 hover:opacity-70 text-muted-foreground">✕</button>
+          <h3 className="font-semibold">{title}</h3>
+          <button onClick={onClose} className="p-1 hover:opacity-70 text-muted-foreground">
+            ✕
+          </button>
         </div>
         <dl className="space-y-3 text-sm">
-          <div className="flex justify-between"><dt className="text-muted-foreground">Legajo</dt><dd className="font-semibold">{m.legajo}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">ID Transacción</dt><dd className="font-mono text-xs">{m.id}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Tipo</dt><dd>{m.tipo}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Email</dt><dd>{m.email}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Origen</dt><dd>{m.nombreOrigen}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Destino</dt><dd>{m.nombreDestino}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">CUIT</dt><dd>{m.cuit}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">CVU</dt><dd className="font-mono text-xs">{m.cvu}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Monto</dt><dd className="font-semibold">{m.monto}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Fecha</dt><dd>{m.fecha}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Estado</dt><dd>{estadoBadge(m.estado)}</dd></div>
+          {rows.map((r) => (
+            <div key={r.label} className="flex justify-between gap-4">
+              <dt className="text-muted-foreground shrink-0">{r.label}</dt>
+              <dd className="font-semibold text-right">{r.value}</dd>
+            </div>
+          ))}
         </dl>
       </div>
     </div>
+  );
+}
+
+export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () => void }) {
+  return (
+    <DetailModal
+      title="Detalle de movimiento"
+      onClose={onClose}
+      rows={[
+        { label: "Legajo", value: m.legajo },
+        { label: "ID Transacción", value: <span className="font-mono text-xs">{m.id}</span> },
+        { label: "Tipo", value: m.tipo },
+        { label: "Usuario", value: m.usuario },
+        { label: "Nombre completo", value: m.nombreOrigen },
+        { label: "Destino", value: m.nombreDestino },
+        { label: "CUIT destino", value: m.cuit },
+        { label: "CVU/CBU", value: <span className="font-mono text-xs">{m.cvu}</span> },
+        { label: "Monto", value: <span className="font-semibold">{m.monto}</span> },
+        { label: "Fecha", value: m.fecha },
+        { label: "Estado", value: estadoBadge(m.estado) },
+      ]}
+    />
   );
 }

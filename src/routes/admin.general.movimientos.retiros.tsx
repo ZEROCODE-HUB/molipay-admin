@@ -17,9 +17,45 @@ export const Route = createFileRoute("/admin/general/movimientos/retiros")({
 });
 
 const data: Movimiento[] = [
-  { legajo: "MOV-002", id: "TXN-002", tipo: "Retiro", cvu: "0000003100087654321023", email: "maria.lopez@email.com", nombreOrigen: "María Elena López", nombreDestino: "Banco Provincia CC", cuit: "27-23456789-0", monto: "$ 45.200,00", fecha: "15/01/2025 11:05", estado: "Pendiente" },
-  { legajo: "MOV-005", id: "TXN-005", tipo: "Retiro", cvu: "0000003100087654321056", email: "pedro.rodriguez@email.com", nombreOrigen: "Pedro Antonio Rodríguez", nombreDestino: "Banco Nación CA", cuit: "20-56789012-3", monto: "$ 78.900,00", fecha: "14/01/2025 16:48", estado: "Rechazada" },
-  { legajo: "MOV-011", id: "TXN-011", tipo: "Retiro", cvu: "0000003100087654321023", email: "maria.lopez@email.com", nombreOrigen: "María Elena López", nombreDestino: "Banco Galicia CC", cuit: "27-23456789-0", monto: "$ 15.600,00", fecha: "11/01/2025 15:30", estado: "Aprobada" },
+  {
+    legajo: "MOV-002",
+    id: "TXN-002",
+    tipo: "Retiro",
+    cvu: "0000003100087654321023",
+    usuario: "maria.lopez@email.com",
+    nombreOrigen: "María Elena López",
+    nombreDestino: "Banco Provincia CC",
+    cuit: "27-23456789-0",
+    monto: "$ 45.200,00",
+    fecha: "15/01/2025 11:05",
+    estado: "Pendiente",
+  },
+  {
+    legajo: "MOV-005",
+    id: "TXN-005",
+    tipo: "Retiro",
+    cvu: "0000003100087654321056",
+    usuario: "pedro.rodriguez@email.com",
+    nombreOrigen: "Pedro Antonio Rodríguez",
+    nombreDestino: "Banco Nación CA",
+    cuit: "20-56789012-3",
+    monto: "$ 78.900,00",
+    fecha: "14/01/2025 16:48",
+    estado: "Rechazada",
+  },
+  {
+    legajo: "MOV-011",
+    id: "TXN-011",
+    tipo: "Retiro",
+    cvu: "0000003100087654321023",
+    usuario: "maria.lopez@email.com",
+    nombreOrigen: "María Elena López",
+    nombreDestino: "Banco Galicia CC",
+    cuit: "27-23456789-0",
+    monto: "$ 15.600,00",
+    fecha: "11/01/2025 15:30",
+    estado: "Aprobada",
+  },
 ];
 
 function RetirosPage() {
@@ -49,12 +85,23 @@ function RetirosPage() {
 const columns: Column<Movimiento>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
   { key: "id", label: "ID", filterable: true, render: (r) => r.id },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "email", label: "Email", filterable: true, render: (r) => r.email },
-  { key: "nombreOrigen", label: "Origen", filterable: true, render: (r) => r.nombreOrigen },
+  { key: "cvu", label: "CVU/CBU", filterable: true, render: (r) => r.cvu },
+  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
+  {
+    key: "nombreOrigen",
+    label: "Nombre completo",
+    filterable: true,
+    render: (r) => r.nombreOrigen,
+  },
   { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
+  { key: "cuit", label: "CUIT destino", filterable: true, render: (r) => r.cuit },
   { key: "monto", label: "Monto", render: (r) => r.monto },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Aprobada", "Pendiente", "Rechazada"], render: (row) => estadoBadge(row.estado) },
+  {
+    key: "estado",
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: ["Aprobada", "Pendiente", "Rechazada", "Bloqueado"],
+    render: (row) => estadoBadge(row.estado),
+  },
 ];
