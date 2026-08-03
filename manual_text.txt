@@ -1,0 +1,429 @@
+Manual de identidad corporativa
+
+/INDICE
+
+L O G O T I P O
+
+M O T I V A C I Ó N
+
+C O N S T R U C C I Ó N   Y   C O M P O S I C I Ó N
+
+A R E A   D E   S E G U R I D A D   Y
+P R O P O R C I O N E S
+
+P A L E T A   C R O M A T I C A
+
+3
+
+4
+
+5
+
+6
+
+7
+
+P A L E T A   T I P O G R A F I C A
+
+A P L I C A C I O N E S   C O R R E C T A S
+
+A P L I C A C I O N E S   I N C O R R E C T A S
+
+T A M A Ñ O S   R E C O M E N D A D O S
+
+G R A F I C O S   C O M P L E M E N T A R I O S
+
+8
+
+9
+
+10
+
+11
+
+12
+
+M O C K U P   M U G
+
+M U R O   E N   H A L L
+
+T A R J E T A   D E   C R E D I T O
+
+E D I F I C I O
+
+P A P E L E R I A   C O R P O R A T I V A
+
+14
+
+15
+
+16
+
+17
+
+18
+
+2
+
+L o g o t i p o
+
+3
+
+M o t i v a c i ó n
+
+La elección del nombre y las formas El logo de "Moli" ha sido diseñado para transmitir accesibilidad,
+modernidad y ﬂuidez, cualidades esen- ciales para un neobanco orientado a mejorar la experiencia
+ﬁnanciera. Las formas redondeadas de las letras representan un acercamiento amigable y accesible,
+mientras que las composiciones internas re- fuerzan la identidad distintiva de la marca.
+
+Isologo Único "Moli" ha sido desarrollado como un isologo, lo que signiﬁca que su icono y su nombre
+funcionan como una unidad indivisible. Se emplea una sola versión del logo, sin variaciones en su
+disposición o elemen- tos. Este isologo fue diseñado para mantener la integridad visual y garantizar una
+identidad consisten- te en todas las aplicaciones.
+
+Importancia de la Unicidad La decisión de emplear un único isologo responde a la necesidad de crear
+una imagen de marca sólida, fácil de reconocer y recordar. Esta uniformidad refuerza la coherencia y el
+impacto visual de "Moli" en cualquier medio o contexto.
+
+4
+
+C O N S T R U C C I Ó N   Y   C O M P O S I C I Ó N
+
+La letra "m" se compone de tres formas
+cilíndricas separadas, lo que simboliza la
+modularidad y la ﬂexibilidad del sistema
+ﬁnanciero que representa Moli. Esta
+estructura visualmente independiente,
+pero funcionalmente conectada, refuerza
+la idea de colaboración ﬂuida entre
+distintos elementos. Todo el logotipo
+está diseñado para comunicar una
+estética cohe- rente, profesional y
+auténtica, en sintonía con los valores de
+la marca.
+
+la 
+
+La  "O"  incorpora  un  círculo  pequeño
+centrado  en  el  lado  derecho  de  su
+interior, del mismo tamaño que el punto
+de 
+"i",  simbolizando  conexión  y
+enfoque en el detalle. Su ubicación en el
+lado  derecho  representa  progreso  y
+movimiento  hacia  adelante,  mientras
+relación  proporcional  crea
+que 
+equilibrio  visual,  reforzando  la  idea  de
+un  sistema  integrado  y  consistente.  Este
+continuo,
+un 
+diseño 
+destacando 
+y
+fluidez, 
+seguridad.
+
+dinamismo 
+
+evoca 
+
+ciclo 
+
+su 
+
+El punto de la "i" se encuentra separado
+del cuerpo de la letra y está alineado en
+altura con la "l". Este detalle genera un
+contraste que aporta dinamismo al
+logotipo, manteniendo un equilibrio visual
+que capta la atención sin sobrecargar la
+composición. Este enfoque minimalista
+reﬂeja la innovación y el carácter
+moderno de Moli.
+
+5
+
+A r e a   d e   s e g u r i d a d   y   p r o p o r c i o n e s
+
+ 1156,09 px 
+
+ 936 px 
+
+x
+p
+
+9
+1
+,
+9
+8
+
+ 173,11 px 
+
+ 121,53 px 
+
+p
+x
+
+5
+6
+6
+0
+4
+
+,
+
+,
+
+8
+2
+5
+8
+3
+
+x
+p
+
+ 100,09
+px 
+
+ 40,6
+px 
+
+ 40,6
+px 
+
+ 325,53
+px 
+
+ 251,23 px 
+
+ 121,53 px 
+
+ 91,15 px 
+
+ 40,6
+px 
+
+ 40,6
+px 
+
+,
+
+8
+2
+5
+8
+3
+
+x
+p
+
+5
+6
+6
+0
+4
+
+,
+
+p
+x
+
+ 100,09
+px 
+
+x
+p
+
+9
+1
+,
+9
+8
+
+ 936 px 
+
+ 1156,09 px 
+
+6
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+P a l e t a   c r o m á t i c a
+
+HEX:
+#9CB0D9 -
+RGB: 156,
+176, 217 
+HSL
+HSL: 220, 45%, 73% 
+CMYK:
+28%, 19%, 0%, 15% 
+HSV:
+220, 28.11, 85.1 
+
+HEX:
+#8C9297 
+RGB:
+ 140, 146, 151 
+HSL:
+ 207, 5%, 57% 
+CMYK:
+7%, 3%, 0%, 41% 
+HSV:
+207, 7.28, 59.22 
+
+HEX:
+#D21523 
+RGB:
+210, 21, 35 
+HSL:
+356, 82%, 45% 
+CMYK:
+0%, 90%, 83%, 18% 
+HSV:
+356, 90, 82.35 
+
+HEX:
+#334596 
+RGB:
+51, 69, 150 
+HSL:
+229, 49%, 39% 
+CMYK:
+66%, 54%, 0%, 41% 
+HSV: 229, 66,
+58.82
+
+7
+
+NOMBRE DE LAS FUENTES EN USO
+
+P a l e t a   t i p o g r á f i c a
+
+Josefin Sans
+
+ABCDEFGHIJKLMNOPQRSTUVWXYZabc
+defghijklmnopqrstuvwxyz1234567890!
+@#$%^&*()
+Josefin Sans Bold
+
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz12345678
+90! @#$%^&* 
+
+NULL
+
+ABCDEFGHIJKLMNOPQRST
+UVWXYZABCDEFGHIJKLM
+NOPQRSTUVWXYZ12345
+67890! @#$%^&* 
+
+PROPORCIÓN DE TAMAÑO DE LAS FUENTES
+ONLINE Y MEDIOS IMPRESOS
+
+ENCABEZADO
+GRANDE
+
+Subtítulo para los textos
+
+Cuerpo de texto: Lorem Ipsum is simply dummy
+text of the printing and typesetting industry.
+Lorem Ipsum has been the industry's standard
+dummy text ever since the 1500s, when an
+unknown printer took a galley of type and
+scrambled it to make a type specimen book. 
+
+8
+
+A P L I C A C I O N E S   C O R R E C T A S   /
+V A R I A C I O N E S   D E   C O L O R
+
+En imagenes
+
+En negativo oscuro
+
+Base original
+
+En colores corporativos
+
+En colores corporativos
+
+En colores claros
+
+En negativo claro
+
+9
+
+A P L I C A C I O N E S   I N C O R R E C T A S
+
+No intervenir las proporciones 
+que componen el logo
+
+No cambiar la orientación de la 
+palabra MOLI
+
+No suplantar el ojo por otros iconos
+
+No usar colores no corporativos
+
+No transformar 
+
+Respetar los espacios entre las letras
+
+MOLI
+
+No alterar el orden de l logo
+
+No cambiar la forma curva del logo
+
+10
+
+T A M A Ñ O S   R E C O M E N D A D O S
+
+Medios Impresos
+260 x 105 px
+
+Merch 
+535 x217 px
+
+Posters 
+743 x 300 px
+
+11
+
+G R Á F I C O S   C O M P L E M E N T A R I O S
+
+12
+
+G R Á F I C O S
+C O M P L E M E N T A R I O S
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+

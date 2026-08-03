@@ -1,6 +1,6 @@
 # Rediseño funcional del módulo de Impuestos — Análisis, propuesta y plan de pruebas
 
-> **Estado:** Documento de análisis y plan de pruebas. **No se ha implementado código.**
+> **Estado:** ✅ **IMPLEMENTADO** (commit `e26ef39`). Este documento fue el diseño previo; la implementación coincide fielmente con lo propuesto. Ver §10 (estado de implementación).
 > **Alcance:** Solo el módulo `Impuestos` (`/admin/modulos/impuestos` y sus sub-rutas). No se toca ningún otro módulo.
 > **Objetivo:** Rediseñar el módulo en 4 pestañas (Impuestos, Usuarios con Impuestos, Ingresos Brutos, Débitos y Créditos) siguiendo un patrón ERP tributario moderno, con acciones guiadas paso a paso.
 
@@ -271,3 +271,31 @@ Una vez autorizado, el orden de implementación sugerido es:
 5. Tab 4 (alta manual + sin retroactivo + excepciones).
 6. Componentes nuevos (`WizardModal`, `FileDropzone`, `KpiCard`).
 7. Regresión y ejecución del plan de pruebas.
+
+---
+
+## 10. Estado de implementación (revisión posterior)
+
+Implementado por completo en el commit `e26ef39` (`feat(impuestos): rediseño del módulo en 4 pestañas`). La estructura final coincide con la propuesta de §3:
+
+| Archivo | Líneas | Cumple |
+|---|---|---|
+| `admin.modulos.impuestos.tsx` | 30 | Layout padre 4 tabs ✅ |
+| `admin.modulos.impuestos.index.tsx` | 358 | Tab 1: catálogo + detalle + CRUD + tasas ✅ |
+| `admin.modulos.impuestos.usuarios.tsx` | 74 | Tab 2: historial solo lectura ✅ |
+| `admin.modulos.impuestos.ingresos-brutos.tsx` | 26 | Tab 3: layout 3 sub-tabs ✅ |
+| `.ingresos-brutos.index.tsx` | 163 | Sub 3.1: Gestión de Padrones (con `FileDropzone`) ✅ |
+| `.ingresos-brutos.normalizacion.tsx` | 240 | Sub 3.2: Normalización (8 KPIs + 3 tablas + `WizardModal`) ✅ |
+| `.ingresos-brutos.reportes.tsx` | 201 | Sub 3.3: Reportes (detalle, presentado/pagado) ✅ |
+| `admin.modulos.impuestos.debitos-creditos.tsx` | 336 | Tab 4: alta manual + sin retroactivo + excepciones ✅ |
+
+**Componentes nuevos creados y usados:** `WizardModal`, `FileDropzone`, `KpiCard`.
+
+**Resolución de los riesgos R-1 a R-5 (en la práctica):**
+- **R-1:** El tipo de impuesto (Porcentaje/Fijo/Otro) se define en Tab 1 (catálogo). ✅
+- **R-2:** La pestaña 4 quedó etiquetada como **"Débitos y Créditos"** (sin sufijo "— Excepciones"); se mantiene la colisión nominal documentada en I-6, sin impacto funcional.
+- **R-3:** La descarga se resuelve con el botón global "Descargar CSV" de `DataTable` (no ZIP).
+- **R-4:** Tab 2 es solo lectura. ✅
+- **R-5:** Datos mock en `useState`, sin backend. ✅
+
+**Nota de reutilización:** los componentes globales `DataTable`, `FormDialog`, `ConfirmDialog`, `ActionsDropdown`, `Badge`, `EmptyState` y `TabLayout` se reutilizaron sin duplicación, según §5.

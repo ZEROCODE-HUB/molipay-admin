@@ -8,50 +8,75 @@ import { FormDialog } from "@/components/form-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, Input } from "@/components/portal-shell";
 
-type Staff = { nombre: string; apellido: string; email: string; estado: string; rol: string };
+type EstadoBackoffice =
+  | "Activado"
+  | "Desactivado"
+  | "No verificado"
+  | "Pendiente de verificación de email"
+  | "Suspendido"
+  | "Pendiente de validación";
+
+type Staff = {
+  nombre: string;
+  apellido: string;
+  email: string;
+  estado: EstadoBackoffice;
+  rol: string;
+};
+
+const ROLES = ["Admin", "Soporte", "Técnico"];
+
+const ESTADOS: { id: string; text: string }[] = [
+  { id: "ACTIVATED", text: "Activado" },
+  { id: "DEACTIVATED", text: "Desactivado" },
+  { id: "NOT_VERIFIED", text: "No verificado" },
+  { id: "PENDING_EMAIL_VERIFICATION", text: "Pendiente de verificación de email" },
+  { id: "SUSPENDED", text: "Suspendido" },
+  { id: "PENDING_VALIDATION", text: "Pendiente de validación" },
+];
 
 const initialData: Staff[] = [
   {
     nombre: "María",
     apellido: "Rodríguez",
     email: "mrodriguez@molipay.com",
-    estado: "Activo",
+    estado: "Activado",
     rol: "Admin",
   },
   {
     nombre: "Luis",
     apellido: "Fernández",
     email: "lfernandez@molipay.com",
-    estado: "Activo",
-    rol: "Compliance",
+    estado: "Activado",
+    rol: "Soporte",
   },
   {
     nombre: "Pedro",
     apellido: "Sánchez",
     email: "psanchez@molipay.com",
-    estado: "Activo",
-    rol: "Management",
+    estado: "Activado",
+    rol: "Técnico",
   },
   {
     nombre: "Ana",
     apellido: "Martínez",
     email: "amartinez@molipay.com",
-    estado: "Inactivo",
-    rol: "Accounting",
+    estado: "Desactivado",
+    rol: "Soporte",
   },
   {
     nombre: "Carlos",
     apellido: "López",
     email: "clopez@molipay.com",
-    estado: "Activo",
-    rol: "Reader",
+    estado: "Activado",
+    rol: "Técnico",
   },
   {
     nombre: "Sofía",
     apellido: "García",
     email: "sgarcia@molipay.com",
-    estado: "Activo",
-    rol: "User",
+    estado: "Pendiente de validación",
+    rol: "Soporte",
   },
 ];
 
@@ -107,10 +132,26 @@ function Page() {
       key: "estado",
       label: "Estado",
       sortable: true,
-      filterable: "enum", filterOptions: ["Activo", "Inactivo"],
-      render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "neutral"}>{r.estado}</Badge>,
+      filterable: "enum",
+      filterOptions: ESTADOS.map((e) => e.text),
+      render: (r) => {
+        const tone =
+          r.estado === "Activado"
+            ? "success"
+            : r.estado === "Suspendido" || r.estado === "Desactivado"
+              ? "danger"
+              : "warn";
+        return <Badge tone={tone}>{r.estado}</Badge>;
+      },
     },
-    { key: "rol", label: "Rol", sortable: true, filterable: "enum", filterOptions: ["Admin", "Compliance", "Management", "Accounting", "Reader", "User"], render: (r) => r.rol },
+    {
+      key: "rol",
+      label: "Rol",
+      sortable: true,
+      filterable: "enum",
+      filterOptions: ROLES,
+      render: (r) => r.rol,
+    },
   ];
 
   return (
@@ -210,11 +251,8 @@ function Page() {
               onChange={(e) => setEditTarget({ ...editTarget, rol: e.target.value })}
             >
               <option>Admin</option>
-              <option>Compliance</option>
-              <option>Management</option>
-              <option>Accounting</option>
-              <option>Reader</option>
-              <option>User</option>
+              <option>Soporte</option>
+              <option>Técnico</option>
             </select>
           </div>
         </FormDialog>
@@ -286,11 +324,8 @@ function Page() {
                 </label>
                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40">
                   <option>Admin</option>
-                  <option>Compliance</option>
-                  <option>Management</option>
-                  <option>Accounting</option>
-                  <option>Reader</option>
-                  <option>User</option>
+                  <option>Soporte</option>
+                  <option>Técnico</option>
                 </select>
               </div>
               <button className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90">
