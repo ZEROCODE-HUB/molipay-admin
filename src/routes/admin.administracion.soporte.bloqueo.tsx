@@ -144,7 +144,7 @@ function Page() {
       label: "Fecha del bloqueo",
       sortable: true,
       filterable: "date",
-      render: (b) => b.fecha,
+      render: (b) => <span className="font-mono tabular-nums">{b.fecha}</span>,
     },
     {
       key: "acciones",

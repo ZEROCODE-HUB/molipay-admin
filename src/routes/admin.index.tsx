@@ -44,7 +44,7 @@ function Page() {
         <Card className="lg:col-span-2">
           <div className="flex items-end justify-between mb-4">
             <div>
-              <h3 className="font-semibold">Volumen transaccional</h3>
+              <h3 className="font-display font-semibold">Volumen transaccional</h3>
               <p className="text-xs text-muted-foreground">ultimos 14 dias — ARS</p>
             </div>
             <div className="text-xs text-primary font-semibold inline-flex items-center gap-1">
@@ -65,7 +65,7 @@ function Page() {
         </Card>
 
         <Card>
-          <h3 className="font-semibold mb-4">Estado del sistema</h3>
+          <h3 className="font-display font-semibold mb-4">Estado del sistema</h3>
           <ul className="space-y-3 text-sm">
             {[
               ["API publica", "operativo", "120 ms"],
@@ -83,7 +83,7 @@ function Page() {
                   )}
                   {n}
                 </span>
-                <span className="text-xs text-muted-foreground">{l}</span>
+                <span className="text-xs text-muted-foreground font-mono tabular-nums">{l}</span>
               </li>
             ))}
           </ul>
@@ -94,7 +94,7 @@ function Page() {
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="font-display font-semibold flex items-center gap-2">
               <Building2 size={16} className="text-moli-blue" /> Últimos registros
             </h3>
             <Link to="/admin/general/usuarios" className="text-xs text-primary font-semibold">
@@ -105,11 +105,11 @@ function Page() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b">
-                  <th className="text-left font-semibold py-2 px-5">Razon social</th>
-                  <th className="text-left font-semibold py-2">CUIT</th>
-                  <th className="text-left font-semibold py-2">Segmento</th>
-                  <th className="text-left font-semibold py-2">Estado</th>
-                  <th className="text-right font-semibold py-2 px-5">Volumen</th>
+                  <th className="text-left font-display font-semibold py-2 px-5">Razon social</th>
+                  <th className="text-left font-display font-semibold py-2">CUIT</th>
+                  <th className="text-left font-display font-semibold py-2">Segmento</th>
+                  <th className="text-left font-display font-semibold py-2">Estado</th>
+                  <th className="text-right font-display font-semibold py-2 px-5">Volumen</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -122,12 +122,12 @@ function Page() {
                 ].map(([n, c, seg, tone, e, v]) => (
                   <tr key={n}>
                     <td className="py-2.5 px-5 font-semibold">{n}</td>
-                    <td className="text-xs text-muted-foreground">{c}</td>
+                    <td className="text-xs text-muted-foreground font-mono tabular-nums">{c}</td>
                     <td className="text-xs">{seg}</td>
                     <td>
                       <Badge tone={tone as "success" | "warn" | "danger"}>{e}</Badge>
                     </td>
-                    <td className="text-right px-5 font-semibold">{v}</td>
+                    <td className="text-right px-5 font-semibold font-mono tabular-nums">{v}</td>
                   </tr>
                 ))}
               </tbody>
@@ -137,7 +137,7 @@ function Page() {
 
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="font-display font-semibold flex items-center gap-2">
               <ShieldAlert size={16} className="text-moli-red" /> Alertas recientes
             </h3>
             <Link to="/admin/general/alertas/bloqueos" className="text-xs text-primary font-semibold">

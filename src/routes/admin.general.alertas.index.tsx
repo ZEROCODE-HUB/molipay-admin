@@ -157,7 +157,7 @@ function ListadoAlertas() {
   ];
 
   const columns: Column<Alerta>[] = [
-    { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+    { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
     { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
     { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
     { key: "tipo", label: "Tipo de alerta", filterable: true, render: (r) => r.tipo },
@@ -206,7 +206,7 @@ function ListadoAlertas() {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground">Legajo:</span>{" "}
-              <span className="font-medium">{viewing.legajo}</span>
+              <span className="font-mono tabular-nums font-medium">{viewing.legajo}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Correo:</span>{" "}

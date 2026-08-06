@@ -27,7 +27,7 @@ export function ConfirmDialog({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-card rounded-lg w-full max-w-sm shadow-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg">{title}</h3>
+          <h3 className="font-display font-semibold text-lg">{title}</h3>
           <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
             <X size={18} />
           </button>

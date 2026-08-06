@@ -139,20 +139,20 @@ function Page() {
       {result && !loading && (
         <div className="bg-card border rounded-lg p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground">
+            <h3 className="font-display font-semibold text-foreground">
               Resultado — {result.tipo === "deposito" ? "Depósito" : "Retiro"}
             </h3>
             <Badge tone={estadoTone[result.estado] ?? "neutral"}>{result.estado}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-            <Field label="Legajo" value={result.legajo} />
+            <Field label="Legajo" value={result.legajo} mono />
             <Field label="Nombre" value={result.nombre} />
             <Field label="Email" value={result.email} />
-            <Field label="Monto" value={result.monto} />
-            <Field label={campoFecha} value={result.fecha} />
+            <Field label="Monto" value={result.monto} mono />
+            <Field label={campoFecha} value={result.fecha} mono />
             <Field label={campoTercero} value={result.terceroNombre} />
             <Field label={labelCvu} value={result.terceroCvu} mono />
-            <Field label={labelCuit} value={result.terceroCuit} />
+            <Field label={labelCuit} value={result.terceroCuit} mono />
           </div>
         </div>
       )}

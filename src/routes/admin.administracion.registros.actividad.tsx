@@ -190,7 +190,7 @@ function Page() {
       render: (r) => r.recurso,
     },
     { key: "accion", label: "Acción", filterable: true, render: (r) => r.accion },
-    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
+    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
   ];
 
   return (
@@ -216,7 +216,7 @@ function Page() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Detalle del evento</h3>
+              <h3 className="font-display font-semibold">Detalle del evento</h3>
               <button onClick={() => setDetalle(null)} className="p-1 hover:opacity-70">
                 <X size={18} />
               </button>
@@ -244,7 +244,7 @@ function Page() {
               </div>
               <div>
                 <span className="text-muted-foreground">Fecha:</span>{" "}
-                <span className="font-medium">{detalle.fecha}</span>
+                <span className="font-medium font-mono tabular-nums">{detalle.fecha}</span>
               </div>
             </div>
             <div className="text-sm p-3 bg-muted rounded-lg">{detalle.detalle}</div>

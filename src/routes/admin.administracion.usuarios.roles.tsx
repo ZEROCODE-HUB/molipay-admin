@@ -99,7 +99,7 @@ function Page() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowNew(false)}>
           <div className="bg-card border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Nuevo rol</h3>
+              <h3 className="font-display font-semibold">Nuevo rol</h3>
               <button onClick={() => setShowNew(false)} className="p-1 hover:opacity-70"><X size={18} /></button>
             </div>
             <div className="space-y-4">

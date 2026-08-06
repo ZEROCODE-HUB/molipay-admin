@@ -72,7 +72,7 @@ function Page() {
       label: "Fecha de creación",
       sortable: true,
       filterable: "date",
-      render: (r) => r.fechaCreacion,
+      render: (r) => <span className="font-mono tabular-nums">{r.fechaCreacion}</span>,
     },
     {
       key: "presentado",
@@ -195,7 +195,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="font-medium">{value}</div>
+      <div className="font-medium font-mono tabular-nums">{value}</div>
     </div>
   );
 }

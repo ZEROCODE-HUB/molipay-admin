@@ -194,7 +194,7 @@ function ComisionesPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Legajo:</span>{" "}
-              <span className="font-medium">{viewing.legajo}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.legajo}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Correo:</span>{" "}
@@ -202,7 +202,7 @@ function ComisionesPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Operación:</span>{" "}
-              <span className="font-medium">{viewing.operacion}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.operacion}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Tipo:</span>{" "}
@@ -216,7 +216,7 @@ function ComisionesPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Monto:</span>{" "}
-              <span className="font-medium">{viewing.monto}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.monto}</span>
             </div>
             <div className="col-span-2">
               <span className="text-muted-foreground">Descripción:</span>{" "}
@@ -346,9 +346,9 @@ function ComisionesPage() {
 }
 
 const columns: Column<Comision>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
-  { key: "operacion", label: "Código de operación", filterable: true, render: (r) => r.operacion },
+  { key: "operacion", label: "Código de operación", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.operacion}</span> },
   {
     key: "tipo",
     label: "Operación",
@@ -374,6 +374,6 @@ const columns: Column<Comision>[] = [
       </Badge>
     ),
   },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
+  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
   { key: "descripcion", label: "Descripción", filterable: true, render: (r) => r.descripcion },
 ];

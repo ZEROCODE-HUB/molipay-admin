@@ -85,7 +85,7 @@ function Page() {
       key: "fecha",
       label: "Fecha",
       sortable: true, filterable: "date",
-      render: (r) => r.fecha,
+      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
     },
     {
       key: "estado",

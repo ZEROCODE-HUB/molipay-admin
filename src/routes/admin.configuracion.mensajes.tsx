@@ -72,7 +72,7 @@ function Page() {
       key: "ultimaOcurrencia",
       label: "Última ocurrencia",
       sortable: true, filterable: "date",
-      render: (r) => <span className="text-xs text-muted-foreground">{r.ultimaOcurrencia}</span>,
+      render: (r) => <span className="text-xs text-muted-foreground font-mono tabular-nums">{r.ultimaOcurrencia}</span>,
     },
     {
       key: "nivel",

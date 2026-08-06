@@ -30,7 +30,7 @@ function Page() {
         <div className="w-12 h-12 rounded-lg bg-moli-red-light text-moli-red grid place-items-center mb-4">
           <ShieldAlert size={22} />
         </div>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Boton de Arrepentimiento</h1>
+        <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Boton de Arrepentimiento</h1>
         <p className="text-sm text-muted-foreground mt-3">
           De acuerdo al articulo 34 de la Ley 24.240 de Defensa del Consumidor y a la Resolucion 424/2020, tenes derecho a revocar la contratacion dentro de los 10 dias corridos desde la aceptacion del servicio, sin necesidad de invocar causa y sin costo alguno.
         </p>

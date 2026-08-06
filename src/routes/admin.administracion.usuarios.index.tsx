@@ -304,7 +304,7 @@ function Page() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Nuevo usuario backoffice</h3>
+              <h3 className="font-display font-semibold">Nuevo usuario backoffice</h3>
               <button onClick={() => setShowNew(false)} className="p-1 hover:opacity-70">
                 <X size={18} />
               </button>

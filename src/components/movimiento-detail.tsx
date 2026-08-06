@@ -71,7 +71,7 @@ export function DetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">{title}</h3>
+          <h3 className="font-display font-semibold">{title}</h3>
           <button onClick={onClose} className="p-1 hover:opacity-70 text-muted-foreground">
             ✕
           </button>
@@ -95,16 +95,16 @@ export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () =>
       title="Detalle de movimiento"
       onClose={onClose}
       rows={[
-        { label: "Legajo", value: m.legajo },
+        { label: "Legajo", value: <span className="font-mono tabular-nums">{m.legajo}</span> },
         { label: "ID Transacción", value: <span className="font-mono text-xs">{m.id}</span> },
         { label: "Tipo", value: m.tipo },
         { label: "Usuario", value: m.usuario },
         { label: "Nombre completo", value: m.nombreOrigen },
         { label: "Destino", value: m.nombreDestino },
-        { label: "CUIT destino", value: m.cuit },
+        { label: "CUIT destino", value: <span className="font-mono tabular-nums">{m.cuit}</span> },
         { label: "CVU/CBU", value: <span className="font-mono text-xs">{m.cvu}</span> },
-        { label: "Monto", value: <span className="font-semibold">{m.monto}</span> },
-        { label: "Fecha", value: m.fecha },
+        { label: "Monto", value: <span className="font-mono font-semibold tabular-nums">{m.monto}</span> },
+        { label: "Fecha", value: <span className="font-mono">{m.fecha}</span> },
         { label: "Estado", value: estadoBadge(m.estado) },
       ]}
     />

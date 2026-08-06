@@ -59,7 +59,7 @@ function Page() {
       key: "fecha",
       label: "Fecha",
       sortable: true, filterable: "date",
-      render: (r) => <span className="text-xs text-muted-foreground">{r.fecha}</span>,
+      render: (r) => <span className="text-xs text-muted-foreground font-mono tabular-nums">{r.fecha}</span>,
     },
     {
       key: "estado",
@@ -87,7 +87,7 @@ function Page() {
 
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <Card>
-          <h3 className="font-semibold mb-4">Configuración del bot</h3>
+          <h3 className="font-display font-semibold mb-4">Configuración del bot</h3>
           <div className="space-y-4">
             <div>
               <Label htmlFor="tg-token">Bot Token</Label>
@@ -97,6 +97,7 @@ function Page() {
                 onChange={(e) => setBotToken(e.target.value)}
                 placeholder="7234567890:AAHd8k2..."
                 type="password"
+                className="font-mono"
               />
             </div>
             <div>
@@ -106,6 +107,7 @@ function Page() {
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
                 placeholder="-1001234567890"
+                className="font-mono"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -130,7 +132,7 @@ function Page() {
         </Card>
 
         <Card>
-          <h3 className="font-semibold mb-4">Información del servicio</h3>
+          <h3 className="font-display font-semibold mb-4">Información del servicio</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">Estado del bot</span>
@@ -160,7 +162,7 @@ function Page() {
       </div>
 
       <Card>
-        <h3 className="font-semibold mb-4">Historial de mensajes enviados</h3>
+        <h3 className="font-display font-semibold mb-4">Historial de mensajes enviados</h3>
         <DataTable
           columns={columns}
           data={historyData}

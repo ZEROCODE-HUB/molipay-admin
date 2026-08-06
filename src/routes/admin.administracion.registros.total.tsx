@@ -34,7 +34,7 @@ function Page() {
 
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <Card className="p-6">
-          <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+          <h3 className="font-display font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
             Fórmula 1 (ARS)
           </h3>
           <div className="space-y-3 text-sm">
@@ -64,7 +64,7 @@ function Page() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+          <h3 className="font-display font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
             Fórmula 2 (ARS) — Interno nuevo
           </h3>
           <div className="space-y-3 text-sm">

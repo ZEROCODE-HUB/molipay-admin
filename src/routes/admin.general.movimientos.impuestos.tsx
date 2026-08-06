@@ -77,14 +77,14 @@ function ImpuestosPage() {
           title="Detalle de impuesto cobrado"
           onClose={() => setDetail(null)}
           rows={[
-            { label: "Legajo", value: detail.legajo },
+            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
             { label: "Usuario", value: detail.usuario },
             { label: "Nombre completo", value: detail.nombreCompleto },
-            { label: "ID de transacción", value: detail.idTransaccion },
+            { label: "ID de transacción", value: <span className="font-mono tabular-nums">{detail.idTransaccion}</span> },
             { label: "Impuesto", value: detail.impuesto },
-            { label: "Monto original", value: detail.montoOriginal },
-            { label: "Monto impuesto", value: detail.montoImpuesto },
-            { label: "Fecha de cobro", value: detail.fechaCobro },
+            { label: "Monto original", value: <span className="font-mono tabular-nums">{detail.montoOriginal}</span> },
+            { label: "Monto impuesto", value: <span className="font-mono tabular-nums">{detail.montoImpuesto}</span> },
+            { label: "Fecha de cobro", value: <span className="font-mono tabular-nums">{detail.fechaCobro}</span> },
           ]}
         />
       )}
@@ -93,7 +93,7 @@ function ImpuestosPage() {
 }
 
 const columns: Column<ImpuestoCobrado>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {
     key: "nombreCompleto",
@@ -105,7 +105,7 @@ const columns: Column<ImpuestoCobrado>[] = [
     key: "idTransaccion",
     label: "ID de transacción",
     filterable: true,
-    render: (r) => r.idTransaccion,
+    render: (r) => <span className="font-mono tabular-nums">{r.idTransaccion}</span>,
   },
   {
     key: "impuesto",
@@ -114,7 +114,7 @@ const columns: Column<ImpuestoCobrado>[] = [
     filterOptions: impuestos,
     render: (r) => r.impuesto,
   },
-  { key: "montoOriginal", label: "Monto original", render: (r) => r.montoOriginal },
-  { key: "montoImpuesto", label: "Monto impuesto", render: (r) => r.montoImpuesto },
-  { key: "fechaCobro", label: "Fecha de cobro", filterable: "date", render: (r) => r.fechaCobro },
+  { key: "montoOriginal", label: "Monto original", render: (r) => <span className="font-mono tabular-nums">{r.montoOriginal}</span> },
+  { key: "montoImpuesto", label: "Monto impuesto", render: (r) => <span className="font-mono tabular-nums">{r.montoImpuesto}</span> },
+  { key: "fechaCobro", label: "Fecha de cobro", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fechaCobro}</span> },
 ];

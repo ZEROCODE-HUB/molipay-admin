@@ -30,7 +30,7 @@ function Page() {
     { key: "id", label: "ID", sortable: true, render: (r) => <span className="font-mono text-xs">{r.id}</span> },
     { key: "asunto", label: "Asunto", sortable: true, filterable: true, render: (r) => r.asunto },
     { key: "segmento", label: "Segmento", filterable: "enum", filterOptions: ["Todos", "Módulo QR", "Módulo Link de pago", "Comercios", "Usuarios activos"], render: (r) => r.segmento },
-    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
+    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
     { key: "estado", label: "Estado", filterable: "enum", filterOptions: ["Enviado", "Borrador"], render: (r) => <Badge tone={r.estado === "Enviado" ? "success" : "warn"}>{r.estado}</Badge> },
   ];
 
@@ -39,7 +39,7 @@ function Page() {
       <PageHeader title="Sistema de comunicación de incidentes" description="Notificación proactiva a clientes ante incidentes o mantenimientos" />
 
       <div className="bg-card border rounded-lg p-6 mb-8 max-w-2xl">
-        <h3 className="font-semibold mb-4">Nuevo mensaje de difusión</h3>
+        <h3 className="font-display font-semibold mb-4">Nuevo mensaje de difusión</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1">Asunto</label>
@@ -79,13 +79,13 @@ function Page() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setVer(null)}>
           <div className="bg-card border rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">{ver.asunto}</h3>
+              <h3 className="font-display font-semibold">{ver.asunto}</h3>
               <button onClick={() => setVer(null)} className="p-1 hover:opacity-70"><X size={18} /></button>
             </div>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between"><dt className="text-muted-foreground">ID</dt><dd className="font-mono text-xs">{ver.id}</dd></div>
               <div className="flex justify-between"><dt className="text-muted-foreground">Segmento</dt><dd>{ver.segmento}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Fecha</dt><dd>{ver.fecha}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Fecha</dt><dd className="font-mono tabular-nums">{ver.fecha}</dd></div>
               <div className="flex justify-between"><dt className="text-muted-foreground">Estado</dt><dd><Badge tone={ver.estado === "Enviado" ? "success" : "warn"}>{ver.estado}</Badge></dd></div>
             </dl>
             <div className="mt-4 p-3 bg-muted rounded-lg text-sm">{ver.contenido}</div>

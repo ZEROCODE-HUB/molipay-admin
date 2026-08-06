@@ -272,6 +272,17 @@ export function UserModal({
     setEditingValue("");
   };
 
+  const monoFields = new Set([
+    "legajo",
+    "cuit",
+    "cuitEmpresa",
+    "numeroDireccion",
+    "codigoPostal",
+    "fechaRegistro",
+    "fechaInscripcion",
+    "fechaNacimiento",
+  ]);
+
   const renderField = (def: FieldDef) => {
     const key = def.key;
     const isEditing = editingField === key;
@@ -322,7 +333,13 @@ export function UserModal({
 
     return (
       <div className="group flex items-center justify-between gap-2">
-        <span className="text-sm font-medium truncate">{value || "—"}</span>
+        <span
+          className={`text-sm font-medium truncate ${
+            monoFields.has(key) ? "font-mono tabular-nums" : ""
+          }`}
+        >
+          {value || "—"}
+        </span>
         <button
           type="button"
           onClick={() => startEdit(key)}
@@ -406,19 +423,19 @@ export function UserModal({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b">
-                  <th className="px-3 py-2 text-left font-semibold text-xs">ID</th>
-                  <th className="px-3 py-2 text-left font-semibold text-xs">Legajo</th>
-                  <th className="px-3 py-2 text-left font-semibold text-xs">Email</th>
-                  <th className="px-3 py-2 text-left font-semibold text-xs">CVU</th>
-                  <th className="px-3 py-2 text-center font-semibold text-xs">Estado</th>
-                  <th className="px-3 py-2 text-center font-semibold text-xs">Acciones</th>
+                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">ID</th>
+                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">Legajo</th>
+                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">Email</th>
+                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">CVU</th>
+                  <th className="px-3 py-2 text-center font-display font-semibold text-xs">Estado</th>
+                  <th className="px-3 py-2 text-center font-display font-semibold text-xs">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedSubs.map((sub) => (
                   <tr key={sub.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-3 py-2 font-medium text-xs">{sub.id}</td>
-                    <td className="px-3 py-2 text-xs">{sub.legajo}</td>
+                    <td className="px-3 py-2 font-medium text-xs font-mono tabular-nums">{sub.id}</td>
+                    <td className="px-3 py-2 text-xs font-mono tabular-nums">{sub.legajo}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{sub.email}</td>
                     <td className="px-3 py-2 text-muted-foreground text-xs font-mono">{sub.cvu}</td>
                     <td className="px-3 py-2 text-center">
@@ -500,7 +517,7 @@ export function UserModal({
         {/* Header */}
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between z-10 rounded-t-lg">
           <div className="flex items-center gap-3">
-            <h3 className="font-semibold text-lg">
+            <h3 className="font-display font-semibold text-lg">
               {user.tipoPersona === "juridica" ? "Persona Jurídica" : "Persona Física"}
             </h3>
             <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
@@ -534,7 +551,7 @@ export function UserModal({
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">CUIT</div>
-                <div className="text-sm font-semibold mt-0.5">{user.cuit}</div>
+                <div className="text-sm font-semibold mt-0.5 font-mono tabular-nums">{user.cuit}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Productos</div>

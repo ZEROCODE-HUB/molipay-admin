@@ -74,14 +74,14 @@ function ComisionesPage() {
           title="Detalle de comisión"
           onClose={() => setDetail(null)}
           rows={[
-            { label: "Legajo", value: detail.legajo },
+            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
             { label: "Usuario", value: detail.usuario },
             { label: "Operación", value: detail.operacion },
             { label: "Tipo", value: detail.tipo },
-            { label: "Monto de comisión", value: detail.montoComision },
-            { label: "Monto de operación", value: detail.montoOperacion },
-            { label: "ID de operación", value: detail.idOperacion },
-            { label: "Fecha", value: detail.fecha },
+            { label: "Monto de comisión", value: <span className="font-mono tabular-nums">{detail.montoComision}</span> },
+            { label: "Monto de operación", value: <span className="font-mono tabular-nums">{detail.montoOperacion}</span> },
+            { label: "ID de operación", value: <span className="font-mono tabular-nums">{detail.idOperacion}</span> },
+            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
           ]}
         />
       )}
@@ -90,7 +90,7 @@ function ComisionesPage() {
 }
 
 const columns: Column<Comision>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   { key: "operacion", label: "Operación", filterable: true, render: (r) => r.operacion },
   {
@@ -100,8 +100,8 @@ const columns: Column<Comision>[] = [
     filterOptions: ["Porcentaje", "Fijo", "Otro"],
     render: (r) => r.tipo,
   },
-  { key: "montoComision", label: "Monto de comisión", render: (r) => r.montoComision },
-  { key: "montoOperacion", label: "Monto de operación", render: (r) => r.montoOperacion },
-  { key: "idOperacion", label: "ID de operación", filterable: true, render: (r) => r.idOperacion },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+  { key: "montoComision", label: "Monto de comisión", render: (r) => <span className="font-mono tabular-nums">{r.montoComision}</span> },
+  { key: "montoOperacion", label: "Monto de operación", render: (r) => <span className="font-mono tabular-nums">{r.montoOperacion}</span> },
+  { key: "idOperacion", label: "ID de operación", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.idOperacion}</span> },
+  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
 ];

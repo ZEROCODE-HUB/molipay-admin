@@ -370,7 +370,12 @@ function PersonasFisicasPage() {
 }
 
 const columns: Column<Usuario>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (row) => row.legajo },
+  {
+    key: "legajo",
+    label: "Legajo",
+    filterable: true,
+    render: (row) => <span className="font-mono tabular-nums">{row.legajo}</span>,
+  },
   { key: "correo", label: "Usuario", filterable: true, render: (row) => row.correo },
   { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },
   { key: "apellidos", label: "Apellidos", filterable: true, render: (row) => row.apellidos },
@@ -395,6 +400,6 @@ const columns: Column<Usuario>[] = [
     key: "fechaRegistro",
     label: "Fecha de registro",
     filterable: "date",
-    render: (row) => row.fechaRegistro,
+    render: (row) => <span className="font-mono tabular-nums">{row.fechaRegistro}</span>,
   },
 ];

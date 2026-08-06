@@ -83,10 +83,10 @@ function Page() {
     {
       key: "cuit",
       label: "CUIT",
-      render: (r) => <span className="font-mono text-xs">{r.cuit}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
     },
     { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
-    { key: "tasa", label: "Tasa", render: (r) => r.tasa },
+    { key: "tasa", label: "Tasa", render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span> },
     { key: "usuario", label: "Usuario", render: (r) => r.usuario },
   ];
 
@@ -94,10 +94,10 @@ function Page() {
     {
       key: "cuit",
       label: "CUIT",
-      render: (r) => <span className="font-mono text-xs">{r.cuit}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
     },
     { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
-    { key: "tasa", label: "Tasa", render: (r) => r.tasa },
+    { key: "tasa", label: "Tasa", render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span> },
     { key: "usuario", label: "Usuario", render: (r) => r.usuario },
     { key: "motivo", label: "Motivo", render: (r) => r.motivo },
   ];
@@ -106,7 +106,7 @@ function Page() {
     {
       key: "cuit",
       label: "CUIT",
-      render: (r) => <span className="font-mono text-xs">{r.cuit}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
     },
     { key: "motivo", label: "Motivo", render: (r) => r.motivo },
     { key: "usuario", label: "Usuario", render: (r) => r.usuario },
@@ -231,7 +231,7 @@ function Page() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+      <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
         {title}
       </h4>
       {children}

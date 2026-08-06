@@ -36,22 +36,24 @@ function Page() {
         </div>
       </header>
       <article className="max-w-3xl mx-auto px-6 py-16">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Tabla de Comisiones</h1>
-        <p className="text-sm text-muted-foreground mt-2">Vigente desde 01/06/2026 · Aplicable al Plan Empresa.</p>
+        <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Tabla de Comisiones</h1>
+        <p className="text-sm text-muted-foreground mt-2">Vigente desde <span className="font-mono tabular-nums">01/06/2026</span> · Aplicable al Plan Empresa.</p>
 
         <div className="mt-8 border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="text-left px-4 py-3">Operacion</th>
-                <th className="text-right px-4 py-3">Comision</th>
+                <th className="text-left px-4 py-3 font-display font-semibold">Operacion</th>
+                <th className="text-right px-4 py-3 font-display font-semibold">Comision</th>
               </tr>
             </thead>
             <tbody>
               {filas.map((f) => (
                 <tr key={f.op} className="border-t">
                   <td className="px-4 py-3">{f.op}</td>
-                  <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{f.com}</td>
+                  <td className="px-4 py-3 text-right font-semibold whitespace-nowrap font-mono tabular-nums">
+                    {f.com}
+                  </td>
                 </tr>
               ))}
             </tbody>

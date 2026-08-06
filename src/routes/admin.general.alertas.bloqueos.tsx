@@ -128,7 +128,7 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Detalle del bloqueo</h3>
+          <h3 className="font-display font-semibold">Detalle del bloqueo</h3>
           <button onClick={onClose} className="p-1 hover:opacity-70">
             <X size={18} />
           </button>
@@ -136,7 +136,7 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Bloqueo</dt>
-            <dd className="font-semibold">{b.legajo}</dd>
+            <dd className="font-mono tabular-nums font-semibold">{b.legajo}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Usuario</dt>
@@ -144,11 +144,11 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">ID COELSA</dt>
-            <dd className="font-mono text-xs">{b.idCoelsa}</dd>
+            <dd className="font-mono tabular-nums text-xs">{b.idCoelsa}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Monto</dt>
-            <dd className="font-semibold">{b.monto}</dd>
+            <dd className="font-mono tabular-nums font-semibold">{b.monto}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Tipo</dt>
@@ -168,7 +168,9 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Fecha</dt>
-            <dd>{b.fecha}</dd>
+            <dd>
+              <span className="font-mono tabular-nums">{b.fecha}</span>
+            </dd>
           </div>
           {b.resolucion && (
             <div className="flex justify-between">
@@ -195,7 +197,7 @@ function GestionarBloqueo({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Gestionar bloqueo — {b.legajo}</h3>
+          <h3 className="font-display font-semibold">Gestionar bloqueo — {b.legajo}</h3>
           <button onClick={onClose} className="p-1 hover:opacity-70">
             <X size={18} />
           </button>
@@ -261,7 +263,7 @@ function Page() {
       label: "Legajo",
       sortable: true,
       filterable: true,
-      render: (r) => <span className="font-mono text-xs">{r.legajo}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.legajo}</span>,
     },
     {
       key: "usuario",
@@ -287,7 +289,7 @@ function Page() {
       ),
     },
     { key: "compliance", label: "Compliance", filterable: true, render: (r) => r.compliance },
-    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => r.fecha },
+    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
   ];
 
   return (

@@ -53,7 +53,7 @@ function Page() {
       label: "Fecha de asignación",
       sortable: true,
       filterable: "date",
-      render: (r) => r.fechaAsignacion,
+      render: (r) => <span className="font-mono tabular-nums">{r.fechaAsignacion}</span>,
     },
   ];
 

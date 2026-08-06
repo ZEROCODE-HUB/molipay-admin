@@ -87,7 +87,7 @@ function Page() {
       label: "CUIT",
       sortable: true,
       filterable: true,
-      render: (r) => <span className="font-mono text-xs">{r.cuit}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
     },
     {
       key: "direccion",
@@ -103,14 +103,14 @@ function Page() {
       label: "Vigencia desde",
       sortable: true,
       filterable: "date",
-      render: (r) => r.vigenciaDesde || "—",
+      render: (r) => <span className="font-mono tabular-nums">{r.vigenciaDesde || "—"}</span>,
     },
     {
       key: "vigenciaHasta",
       label: "Vigencia hasta",
       sortable: true,
       filterable: "date",
-      render: (r) => r.vigenciaHasta || "Abierta",
+      render: (r) => <span className="font-mono tabular-nums">{r.vigenciaHasta || "Abierta"}</span>,
     },
     {
       key: "estado",
@@ -125,12 +125,12 @@ function Page() {
       label: "Fecha de creación",
       sortable: true,
       filterable: "date",
-      render: (r) => r.fechaCreacion,
+      render: (r) => <span className="font-mono tabular-nums">{r.fechaCreacion}</span>,
     },
     {
       key: "autorizacion",
       label: "Autorización",
-      render: (r) => <span className="font-mono text-xs">{r.autorizacion}</span>,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.autorizacion}</span>,
     },
   ];
 

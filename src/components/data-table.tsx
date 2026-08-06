@@ -367,7 +367,7 @@ export function DataTable<T>({
                 <th key={col.key} className="px-4 py-3 text-left whitespace-nowrap">
                   <button
                     type="button"
-                    className={`font-semibold text-foreground flex items-center gap-1 ${
+                    className={`font-display font-semibold text-foreground flex items-center gap-1 ${
                       col.sortable ? "cursor-pointer hover:text-primary" : ""
                     }`}
                     onClick={() => col.sortable && handleSort(col.key)}

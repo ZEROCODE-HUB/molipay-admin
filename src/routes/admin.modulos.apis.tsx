@@ -66,7 +66,7 @@ function Page() {
       key: "restricciones",
       label: "Restricciones",
       sortable: true, filterable: true,
-      render: (r) => <span className="text-muted-foreground">{r.restricciones}</span>,
+      render: (r) => <span className="text-muted-foreground font-mono tabular-nums">{r.restricciones}</span>,
     },
   ];
 

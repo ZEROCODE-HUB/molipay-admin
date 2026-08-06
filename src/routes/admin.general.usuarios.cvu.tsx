@@ -220,7 +220,7 @@ function CvuPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Legajo:</span>{" "}
-              <span className="font-medium">{viewing.legajo}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.legajo}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Correo:</span>{" "}
@@ -236,11 +236,11 @@ function CvuPage() {
             </div>
             <div>
               <span className="text-muted-foreground">CVU:</span>{" "}
-              <span className="font-medium font-mono">{viewing.cvu}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.cvu}</span>
             </div>
             <div>
               <span className="text-muted-foreground">CBK:</span>{" "}
-              <span className="font-medium font-mono">{viewing.cbk}</span>
+              <span className="font-medium font-mono tabular-nums">{viewing.cbk}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Alias:</span>{" "}
@@ -321,12 +321,12 @@ function CvuPage() {
 }
 
 const columns: Column<CvuUser>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
   { key: "apellido", label: "Apellido", filterable: true, render: (r) => r.apellido },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
-  { key: "cbk", label: "CBK", filterable: true, render: (r) => r.cbk },
+  { key: "cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span> },
+  { key: "cbk", label: "CBK", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cbk}</span> },
   { key: "alias", label: "Alias", filterable: true, render: (r) => r.alias },
   {
     key: "estado",

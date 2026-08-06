@@ -76,13 +76,13 @@ function PagosTarjetaPage() {
           title="Detalle de pago con tarjeta"
           onClose={() => setDetail(null)}
           rows={[
-            { label: "Legajo", value: detail.legajo },
+            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
             { label: "Usuario", value: detail.usuario },
-            { label: "Monto", value: detail.monto },
+            { label: "Monto", value: <span className="font-mono tabular-nums">{detail.monto}</span> },
             { label: "Medio de pago", value: detail.medioPago },
             { label: "Cuotas", value: detail.cuotas },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha", value: detail.fecha },
+            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
           ]}
         />
       )}
@@ -91,9 +91,9 @@ function PagosTarjetaPage() {
 }
 
 const columns: Column<PagoTarjeta>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
+  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
   { key: "medioPago", label: "Medio de pago", filterable: true, render: (r) => r.medioPago },
   { key: "cuotas", label: "Cuotas", filterable: true, render: (r) => r.cuotas },
   {
@@ -103,5 +103,5 @@ const columns: Column<PagoTarjeta>[] = [
     filterOptions: estados,
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
 ];

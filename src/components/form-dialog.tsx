@@ -29,7 +29,7 @@ export function FormDialog({
       <div className={`relative bg-card rounded-lg w-full ${w} max-h-[90vh] overflow-y-auto shadow-xl`}>
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start z-10">
           <div>
-            <h3 className="font-semibold text-lg">{title}</h3>
+            <h3 className="font-display font-semibold text-lg">{title}</h3>
             {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
           </div>
           <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">

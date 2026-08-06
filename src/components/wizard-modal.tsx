@@ -37,7 +37,7 @@ export function WizardModal({
       <div className="relative bg-card rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-card border-b px-6 py-4 z-10">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="font-semibold text-lg">{title}</h3>
+            <h3 className="font-display font-semibold text-lg">{title}</h3>
             <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
               <X size={18} />
             </button>

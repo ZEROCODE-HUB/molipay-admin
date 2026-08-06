@@ -115,7 +115,7 @@ function Conciliaciones() {
       filterable: true,
       render: (r) => <span className="font-mono text-xs">{r.archivo}</span>,
     },
-    { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+    { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
     {
       key: "analizar",
       label: "Analizar",
@@ -143,21 +143,21 @@ function ReportesBCRA() {
   return (
     <div className="grid sm:grid-cols-2 gap-4">
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">SISCEN — Régimen informativo mensual</h4>
+        <h4 className="font-display font-semibold text-sm">SISCEN — Régimen informativo mensual</h4>
         <p className="text-xs text-muted-foreground mt-1">Presentado el 15/07/2026</p>
         <div className="mt-2">
           <Badge tone="success">Presentado</Badge>
         </div>
       </Card>
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">Régimen de transparencia</h4>
+        <h4 className="font-display font-semibold text-sm">Régimen de transparencia</h4>
         <p className="text-xs text-muted-foreground mt-1">Tasas activas y pasivas — Julio 2026</p>
         <div className="mt-2">
           <Badge tone="warn">Pendiente</Badge>
         </div>
       </Card>
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">Información de clientes</h4>
+        <h4 className="font-display font-semibold text-sm">Información de clientes</h4>
         <p className="text-xs text-muted-foreground mt-1">Base consolidada al 30/06/2026</p>
         <div className="mt-2">
           <BtnOutline className="h-7 text-xs px-3">Exportar TXT</BtnOutline>
@@ -173,7 +173,7 @@ function ReportesAFIP() {
   return (
     <div className="grid sm:grid-cols-2 gap-4">
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">RG 3685 — Régimen de información de operaciones</h4>
+        <h4 className="font-display font-semibold text-sm">RG 3685 — Régimen de información de operaciones</h4>
         <p className="text-xs text-muted-foreground mt-1">
           Período Junio 2026 — Generado el 10/07/2026
         </p>
@@ -182,14 +182,14 @@ function ReportesAFIP() {
         </div>
       </Card>
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">RG 5450 — Información de beneficiarios finales</h4>
+        <h4 className="font-display font-semibold text-sm">RG 5450 — Información de beneficiarios finales</h4>
         <p className="text-xs text-muted-foreground mt-1">Vencimiento: 31/08/2026</p>
         <div className="mt-2">
           <Badge tone="warn">En preparación</Badge>
         </div>
       </Card>
       <Card className="p-5">
-        <h4 className="font-semibold text-sm">RG 4613 — Impuesto al cheque</h4>
+        <h4 className="font-display font-semibold text-sm">RG 4613 — Impuesto al cheque</h4>
         <p className="text-xs text-muted-foreground mt-1">Base imponible mensual — Julio 2026</p>
         <div className="mt-2">
           <BtnOutline className="h-7 text-xs px-3">Calcular</BtnOutline>
@@ -254,8 +254,8 @@ function ReportesComisiones() {
       filterable: true,
       render: (r) => r.cantidad.toLocaleString(),
     },
-    { key: "monto", label: "Monto cobrado", render: (r) => r.monto },
-    { key: "comision", label: "Comisión", render: (r) => r.comision },
+    { key: "monto", label: "Monto cobrado", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
+    { key: "comision", label: "Comisión", render: (r) => <span className="font-mono tabular-nums">{r.comision}</span> },
   ];
   return <DataTable columns={columns} data={data} keyExtractor={(r) => r.periodo + r.tipo} />;
 }
@@ -340,11 +340,11 @@ function ActividadUsuarios() {
     },
   ];
   const columns: Column<Actividad>[] = [
-    { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+    { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
     { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
     { key: "accion", label: "Acción", filterable: true, render: (r) => r.accion },
-    { key: "ip", label: "IP", render: (r) => r.ip },
-    { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+    { key: "ip", label: "IP", render: (r) => <span className="font-mono tabular-nums">{r.ip}</span> },
+    { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
   ];
   return <DataTable columns={columns} data={data} keyExtractor={(r) => r.legajo + r.fecha} />;
 }
@@ -369,7 +369,7 @@ function impuestosColumns(): Column<Impuesto>[] {
       render: (r) => r.periodo,
     },
     { key: "tramo", label: "Tramo", filterable: true, render: (r) => r.tramo },
-    { key: "creado", label: "Fecha de creación", filterable: "date", render: (r) => r.creado },
+    { key: "creado", label: "Fecha de creación", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.creado}</span> },
     {
       key: "presentado",
       label: "Presentado",
@@ -430,7 +430,7 @@ function ConciliacionesBLP() {
     {
       key: "monto",
       label: "Monto conciliado",
-      render: (r) => <span className="font-mono">{r.monto}</span>,
+      render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
     },
   ];
   return (

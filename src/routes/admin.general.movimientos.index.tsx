@@ -226,10 +226,10 @@ function TodosPage() {
 }
 
 const columns: Column<Movimiento>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
-  { key: "id", label: "ID", filterable: true, render: (r) => r.id },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.id}</span> },
   { key: "tipo", label: "Tipo de transacción", filterable: true, render: (r) => r.tipo },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => r.cvu },
+  { key: "cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span> },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {
     key: "nombreOrigen",
@@ -243,9 +243,9 @@ const columns: Column<Movimiento>[] = [
     filterable: true,
     render: (r) => r.nombreDestino,
   },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => r.cuit },
-  { key: "monto", label: "Monto", render: (r) => r.monto },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+  { key: "cuit", label: "CUIT", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span> },
+  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
+  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
   {
     key: "estado",
     label: "Estado",

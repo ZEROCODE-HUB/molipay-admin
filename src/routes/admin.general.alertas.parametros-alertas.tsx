@@ -235,7 +235,7 @@ function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map((g, gIdx) => (
             <div key={g.title} className="break-inside-avoid">
-              <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
+              <h4 className="font-display text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
                 {g.title}
               </h4>
               <div className="space-y-3">

@@ -93,14 +93,14 @@ function CobrosQrPage() {
           onClose={() => setDetail(null)}
           rows={[
             { label: "Usuario", value: detail.usuario },
-            { label: "Legajo", value: detail.legajo },
+            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
             { label: "Tipo QR", value: detail.tipoQr },
             { label: "Estado QR", value: estadoBadge(detail.estadoQr) },
-            { label: "Monto total", value: detail.montoTotal },
-            { label: "Comisión", value: detail.comision },
-            { label: "Monto neto", value: detail.montoNeto },
+            { label: "Monto total", value: <span className="font-mono tabular-nums">{detail.montoTotal}</span> },
+            { label: "Comisión", value: <span className="font-mono tabular-nums">{detail.comision}</span> },
+            { label: "Monto neto", value: <span className="font-mono tabular-nums">{detail.montoNeto}</span> },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha", value: detail.fecha },
+            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
           ]}
         />
       )}
@@ -126,7 +126,7 @@ function CobrosQrPage() {
 
 const columns: Column<CobroQr>[] = [
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => r.legajo },
+  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   {
     key: "tipoQr",
     label: "Tipo QR",
@@ -141,9 +141,9 @@ const columns: Column<CobroQr>[] = [
     filterOptions: estadosQr,
     render: (r) => estadoBadge(r.estadoQr),
   },
-  { key: "montoTotal", label: "Monto Total", render: (r) => r.montoTotal },
-  { key: "comision", label: "Comisión", render: (r) => r.comision },
-  { key: "montoNeto", label: "Monto Neto", render: (r) => r.montoNeto },
+  { key: "montoTotal", label: "Monto Total", render: (r) => <span className="font-mono tabular-nums">{r.montoTotal}</span> },
+  { key: "comision", label: "Comisión", render: (r) => <span className="font-mono tabular-nums">{r.comision}</span> },
+  { key: "montoNeto", label: "Monto Neto", render: (r) => <span className="font-mono tabular-nums">{r.montoNeto}</span> },
   {
     key: "estado",
     label: "Estado",
@@ -151,5 +151,5 @@ const columns: Column<CobroQr>[] = [
     filterOptions: estados,
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => r.fecha },
+  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
 ];
