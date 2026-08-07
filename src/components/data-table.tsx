@@ -242,7 +242,7 @@ export function DataTable<T>({
   const showSpecificFilters = dateCols.length > 0 || enumCols.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">{sortedData.length} resultados</span>
         <div className="flex items-center gap-3">
@@ -253,7 +253,7 @@ export function DataTable<T>({
       </div>
 
       {(textSearchableCols.length > 0 || showSpecificFilters) && (
-        <div className="bg-card border rounded-lg p-4 space-y-3">
+        <div className="bg-card border rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             {textSearchableCols.length > 0 && (
               <div className="relative flex-1 max-w-md">
@@ -266,7 +266,7 @@ export function DataTable<T>({
                   placeholder={searchPlaceholder}
                   value={globalQuery}
                   onChange={(e) => setGlobalQuery(e.target.value)}
-                  className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
+                  className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
                 />
                 {globalQuery && (
                   <button

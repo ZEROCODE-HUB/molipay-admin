@@ -20,7 +20,7 @@ export function TabLayout({ tabs, children }: { tabs: Tab[]; children: ReactNode
   }, null);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex gap-1 border-b border-border">
         {tabs.map((tab) => {
           const activeTab = active === tab.to;
