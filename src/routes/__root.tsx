@@ -13,7 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DemoModeProvider } from "../contexts/demo-mode";
 import { Toaster } from "@/components/ui/sonner";
-import ogImageSrc from "@/assets/miniaturaadmin.png";
+import ogImageSrc from "@/assets/miniaturaadminfinal.png";
 
 function NotFoundComponent() {
   return (
@@ -89,8 +89,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "Panel de Administración — Moli" },
       { name: "twitter:description", content: "Panel de administración de la plataforma Moli." },
       { property: "og:image", content: ogImageSrc },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
+      { property: "og:image:width", content: "1917" },
+      { property: "og:image:height", content: "911" },
       { name: "twitter:image", content: ogImageSrc },
       { name: "twitter:card", content: "summary_large_image" },
     ],
