@@ -3,6 +3,7 @@ import { useState } from "react";
 import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
+import loginBackground from "@/assets/17.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,25 +34,24 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden select-none"
-      style={{
-        background: "linear-gradient(160deg, #0A1628 0%, #1A244D 50%, #25336B 100%)",
-      }}
-    >
-      {/* Subtle grid pattern */}
-      <div aria-hidden className="absolute inset-0 opacity-[0.05] pointer-events-none"
-        style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden select-none">
+      {/* Animated background image */}
+      <div aria-hidden className="absolute inset-0 overflow-hidden">
+        <img
+          src={loginBackground}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover animate-kenburns"
+        />
+      </div>
 
-      {/* Decorative orbs */}
-      <div aria-hidden className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.08] pointer-events-none"
-        style={{ background: "radial-gradient(circle, #D21523 0%, transparent 70%)" }}
-      />
-      <div aria-hidden className="absolute -bottom-40 -left-20 w-[400px] h-[400px] rounded-full opacity-[0.06] pointer-events-none"
-        style={{ background: "radial-gradient(circle, #9CB0D9 0%, transparent 70%)" }}
+      {/* Contrast overlay */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(160deg, rgba(5,10,25,0.72) 0%, rgba(8,15,38,0.55) 45%, rgba(12,22,55,0.78) 100%), radial-gradient(ellipse at center, rgba(4,8,22,0.15) 0%, rgba(4,8,22,0.65) 100%)",
+        }}
       />
 
       <div className="w-full max-w-[400px] relative">
