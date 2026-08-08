@@ -245,7 +245,7 @@ function JuridicasPage() {
           {
             label: "Suspender",
             icon: XCircle,
-            variant: "danger",
+            variant: "danger" as const,
             onClick: () =>
               setConfirmAction({
                 title: "Suspender persona jurídica",
@@ -310,7 +310,12 @@ function JuridicasPage() {
 }
 
 const columns: Column<Juridica>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+  },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
   {
@@ -343,5 +348,9 @@ const columns: Column<Juridica>[] = [
     filterable: "date",
     render: (r) => <span className="font-mono tabular-nums">{r.fechaRegistro}</span>,
   },
-  { key: "subcuentas", label: "Subcuentas", render: (r) => <span className="font-mono tabular-nums">{r.subcuentas}</span> },
+  {
+    key: "subcuentas",
+    label: "Subcuentas",
+    render: (r) => <span className="font-mono tabular-nums">{r.subcuentas}</span>,
+  },
 ];

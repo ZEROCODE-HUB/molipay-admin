@@ -211,7 +211,7 @@ function ComisionesPage() {
             <div>
               <span className="text-muted-foreground">Estado:</span>{" "}
               <span className="font-medium">
-                {viewing.estado === "activa" ? "Activa" : "Inactiva"}
+                {viewing.estado === "Habilitado" ? "Activa" : "Inactiva"}
               </span>
             </div>
             <div>
@@ -346,9 +346,19 @@ function ComisionesPage() {
 }
 
 const columns: Column<Comision>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+  },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
-  { key: "operacion", label: "Código de operación", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.operacion}</span> },
+  {
+    key: "operacion",
+    label: "Código de operación",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.operacion}</span>,
+  },
   {
     key: "tipo",
     label: "Operación",
@@ -374,6 +384,10 @@ const columns: Column<Comision>[] = [
       </Badge>
     ),
   },
-  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
+  {
+    key: "monto",
+    label: "Monto",
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
   { key: "descripcion", label: "Descripción", filterable: true, render: (r) => r.descripcion },
 ];

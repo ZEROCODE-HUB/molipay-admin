@@ -249,6 +249,87 @@ const toUserData = (u: Usuario): UserData => ({
       label: "Selfie",
     },
   ],
+  validacionesAutomaticas:
+    u.legajo.endsWith("3") || u.legajo.endsWith("7")
+      ? []
+      : [
+          { id: "val-1", proveedor: "AFIP", estado: "Ok", fecha: "04/08/2026" },
+          { id: "val-2", proveedor: "BCRA", estado: "Ok", fecha: "04/08/2026" },
+          { id: "val-3", proveedor: "Renaper", estado: "Pendiente", fecha: "05/08/2026" },
+        ],
+  comisiones: [
+    {
+      id: "com-1",
+      tipo: "Comisión por transferencia",
+      monto: "$ 1.250,00",
+      fecha: "06/08/2026",
+      origen: "Transferencia entrante",
+    },
+    {
+      id: "com-2",
+      tipo: "Comisión por retiro",
+      monto: "$ 850,00",
+      fecha: "02/08/2026",
+      origen: "Retiro por terminal",
+    },
+    {
+      id: "com-3",
+      tipo: "Comisión por cobro QR",
+      monto: "$ 320,00",
+      fecha: "28/07/2026",
+      origen: "Cobro QR",
+    },
+  ],
+  impuestos: [
+    { id: "imp-1", nombre: "IIBB", monto: "$ 2.140,00", fecha: "05/08/2026" },
+    { id: "imp-2", nombre: "IVA", monto: "$ 3.400,00", fecha: "28/07/2026" },
+  ],
+  alertas: [
+    { id: "al-1", tipo: "Depósito excedido", fecha: "03/08/2026", estado: "Pendiente" },
+    { id: "al-2", tipo: "Volumen anormal", fecha: "29/07/2026", estado: "Revisado" },
+  ],
+  bloqueos: [
+    { id: "bl-1", tipo: "Umbral de salarios mínimos", fecha: "01/08/2026", estado: "Activo" },
+  ],
+  parametrosAlertas: [
+    { label: "Depósitos por mes", valor: "10" },
+    { label: "Depósitos salario mínimo por transferencia", valor: "5" },
+    { label: "Transferencias por hora", valor: "10" },
+    { label: "Operaciones repetitivas", valor: "5" },
+    { label: "Volumen anormal", valor: "$ 1.000.000 – $ 5.000.000" },
+    { label: "Política a menores", valor: "Bloquear" },
+  ],
+  parametrosBloqueo: [
+    { label: "Salarios mínimos por persona", valor: "15" },
+    { label: "Salarios mínimos por empresa", valor: "50" },
+  ],
+  modulos: [
+    {
+      clave: "pct",
+      titulo: "PCT",
+      cantidad: u.legajo.endsWith("3") ? 0 : 3,
+      verLabel: "Ver comercios PCT",
+      vacioMsg: "No se encontró comercio PCT asociado",
+      ruta: "/admin/modulos/transferencia",
+    },
+    {
+      clave: "blp",
+      titulo: "Links de Pago",
+      cantidad: 2,
+      verLabel: "Ver links de pago",
+      vacioMsg: "No se encontró link de pago asociado",
+      ruta: "/admin/modulos/link-pago",
+    },
+    {
+      clave: "api",
+      titulo: "API Externa",
+      cantidad: 1,
+      verLabel: "Ver usuarios API",
+      vacioMsg: "No se encontró usuario API asociado",
+      ruta: "/admin/modulos/apis",
+    },
+  ],
+  entidad: { maximoSubcuentas: 3, redireccionAutomatica: true, presionOperativa: "Normal" },
 });
 
 function PersonasFisicasPage() {
@@ -283,7 +364,7 @@ function PersonasFisicasPage() {
 
   const getActions = (row: Usuario): ActionItem[] => [
     { label: "Ver / Editar", icon: Edit3, onClick: () => openModal(row) },
-    ...(row.estado === "suspendido"
+    ...(row.estado === "Suspendido"
       ? [
           {
             label: "Reactivar",

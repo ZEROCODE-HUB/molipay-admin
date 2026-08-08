@@ -39,7 +39,7 @@ function parseDateCell(text: string): Date | null {
   return null;
 }
 
-function isTextFilterable(col: Column<unknown>): boolean {
+function isTextFilterable<T>(col: Column<T>): boolean {
   return col.filterable === true || col.filterable === "text";
 }
 
