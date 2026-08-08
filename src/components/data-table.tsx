@@ -254,7 +254,7 @@ export function DataTable<T>({
 
       {(textSearchableCols.length > 0 || showSpecificFilters) && (
         <div className="bg-card border rounded-lg p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             {textSearchableCols.length > 0 && (
               <div className="relative flex-1 max-w-md">
                 <Search
@@ -351,7 +351,7 @@ export function DataTable<T>({
           <thead>
             <tr className="border-b bg-muted/50">
               {selection && (
-                <th className="px-4 py-3 w-10">
+                <th className="px-2 py-2 sm:px-4 sm:py-3 w-10">
                   <input
                     type="checkbox"
                     className="accent-primary"
@@ -364,7 +364,7 @@ export function DataTable<T>({
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-left whitespace-nowrap">
+                <th key={col.key} className="px-2 py-2 sm:px-4 sm:py-3 text-left whitespace-nowrap">
                   <button
                     type="button"
                     className={`font-display font-semibold text-foreground flex items-center gap-1 ${
@@ -378,13 +378,20 @@ export function DataTable<T>({
                   </button>
                 </th>
               ))}
-              {actions && <th className="px-4 py-3 w-20 text-right whitespace-nowrap">Acciones</th>}
+              {actions && (
+                <th className="px-2 py-2 sm:px-4 sm:py-3 w-20 text-right whitespace-nowrap">
+                  Acciones
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={colspan} className="px-4 py-12 text-center text-muted-foreground">
+                <td
+                  colSpan={colspan}
+                  className="px-4 py-8 sm:py-12 text-center text-muted-foreground"
+                >
                   {emptyMessage}
                 </td>
               </tr>
@@ -398,7 +405,7 @@ export function DataTable<T>({
                     className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     {selection && (
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <input
                           type="checkbox"
                           className="accent-primary"
@@ -408,11 +415,13 @@ export function DataTable<T>({
                       </td>
                     )}
                     {columns.map((col) => (
-                      <td key={col.key} className="px-4 py-3">
+                      <td key={col.key} className="px-2 py-2 sm:px-4 sm:py-3">
                         {col.render(row)}
                       </td>
                     ))}
-                    {actions && <td className="px-4 py-3 text-right">{actions(row)}</td>}
+                    {actions && (
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right">{actions(row)}</td>
+                    )}
                   </tr>
                 );
               })
@@ -421,7 +430,7 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
           <select

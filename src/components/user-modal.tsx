@@ -767,8 +767,8 @@ export function UserModal({
         {user.subcuentas.length === 0 ? (
           <EmptyMsg>Sin subcuentas</EmptyMsg>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="bg-muted/50 border-b">
                   <th className="px-3 py-2 text-left font-display font-semibold text-xs">ID</th>
@@ -1037,7 +1037,7 @@ export function UserModal({
         </div>
       }
     >
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
         <KpiTile label="CVUs" value={String(cvuRecientes.length)} />
         <KpiTile label="Comisiones" value={String(comisiones.length)} />
         <KpiTile label="Impuestos" value={String(impuestos.length)} />

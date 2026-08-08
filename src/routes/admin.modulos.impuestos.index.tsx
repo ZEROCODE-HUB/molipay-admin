@@ -106,7 +106,11 @@ function Page() {
   ];
 
   const columns: Column<Impuesto>[] = [
-    { key: "id", label: "ID", render: (r) => <span className="font-mono tabular-nums text-xs">#{r.id}</span> },
+    {
+      key: "id",
+      label: "ID",
+      render: (r) => <span className="font-mono tabular-nums text-xs">#{r.id}</span>,
+    },
     { key: "nombre", label: "Nombre", sortable: true, filterable: true, render: (r) => r.nombre },
     {
       key: "descripcion",
@@ -305,8 +309,8 @@ function Page() {
           <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
             Tasas (alícuotas)
           </h4>
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm min-w-[520px]">
               <thead>
                 <tr className="border-b bg-muted/50 text-left">
                   <th className="px-3 py-2">Código</th>
@@ -319,7 +323,9 @@ function Page() {
                 {detailTarget.tasas.map((t, i) => (
                   <tr key={i} className="border-b last:border-0">
                     <td className="px-3 py-2 font-mono text-xs">{t.codigo}</td>
-                    <td className="px-3 py-2"><span className="font-mono tabular-nums">{t.tasa}</span></td>
+                    <td className="px-3 py-2">
+                      <span className="font-mono tabular-nums">{t.tasa}</span>
+                    </td>
                     <td className="px-3 py-2">{t.descripcion}</td>
                     <td className="px-3 py-2">
                       <Badge tone={t.estado === "Activo" ? "success" : "neutral"}>{t.estado}</Badge>
