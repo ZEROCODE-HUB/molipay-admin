@@ -1288,9 +1288,11 @@ export function UserModal({
             </h3>
             <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
-            <X size={18} />
-          </button>
+          {!inline && (
+            <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Content */}

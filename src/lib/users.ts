@@ -572,6 +572,12 @@ export function getUserByLegajo(legajo: string): UserData | undefined {
   return registry()[legajo];
 }
 
+export function setUserByLegajo(updated: UserData): void {
+  if (!updated.legajo) return;
+  if (!_registry) _registry = buildRegistry();
+  _registry[updated.legajo] = updated;
+}
+
 export function allUserData(): UserData[] {
   return Object.values(registry());
 }
