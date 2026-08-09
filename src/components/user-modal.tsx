@@ -1270,11 +1270,7 @@ export function UserModal({
 
   return (
     <div
-      className={
-        inline
-          ? "w-full max-w-5xl mx-auto px-4"
-          : "fixed inset-0 z-[60] flex items-center justify-center p-4"
-      }
+      className={inline ? "w-full" : "fixed inset-0 z-[60] flex items-center justify-center p-4"}
     >
       {!inline && <div className="absolute inset-0 bg-black/50" onClick={onClose} />}
 

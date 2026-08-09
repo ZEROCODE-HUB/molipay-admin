@@ -54,10 +54,8 @@ function UsuarioDetailPage() {
 
   return (
     <>
-      <PageHeader
-        title="Ficha de usuario"
-        description={`${user.nombre} ${user.apellido}`}
-        action={
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-4">
           <button
             type="button"
             onClick={backToList}
@@ -65,16 +63,25 @@ function UsuarioDetailPage() {
           >
             <ChevronLeft size={16} /> Volver
           </button>
-        }
-      />
-      {/* Reutiliza el render del detalle (pestañas, edición, sub-modales) a pantalla completa. */}
-      <UserModal
-        open
-        user={user}
-        onClose={backToList}
-        inline
-        onUserChange={(updated: UserData) => {}}
-      />
+          <div className="min-w-0">
+            <h1 className="font-display text-xl md:text-2xl font-semibold tracking-tight text-foreground truncate">
+              {user.nombre} {user.apellido}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">
+              {user.legajo} · {user.email}
+            </p>
+          </div>
+        </div>
+
+        {/* Reutiliza el render del detalle (pestañas, edición, sub-modales) a pantalla completa. */}
+        <UserModal
+          open
+          user={user}
+          onClose={backToList}
+          inline
+          onUserChange={(updated: UserData) => {}}
+        />
+      </div>
     </>
   );
 }
