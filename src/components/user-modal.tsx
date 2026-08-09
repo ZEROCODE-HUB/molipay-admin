@@ -134,6 +134,7 @@ export type UserData = {
   parametrosBloqueo?: ParametroBloqueo[];
   modulos?: ModuloVinculado[];
   entidad?: {
+    controlSubcuentas?: boolean;
     maximoSubcuentas: number;
     redireccionAutomatica: boolean;
     presionOperativa: string;
@@ -219,13 +220,44 @@ const DEFAULT_MODULOS: ModuloVinculado[] = [
   },
 ];
 
+const MODULO_POPUP_META: Record<
+  ModuloVinculado["clave"],
+  { titulo: string; descripcion: string; columnas: [string, string, string] }
+> = {
+  pct: {
+    titulo: "Comercios PCT del usuario",
+    descripcion: "Comercios vinculados a pagos con transferencia (PCT)",
+    columnas: ["Comercio", "CUIT", "Estado"],
+  },
+  blp: {
+    titulo: "Links de pago del usuario",
+    descripcion: "Links de pago generados para el usuario",
+    columnas: ["Link", "Método", "Estado"],
+  },
+  api: {
+    titulo: "Usuarios API del usuario",
+    descripcion: "Usuarios de API externa vinculados al titular",
+    columnas: ["Usuario", "Clave pública", "Estado"],
+  },
+};
+
 const modIcon: Record<ModuloVinculado["clave"], typeof Landmark> = {
   pct: Landmark,
   blp: Link2,
   api: Globe,
 };
 
-type TabName = "personal" | "compliance" | "empresa" | "documentos" | "subcuentas";
+type TabName =
+  | "identificacion"
+  | "estado-actual"
+  | "contexto"
+  | "validaciones"
+  | "riesgo"
+  | "modulos"
+  | "financiero"
+  | "documentos"
+  | "subcuentas"
+  | "historial";
 
 type FieldDef = {
   key: keyof UserData;
@@ -377,7 +409,7 @@ export function UserModal({
   onUserChange?: (updated: UserData) => void;
   inline?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<TabName>("personal");
+  const [activeTab, setActiveTab] = useState<TabName>("identificacion");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [previewImg, setPreviewImg] = useState<string | null>(null);
@@ -403,6 +435,14 @@ export function UserModal({
     { cuit: string; direccion: string; motivo: string; desde: string; hasta: string }[]
   >([]);
 
+  const [moduloPopup, setModuloPopup] = useState<ModuloVinculado["clave"] | null>(null);
+
+  const [entidadDraft, setEntidadDraft] = useState({
+    controlSubcuentas: true,
+    maximoSubcuentas: 0,
+    redireccionAutomatica: false,
+  });
+
   const [editAlertasOpen, setEditAlertasOpen] = useState(false);
   const [editAlertasDraft, setEditAlertasDraft] =
     useState<ParametroAlerta[]>(DEFAULT_PARAMS_ALERTAS);
@@ -426,6 +466,11 @@ export function UserModal({
       setParametrosAlertas(user.parametrosAlertas ?? DEFAULT_PARAMS_ALERTAS);
       setParametrosBloqueo(user.parametrosBloqueo ?? DEFAULT_PARAMS_BLOQUEO);
       setModulos(user.modulos ?? DEFAULT_MODULOS);
+      setEntidadDraft({
+        controlSubcuentas: user.entidad?.controlSubcuentas ?? true,
+        maximoSubcuentas: user.entidad?.maximoSubcuentas ?? 0,
+        redireccionAutomatica: user.entidad?.redireccionAutomatica ?? false,
+      });
     }
   }, [user]);
 
@@ -449,12 +494,42 @@ export function UserModal({
   const alertas = user.alertas ?? [];
   const bloqueos = user.bloqueos ?? [];
   const entidad = user.entidad ?? {
+    controlSubcuentas: true,
     maximoSubcuentas: 0,
     redireccionAutomatica: false,
     presionOperativa: "—",
   };
   const cvuInformados = user.subcuentas.filter((s) => s.cvu).length;
   const cvuRecientes = user.subcuentas.slice(0, 3);
+
+  const filasModuloPopup = (clave: ModuloVinculado["clave"], cantidad: number) => {
+    const estados = ["Activo", "Pendiente", "Suspendido"];
+    const base = user.legajo.replace(/[^a-zA-Z0-9]/g, "") || "usr";
+    const rows: { col1: string; col2: string; col3: string }[] = [];
+    for (let i = 0; i < Math.max(0, Math.min(cantidad, 8)); i++) {
+      const estado = estados[i % estados.length];
+      if (clave === "pct") {
+        rows.push({
+          col1: `Comercio PCT ${i + 1}`,
+          col2: user.cuit || "30-00000000-0",
+          col3: estado,
+        });
+      } else if (clave === "blp") {
+        rows.push({
+          col1: `Link de pago ${i + 1}`,
+          col2: ["CREDIT_CARD", "DEBIT_CARD", "PREPAID_CARD", "PAGOFACIL"][i % 4],
+          col3: estado,
+        });
+      } else {
+        rows.push({
+          col1: `Usuario API ${i + 1}`,
+          col2: `pk_${base.slice(0, 8)}_${i + 1}`,
+          col3: estado,
+        });
+      }
+    }
+    return rows;
+  };
 
   const go = (to: string) => {
     if (!inline) onClose();
@@ -531,6 +606,26 @@ export function UserModal({
     setExencionOpen(false);
     setExencionForm({ cuit: "", direccion: "Entrada", motivo: "", desde: "", hasta: "" });
     toast.success("Exención de débitos y créditos registrada");
+  };
+
+  const aplicarParametrosEntidad = () => {
+    if (!onUserChange) return;
+    const actual = user.entidad ?? {
+      controlSubcuentas: true,
+      maximoSubcuentas: 0,
+      redireccionAutomatica: false,
+      presionOperativa: "—",
+    };
+    onUserChange({
+      ...user,
+      entidad: {
+        ...actual,
+        controlSubcuentas: entidadDraft.controlSubcuentas,
+        maximoSubcuentas: entidadDraft.maximoSubcuentas,
+        redireccionAutomatica: entidadDraft.redireccionAutomatica,
+      },
+    });
+    toast.success("Parámetros de entidad aplicados");
   };
 
   const forzarValidacion = () => {
@@ -676,23 +771,57 @@ export function UserModal({
     </div>
   );
 
-  const tabContent: Record<TabName, ReactNode> = {
-    personal: (
+  const tabContent: Record<TabName, () => ReactNode> = {
+    identificacion: () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        {personalFields.map(renderFieldRow)}
+        {(user.tipoPersona === "juridica"
+          ? [...personalFields, ...empresaFields]
+          : personalFields
+        ).map(renderFieldRow)}
       </div>
     ),
-    compliance: (
+    "estado-actual": () => (
+      <SectionCard title="Estado actual">
+        <div className="space-y-3">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Situación</div>
+            <div>
+              <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={abrirExencion}
+            className={btnSmallOutline + " w-full justify-center"}
+          >
+            Eximir débitos y créditos
+          </button>
+          {exenciones.length > 0 && (
+            <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
+              Última exención:{" "}
+              <span className="text-foreground font-medium">
+                {exenciones[exenciones.length - 1].motivo}
+              </span>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+    ),
+    contexto: () => contextoSection,
+    validaciones: () => validacionesSection,
+    riesgo: () => riesgoSection,
+    modulos: () => modulosSection,
+    financiero: () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         {complianceFields.map(renderFieldRow)}
       </div>
     ),
-    empresa: (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        {empresaFields.map(renderFieldRow)}
-      </div>
+    historial: () => (
+      <SectionCard title="Historial de cambios">
+        <EmptyMsg>Sin historial de cambios registrados</EmptyMsg>
+      </SectionCard>
     ),
-    documentos: (
+    documentos: () => (
       <div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {existingDocs.map((doc) => (
@@ -730,41 +859,98 @@ export function UserModal({
         </div>
       </div>
     ),
-    subcuentas: (
+    subcuentas: () => (
       <div className="space-y-4">
-        {user.tipoPersona === "fisica" && (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <KpiTile label="CVUs informadas" value={String(cvuInformados)} />
-              <KpiTile label="Máximo de subcuentas" value={String(entidad.maximoSubcuentas)} />
-              <KpiTile
-                label="Redirección automática"
-                value={entidad.redireccionAutomatica ? "Sí" : "No"}
-              />
-              <KpiTile label="Presión operativa" value={entidad.presionOperativa} />
+        {user.tipoPersona === "juridica" && (
+          <SectionCard
+            title="Parámetros de entidad"
+            actions={
+              <button type="button" onClick={aplicarParametrosEntidad} className={btnSmallPrimary}>
+                <Check size={14} /> Aplicar cambios de parámetros
+              </button>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="text-xs font-semibold text-muted-foreground">
+                  Control de subcuentas
+                </div>
+                <input
+                  type="checkbox"
+                  checked={entidadDraft.controlSubcuentas}
+                  onChange={(e) =>
+                    setEntidadDraft((d) => ({ ...d, controlSubcuentas: e.target.checked }))
+                  }
+                  className="h-4 w-4 rounded accent-[var(--color-primary)]"
+                />
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <label className="text-xs font-semibold text-muted-foreground block mb-2">
+                  Máximo de subcuentas
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={String(entidadDraft.maximoSubcuentas)}
+                  onChange={(e) =>
+                    setEntidadDraft((d) => ({
+                      ...d,
+                      maximoSubcuentas: Number(e.target.value) || 0,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="text-xs font-semibold text-muted-foreground">
+                  Redirección automática de subcuenta
+                </div>
+                <input
+                  type="checkbox"
+                  checked={entidadDraft.redireccionAutomatica}
+                  onChange={(e) =>
+                    setEntidadDraft((d) => ({ ...d, redireccionAutomatica: e.target.checked }))
+                  }
+                  className="h-4 w-4 rounded accent-[var(--color-primary)]"
+                />
+              </div>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={abrirExencion} className={btnSmallOutline}>
-                Eximir CUIT principal
-              </button>
-              <button
-                type="button"
-                onClick={() => go("/admin/general/usuarios/cvu")}
-                className={btnSmallOutline}
-              >
-                Ir a usuarios con CVU
-              </button>
-              <button
-                type="button"
-                onClick={() => setCargarSubcuentasOpen(true)}
-                className={btnSmallPrimary}
-              >
-                <Plus size={14} /> Cargar subcuentas
-              </button>
+            <div className="text-[11px] text-muted-foreground mt-3">
+              Los cambios se guardan de forma independiente, sin afectar el resto del perfil.
             </div>
-          </>
+          </SectionCard>
         )}
+
+        {user.tipoPersona === "fisica" && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiTile label="CVUs informadas" value={String(cvuInformados)} />
+            <KpiTile label="Máximo de subcuentas" value={String(entidad.maximoSubcuentas)} />
+            <KpiTile
+              label="Redirección automática"
+              value={entidad.redireccionAutomatica ? "Sí" : "No"}
+            />
+            <KpiTile label="Presión operativa" value={entidad.presionOperativa} />
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={abrirExencion} className={btnSmallOutline}>
+            Eximir CUIT principal
+          </button>
+          <button
+            type="button"
+            onClick={() => go("/admin/general/usuarios/cvu")}
+            className={btnSmallOutline}
+          >
+            Ir a usuarios con CVU
+          </button>
+          <button
+            type="button"
+            onClick={() => setCargarSubcuentasOpen(true)}
+            className={btnSmallPrimary}
+          >
+            <Plus size={14} /> Cargar subcuentas
+          </button>
+        </div>
 
         {user.subcuentas.length === 0 ? (
           <EmptyMsg>Sin subcuentas</EmptyMsg>
@@ -856,17 +1042,22 @@ export function UserModal({
   };
 
   const tabs: { key: TabName; label: string; show: boolean }[] = [
-    { key: "personal", label: "Datos personales", show: true },
-    { key: "compliance", label: "Financiero & Compliance", show: true },
-    { key: "empresa", label: "Datos de la empresa", show: user.tipoPersona === "juridica" },
+    { key: "identificacion", label: "Identificación", show: true },
+    { key: "estado-actual", label: "Estado actual", show: true },
+    { key: "contexto", label: "Contexto operativo", show: true },
+    { key: "validaciones", label: "Validaciones automáticas", show: true },
+    { key: "riesgo", label: "Riesgo y monitoreo", show: true },
+    { key: "modulos", label: "Módulos y productos", show: true },
+    { key: "financiero", label: "Financiero & Compliance", show: true },
     { key: "documentos", label: "Documentos", show: true },
     { key: "subcuentas", label: "Subcuentas & CVU", show: true },
+    { key: "historial", label: "Historial de cambios", show: true },
   ];
 
   const visibleTabs = tabs.filter((t) => t.show);
 
   const resumenCards = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Estado actual */}
       <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -917,10 +1108,10 @@ export function UserModal({
         </div>
       </div>
 
-      {/* Operativa */}
+      {/* Contexto operativo */}
       <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Operativa
+          Contexto operativo
         </div>
         <div>
           <div className="text-xs text-muted-foreground mb-1">Documentos cargados</div>
@@ -946,12 +1137,18 @@ export function UserModal({
           <div className="text-xs text-muted-foreground">PEP</div>
           <div className="text-sm font-semibold mt-0.5">{user.pep}</div>
         </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Alertas y bloqueos</div>
+          <div className="text-sm font-semibold mt-0.5 tabular-nums">
+            {alertas.length + bloqueos.length}
+          </div>
+        </div>
       </div>
 
-      {/* Productos */}
+      {/* Módulos y productos */}
       <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Productos
+          Módulos y productos
         </div>
         <div>
           <div className="text-xs text-muted-foreground">Cuentas bancarias</div>
@@ -965,15 +1162,12 @@ export function UserModal({
             {user.cantidadCuentasVirtuales}
           </div>
         </div>
-        {productos.map((p) => (
-          <div key={p.id}>
-            <div className="text-xs text-muted-foreground">{p.nombre}</div>
-            <div className="text-sm font-semibold mt-0.5 tabular-nums">
-              {p.cantidad}
-              {p.detalle ? ` · ${p.detalle}` : ""}
-            </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Módulos activos</div>
+          <div className="text-sm font-semibold mt-0.5 tabular-nums">
+            {modulos.filter((m) => m.cantidad > 0).length}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -1028,13 +1222,6 @@ export function UserModal({
             className={btnSmallOutline}
           >
             <ExternalLink size={13} /> Ver impuestos
-          </button>
-          <button
-            type="button"
-            onClick={() => go("/admin/general/alertas")}
-            className={btnSmallOutline}
-          >
-            <ExternalLink size={13} /> Ver alertas
           </button>
         </div>
       }
@@ -1224,48 +1411,59 @@ export function UserModal({
         </button>
       }
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {modulos.map((m) => {
-          const Icon = modIcon[m.clave];
-          return (
-            <div key={m.clave} className="rounded-lg border border-border p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                  <Icon size={16} />
-                </span>
-                <div className="font-display font-semibold text-sm">{m.titulo}</div>
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {modulos.map((m) => {
+            const Icon = modIcon[m.clave];
+            return (
+              <div key={m.clave} className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                    <Icon size={16} />
+                  </span>
+                  <div className="font-display font-semibold text-sm">{m.titulo}</div>
+                </div>
+                {m.cantidad > 0 ? (
+                  <>
+                    <div className="text-xs text-muted-foreground">
+                      Vinculados:{" "}
+                      <span className="font-semibold text-foreground tabular-nums">{m.cantidad}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModuloPopup(m.clave)}
+                      className={`${btnSmallOutline} mt-auto self-start`}
+                    >
+                      <ExternalLink size={13} /> {m.verLabel}
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground">{m.vacioMsg}</div>
+                )}
               </div>
-              {m.cantidad > 0 ? (
-                <>
-                  <div className="text-xs text-muted-foreground">
-                    Vinculados:{" "}
-                    <span className="font-semibold text-foreground tabular-nums">{m.cantidad}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => go(m.ruta)}
-                    className={`${btnSmallOutline} mt-auto self-start`}
-                  >
-                    <ExternalLink size={13} /> {m.verLabel}
-                  </button>
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground">{m.vacioMsg}</div>
-              )}
+            );
+          })}
+        </div>
+        {productos.length > 0 && (
+          <div className="mt-5 pt-5 border-t border-border">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Productos vinculados
             </div>
-          );
-        })}
-      </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {productos.map((p) => (
+                <div key={p.id} className="rounded-lg border border-border p-3">
+                  <div className="text-xs font-medium text-muted-foreground">{p.nombre}</div>
+                  <div className="text-sm font-semibold mt-0.5 tabular-nums">
+                    {p.cantidad}
+                    {p.detalle ? ` · ${p.detalle}` : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
     </SectionCard>
-  );
-
-  const seccionesFisica = (
-    <div className="space-y-6">
-      {validacionesSection}
-      {contextoSection}
-      {riesgoSection}
-      {modulosSection}
-    </div>
   );
 
   return (
@@ -1319,7 +1517,7 @@ export function UserModal({
           </div>
 
           {/* Desktop: Tab Content */}
-          <div className="hidden md:block min-h-[200px]">{tabContent[activeTab]}</div>
+          <div className="hidden md:block min-h-[200px]">{tabContent[activeTab]()}</div>
 
           {/* Mobile: stacked sections */}
           <div className="block md:hidden space-y-6">
@@ -1328,13 +1526,10 @@ export function UserModal({
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                   {tab.label}
                 </div>
-                {tabContent[tab.key]}
+                {tabContent[tab.key]()}
               </div>
             ))}
           </div>
-
-          {/* Secciones exclusivas de Persona Física */}
-          {user.tipoPersona === "fisica" && seccionesFisica}
         </div>
       </div>
 
@@ -1512,6 +1707,77 @@ export function UserModal({
           </div>
         </FormDialog>
       )}
+
+      {/* Modal: Detalle de módulo vinculado */}
+      {moduloPopup &&
+        (() => {
+          const meta = MODULO_POPUP_META[moduloPopup];
+          const mod = modulos.find((mm) => mm.clave === moduloPopup);
+          const filas = filasModuloPopup(moduloPopup, mod?.cantidad ?? 0);
+          return (
+            <FormDialog
+              open={!!moduloPopup}
+              onClose={() => setModuloPopup(null)}
+              title={meta.titulo}
+              description={`${meta.descripcion} · ${user.nombre} ${user.apellido} (${mod?.cantidad ?? 0})`}
+              size="lg"
+              submitLabel="Ver página completa"
+              onSubmit={() => {
+                const m = modulos.find((mm) => mm.clave === moduloPopup);
+                if (m) go(m.ruta);
+                setModuloPopup(null);
+              }}
+            >
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm min-w-[420px]">
+                  <thead>
+                    <tr className="bg-muted/50 border-b">
+                      <th className="px-3 py-2 text-left font-display font-semibold text-xs">
+                        {meta.columnas[0]}
+                      </th>
+                      <th className="px-3 py-2 text-left font-display font-semibold text-xs">
+                        {meta.columnas[1]}
+                      </th>
+                      <th className="px-3 py-2 text-center font-display font-semibold text-xs">
+                        {meta.columnas[2]}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filas.map((f, i) => (
+                      <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="px-3 py-2 text-xs font-medium">{f.col1}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground font-mono">
+                          {f.col2}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <Badge
+                            tone={
+                              f.col3 === "Activo"
+                                ? "success"
+                                : f.col3 === "Pendiente"
+                                  ? "warn"
+                                  : "neutral"
+                            }
+                          >
+                            {f.col3}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                    {filas.length === 0 && (
+                      <tr>
+                        <td colSpan={3}>
+                          <EmptyMsg>Sin registros vinculados a este módulo</EmptyMsg>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </FormDialog>
+          );
+        })()}
 
       {/* Image Preview */}
       {previewImg && (
