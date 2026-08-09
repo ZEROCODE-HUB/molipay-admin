@@ -369,11 +369,13 @@ export function UserModal({
   onClose,
   user,
   onUserChange,
+  inline = false,
 }: {
   open: boolean;
   onClose: () => void;
   user: UserData | null;
   onUserChange?: (updated: UserData) => void;
+  inline?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabName>("personal");
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -455,7 +457,7 @@ export function UserModal({
   const cvuRecientes = user.subcuentas.slice(0, 3);
 
   const go = (to: string) => {
-    onClose();
+    if (!inline) onClose();
     navigate({ to });
   };
 
@@ -1267,10 +1269,20 @@ export function UserModal({
   );
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div
+      className={
+        inline
+          ? "w-full max-w-5xl mx-auto px-4"
+          : "fixed inset-0 z-[60] flex items-center justify-center p-4"
+      }
+    >
+      {!inline && <div className="absolute inset-0 bg-black/50" onClick={onClose} />}
 
-      <div className="relative bg-card rounded-lg w-full max-w-6xl max-h-[92vh] flex flex-col shadow-xl">
+      <div
+        className={`relative bg-card rounded-lg w-full flex flex-col ${
+          inline ? "shadow-none" : "max-w-6xl max-h-[92vh] shadow-xl"
+        }`}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between z-10 rounded-t-lg">
           <div className="flex items-center gap-3">

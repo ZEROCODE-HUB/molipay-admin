@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
-import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
@@ -156,185 +155,8 @@ const estadoBadge = (e: Usuario["estado"]) => {
   return <Badge tone={m.tone}>{m.label}</Badge>;
 };
 
-const statusMap: Record<Usuario["estado"], UserStatus> = {
-  Activado: "active",
-  Registrado: "active",
-  "Pre-activado": "active",
-  "En progreso": "pending",
-  "Pendiente de verificación de email": "pending",
-  "Pendiente de aprobación": "pending",
-  Suspendido: "blocked",
-  Rechazado: "blocked",
-  Deshabilitado: "inactive",
-};
-
-const statusRev: Record<UserStatus, Usuario["estado"]> = {
-  active: "Activado",
-  blocked: "Suspendido",
-  pending: "Pendiente de aprobación",
-  inactive: "Deshabilitado",
-};
-
-const toUserData = (u: Usuario): UserData => ({
-  id: u.legajo,
-  status: statusMap[u.estado],
-  tipoPersona: "fisica",
-  legajo: u.legajo,
-  email: u.correo,
-  fechaRegistro: u.fechaRegistro,
-  tipoCuenta: "Individual",
-  cantidadCuentasBancarias: 2,
-  cantidadCuentasVirtuales: 1,
-  nombre: u.nombres,
-  apellido: u.apellidos,
-  cuit: "20-12345678-9",
-  genero: "Masculino",
-  ocupacion: "Empleado",
-  origenFondos: "Salario",
-  direccion: "Av. Corrientes",
-  numeroDireccion: "1234",
-  ciudad: "CABA",
-  estadoProvincia: "Buenos Aires",
-  codigoPostal: "C1043",
-  fechaNacimiento: "15/03/1990",
-  cuitEmpresa: "",
-  tipoEmpresa: "",
-  nombreLegal: "",
-  nombreComercial: "",
-  fechaInscripcion: "",
-  pep: "No",
-  subcuentas: [
-    {
-      id: "SUB-001",
-      legajo: "SUB-001",
-      email: "juan.perez@email.com",
-      alias: "mi.cuenta",
-      cvu: "0000003100087654321012",
-      saldo: "$ 150.000",
-      estado: "activa",
-    },
-    {
-      id: "SUB-002",
-      legajo: "SUB-002",
-      email: "juan.perez@email.com",
-      alias: "ahorros.juan",
-      cvu: "0000003100087654321013",
-      saldo: "$ 85.000",
-      estado: "activa",
-    },
-  ],
-  documentos: [
-    {
-      id: "doc-1",
-      tipo: "id_frente",
-      url: "https://placehold.co/400x600/1a1a2e/e0e0e0?text=DNI+Frente",
-      label: "ID Frente",
-    },
-    {
-      id: "doc-2",
-      tipo: "id_dorso",
-      url: "https://placehold.co/400x600/16213e/e0e0e0?text=DNI+Dorso",
-      label: "ID Dorso",
-    },
-    {
-      id: "doc-3",
-      tipo: "servicio",
-      url: "https://placehold.co/400x600/0f3460/e0e0e0?text=Servicio",
-      label: "Servicio",
-    },
-    {
-      id: "doc-4",
-      tipo: "selfie",
-      url: "https://placehold.co/400x600/1a1a2e/e0e0e0?text=Selfie",
-      label: "Selfie",
-    },
-  ],
-  validacionesAutomaticas:
-    u.legajo.endsWith("3") || u.legajo.endsWith("7")
-      ? []
-      : [
-          { id: "val-1", proveedor: "AFIP", estado: "Ok", fecha: "04/08/2026" },
-          { id: "val-2", proveedor: "BCRA", estado: "Ok", fecha: "04/08/2026" },
-          { id: "val-3", proveedor: "Renaper", estado: "Pendiente", fecha: "05/08/2026" },
-        ],
-  comisiones: [
-    {
-      id: "com-1",
-      tipo: "Comisión por transferencia",
-      monto: "$ 1.250,00",
-      fecha: "06/08/2026",
-      origen: "Transferencia entrante",
-    },
-    {
-      id: "com-2",
-      tipo: "Comisión por retiro",
-      monto: "$ 850,00",
-      fecha: "02/08/2026",
-      origen: "Retiro por terminal",
-    },
-    {
-      id: "com-3",
-      tipo: "Comisión por cobro QR",
-      monto: "$ 320,00",
-      fecha: "28/07/2026",
-      origen: "Cobro QR",
-    },
-  ],
-  impuestos: [
-    { id: "imp-1", nombre: "IIBB", monto: "$ 2.140,00", fecha: "05/08/2026" },
-    { id: "imp-2", nombre: "IVA", monto: "$ 3.400,00", fecha: "28/07/2026" },
-  ],
-  alertas: [
-    { id: "al-1", tipo: "Depósito excedido", fecha: "03/08/2026", estado: "Pendiente" },
-    { id: "al-2", tipo: "Volumen anormal", fecha: "29/07/2026", estado: "Revisado" },
-  ],
-  bloqueos: [
-    { id: "bl-1", tipo: "Umbral de salarios mínimos", fecha: "01/08/2026", estado: "Activo" },
-  ],
-  parametrosAlertas: [
-    { label: "Depósitos por mes", valor: "10" },
-    { label: "Depósitos salario mínimo por transferencia", valor: "5" },
-    { label: "Transferencias por hora", valor: "10" },
-    { label: "Operaciones repetitivas", valor: "5" },
-    { label: "Volumen anormal", valor: "$ 1.000.000 – $ 5.000.000" },
-    { label: "Política a menores", valor: "Bloquear" },
-  ],
-  parametrosBloqueo: [
-    { label: "Salarios mínimos por persona", valor: "15" },
-    { label: "Salarios mínimos por empresa", valor: "50" },
-  ],
-  modulos: [
-    {
-      clave: "pct",
-      titulo: "PCT",
-      cantidad: u.legajo.endsWith("3") ? 0 : 3,
-      verLabel: "Ver comercios PCT",
-      vacioMsg: "No se encontró comercio PCT asociado",
-      ruta: "/admin/modulos/transferencia",
-    },
-    {
-      clave: "blp",
-      titulo: "Links de Pago",
-      cantidad: 2,
-      verLabel: "Ver links de pago",
-      vacioMsg: "No se encontró link de pago asociado",
-      ruta: "/admin/modulos/link-pago",
-    },
-    {
-      clave: "api",
-      titulo: "API Externa",
-      cantidad: 1,
-      verLabel: "Ver usuarios API",
-      vacioMsg: "No se encontró usuario API asociado",
-      ruta: "/admin/modulos/apis",
-    },
-  ],
-  entidad: { maximoSubcuentas: 3, redireccionAutomatica: true, presionOperativa: "Normal" },
-});
-
 function PersonasFisicasPage() {
   const [data, setData] = useState<Usuario[]>(initialData);
-  const [viewing, setViewing] = useState<UserData | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -343,27 +165,13 @@ function PersonasFisicasPage() {
     onConfirm: () => void;
   } | null>(null);
 
-  const openModal = (u: Usuario) => setViewing(toUserData(u));
+  const navigate = useNavigate();
 
-  const handleUserChange = (updated: UserData) => {
-    setViewing(updated);
-    setData((prev) =>
-      prev.map((u) =>
-        u.legajo === updated.legajo
-          ? {
-              ...u,
-              correo: updated.email,
-              nombres: updated.nombre,
-              apellidos: updated.apellido,
-              estado: statusRev[updated.status] ?? u.estado,
-            }
-          : u,
-      ),
-    );
-  };
+  const verDetalle = (row: Usuario) =>
+    navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo } });
 
   const getActions = (row: Usuario): ActionItem[] => [
-    { label: "Ver / Editar", icon: Edit3, onClick: () => openModal(row) },
+    { label: "Ver / Editar", icon: Edit3, onClick: () => verDetalle(row) },
     ...(row.estado === "Suspendido"
       ? [
           {
@@ -426,13 +234,6 @@ function PersonasFisicasPage() {
         data={data}
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-      />
-
-      <UserModal
-        open={!!viewing}
-        onClose={() => setViewing(null)}
-        user={viewing}
-        onUserChange={handleUserChange}
       />
 
       {confirmAction && (

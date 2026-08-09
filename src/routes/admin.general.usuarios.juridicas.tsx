@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Edit3, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
-import { UserModal, type UserData, type UserStatus } from "@/components/user-modal";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
@@ -136,68 +135,8 @@ const initialData: Juridica[] = [
   },
 ];
 
-const toUserData = (j: Juridica): UserData => ({
-  id: j.legajo,
-  status: "active",
-  tipoPersona: "juridica",
-  legajo: j.legajo,
-  email: j.correo,
-  fechaRegistro: j.fechaRegistro,
-  tipoCuenta: "Empresarial",
-  cantidadCuentasBancarias: 3,
-  cantidadCuentasVirtuales: 2,
-  nombre: j.razonSocial,
-  apellido: "-",
-  cuit: "30-12345678-9",
-  genero: "-",
-  ocupacion: "Empresa",
-  origenFondos: "Actividad comercial",
-  direccion: "Av. Industrial",
-  numeroDireccion: "500",
-  ciudad: "CABA",
-  estadoProvincia: "Buenos Aires",
-  codigoPostal: "C1104",
-  fechaNacimiento: "-",
-  cuitEmpresa: j.razonSocial.includes("SA") ? "30-87654321-0" : "30-87654321-1",
-  tipoEmpresa: j.tipo,
-  nombreLegal: j.razonSocial,
-  nombreComercial: j.razonSocial,
-  fechaInscripcion: j.fechaRegistro,
-  pep: "No",
-  subcuentas: Array.from({ length: j.subcuentas }, (_, i) => ({
-    id: `SUB-${j.legajo}-${i + 1}`,
-    legajo: `SUB-${j.legajo}-${i + 1}`,
-    email: j.correo,
-    alias: `sub.${(j.razonSocial.split(" ")[0] ?? "empresa").toLowerCase()}.${i + 1}`,
-    cvu: `0000003100087654321${String(i + 1).padStart(4, "0")}`,
-    saldo: `$ ${(Math.random() * 500000 + 10000).toFixed(2)}`,
-    estado: "activa",
-  })),
-  documentos: [
-    {
-      id: "doc-1",
-      tipo: "id_frente",
-      url: "https://placehold.co/400x600/1a1a2e/e0e0e0?text=DNI+Frente",
-      label: "ID Frente",
-    },
-    {
-      id: "doc-2",
-      tipo: "id_dorso",
-      url: "https://placehold.co/400x600/16213e/e0e0e0?text=DNI+Dorso",
-      label: "ID Dorso",
-    },
-    {
-      id: "doc-4",
-      tipo: "selfie",
-      url: "https://placehold.co/400x600/1a1a2e/e0e0e0?text=Selfie",
-      label: "Selfie",
-    },
-  ],
-});
-
 function JuridicasPage() {
   const [data, setData] = useState<Juridica[]>(initialData);
-  const [viewing, setViewing] = useState<UserData | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -206,23 +145,13 @@ function JuridicasPage() {
     onConfirm: () => void;
   } | null>(null);
 
-  const handleUserChange = (updated: UserData) => {
-    setViewing(updated);
-    setData((prev) =>
-      prev.map((j) =>
-        j.legajo === updated.legajo
-          ? {
-              ...j,
-              correo: updated.email,
-              razonSocial: updated.nombreLegal || updated.nombre,
-            }
-          : j,
-      ),
-    );
-  };
+  const navigate = useNavigate();
+
+  const verDetalle = (row: Juridica) =>
+    navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo } });
 
   const getActions = (row: Juridica): ActionItem[] => [
-    { label: "Ver / Editar", icon: Edit3, onClick: () => setViewing(toUserData(row)) },
+    { label: "Ver / Editar", icon: Edit3, onClick: () => verDetalle(row) },
     ...(row.estado === "Suspendido"
       ? [
           {
@@ -285,13 +214,6 @@ function JuridicasPage() {
         data={data}
         keyExtractor={(r) => r.legajo}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-      />
-
-      <UserModal
-        open={!!viewing}
-        onClose={() => setViewing(null)}
-        user={viewing}
-        onUserChange={handleUserChange}
       />
 
       {confirmAction && (

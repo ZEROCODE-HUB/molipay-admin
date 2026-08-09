@@ -50,6 +50,7 @@ import { Route as AdminModulosImpuestosDebitosCreditosRouteImport } from './rout
 import { Route as AdminGeneralUsuariosJuridicasRouteImport } from './routes/admin.general.usuarios.juridicas'
 import { Route as AdminGeneralUsuariosCvuRouteImport } from './routes/admin.general.usuarios.cvu'
 import { Route as AdminGeneralUsuariosComisionesRouteImport } from './routes/admin.general.usuarios.comisiones'
+import { Route as AdminGeneralUsuariosLegajoRouteImport } from './routes/admin.general.usuarios.$legajo'
 import { Route as AdminGeneralMovimientosRetirosRouteImport } from './routes/admin.general.movimientos.retiros'
 import { Route as AdminGeneralMovimientosPagosTarjetaRouteImport } from './routes/admin.general.movimientos.pagos-tarjeta'
 import { Route as AdminGeneralMovimientosPagosQrRouteImport } from './routes/admin.general.movimientos.pagos-qr'
@@ -295,6 +296,12 @@ const AdminGeneralUsuariosComisionesRoute =
     path: '/comisiones',
     getParentRoute: () => AdminGeneralUsuariosRoute,
   } as any)
+const AdminGeneralUsuariosLegajoRoute =
+  AdminGeneralUsuariosLegajoRouteImport.update({
+    id: '/$legajo',
+    path: '/$legajo',
+    getParentRoute: () => AdminGeneralUsuariosRoute,
+  } as any)
 const AdminGeneralMovimientosRetirosRoute =
   AdminGeneralMovimientosRetirosRouteImport.update({
     id: '/retiros',
@@ -438,6 +445,7 @@ export interface FileRoutesByFullPath {
   '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
   '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
   '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/$legajo': typeof AdminGeneralUsuariosLegajoRoute
   '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
   '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
   '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
@@ -487,6 +495,7 @@ export interface FileRoutesByTo {
   '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
   '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
   '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/$legajo': typeof AdminGeneralUsuariosLegajoRoute
   '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
   '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
   '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
@@ -547,6 +556,7 @@ export interface FileRoutesById {
   '/admin/general/movimientos/pagos-qr': typeof AdminGeneralMovimientosPagosQrRoute
   '/admin/general/movimientos/pagos-tarjeta': typeof AdminGeneralMovimientosPagosTarjetaRoute
   '/admin/general/movimientos/retiros': typeof AdminGeneralMovimientosRetirosRoute
+  '/admin/general/usuarios/$legajo': typeof AdminGeneralUsuariosLegajoRoute
   '/admin/general/usuarios/comisiones': typeof AdminGeneralUsuariosComisionesRoute
   '/admin/general/usuarios/cvu': typeof AdminGeneralUsuariosCvuRoute
   '/admin/general/usuarios/juridicas': typeof AdminGeneralUsuariosJuridicasRoute
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/admin/general/movimientos/pagos-qr'
     | '/admin/general/movimientos/pagos-tarjeta'
     | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/$legajo'
     | '/admin/general/usuarios/comisiones'
     | '/admin/general/usuarios/cvu'
     | '/admin/general/usuarios/juridicas'
@@ -658,6 +669,7 @@ export interface FileRouteTypes {
     | '/admin/general/movimientos/pagos-qr'
     | '/admin/general/movimientos/pagos-tarjeta'
     | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/$legajo'
     | '/admin/general/usuarios/comisiones'
     | '/admin/general/usuarios/cvu'
     | '/admin/general/usuarios/juridicas'
@@ -717,6 +729,7 @@ export interface FileRouteTypes {
     | '/admin/general/movimientos/pagos-qr'
     | '/admin/general/movimientos/pagos-tarjeta'
     | '/admin/general/movimientos/retiros'
+    | '/admin/general/usuarios/$legajo'
     | '/admin/general/usuarios/comisiones'
     | '/admin/general/usuarios/cvu'
     | '/admin/general/usuarios/juridicas'
@@ -1034,6 +1047,13 @@ declare module '@tanstack/react-router' {
       path: '/comisiones'
       fullPath: '/admin/general/usuarios/comisiones'
       preLoaderRoute: typeof AdminGeneralUsuariosComisionesRouteImport
+      parentRoute: typeof AdminGeneralUsuariosRoute
+    }
+    '/admin/general/usuarios/$legajo': {
+      id: '/admin/general/usuarios/$legajo'
+      path: '/$legajo'
+      fullPath: '/admin/general/usuarios/$legajo'
+      preLoaderRoute: typeof AdminGeneralUsuariosLegajoRouteImport
       parentRoute: typeof AdminGeneralUsuariosRoute
     }
     '/admin/general/movimientos/retiros': {
@@ -1363,6 +1383,7 @@ const AdminGeneralMovimientosRouteWithChildren =
   )
 
 interface AdminGeneralUsuariosRouteChildren {
+  AdminGeneralUsuariosLegajoRoute: typeof AdminGeneralUsuariosLegajoRoute
   AdminGeneralUsuariosComisionesRoute: typeof AdminGeneralUsuariosComisionesRoute
   AdminGeneralUsuariosCvuRoute: typeof AdminGeneralUsuariosCvuRoute
   AdminGeneralUsuariosJuridicasRoute: typeof AdminGeneralUsuariosJuridicasRoute
@@ -1370,6 +1391,7 @@ interface AdminGeneralUsuariosRouteChildren {
 }
 
 const AdminGeneralUsuariosRouteChildren: AdminGeneralUsuariosRouteChildren = {
+  AdminGeneralUsuariosLegajoRoute: AdminGeneralUsuariosLegajoRoute,
   AdminGeneralUsuariosComisionesRoute: AdminGeneralUsuariosComisionesRoute,
   AdminGeneralUsuariosCvuRoute: AdminGeneralUsuariosCvuRoute,
   AdminGeneralUsuariosJuridicasRoute: AdminGeneralUsuariosJuridicasRoute,
