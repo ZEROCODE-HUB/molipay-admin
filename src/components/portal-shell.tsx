@@ -19,6 +19,13 @@ const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !=
 const flattenLeaves = (nav: NavItem[]): NavLeaf[] =>
   nav.flatMap((i) => (isGroup(i) ? i.items : [i]));
 
+const isActive = (to: string, path: string): boolean => {
+  if (path === to) return true;
+  if (path === `${to}/`) return true;
+  if (to !== "/admin" && path.startsWith(`${to}/`)) return true;
+  return false;
+};
+
 export function PortalShell({
   nav,
   title,
@@ -108,7 +115,7 @@ export function PortalShell({
       {/* Bottom nav mobile */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white border-t border-black-100 flex items-stretch z-30">
         {mainNav.map((item) => {
-          const active = path === item.to;
+          const active = isActive(item.to, path);
           const Icon = item.icon;
           return (
             <Link
@@ -152,7 +159,7 @@ function SidebarNav({
         isGroup(item) ? (
           <SidebarGroup key={`g-${idx}-${item.label}`} group={item} path={path} onNavigate={onNavigate} />
         ) : (
-          <SidebarLink key={item.to} item={item} active={path === item.to} onNavigate={onNavigate} />
+          <SidebarLink key={item.to} item={item} active={isActive(item.to, path)} onNavigate={onNavigate} />
         ),
       )}
     </>
@@ -203,7 +210,7 @@ function SidebarGroup({
   path: string;
   onNavigate?: () => void;
 }) {
-  const containsActive = group.items.some((i) => i.to === path);
+  const containsActive = group.items.some((i) => isActive(i.to, path));
   const [open, setOpen] = useState(containsActive);
   const Icon = group.icon;
   const expanded = open || containsActive;
@@ -232,7 +239,7 @@ function SidebarGroup({
             <SidebarLink
               key={it.to}
               item={it}
-              active={path === it.to}
+              active={isActive(it.to, path)}
               onNavigate={onNavigate}
               nested
             />

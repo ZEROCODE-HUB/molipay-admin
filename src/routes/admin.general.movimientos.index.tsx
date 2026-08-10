@@ -46,7 +46,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-003",
     id: "TXN-003",
-    tipo: "Cobro de comisiones",
+    tipo: "Comisión",
     cvu: "0000003100087654321034",
     usuario: "carlos.martinez@email.com",
     nombreOrigen: "Carlos Alberto Martínez",
@@ -85,7 +85,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-006",
     id: "TXN-006",
-    tipo: "Impuestos cobrados",
+    tipo: "Impuesto",
     cvu: "0000003100087654321067",
     usuario: "lucia.mendoza@email.com",
     nombreOrigen: "Lucía Belén Mendoza",
@@ -98,7 +98,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-007",
     id: "TXN-007",
-    tipo: "Pagos con tarjeta",
+    tipo: "Pago con tarjeta",
     cvu: "0000003100087654321078",
     usuario: "gabriel.rios@email.com",
     nombreOrigen: "Gabriel Esteban Ríos",
@@ -111,7 +111,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-008",
     id: "TXN-008",
-    tipo: "Pagos QR",
+    tipo: "Pago PCT",
     cvu: "0000003100087654321089",
     usuario: "valentina.castro@email.com",
     nombreOrigen: "Valentina Castro",
@@ -124,7 +124,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-009",
     id: "TXN-009",
-    tipo: "Cobros QR",
+    tipo: "Cobro PCT",
     cvu: "0000003100087654321090",
     usuario: "diego.fernandez@email.com",
     nombreOrigen: "Diego Martín Fernández",
@@ -163,7 +163,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-012",
     id: "TXN-012",
-    tipo: "Cobro de comisiones",
+    tipo: "Comisión",
     cvu: "0000003100087654321034",
     usuario: "carlos.martinez@email.com",
     nombreOrigen: "Carlos Alberto Martínez",
@@ -176,7 +176,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-013",
     id: "TXN-013",
-    tipo: "Pagos con tarjeta",
+    tipo: "Pago con tarjeta",
     cvu: "0000003100087654321045",
     usuario: "ana.garcia@email.com",
     nombreOrigen: "Ana Sofía García",
@@ -189,7 +189,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-014",
     id: "TXN-014",
-    tipo: "Impuestos cobrados",
+    tipo: "Impuesto",
     cvu: "0000003100087654321056",
     usuario: "pedro.rodriguez@email.com",
     nombreOrigen: "Pedro Antonio Rodríguez",
@@ -202,7 +202,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-015",
     id: "TXN-015",
-    tipo: "Cobros QR",
+    tipo: "Cobro PCT",
     cvu: "0000003100087654321090",
     usuario: "valentina.castro@email.com",
     nombreOrigen: "Valentina Castro",
@@ -215,7 +215,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-016",
     id: "TXN-016",
-    tipo: "Pagos con tarjeta",
+    tipo: "Pago con tarjeta",
     cvu: "0000003100087654321081",
     usuario: "lucas.rivas@email.com",
     nombreOrigen: "Lucas Ezequiel Rivas",
@@ -228,7 +228,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-017",
     id: "TXN-017",
-    tipo: "Pagos con tarjeta",
+    tipo: "Pago con tarjeta",
     cvu: "0000003100087654321082",
     usuario: "marcos.peralta@email.com",
     nombreOrigen: "Marcos Andrés Peralta",
@@ -241,7 +241,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-018",
     id: "TXN-018",
-    tipo: "Pagos QR",
+    tipo: "Pago PCT",
     cvu: "0000003100087654321083",
     usuario: "agustin.vila@email.com",
     nombreOrigen: "Agustín Vila",
@@ -254,7 +254,7 @@ const allTransactions: Movimiento[] = [
   {
     legajo: "MOV-028",
     id: "TXN-028",
-    tipo: "Pagos QR",
+    tipo: "Pago PCT",
     cvu: "0000003100087654321089",
     usuario: "matias.luna@email.com",
     nombreOrigen: "Matías Luna",
@@ -263,6 +263,19 @@ const allTransactions: Movimiento[] = [
     monto: "$ 1.450,00",
     fecha: "10/01/2025 10:05",
     estado: "REEMBOLSADO",
+  },
+  {
+    legajo: "MOV-031",
+    id: "TXN-031",
+    tipo: "Pago de servicio",
+    cvu: "0000003100087654321044",
+    usuario: "carolina.ibanez@email.com",
+    nombreOrigen: "Carolina Beatriz Ibáñez",
+    nombreDestino: "AYSA",
+    cuit: "30-66778899-0",
+    monto: "$ 4.120,00",
+    fecha: "09/01/2025 16:20",
+    estado: "APROBADO",
   },
 ];
 
@@ -293,7 +306,22 @@ function TodosPage() {
 const columns: Column<Movimiento>[] = [
   { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
   { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.id}</span> },
-  { key: "tipo", label: "Tipo de transacción", filterable: true, render: (r) => r.tipo },
+  {
+    key: "tipo",
+    label: "Tipo de movimiento",
+    filterable: "enum",
+    filterOptions: [
+      "Depósito",
+      "Retiro",
+      "Comisión",
+      "Impuesto",
+      "Pago con tarjeta",
+      "Pago PCT",
+      "Cobro PCT",
+      "Pago de servicio",
+    ],
+    render: (r) => r.tipo,
+  },
   { key: "cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span> },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {

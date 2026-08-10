@@ -4,7 +4,7 @@ import { Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { DetailModal } from "@/components/movimiento-detail";
+import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
 
 export const Route = createFileRoute("/admin/general/movimientos/comisiones")({
   head: () => ({
@@ -24,6 +24,7 @@ type Comision = {
   montoComision: string;
   montoOperacion: string;
   idOperacion: string;
+  estado: string;
   fecha: string;
 };
 
@@ -36,6 +37,7 @@ const data: Comision[] = [
     montoComision: "$ 1.875,00",
     montoOperacion: "$ 12.500,00",
     idOperacion: "OP-0003",
+    estado: "APROBADO",
     fecha: "14/01/2025 09:15",
   },
   {
@@ -46,7 +48,30 @@ const data: Comision[] = [
     montoComision: "$ 250,00",
     montoOperacion: "$ 5.000,00",
     idOperacion: "OP-0012",
+    estado: "BLOQUEADO",
     fecha: "11/01/2025 11:20",
+  },
+  {
+    legajo: "MOV-032",
+    usuario: "carlos.m@email.com",
+    operacion: "Impuesto",
+    tipo: "Porcentaje",
+    montoComision: "$ 460,00",
+    montoOperacion: "$ 23.000,00",
+    idOperacion: "OP-0032",
+    estado: "EN PROGRESO",
+    fecha: "10/01/2025 13:45",
+  },
+  {
+    legajo: "MOV-033",
+    usuario: "lucia.mendoza@email.com",
+    operacion: "Retiro",
+    tipo: "Fijo",
+    montoComision: "$ 75,00",
+    montoOperacion: "$ 1.500,00",
+    idOperacion: "OP-0033",
+    estado: "RECHAZADO",
+    fecha: "09/01/2025 10:10",
   },
 ];
 
@@ -81,6 +106,7 @@ function ComisionesPage() {
             { label: "Monto de comisión", value: <span className="font-mono tabular-nums">{detail.montoComision}</span> },
             { label: "Monto de operación", value: <span className="font-mono tabular-nums">{detail.montoOperacion}</span> },
             { label: "ID de operación", value: <span className="font-mono tabular-nums">{detail.idOperacion}</span> },
+            { label: "Estado", value: estadoBadge(detail.estado) },
             { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
           ]}
         />
@@ -103,5 +129,12 @@ const columns: Column<Comision>[] = [
   { key: "montoComision", label: "Monto de comisión", render: (r) => <span className="font-mono tabular-nums">{r.montoComision}</span> },
   { key: "montoOperacion", label: "Monto de operación", render: (r) => <span className="font-mono tabular-nums">{r.montoOperacion}</span> },
   { key: "idOperacion", label: "ID de operación", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.idOperacion}</span> },
+  {
+    key: "estado",
+    label: "Estado",
+    filterable: "enum",
+    filterOptions: ["APROBADO", "EN PROGRESO", "RECHAZADO", "BLOQUEADO"],
+    render: (r) => estadoBadge(r.estado),
+  },
   { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
 ];
