@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck, ShieldAlert } from "lucide-react";
+import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
-import { useDemoMode, type DemoRole } from "@/contexts/demo-mode";
+import { useDemoMode } from "@/contexts/demo-mode";
 import loginBackground from "@/assets/17.png";
 
 export const Route = createFileRoute("/")({
@@ -21,7 +21,6 @@ function AdminLogin() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loginRole, setLoginRole] = useState<DemoRole>("admin");
   const { setRole } = useDemoMode();
   const navigate = useNavigate();
 
@@ -29,7 +28,7 @@ function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
-      setRole(loginRole);
+      setRole("admin");
       navigate({ to: "/admin" });
     }, 600);
   };
@@ -133,27 +132,6 @@ function AdminLogin() {
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="loginRole" className="block text-xs font-semibold text-foreground mb-1.5">
-                Modo demo
-              </label>
-              <div className="relative">
-                <ShieldCheck
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60"
-                />
-                <select
-                  id="loginRole"
-                  value={loginRole}
-                  onChange={(e) => setLoginRole(e.target.value as DemoRole)}
-                  className="w-full h-11 pl-9 pr-3.5 rounded-lg border border-input bg-background text-sm text-foreground outline-none transition-all duration-200 focus:border-ring focus:ring-2 focus:ring-ring/20 cursor-pointer"
-                >
-                  <option value="admin">Administrador</option>
-                  <option value="operador">Operador (sin permisos de exención)</option>
-                </select>
               </div>
             </div>
 

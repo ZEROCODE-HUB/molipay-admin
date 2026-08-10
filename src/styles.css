@@ -173,6 +173,44 @@
   --sidebar-accent-foreground: var(--moli-blue);
   --sidebar-border: var(--moli-border);
   --sidebar-ring: var(--moli-red);
+
+  /* ── MOLI extended palette (mirrors MollyPay-Enterprises / IDENTIDAD) ── */
+  --black-900: #000000;
+  --black-800: #1A1A1A;
+  --black-700: #2E2E2E;
+  --black-600: #474747;
+  --black-500: #5E5E5E;
+  --black-400: #767676;
+  --black-300: #909090;
+  --black-200: #B3B3B3;
+  --black-100: #D4D4D4;
+  --black-50: #F0F0F0;
+
+  --red-700: #8B0014;
+  --red-600: #AD0019;
+  --red-500: #D3001F;
+  --red-400: #E6394F;
+  --red-300: #F06A7A;
+  --red-200: #F5A0AA;
+  --red-100: #FCD3D8;
+  --red-50: #FFF0F1;
+
+  --navy-700: #1A235A;
+  --navy-600: #26327A;
+  --navy-500: #324595;
+  --navy-400: #5066B5;
+  --navy-300: #7B8ECC;
+  --navy-200: #A9B6E1;
+  --navy-100: #D4DBF3;
+  --navy-50: #EDF0FA;
+
+  --plata-600: #8A8A8A;
+  --plata-500: #A8A8A8;
+  --plata-400: #CECECE;
+  --plata-300: #DEDEDE;
+  --plata-200: #EBEBEB;
+  --plata-100: #F5F5F5;
+  --plata-50: #FAFAFA;
 }
 
 .dark {
