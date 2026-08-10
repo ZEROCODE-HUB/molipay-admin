@@ -2,15 +2,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   X,
-  ChevronLeft,
-  ChevronRight,
   Upload,
   Pencil,
   Check,
-  Settings,
-  Shield,
-  UserX,
-  UserCheck,
   Trash2,
   RefreshCw,
   ExternalLink,
@@ -19,11 +13,22 @@ import {
   Globe,
   ShieldAlert,
   Plus,
+  Eye,
+  Key,
+  Pause,
+  Lock,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Building2,
+  Download,
+  Filter,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Input } from "./portal-shell";
+import { Badge, Input, BtnOutline } from "./portal-shell";
+import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
-import type { ActionItem } from "./actions-dropdown";
+import { DataTable, type Column } from "./data-table";
 
 export type UserStatus = "active" | "inactive" | "pending" | "blocked";
 
@@ -34,13 +39,52 @@ export type UserDocument = {
   label: string;
 };
 
+export type MovimientoSub = {
+  tipo: "ingreso" | "egreso";
+  titulo: string;
+  txid: string;
+  cbu: string;
+  entidad: string;
+  fecha: string;
+  hora: string;
+  monto: number;
+};
+
 export type Subcuenta = {
   id: string;
-  legajo: string;
+  nombre: string;
+  apellido: string;
   email: string;
-  alias: string;
-  cvu: string;
-  saldo: string;
+  cbu: string;
+  tipo: "Operativa" | "Recaudacion" | "Garantias" | "Sueldos";
+  estado: "Activa" | "Pausada";
+  disp: number;
+  ret: number;
+  conc: number;
+  ing: string;
+  egr: string;
+  resp: string;
+  lim: string;
+  retirosHab: boolean;
+  movimientos: MovimientoSub[];
+};
+
+export type HistorialRegistro = {
+  id: string;
+  campo: string;
+  valorAnterior: string;
+  valorNuevo: string;
+  fecha: string;
+  hora: string;
+  usuario: string;
+};
+
+export type MovimientoOperativo = {
+  id: string;
+  tipo: string;
+  detalle: string;
+  monto: string;
+  fecha: string;
   estado: string;
 };
 
@@ -222,21 +266,24 @@ const DEFAULT_MODULOS: ModuloVinculado[] = [
 
 const MODULO_POPUP_META: Record<
   ModuloVinculado["clave"],
-  { titulo: string; descripcion: string; columnas: [string, string, string] }
+  { titulo: string; descripcion: string; verTodosLabel: string; columnas: [string, string, string] }
 > = {
   pct: {
     titulo: "Comercios PCT del usuario",
     descripcion: "Comercios vinculados a pagos con transferencia (PCT)",
+    verTodosLabel: "Ver todos los comercios PCT",
     columnas: ["Comercio", "CUIT", "Estado"],
   },
   blp: {
     titulo: "Links de pago del usuario",
     descripcion: "Links de pago generados para el usuario",
+    verTodosLabel: "Ver todos los links PCT",
     columnas: ["Link", "Método", "Estado"],
   },
   api: {
     titulo: "Usuarios API del usuario",
     descripcion: "Usuarios de API externa vinculados al titular",
+    verTodosLabel: "Ver todos los usuarios API",
     columnas: ["Usuario", "Clave pública", "Estado"],
   },
 };
@@ -249,7 +296,6 @@ const modIcon: Record<ModuloVinculado["clave"], typeof Landmark> = {
 
 type TabName =
   | "identificacion"
-  | "estado-actual"
   | "contexto"
   | "validaciones"
   | "riesgo"
@@ -335,14 +381,6 @@ const empresaFields: FieldDef[] = [
   { key: "fechaInscripcion", label: "Fecha de inscripción" },
 ];
 
-const subcuentaActions: ActionItem[] = [
-  { label: "Ver configuración", icon: Settings, onClick: () => {} },
-  { label: "Validar", icon: Shield, onClick: () => {} },
-  { label: "Suspender", icon: UserX, variant: "danger", onClick: () => {} },
-  { label: "Reactivar", icon: UserCheck, onClick: () => {} },
-  { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => {} },
-];
-
 function getFieldValue(user: UserData, field: FieldDef): string {
   if (field.renderValue) return field.renderValue(user);
   const val = user[field.key];
@@ -396,6 +434,265 @@ function EmptyMsg({ children }: { children: ReactNode }) {
   );
 }
 
+const MOCK_HISTORIAL: HistorialRegistro[] = [
+  {
+    id: "h-1",
+    campo: "Ocupación",
+    valorAnterior: "Empleado",
+    valorNuevo: "Comerciante",
+    fecha: "07/08/2026",
+    hora: "14:22",
+    usuario: "admin.operaciones",
+  },
+  {
+    id: "h-2",
+    campo: "Origen de fondos",
+    valorAnterior: "Salario",
+    valorNuevo: "Actividad comercial",
+    fecha: "07/08/2026",
+    hora: "14:20",
+    usuario: "admin.operaciones",
+  },
+  {
+    id: "h-3",
+    campo: "Email",
+    valorAnterior: "juan.perez@oldmail.com",
+    valorNuevo: "juan.perez@email.com",
+    fecha: "02/08/2026",
+    hora: "09:05",
+    usuario: "soporte.nivel2",
+  },
+  {
+    id: "h-4",
+    campo: "Estado",
+    valorAnterior: "Pendiente",
+    valorNuevo: "Activo",
+    fecha: "28/07/2026",
+    hora: "17:41",
+    usuario: "compliance.team",
+  },
+  {
+    id: "h-5",
+    campo: "Dirección",
+    valorAnterior: "Av. Corrientes 1200",
+    valorNuevo: "Av. Corrientes 1234",
+    fecha: "15/07/2026",
+    hora: "11:30",
+    usuario: "admin.operaciones",
+  },
+  {
+    id: "h-6",
+    campo: "Teléfono",
+    valorAnterior: "+54 9 11 5555 0101",
+    valorNuevo: "+54 9 11 5555 0189",
+    fecha: "10/07/2026",
+    hora: "16:12",
+    usuario: "soporte.nivel1",
+  },
+  {
+    id: "h-7",
+    campo: "Ficha creada",
+    valorAnterior: "—",
+    valorNuevo: "Registro inicial del usuario",
+    fecha: "12/01/2024",
+    hora: "10:00",
+    usuario: "system",
+  },
+];
+
+function getHistorial(user: UserData): HistorialRegistro[] {
+  if (getUltimoDigitoLegajo(user.legajo) === "8") return [];
+  return MOCK_HISTORIAL;
+}
+
+function getUltimoDigitoLegajo(legajo: string): string {
+  const m = legajo.match(/\d+$/);
+  return m ? m[0].slice(-1) : "";
+}
+
+function buildMovimientosOperativos(user: UserData): MovimientoOperativo[] {
+  if (getUltimoDigitoLegajo(user.legajo) === "5") return [];
+  const base = user.legajo.replace(/[^a-zA-Z0-9]/g, "") || "usr";
+  const tipos = ["Depósito", "Retiro", "Transferencia", "Cobro QR", "Pago de tarjeta", "Comisión"];
+  const estados = ["Acreditado", "Pendiente", "Rechazado"];
+  return Array.from({ length: 14 }, (_, i) => ({
+    id: `mov-${base}-${i + 1}`,
+    tipo: tipos[i % tipos.length],
+    detalle: `TX-2026-08-0${(i % 9) + 1}-${1000 + i}`,
+    monto: `$ ${((i + 1) * 3250 + i * 137).toLocaleString("es-AR")}`,
+    fecha: `0${(i % 9) + 1}/08/2026`,
+    estado: estados[i % estados.length],
+  }));
+}
+
+const fmtARS = (n: number) => "$ " + n.toLocaleString("es-AR");
+
+const fmtMov = (n: number) => (n >= 0 ? "+" : "") + "$ " + Math.abs(n).toLocaleString("es-AR");
+
+const historialColumns: Column<HistorialRegistro>[] = [
+  {
+    key: "campo",
+    label: "Campo actualizado",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-medium">{r.campo}</span>,
+  },
+  {
+    key: "valorAnterior",
+    label: "Valor anterior",
+    render: (r) => <span className="text-muted-foreground line-through">{r.valorAnterior}</span>,
+  },
+  {
+    key: "valorNuevo",
+    label: "Valor nuevo",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="text-foreground font-medium">{r.valorNuevo}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha y hora",
+    sortable: true,
+    filterable: "date",
+    render: (r) => (
+      <span className="text-muted-foreground tabular-nums">
+        {r.fecha} {r.hora}
+      </span>
+    ),
+  },
+  {
+    key: "usuario",
+    label: "Actualizado por",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-mono text-xs">{r.usuario}</span>,
+  },
+];
+
+const movimientosOperativosColumns: Column<MovimientoOperativo>[] = [
+  {
+    key: "detalle",
+    label: "Movimiento",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-mono text-xs">{r.detalle}</span>,
+  },
+  {
+    key: "tipo",
+    label: "Tipo",
+    sortable: true,
+    filterable: "enum",
+    filterOptions: ["Depósito", "Retiro", "Transferencia", "Cobro QR", "Pago de tarjeta", "Comisión"],
+    render: (r) => <span className="font-medium">{r.tipo}</span>,
+  },
+  {
+    key: "monto",
+    label: "Monto",
+    sortable: true,
+    render: (r) => <span className="font-semibold tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    sortable: true,
+    filterable: "date",
+    render: (r) => <span className="text-muted-foreground tabular-nums">{r.fecha}</span>,
+  },
+  {
+    key: "estado",
+    label: "Estado",
+    sortable: true,
+    filterable: "enum",
+    filterOptions: ["Acreditado", "Pendiente", "Rechazado"],
+    render: (r) => (
+      <Badge
+        tone={r.estado === "Acreditado" ? "success" : r.estado === "Pendiente" ? "warn" : "danger"}
+      >
+        {r.estado}
+      </Badge>
+    ),
+  },
+];
+
+const impuestosOperativosColumns: Column<ImpuestoUsuario>[] = [
+  {
+    key: "nombre",
+    label: "Impuesto",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-medium">{r.nombre}</span>,
+  },
+  {
+    key: "monto",
+    label: "Monto",
+    sortable: true,
+    render: (r) => <span className="font-semibold tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    sortable: true,
+    filterable: "date",
+    render: (r) => <span className="text-muted-foreground tabular-nums">{r.fecha}</span>,
+  },
+];
+
+const alertasOperativasColumns: Column<AlertaUsuario>[] = [
+  {
+    key: "tipo",
+    label: "Alerta",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-medium">{r.tipo}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    sortable: true,
+    filterable: "date",
+    render: (r) => <span className="text-muted-foreground tabular-nums">{r.fecha}</span>,
+  },
+  {
+    key: "estado",
+    label: "Estado",
+    sortable: true,
+    filterable: "enum",
+    filterOptions: ["Pendiente", "Revisado", "Resuelto"],
+    render: (r) => (
+      <Badge tone={r.estado === "Pendiente" ? "warn" : r.estado === "Resuelto" ? "success" : "neutral"}>
+        {r.estado}
+      </Badge>
+    ),
+  },
+];
+
+const bloqueosOperativosColumns: Column<AlertaUsuario>[] = [
+  {
+    key: "tipo",
+    label: "Bloqueo",
+    sortable: true,
+    filterable: true,
+    render: (r) => <span className="font-medium">{r.tipo}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    sortable: true,
+    filterable: "date",
+    render: (r) => <span className="text-muted-foreground tabular-nums">{r.fecha}</span>,
+  },
+  {
+    key: "estado",
+    label: "Estado",
+    sortable: true,
+    filterable: "enum",
+    filterOptions: ["Activo", "Inactivo"],
+    render: (r) => (
+      <Badge tone={r.estado === "Activo" ? "danger" : "neutral"}>{r.estado}</Badge>
+    ),
+  },
+];
+
 export function UserModal({
   open,
   onClose,
@@ -413,8 +710,11 @@ export function UserModal({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [previewImg, setPreviewImg] = useState<string | null>(null);
-  const [subPage, setSubPage] = useState(1);
-  const subPageSize = 5;
+
+  const [contextoSubTab, setContextoSubTab] = useState<"movimientos" | "impuestos">(
+    "movimientos",
+  );
+  const [riesgoSubTab, setRiesgoSubTab] = useState<"alertas" | "bloqueos">("alertas");
 
   const [validaciones, setValidaciones] = useState<ValidacionAutomatica[]>([]);
   const [parametrosAlertas, setParametrosAlertas] =
@@ -451,14 +751,22 @@ export function UserModal({
     useState<ParametroBloqueo[]>(DEFAULT_PARAMS_BLOQUEO);
 
   const [cargarSubcuentasOpen, setCargarSubcuentasOpen] = useState(false);
+  const [subDetail, setSubDetail] = useState<Subcuenta | null>(null);
+  const [editSub, setEditSub] = useState<Subcuenta | null>(null);
+  const [subPage, setSubPage] = useState(1);
+  const SUB_PAGE_SIZE = 10;
   const [subcuentaForm, setSubcuentaForm] = useState({
-    legajo: "",
-    email: "",
-    alias: "",
-    cvu: "",
+    nombre: "",
+    tipo: "Operativa",
+    resp: "",
+    lim: "",
+    saldoInicial: "0",
+    activarInmediato: true,
   });
 
   const navigate = useNavigate();
+  const { role } = useDemoMode();
+  const canEximir = role === "admin";
 
   useEffect(() => {
     if (user) {
@@ -476,13 +784,6 @@ export function UserModal({
 
   if (!open || !user) return null;
 
-  const totalSubPages = Math.max(1, Math.ceil(user.subcuentas.length / subPageSize));
-  const safeSubPage = Math.min(subPage, totalSubPages);
-  const paginatedSubs = user.subcuentas.slice(
-    (safeSubPage - 1) * subPageSize,
-    safeSubPage * subPageSize,
-  );
-
   const existingDocs = user.documentos.filter((d) => d.url);
   const missingDocTypes: UserDocument["tipo"][] = (
     ["id_frente", "id_dorso", "servicio", "selfie"] as UserDocument["tipo"][]
@@ -490,17 +791,19 @@ export function UserModal({
 
   const productos = user.productos ?? [];
   const comisiones = user.comisiones ?? [];
-  const impuestos = user.impuestos ?? [];
-  const alertas = user.alertas ?? [];
-  const bloqueos = user.bloqueos ?? [];
+  const ultimoDigito = getUltimoDigitoLegajo(user.legajo);
+  const impuestos = ultimoDigito === "5" ? [] : (user.impuestos ?? []);
+  const alertas = ultimoDigito === "6" ? [] : (user.alertas ?? []);
+  const bloqueos = ultimoDigito === "6" ? [] : (user.bloqueos ?? []);
   const entidad = user.entidad ?? {
     controlSubcuentas: true,
     maximoSubcuentas: 0,
     redireccionAutomatica: false,
     presionOperativa: "—",
   };
-  const cvuInformados = user.subcuentas.filter((s) => s.cvu).length;
+  const cvuInformados = user.subcuentas.filter((s) => s.cbu).length;
   const cvuRecientes = user.subcuentas.slice(0, 3);
+  const movimientosOperativos = buildMovimientosOperativos(user);
 
   const filasModuloPopup = (clave: ModuloVinculado["clave"], cantidad: number) => {
     const estados = ["Activo", "Pendiente", "Suspendido"];
@@ -670,19 +973,62 @@ export function UserModal({
 
   const guardarSubcuenta = () => {
     if (!onUserChange) return;
+    const id = editSub?.id ?? `SUB-${Date.now()}`;
+    const saldoInicial = Number(subcuentaForm.saldoInicial) || 0;
     const nueva: Subcuenta = {
-      id: `SUB-${Date.now()}`,
-      legajo: subcuentaForm.legajo || `SUB-${Date.now()}`,
-      email: subcuentaForm.email || user.email,
-      alias: subcuentaForm.alias || "nueva.subcuenta",
-      cvu: subcuentaForm.cvu,
-      saldo: "$ 0",
-      estado: "activa",
+      id,
+      nombre: subcuentaForm.nombre || `Subcuenta ${id}`,
+      apellido: editSub?.apellido ?? user.apellido,
+      email: user.email,
+      cbu: `0000003 10001111${String(Date.now()).slice(-6)} 01`,
+      tipo: subcuentaForm.tipo as Subcuenta["tipo"],
+      estado: subcuentaForm.activarInmediato ? "Activa" : "Pausada",
+      disp: saldoInicial,
+      ret: 0,
+      conc: saldoInicial,
+      ing: fmtARS(saldoInicial),
+      egr: "$ 0",
+      resp: subcuentaForm.resp || "—",
+      lim: subcuentaForm.lim || "Sin limite",
+      retirosHab: subcuentaForm.activarInmediato,
+      movimientos: [],
     };
-    onUserChange({ ...user, subcuentas: [...user.subcuentas, nueva] });
-    setSubcuentaForm({ legajo: "", email: "", alias: "", cvu: "" });
+    onUserChange({
+      ...user,
+      subcuentas: editSub
+        ? user.subcuentas.map((s) => (s.id === editSub.id ? nueva : s))
+        : [...user.subcuentas, nueva],
+    });
+    setSubcuentaForm({
+      nombre: "",
+      tipo: "Operativa",
+      resp: "",
+      lim: "",
+      saldoInicial: "0",
+      activarInmediato: true,
+    });
+    setEditSub(null);
     setCargarSubcuentasOpen(false);
-    toast.success("Subcuenta cargada");
+    toast.success(editSub ? "Subcuenta actualizada" : "Subcuenta cargada");
+  };
+
+  const abrirEditarSubcuenta = (sub: Subcuenta) => {
+    setEditSub(sub);
+    setSubcuentaForm({
+      nombre: sub.nombre,
+      tipo: sub.tipo,
+      resp: sub.resp,
+      lim: sub.lim,
+      saldoInicial: String(sub.disp),
+      activarInmediato: sub.estado === "Activa",
+    });
+    setCargarSubcuentasOpen(true);
+  };
+
+  const eliminarSubcuenta = (sub: Subcuenta) => {
+    if (!onUserChange) return;
+    onUserChange({ ...user, subcuentas: user.subcuentas.filter((s) => s.id !== sub.id) });
+    toast.success("Subcuenta eliminada");
   };
 
   const monoFields = new Set([
@@ -780,33 +1126,6 @@ export function UserModal({
         ).map(renderFieldRow)}
       </div>
     ),
-    "estado-actual": () => (
-      <SectionCard title="Estado actual">
-        <div className="space-y-3">
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">Situación</div>
-            <div>
-              <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={abrirExencion}
-            className={btnSmallOutline + " w-full justify-center"}
-          >
-            Eximir débitos y créditos
-          </button>
-          {exenciones.length > 0 && (
-            <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
-              Última exención:{" "}
-              <span className="text-foreground font-medium">
-                {exenciones[exenciones.length - 1].motivo}
-              </span>
-            </div>
-          )}
-        </div>
-      </SectionCard>
-    ),
     contexto: () => contextoSection,
     validaciones: () => validacionesSection,
     riesgo: () => riesgoSection,
@@ -818,7 +1137,13 @@ export function UserModal({
     ),
     historial: () => (
       <SectionCard title="Historial de cambios">
-        <EmptyMsg>Sin historial de cambios registrados</EmptyMsg>
+        <DataTable
+          columns={historialColumns}
+          data={getHistorial(user)}
+          keyExtractor={(r) => r.id}
+          emptyMessage="No hay cambios registrados"
+          pageSize={5}
+        />
       </SectionCard>
     ),
     documentos: () => (
@@ -933,9 +1258,11 @@ export function UserModal({
         )}
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={abrirExencion} className={btnSmallOutline}>
-            Eximir CUIT principal
-          </button>
+          {canEximir && (
+            <button type="button" onClick={abrirExencion} className={btnSmallOutline}>
+              Eximir CUIT principal
+            </button>
+          )}
           <button
             type="button"
             onClick={() => go("/admin/general/usuarios/cvu")}
@@ -952,98 +1279,111 @@ export function UserModal({
           </button>
         </div>
 
-        {user.subcuentas.length === 0 ? (
-          <EmptyMsg>Sin subcuentas</EmptyMsg>
-        ) : (
-          <div className="border rounded-lg overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
-              <thead>
-                <tr className="bg-muted/50 border-b">
-                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">ID</th>
-                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">Legajo</th>
-                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">Email</th>
-                  <th className="px-3 py-2 text-left font-display font-semibold text-xs">CVU</th>
-                  <th className="px-3 py-2 text-center font-display font-semibold text-xs">
-                    Estado
-                  </th>
-                  <th className="px-3 py-2 text-center font-display font-semibold text-xs">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedSubs.map((sub) => (
-                  <tr key={sub.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-3 py-2 font-medium text-xs font-mono tabular-nums">
-                      {sub.id}
-                    </td>
-                    <td className="px-3 py-2 text-xs font-mono tabular-nums">{sub.legajo}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">{sub.email}</td>
-                    <td className="px-3 py-2 text-muted-foreground text-xs font-mono">{sub.cvu}</td>
-                    <td className="px-3 py-2 text-center">
-                      <Badge tone={sub.estado === "activa" ? "success" : "neutral"}>
-                        {sub.estado}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <div className="inline-flex items-center gap-1">
-                        {subcuentaActions.slice(0, 2).map((act) => {
-                          const Icon = act.icon;
-                          return Icon ? (
+        {(() => {
+          const totalPages = Math.max(1, Math.ceil(user.subcuentas.length / SUB_PAGE_SIZE));
+          const paginated = user.subcuentas.slice(
+            (subPage - 1) * SUB_PAGE_SIZE,
+            subPage * SUB_PAGE_SIZE,
+          );
+          return (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[560px]">
+                  <thead>
+                    <tr className="bg-muted/50 border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-2.5 font-semibold">Nombre</th>
+                      <th className="px-4 py-2.5 font-semibold">Apellido</th>
+                      <th className="px-4 py-2.5 font-semibold">Email</th>
+                      <th className="px-4 py-2.5 font-semibold">Estado</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.map((sub) => (
+                      <tr key={sub.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="px-4 py-2.5 text-xs font-medium">{sub.nombre}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{sub.apellido}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{sub.email}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge tone={sub.estado === "Activa" ? "success" : "neutral"}>
+                            {sub.estado}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex gap-1 justify-end">
                             <button
-                              key={act.label}
                               type="button"
-                              onClick={act.onClick}
-                              className="p-1 rounded hover:bg-muted text-muted-foreground"
-                              title={act.label}
+                              onClick={() => setSubDetail(sub)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
+                              title="Ver detalle"
                             >
-                              <Icon size={14} />
+                              <Eye size={14} />
                             </button>
-                          ) : null;
-                        })}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {totalSubPages > 1 && (
-              <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t text-xs text-muted-foreground">
-                <span>{user.subcuentas.length} subcuentas</span>
-                <div className="flex items-center gap-2">
-                  <span>
-                    Pág. {safeSubPage} de {totalSubPages}
-                  </span>
-                  <div className="flex gap-0.5">
-                    <button
-                      type="button"
-                      className="p-1 rounded hover:bg-muted disabled:opacity-30"
-                      disabled={safeSubPage <= 1}
-                      onClick={() => setSubPage((p) => Math.max(1, p - 1))}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="p-1 rounded hover:bg-muted disabled:opacity-30"
-                      disabled={safeSubPage >= totalSubPages}
-                      onClick={() => setSubPage((p) => Math.min(totalSubPages, p + 1))}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
+                            <button
+                              type="button"
+                              onClick={() => abrirEditarSubcuenta(sub)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
+                              title="Editar"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarSubcuenta(sub)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition"
+                              title="Borrar"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {paginated.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8">
+                          <EmptyMsg>Sin subcuentas</EmptyMsg>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
+                <span>
+                  {user.subcuentas.length === 0
+                    ? "0 registros"
+                    : `${(subPage - 1) * SUB_PAGE_SIZE + 1}–${Math.min(
+                        subPage * SUB_PAGE_SIZE,
+                        user.subcuentas.length,
+                      )} de ${user.subcuentas.length}`}
+                </span>
+                <div className="flex gap-1">
+                  <BtnOutline
+                    className="h-7 px-2 text-[11px]"
+                    disabled={subPage <= 1}
+                    onClick={() => setSubPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </BtnOutline>
+                  <BtnOutline
+                    className="h-7 px-2 text-[11px]"
+                    disabled={subPage >= totalPages}
+                    onClick={() => setSubPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Siguiente
+                  </BtnOutline>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
     ),
   };
 
   const tabs: { key: TabName; label: string; show: boolean }[] = [
     { key: "identificacion", label: "Identificación", show: true },
-    { key: "estado-actual", label: "Estado actual", show: true },
     { key: "contexto", label: "Contexto operativo", show: true },
     { key: "validaciones", label: "Validaciones automáticas", show: true },
     { key: "riesgo", label: "Riesgo y monitoreo", show: true },
@@ -1057,32 +1397,7 @@ export function UserModal({
   const visibleTabs = tabs.filter((t) => t.show);
 
   const resumenCards = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Estado actual */}
-      <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Estado actual
-        </div>
-        <div>
-          <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
-        </div>
-        <button
-          type="button"
-          onClick={abrirExencion}
-          className={btnSmallOutline + " w-full justify-center"}
-        >
-          Eximir débitos y créditos
-        </button>
-        {exenciones.length > 0 && (
-          <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
-            Última exención:{" "}
-            <span className="text-foreground font-medium">
-              {exenciones[exenciones.length - 1].motivo}
-            </span>
-          </div>
-        )}
-      </div>
-
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {/* Identificación */}
       <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1106,6 +1421,23 @@ export function UserModal({
           <div className="text-xs text-muted-foreground">CUIT</div>
           <div className="text-sm font-semibold mt-0.5 font-mono tabular-nums">{user.cuit}</div>
         </div>
+        {canEximir && (
+          <button
+            type="button"
+            onClick={abrirExencion}
+            className={btnSmallOutline + " w-full justify-center"}
+          >
+            Eximir débitos y créditos
+          </button>
+        )}
+        {exenciones.length > 0 && (
+          <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
+            Última exención:{" "}
+            <span className="text-foreground font-medium">
+              {exenciones[exenciones.length - 1].motivo}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Contexto operativo */}
@@ -1205,27 +1537,7 @@ export function UserModal({
   );
 
   const contextoSection = (
-    <SectionCard
-      title="Contexto operativo"
-      actions={
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => go("/admin/general/movimientos")}
-            className={btnSmallOutline}
-          >
-            <ExternalLink size={13} /> Ver movimientos
-          </button>
-          <button
-            type="button"
-            onClick={() => go("/admin/general/movimientos/impuestos")}
-            className={btnSmallOutline}
-          >
-            <ExternalLink size={13} /> Ver impuestos
-          </button>
-        </div>
-      }
-    >
+    <SectionCard title="Contexto operativo">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
         <KpiTile label="CVUs" value={String(cvuRecientes.length)} />
         <KpiTile label="Comisiones" value={String(comisiones.length)} />
@@ -1238,129 +1550,69 @@ export function UserModal({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* CVUs recientes */}
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 border-b text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            CVUs recientes
-          </div>
-          {cvuRecientes.length === 0 ? (
-            <EmptyMsg>Sin CVUs</EmptyMsg>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {cvuRecientes.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="text-xs font-mono truncate">{s.cvu}</span>
-                  <Badge tone={s.estado === "activa" ? "success" : "neutral"}>{s.estado}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Últimas comisiones */}
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 border-b text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Últimas comisiones
-          </div>
-          {comisiones.length === 0 ? (
-            <EmptyMsg>Sin comisiones</EmptyMsg>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {comisiones.slice(0, 3).map((c) => (
-                <li key={c.id} className="px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium truncate">{c.tipo}</span>
-                    <span className="text-xs font-semibold tabular-nums">{c.monto}</span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    {c.fecha} · {c.origen}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Impuestos recientes */}
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 border-b text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Impuestos recientes
-          </div>
-          {impuestos.length === 0 ? (
-            <EmptyMsg>Sin impuestos recientes</EmptyMsg>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {impuestos.slice(0, 3).map((i) => (
-                <li key={i.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium truncate">{i.nombre}</div>
-                    <div className="text-[11px] text-muted-foreground">{i.fecha}</div>
-                  </div>
-                  <span className="text-xs font-semibold tabular-nums">{i.monto}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Alertas y bloqueos */}
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 border-b text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Alertas y bloqueos
-          </div>
-          {alertas.length === 0 && bloqueos.length === 0 ? (
-            <EmptyMsg>Sin alertas ni bloqueos</EmptyMsg>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {alertas.slice(0, 2).map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium truncate">{a.tipo}</div>
-                    <div className="text-[11px] text-muted-foreground">{a.fecha}</div>
-                  </div>
-                  <Badge tone={a.estado === "Pendiente" ? "warn" : "neutral"}>{a.estado}</Badge>
-                </li>
-              ))}
-              {bloqueos.slice(0, 2).map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium truncate">{b.tipo}</div>
-                    <div className="text-[11px] text-muted-foreground">{b.fecha}</div>
-                  </div>
-                  <Badge tone={b.estado === "Activo" ? "danger" : "neutral"}>{b.estado}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="flex flex-wrap gap-1 border-b border-border mb-4">
+        {(
+          [
+            { key: "movimientos", label: "Ver movimientos" },
+            { key: "impuestos", label: "Ver impuestos" },
+          ] as const
+        ).map((st) => (
+          <button
+            key={st.key}
+            type="button"
+            onClick={() => setContextoSubTab(st.key)}
+            className={`px-3 py-2 text-xs font-semibold rounded-t-md transition-colors ${
+              contextoSubTab === st.key
+                ? "bg-primary/10 text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            {st.label}
+          </button>
+        ))}
       </div>
+
+      {contextoSubTab === "movimientos" ? (
+        <div className="space-y-3">
+          <DataTable
+            columns={movimientosOperativosColumns}
+            data={movimientosOperativos}
+            keyExtractor={(m) => m.id}
+            emptyMessage="Sin movimientos para este usuario"
+            pageSize={5}
+          />
+          <button
+            type="button"
+            onClick={() => go("/admin/general/movimientos")}
+            className={btnSmallOutline}
+          >
+            <ExternalLink size={13} /> Ir a página de movimientos
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <DataTable
+            columns={impuestosOperativosColumns}
+            data={impuestos}
+            keyExtractor={(i) => i.id}
+            emptyMessage="Sin impuestos para este usuario"
+            pageSize={5}
+          />
+          <button
+            type="button"
+            onClick={() => go("/admin/general/movimientos/impuestos")}
+            className={btnSmallOutline}
+          >
+            <ExternalLink size={13} /> Ir a página de impuestos
+          </button>
+        </div>
+      )}
     </SectionCard>
   );
 
   const riesgoSection = (
-    <SectionCard
-      title="Riesgo y monitoreo"
-      actions={
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => go("/admin/general/alertas")}
-            className={btnSmallOutline}
-          >
-            <ExternalLink size={13} /> Ir a alertas
-          </button>
-          <button
-            type="button"
-            onClick={() => go("/admin/general/alertas/bloqueos")}
-            className={btnSmallOutline}
-          >
-            <ExternalLink size={13} /> Ir a bloqueos
-          </button>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <SectionCard title="Riesgo y monitoreo">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <div className="rounded-lg border border-border p-4">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1399,6 +1651,64 @@ export function UserModal({
           </ul>
         </div>
       </div>
+
+      <div className="flex flex-wrap gap-1 border-b border-border mb-4">
+        {(
+          [
+            { key: "alertas", label: "Ver alertas" },
+            { key: "bloqueos", label: "Ver bloqueos" },
+          ] as const
+        ).map((st) => (
+          <button
+            key={st.key}
+            type="button"
+            onClick={() => setRiesgoSubTab(st.key)}
+            className={`px-3 py-2 text-xs font-semibold rounded-t-md transition-colors ${
+              riesgoSubTab === st.key
+                ? "bg-primary/10 text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            {st.label}
+          </button>
+        ))}
+      </div>
+
+      {riesgoSubTab === "alertas" ? (
+        <div className="space-y-3">
+          <DataTable
+            columns={alertasOperativasColumns}
+            data={alertas}
+            keyExtractor={(a) => a.id}
+            emptyMessage="Sin alertas para este usuario"
+            pageSize={5}
+          />
+          <button
+            type="button"
+            onClick={() => go("/admin/general/alertas")}
+            className={btnSmallOutline}
+          >
+            <ExternalLink size={13} /> Ir a alertas
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <DataTable
+            columns={bloqueosOperativosColumns}
+            data={bloqueos}
+            keyExtractor={(b) => b.id}
+            emptyMessage="Sin bloqueos para este usuario"
+            pageSize={5}
+          />
+          <button
+            type="button"
+            onClick={() => go("/admin/general/alertas/bloqueos")}
+            className={btnSmallOutline}
+          >
+            <ExternalLink size={13} /> Ir a bloqueos
+          </button>
+        </div>
+      )}
     </SectionCard>
   );
 
@@ -1424,22 +1734,20 @@ export function UserModal({
                   <div className="font-display font-semibold text-sm">{m.titulo}</div>
                 </div>
                 {m.cantidad > 0 ? (
-                  <>
-                    <div className="text-xs text-muted-foreground">
-                      Vinculados:{" "}
-                      <span className="font-semibold text-foreground tabular-nums">{m.cantidad}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setModuloPopup(m.clave)}
-                      className={`${btnSmallOutline} mt-auto self-start`}
-                    >
-                      <ExternalLink size={13} /> {m.verLabel}
-                    </button>
-                  </>
+                  <div className="text-xs text-muted-foreground">
+                    Vinculados:{" "}
+                    <span className="font-semibold text-foreground tabular-nums">{m.cantidad}</span>
+                  </div>
                 ) : (
                   <div className="text-xs text-muted-foreground">{m.vacioMsg}</div>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setModuloPopup(m.clave)}
+                  className={`${btnSmallOutline} mt-auto self-start`}
+                >
+                  <ExternalLink size={13} /> {m.verLabel}
+                </button>
               </div>
             );
           })}
@@ -1479,12 +1787,17 @@ export function UserModal({
       >
         {/* Header */}
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between z-10 rounded-t-lg">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 flex-wrap">
             <h3 className="font-display font-semibold text-lg">
               Ver y editar usuario —{" "}
               {user.tipoPersona === "juridica" ? "Persona Jurídica" : "Persona Física"}
             </h3>
-            <Badge tone={statusTone[user.status]}>{statusLabel[user.status]}</Badge>
+            <Badge
+              tone={statusTone[user.status]}
+              className="px-3.5 py-1.5 text-sm rounded-lg"
+            >
+              {statusLabel[user.status]}
+            </Badge>
           </div>
           {!inline && (
             <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
@@ -1660,51 +1973,93 @@ export function UserModal({
         </FormDialog>
       )}
 
-      {/* Modal: Cargar subcuentas */}
+      {/* Modal: Cargar / Editar subcuentas */}
       {cargarSubcuentasOpen && (
         <FormDialog
           open={cargarSubcuentasOpen}
-          onClose={() => setCargarSubcuentasOpen(false)}
-          title="Cargar subcuentas"
-          description={`Alta de subcuenta para ${user.nombre} ${user.apellido}`}
+          onClose={() => {
+            setCargarSubcuentasOpen(false);
+            setEditSub(null);
+          }}
+          title={editSub ? "Editar subcuenta" : "Cargar subcuentas"}
+          description={
+            editSub
+              ? `Modifica los datos de la subcuenta ${editSub.nombre}.`
+              : `Alta de subcuenta para ${user.nombre} ${user.apellido}`
+          }
           onSubmit={guardarSubcuenta}
-          submitLabel="Cargar subcuenta"
+          submitLabel={editSub ? "Guardar cambios" : "Cargar subcuenta"}
           size="lg"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">Legajo</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                Nombre de la subcuenta
+              </label>
               <Input
-                value={subcuentaForm.legajo}
-                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, legajo: e.target.value })}
-                placeholder="SUB-XXX"
+                value={subcuentaForm.nombre}
+                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, nombre: e.target.value })}
+                placeholder="Ej. Sucursal Sur"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">Email</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
+              <select
+                value={subcuentaForm.tipo}
+                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, tipo: e.target.value })}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              >
+                <option value="Operativa">Operativa</option>
+                <option value="Recaudacion">Recaudacion</option>
+                <option value="Garantias">Garantias</option>
+                <option value="Sueldos">Sueldos</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                Responsable
+              </label>
               <Input
-                value={subcuentaForm.email}
-                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, email: e.target.value })}
-                placeholder={user.email}
+                value={subcuentaForm.resp}
+                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, resp: e.target.value })}
+                placeholder="Usuario o area"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">Alias</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                Límite diario (ARS)
+              </label>
               <Input
-                value={subcuentaForm.alias}
-                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, alias: e.target.value })}
-                placeholder="mi.alias"
+                value={subcuentaForm.lim}
+                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, lim: e.target.value })}
+                placeholder="$ 0,00"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">CVU</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                Saldo inicial
+              </label>
               <Input
-                value={subcuentaForm.cvu}
-                onChange={(e) => setSubcuentaForm({ ...subcuentaForm, cvu: e.target.value })}
-                placeholder="0000003100..."
+                type="number"
+                value={subcuentaForm.saldoInicial}
+                onChange={(e) =>
+                  setSubcuentaForm({ ...subcuentaForm, saldoInicial: e.target.value })
+                }
+                placeholder="0"
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={subcuentaForm.activarInmediato}
+              onChange={(e) =>
+                setSubcuentaForm({ ...subcuentaForm, activarInmediato: e.target.checked })
+              }
+              className="h-4 w-4 rounded accent-[var(--color-primary)]"
+            />
+            Activar inmediatamente al crear
+          </label>
         </FormDialog>
       )}
 
@@ -1721,7 +2076,7 @@ export function UserModal({
               title={meta.titulo}
               description={`${meta.descripcion} · ${user.nombre} ${user.apellido} (${mod?.cantidad ?? 0})`}
               size="lg"
-              submitLabel="Ver página completa"
+              submitLabel={meta.verTodosLabel}
               onSubmit={() => {
                 const m = modulos.find((mm) => mm.clave === moduloPopup);
                 if (m) go(m.ruta);
@@ -1775,9 +2130,23 @@ export function UserModal({
                   </tbody>
                 </table>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const m = modulos.find((mm) => mm.clave === moduloPopup);
+                  if (m) go(m.ruta);
+                  setModuloPopup(null);
+                }}
+                className={btnSmallPrimary + " w-full justify-center mt-3"}
+              >
+                <ExternalLink size={14} /> {meta.verTodosLabel}
+              </button>
             </FormDialog>
           );
         })()}
+
+      {/* Modal: Detalle de subcuenta (paridad con MollyPay-Enterprises /app/subcuentas) */}
+      {subDetail && <SubDetailModal sub={subDetail} onClose={() => setSubDetail(null)} />}
 
       {/* Image Preview */}
       {previewImg && (
@@ -1801,6 +2170,399 @@ export function UserModal({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SubDetailModal({ sub, onClose }: { sub: Subcuenta; onClose: () => void }) {
+  const [editEmail, setEditEmail] = useState(false);
+  const [emailVal, setEmailVal] = useState(sub.email);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterTipo, setFilterTipo] = useState<"todos" | "ingreso" | "egreso">("todos");
+  const [filterSearch, setFilterSearch] = useState("");
+
+  const allMoves = sub.movimientos ?? [];
+  const moves = allMoves.filter((m) => {
+    if (filterTipo !== "todos" && m.tipo !== filterTipo) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      if (!m.txid.toLowerCase().includes(q) && !m.entidad.toLowerCase().includes(q) && !m.cbu.includes(q))
+        return false;
+    }
+    return true;
+  });
+
+  const totalDepositos = allMoves
+    .filter((m) => m.tipo === "ingreso")
+    .reduce((a, m) => a + m.monto, 0);
+  const totalRetiros = allMoves
+    .filter((m) => m.tipo === "egreso")
+    .reduce((a, m) => a + m.monto, 0);
+  const totalComisiones = allMoves
+    .filter((m) => m.entidad === "Moli Financial S.A.")
+    .reduce((a, m) => a + m.monto, 0);
+
+  const confirmAction = (accion: string, detalle: string): boolean =>
+    window.confirm(`¿Estas seguro de que queres ${accion}?\n\n${detalle}`);
+
+  return (
+    <div className="fixed inset-0 z-[65] flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        className="relative bg-card w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col shadow-xl rounded-t-xl sm:rounded-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
+        <div className="sticky top-0 bg-card border-b px-5 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
+          <h2 className="text-base font-semibold">Detalles de Subcuenta</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted transition text-muted-foreground hover:text-foreground"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-7">
+          {/* ══ BLOQUE: Informacion general ══ */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Informacion general</h3>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirmAction(
+                        "cambiar la contrasena de esta subcuenta",
+                        "Se enviara un enlace de restablecimiento al email del responsable.",
+                      )
+                    )
+                      toast.success("Enlace de restablecimiento enviado");
+                  }}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
+                  title="Cambiar contrasena"
+                >
+                  <Key size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirmAction(
+                        sub.estado === "Activa" ? "pausar esta subcuenta" : "reactivar esta subcuenta",
+                        "Los fondos quedaran " +
+                          (sub.estado === "Activa"
+                            ? "congelados hasta que la reactives."
+                            : "disponibles nuevamente."),
+                      )
+                    )
+                      toast.success(sub.estado === "Activa" ? "Subcuenta pausada" : "Subcuenta reactivada");
+                  }}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
+                  title={sub.estado === "Activa" ? "Deshabilitar cuenta" : "Reactivar cuenta"}
+                >
+                  <Pause size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirmAction(
+                        "eliminar esta subcuenta",
+                        "Esta accion es irreversible. Todos los fondos seran transferidos a la cuenta madre.",
+                      )
+                    )
+                      toast.success("Subcuenta eliminada");
+                  }}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition text-muted-foreground"
+                  title="Eliminar subcuenta"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Nombre
+                  </span>
+                  <p className="font-semibold mt-0.5">{sub.nombre}</p>
+                </div>
+                <div>
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Email
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {editEmail ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input
+                          value={emailVal}
+                          onChange={(e) => setEmailVal(e.target.value)}
+                          className="h-8 text-sm flex-1 min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditEmail(false);
+                            toast.success("Email actualizado");
+                          }}
+                          className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded border"
+                        >
+                          OK
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditEmail(false);
+                            setEmailVal(sub.email);
+                          }}
+                          className="h-8 px-2 text-xs text-muted-foreground hover:bg-muted rounded border"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">{emailVal}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditEmail(true)}
+                          className="text-muted-foreground hover:text-foreground transition"
+                          title="Editar email"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Badge tone={sub.estado === "Activa" ? "success" : "warn"}>
+                  {sub.estado === "Activa" ? "Activo" : "Desactivado"}
+                </Badge>
+                <Badge tone={sub.retirosHab ? "success" : "neutral"}>
+                  <Lock size={11} className="inline mr-0.5" />
+                  Retiros {sub.retirosHab ? "Habilitados" : "Deshabilitados"}
+                </Badge>
+              </div>
+            </div>
+          </section>
+
+          {/* ══ BLOQUE: Informacion financiera ══ */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Informacion financiera</h3>
+              <button
+                type="button"
+                onClick={() => setMoveOpen(true)}
+                className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
+                title="Mover fondos"
+              >
+                <Building2 size={13} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-muted/30 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Balance actual
+                </div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1">
+                  {fmtARS(sub.disp)}
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Total depositos
+                </div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1 text-emerald-700">
+                  {fmtARS(totalDepositos)}
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Total retiros
+                </div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1 text-red-700">
+                  {fmtARS(totalRetiros)}
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Total comisiones
+                </div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1">
+                  {fmtARS(totalComisiones)}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ══ BLOQUE: Historial de movimientos ══ */}
+          <section>
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold">Historial de movimientos</h3>
+              <div className="flex gap-2">
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => toast.success("Reporte descargado (demo)")}>
+                  <Download size={12} /> DESCARGAR REPORTE
+                </BtnOutline>
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => setFilterOpen(!filterOpen)}>
+                  <Filter size={12} /> FILTRAR{filterOpen && <ChevronUp size={11} className="ml-1" />}
+                </BtnOutline>
+              </div>
+            </div>
+
+            {filterOpen && (
+              <div className="mb-3 p-3 bg-muted/30 rounded-lg border space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Buscar
+                    </label>
+                    <Input
+                      value={filterSearch}
+                      onChange={(e) => setFilterSearch(e.target.value)}
+                      placeholder="TXID, CBU o entidad..."
+                      className="h-9 text-sm w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Tipo
+                    </label>
+                    <select
+                      value={filterTipo}
+                      onChange={(e) => setFilterTipo(e.target.value as "todos" | "ingreso" | "egreso")}
+                      className="h-9 px-3 rounded-md border bg-card text-sm w-full"
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="ingreso">Ingresos</option>
+                      <option value="egreso">Egresos</option>
+                    </select>
+                  </div>
+                </div>
+                {moves.length < allMoves.length && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {moves.length} de {allMoves.length} movimientos
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="max-h-[280px] overflow-y-auto border rounded-lg divide-y">
+              {moves.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">
+                  Sin movimientos registrados
+                </p>
+              ) : (
+                moves.map((m, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 hover:bg-muted/30 transition">
+                    <span
+                      className="mt-0.5 h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-xs"
+                      style={{
+                        background:
+                          m.tipo === "ingreso"
+                            ? "rgba(5,150,105,0.12)"
+                            : "rgba(220,38,38,0.12)",
+                      }}
+                    >
+                      {m.tipo === "ingreso" ? (
+                        <ArrowDownLeft size={15} className="text-emerald-700" />
+                      ) : (
+                        <ArrowUpRight size={15} className="text-red-700" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{m.titulo}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                            {m.txid}
+                          </p>
+                        </div>
+                        <span
+                          className={`font-mono tabular-nums text-sm font-semibold whitespace-nowrap shrink-0 ${
+                            m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700"
+                          }`}
+                        >
+                          {fmtMov(m.tipo === "ingreso" ? m.monto : -m.monto)}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>CBU/CVU: {m.cbu}</span>
+                        <span>{m.entidad}</span>
+                        <span>
+                          {m.fecha} · {m.hora}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* ── Mover fondos sub-dialog ── */}
+        {moveOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setMoveOpen(false)} />
+            <div
+              className="relative bg-card rounded-lg max-w-md w-full p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold">Mover fondos</h3>
+                <button
+                  type="button"
+                  onClick={() => setMoveOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Direccion
+                  </label>
+                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm mt-1">
+                    <option>Cuenta madre → {sub.nombre}</option>
+                    <option>{sub.nombre} → Cuenta madre</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Monto (ARS)
+                  </label>
+                  <Input placeholder="0,00" className="mt-1" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Concepto
+                  </label>
+                  <Input placeholder="Fondeo, barrido, etc." className="mt-1" />
+                </div>
+                <button
+                  type="button"
+                  className={btnSmallPrimary + " w-full justify-center mt-2"}
+                  onClick={() => {
+                    setMoveOpen(false);
+                    toast.success("Movimiento interno realizado");
+                  }}
+                >
+                  Transferir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

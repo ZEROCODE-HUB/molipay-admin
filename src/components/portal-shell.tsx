@@ -4,8 +4,6 @@ import {
   LogOut,
   MoreHorizontal,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -32,7 +30,6 @@ export function PortalShell({
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const { setRole } = useDemoMode();
   const navigate = useNavigate();
 
@@ -47,32 +44,32 @@ export function PortalShell({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="h-14 border-b bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
+      {/* Header superior */}
+      <header className="h-14 border-b border-black-100 bg-white flex items-center justify-between px-4 lg:px-6 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 -ml-2 text-foreground"
+            className="lg:hidden p-2 -ml-2 text-black-600 hover:text-black-800"
             onClick={() => setOpen((v) => !v)}
             aria-label="Abrir menú"
           >
             <Menu size={20} />
           </button>
           <MollyLogo size={28} />
-          <span className="hidden lg:inline text-sm text-muted-foreground border-l pl-3 ml-1 truncate max-w-[200px]">
+          <span className="hidden md:inline text-sm text-black-400 border-l border-black-100 pl-3 ml-1">
             {title}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-xs text-muted-foreground">Admin</span>
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
-            style={{ background: "var(--moli-red-light)", color: "var(--moli-red-dark)" }}
-          >
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-xs text-black-400">Sesión</span>
+            <span className="text-sm font-semibold text-black-700">Admin</span>
+          </div>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold bg-red-50 text-red-500">
             AD
           </div>
           <button
             onClick={onLogout}
-            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden md:inline-flex items-center gap-1 text-xs text-black-400 hover:text-black-700 transition-colors"
           >
             <LogOut size={14} /> Salir
           </button>
@@ -81,44 +78,21 @@ export function PortalShell({
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar desktop */}
-        <aside
-          className={`hidden lg:flex flex-col border-r bg-sidebar shrink-0 transition-[width,min-width] duration-200 ${
-            collapsed ? "w-16 min-w-16" : "w-64 min-w-64"
-          }`}
-        >
-          <div
-            className={`flex items-center shrink-0 border-b border-sidebar-border ${
-              collapsed ? "justify-center py-2" : "justify-between px-3 h-12"
-            }`}
-          >
-            {!collapsed && (
-              <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 truncate">
-                Navegación
-              </span>
-            )}
-            <button
-              onClick={() => setCollapsed((v) => !v)}
-              className="p-2 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors cursor-pointer"
-              title={collapsed ? "Expandir menú" : "Minimizar menú"}
-              aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
-            >
-              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
-          </div>
-          <nav className="p-2 flex-1 overflow-y-auto">
-            <SidebarNav nav={nav} path={path} collapsed={collapsed} />
+        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-600 bg-navy-700 shrink-0">
+          <nav className="p-3 flex-1 overflow-y-auto">
+            <SidebarNav nav={nav} path={path} />
           </nav>
         </aside>
 
-        {/* Sidebar mobile drawer */}
+        {/* Drawer mobile */}
         {open && (
           <div className="lg:hidden fixed inset-0 z-40">
             <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r flex flex-col">
-              <div className="p-4 border-b border-sidebar-border">
+            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-700 border-r border-navy-600 flex flex-col">
+              <div className="p-4 border-b border-navy-600">
                 <MollyLogo size={28} />
               </div>
-              <nav className="p-2 flex-1 overflow-y-auto">
+              <nav className="p-3 flex-1 overflow-y-auto">
                 <SidebarNav nav={nav} path={path} onNavigate={() => setOpen(false)} />
               </nav>
             </aside>
@@ -127,12 +101,12 @@ export function PortalShell({
 
         {/* Main */}
         <main className="flex-1 min-w-0 overflow-y-auto pb-20 lg:pb-6">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-8 lg:py-6">{children}</div>
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:py-8">{children}</div>
         </main>
       </div>
 
       {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-card border-t flex items-stretch z-30">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white border-t border-black-100 flex items-stretch z-30">
         {mainNav.map((item) => {
           const active = path === item.to;
           const Icon = item.icon;
@@ -141,7 +115,7 @@ export function PortalShell({
               key={item.to}
               to={item.to}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
-                active ? "text-primary font-semibold" : "text-muted-foreground"
+                active ? "text-red-500 font-semibold" : "text-black-400"
               }`}
             >
               <Icon size={20} strokeWidth={1.75} />
@@ -152,7 +126,7 @@ export function PortalShell({
         {more.length > 0 && (
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] text-muted-foreground cursor-pointer"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] text-black-400"
           >
             <MoreHorizontal size={20} strokeWidth={1.75} />
             <span>Más</span>
@@ -166,59 +140,19 @@ export function PortalShell({
 function SidebarNav({
   nav,
   path,
-  collapsed,
   onNavigate,
 }: {
   nav: NavItem[];
   path: string;
-  collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  if (collapsed) {
-    return (
-      <>
-        {nav.map((item) =>
-          isGroup(item) ? (
-            item.items.map((leaf) => (
-              <SidebarLink
-                key={leaf.to}
-                item={leaf}
-                active={path === leaf.to}
-                onNavigate={onNavigate}
-                collapsed
-              />
-            ))
-          ) : (
-            <SidebarLink
-              key={item.to}
-              item={item}
-              active={path === item.to}
-              onNavigate={onNavigate}
-              collapsed
-            />
-          ),
-        )}
-      </>
-    );
-  }
-
   return (
     <>
       {nav.map((item, idx) =>
         isGroup(item) ? (
-          <SidebarGroup
-            key={`g-${idx}-${item.label}`}
-            group={item}
-            path={path}
-            onNavigate={onNavigate}
-          />
+          <SidebarGroup key={`g-${idx}-${item.label}`} group={item} path={path} onNavigate={onNavigate} />
         ) : (
-          <SidebarLink
-            key={item.to}
-            item={item}
-            active={path === item.to}
-            onNavigate={onNavigate}
-          />
+          <SidebarLink key={item.to} item={item} active={path === item.to} onNavigate={onNavigate} />
         ),
       )}
     </>
@@ -230,44 +164,27 @@ function SidebarLink({
   active,
   onNavigate,
   nested = false,
-  collapsed = false,
 }: {
   item: NavLeaf;
   active: boolean;
   onNavigate?: () => void;
   nested?: boolean;
-  collapsed?: boolean;
 }) {
   const Icon = item.icon;
-
-  if (collapsed) {
-    return (
-      <Link
-        to={item.to}
-        onClick={onNavigate}
-        title={item.label}
-        aria-label={item.label}
-        className={`flex items-center justify-center w-11 h-11 mx-auto mb-1 rounded-lg transition-colors ${
-          active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/60"
-        }`}
-      >
-        <Icon size={20} strokeWidth={1.75} />
-      </Link>
-    );
-  }
-
   return (
     <Link
       to={item.to}
       onClick={onNavigate}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-sm text-sm mb-0.5 transition-colors ${
         nested ? "pl-9" : ""
       } ${
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-          : "text-sidebar-foreground hover:bg-sidebar-accent/60"
+        nested
+          ? active
+            ? "bg-navy-600 text-white font-semibold"
+            : "text-white/60 hover:text-white hover:bg-navy-600/50"
+          : active
+            ? "bg-navy-500 text-white font-semibold"
+            : "text-white/80 hover:text-white hover:bg-navy-600"
       }`}
     >
       {!nested && <Icon size={18} strokeWidth={1.75} />}
@@ -295,19 +212,22 @@ function SidebarGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
           containsActive
-            ? "text-sidebar-accent-foreground font-semibold"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/60"
+            ? "text-white font-semibold"
+            : "text-white/80 hover:text-white hover:bg-navy-600"
         }`}
         aria-expanded={expanded}
       >
         <Icon size={18} strokeWidth={1.75} />
         <span className="flex-1 text-left">{group.label}</span>
-        <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={14}
+          className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+        />
       </button>
       {expanded && (
-        <div className="mt-0.5 ml-1.5 border-l border-sidebar-border pl-1.5">
+        <div className="mt-0.5">
           {group.items.map((it) => (
             <SidebarLink
               key={it.to}
@@ -408,13 +328,15 @@ const badgeStyles: Record<string, string> = {
 export function Badge({
   children,
   tone = "neutral",
+  className = "",
 }: {
   children: ReactNode;
   tone?: "neutral" | "success" | "warn" | "danger";
+  className?: string;
 }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeStyles[tone]}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeStyles[tone]} ${className}`}
     >
       {children}
     </span>

@@ -1,4 +1,10 @@
-import type { UserData, UserStatus, TipoPersona } from "@/components/user-modal";
+import type {
+  UserData,
+  UserStatus,
+  TipoPersona,
+  Subcuenta,
+  MovimientoSub,
+} from "@/components/user-modal";
 
 export type {
   UserData,
@@ -298,6 +304,59 @@ function docsJuridica(razonSocial: string) {
   ];
 }
 
+const MOV_SUBCUENTA_MOCK: MovimientoSub[] = [
+  {
+    tipo: "ingreso",
+    titulo: "Ingresaste dinero",
+    txid: "TX-2026-06-02-8841",
+    cbu: "0000003100054321678901",
+    entidad: "Cliente #4821",
+    fecha: "02/06/2026",
+    hora: "14:32",
+    monto: 1840000,
+  },
+  {
+    tipo: "egreso",
+    titulo: "Retiraste dinero",
+    txid: "TX-2026-06-02-8842",
+    cbu: "0000003100023456789012",
+    entidad: "Proveedor SA",
+    fecha: "02/06/2026",
+    hora: "11:08",
+    monto: 220000,
+  },
+  {
+    tipo: "ingreso",
+    titulo: "Ingresaste dinero",
+    txid: "TX-2026-06-01-8844",
+    cbu: "0000003100034567890123",
+    entidad: "Link de pago Factura 0033",
+    fecha: "01/06/2026",
+    hora: "10:42",
+    monto: 18400,
+  },
+  {
+    tipo: "egreso",
+    titulo: "Retiraste dinero",
+    txid: "TX-2026-05-30-8847",
+    cbu: "0000003100056789012345",
+    entidad: "AFIP",
+    fecha: "30/05/2026",
+    hora: "18:11",
+    monto: 64320,
+  },
+  {
+    tipo: "egreso",
+    titulo: "Comision Molly",
+    txid: "TX-2026-05-31-8853",
+    cbu: "0000003100112345678901",
+    entidad: "Moli Financial S.A.",
+    fecha: "31/05/2026",
+    hora: "12:00",
+    monto: 4820,
+  },
+];
+
 export function toUserDataFisica(u: UsuarioFisica): UserData {
   return {
     id: u.legajo,
@@ -330,21 +389,39 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
     subcuentas: [
       {
         id: "SUB-001",
-        legajo: "SUB-001",
+        nombre: "Sucursal Centro",
+        apellido: "Pérez",
         email: u.correo,
-        alias: "mi.cuenta",
-        cvu: "0000003100087654321012",
-        saldo: "$ 150.00",
-        estado: "activa",
+        cbu: "0000003 100011112222 01",
+        tipo: "Operativa",
+        estado: "Activa",
+        disp: 150000,
+        ret: 0,
+        conc: 150000,
+        ing: "$ 1.840.000",
+        egr: "$ 920.000",
+        resp: "J. Pérez",
+        lim: "$ 8.000.000 / dia",
+        retirosHab: true,
+        movimientos: MOV_SUBCUENTA_MOCK,
       },
       {
         id: "SUB-002",
-        legajo: "SUB-002",
+        nombre: "Ahorros",
+        apellido: "Pérez",
         email: u.correo,
-        alias: "ahorros.juan",
-        cvu: "0000003100087654321013",
-        saldo: "$ 85.00",
-        estado: "activa",
+        cbu: "0000003 100011112222 02",
+        tipo: "Operativa",
+        estado: "Activa",
+        disp: 85000,
+        ret: 0,
+        conc: 85000,
+        ing: "$ 220.000",
+        egr: "$ 90.000",
+        resp: "J. Pérez",
+        lim: "$ 4.000.000 / dia",
+        retirosHab: true,
+        movimientos: MOV_SUBCUENTA_MOCK.slice(0, 3),
       },
     ],
     documentos: docsFisica(),
@@ -435,7 +512,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
 export function toUserDataJuridica(j: UsuarioJuridica): UserData {
   return {
     id: j.legajo,
-    status: "active",
+    status: statusMap[j.estado] ?? "pending",
     tipoPersona: "juridica",
     legajo: j.legajo,
     email: j.correo,
@@ -461,15 +538,27 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
     nombreComercial: j.razonSocial,
     fechaInscripcion: j.fechaRegistro,
     pep: "No",
-    subcuentas: Array.from({ length: j.subcuentas }, (_, i) => ({
-      id: `SUB-${j.legajo}-${i + 1}`,
-      legajo: `SUB-${j.legajo}-${i + 1}`,
-      email: j.correo,
-      alias: `sub.${(j.razonSocial.split(" ")[0] ?? "empresa").toLowerCase()}.${i + 1}`,
-      cvu: `0000003100087654321${String(i + 1).padStart(4, "0")}`,
-      saldo: `$ ${(Math.random() * 500000 + 10000).toFixed(2)}`,
-      estado: "activa",
-    })),
+    subcuentas: Array.from({ length: j.subcuentas }, (_, i) => {
+      const primera = j.razonSocial.split(" ")[0] ?? "empresa";
+      return {
+        id: `SUB-${j.legajo}-${i + 1}`,
+        nombre: `${primera} ${i + 1}`,
+        apellido: primera,
+        email: j.correo,
+        cbu: `0000003 10001111222${String(i + 1).padStart(2, "0")} ${String(i + 1).padStart(2, "0")}`,
+        tipo: (["Operativa", "Recaudacion", "Garantias", "Sueldos"] as const)[i % 4],
+        estado: (i % 5 === 4 ? "Pausada" : "Activa") as Subcuenta["estado"],
+        disp: Math.floor(Math.random() * 4000000),
+        ret: Math.floor(Math.random() * 500000),
+        conc: 0,
+        ing: "$ 1.840.000",
+        egr: "$ 920.000",
+        resp: `${primera} · RRHH`,
+        lim: "$ 20.000.000 / dia",
+        retirosHab: i % 3 !== 2,
+        movimientos: MOV_SUBCUENTA_MOCK.slice(0, (i % 4) + 1),
+      };
+    }),
     documentos: docsJuridica(j.razonSocial),
     validacionesAutomaticas:
       j.legajo.endsWith("3") || j.legajo.endsWith("7")

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { X } from "lucide-react";
 import { BtnPrimary, BtnOutline } from "./portal-shell";
 
@@ -21,6 +21,15 @@ export function FormDialog({
   submitLabel?: string;
   size?: "md" | "lg";
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
   const w = size === "lg" ? "max-w-2xl" : "max-w-md";
   return (

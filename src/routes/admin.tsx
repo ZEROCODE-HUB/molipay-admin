@@ -81,7 +81,7 @@ const nav: NavItem[] = [
 function AdminLayout() {
   const { role, setRole } = useDemoMode();
   useEffect(() => {
-    if (role !== "admin") setRole("admin");
+    if (role !== "admin" && role !== "operador") setRole("admin");
   }, [role, setRole]);
   return (
     <PortalShell nav={nav} title="Backoffice Molly">

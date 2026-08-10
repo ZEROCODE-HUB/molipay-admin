@@ -70,7 +70,7 @@ function UsuarioDetailPage() {
           Volver a la lista
         </button>
 
-        <div className="min-w-0">
+        <div className="min-w-0 mt-10">
           <h1 className="font-display text-xl md:text-2xl font-semibold tracking-tight text-foreground truncate">
             {user.nombre} {user.apellido}
           </h1>
@@ -80,7 +80,9 @@ function UsuarioDetailPage() {
         </div>
 
         {/* Reutiliza el render del detalle (pestañas, edición, sub-modales) a pantalla completa. */}
-        <UserModal open user={user} onClose={backToList} inline onUserChange={onUserChange} />
+        <div className="mt-10">
+          <UserModal open user={user} onClose={backToList} inline onUserChange={onUserChange} />
+        </div>
       </div>
     </>
   );
