@@ -3,6 +3,7 @@ import { useState } from "react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/admin/modulos/transferencia/categorias")({
   component: Page,
@@ -40,6 +41,7 @@ function Page() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<Categoria | null>(null);
   const [form, setForm] = useState({ codigo: "", nombre: "", descripcion: "" });
+  const [confirmDelete, setConfirmDelete] = useState<Categoria | null>(null);
 
   const openNew = () => {
     setEditRow(null);
@@ -127,7 +129,7 @@ function Page() {
             <BtnOutline
               type="button"
               className="h-7 text-xs px-2 text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => eliminar(r.id)}
+              onClick={() => setConfirmDelete(r)}
             >
               Eliminar
             </BtnOutline>
@@ -170,6 +172,18 @@ function Page() {
           />
         </div>
       </FormDialog>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Eliminar categoría"
+        message={`¿Estás seguro de eliminar la categoría "${confirmDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDelete) eliminar(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      />
     </>
   );
 }

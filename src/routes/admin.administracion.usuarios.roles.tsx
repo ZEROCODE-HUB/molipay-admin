@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Plus, X, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Permiso = {
   recurso: string;
@@ -105,6 +106,7 @@ function Page() {
   const [selectedRol, setSelectedRol] = useState(rolesIniciales[0].id);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<Rol | null>(null);
 
   const current = roles.find((r) => r.id === selectedRol)!;
 
@@ -170,10 +172,10 @@ function Page() {
               <Trash2
                 size={12}
                 className="opacity-60 hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteRol(r.id);
-                }}
+onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(r);
+                  }}
               />
             )}
           </button>
@@ -251,6 +253,19 @@ function Page() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Eliminar rol"
+        message={`¿Estás seguro de eliminar el rol "${confirmDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDelete) deleteRol(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      />
     </>
   );
 }

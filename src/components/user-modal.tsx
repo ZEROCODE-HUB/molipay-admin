@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Badge, Input, BtnOutline } from "./portal-shell";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
+import { ConfirmDialog } from "./confirm-dialog";
 import { DataTable, type Column } from "./data-table";
 
 export type UserStatus = "active" | "inactive" | "pending" | "blocked";
@@ -752,6 +753,7 @@ export function UserModal({
 
   const [cargarSubcuentasOpen, setCargarSubcuentasOpen] = useState(false);
   const [subDetail, setSubDetail] = useState<Subcuenta | null>(null);
+  const [subEliminar, setSubEliminar] = useState<Subcuenta | null>(null);
   const [editSub, setEditSub] = useState<Subcuenta | null>(null);
   const [subPage, setSubPage] = useState(1);
   const SUB_PAGE_SIZE = 10;
@@ -1329,7 +1331,7 @@ export function UserModal({
                             </button>
                             <button
                               type="button"
-                              onClick={() => eliminarSubcuenta(sub)}
+                              onClick={() => setSubEliminar(sub)}
                               className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition"
                               title="Borrar"
                             >
@@ -2077,6 +2079,7 @@ export function UserModal({
               description={`${meta.descripcion} · ${user.nombre} ${user.apellido} (${mod?.cantidad ?? 0})`}
               size="lg"
               submitLabel={meta.verTodosLabel}
+              hideCancel
               onSubmit={() => {
                 const m = modulos.find((mm) => mm.clave === moduloPopup);
                 if (m) go(m.ruta);
@@ -2130,20 +2133,22 @@ export function UserModal({
                   </tbody>
                 </table>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const m = modulos.find((mm) => mm.clave === moduloPopup);
-                  if (m) go(m.ruta);
-                  setModuloPopup(null);
-                }}
-                className={btnSmallPrimary + " w-full justify-center mt-3"}
-              >
-                <ExternalLink size={14} /> {meta.verTodosLabel}
-              </button>
             </FormDialog>
           );
         })()}
+
+      <ConfirmDialog
+        open={!!subEliminar}
+        onClose={() => setSubEliminar(null)}
+        title="Eliminar subcuenta"
+        message={`¿Estás seguro de eliminar la subcuenta "${subEliminar?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={() => {
+          if (subEliminar) eliminarSubcuenta(subEliminar);
+          setSubEliminar(null);
+        }}
+      />
 
       {/* Modal: Detalle de subcuenta (paridad con MollyPay-Enterprises /app/subcuentas) */}
       {subDetail && <SubDetailModal sub={subDetail} onClose={() => setSubDetail(null)} />}
