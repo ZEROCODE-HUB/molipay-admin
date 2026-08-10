@@ -166,8 +166,17 @@ export function DataTable<T>({
         if (!value) continue;
         const col = columns.find((c) => c.key === key);
         if (!col) continue;
-        const text = String(col.render(row) ?? "");
-        if (text !== value) return false;
+        const raw = (row as Record<string, unknown>)[col.key];
+        const rendered = col.render(row);
+        const renderedText =
+          typeof rendered === "string" || typeof rendered === "number"
+            ? String(rendered)
+            : "";
+        const text =
+          typeof raw === "string" || typeof raw === "number"
+            ? String(raw)
+            : renderedText;
+        if (text !== value && renderedText !== value) return false;
       }
       if (dateRange.from || dateRange.to) {
         const key = dateCols[0]?.key;

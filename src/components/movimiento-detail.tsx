@@ -12,36 +12,42 @@ export type Movimiento = {
   cuit: string;
   monto: string;
   fecha: string;
-  estado: "Pendiente" | "Aprobada" | "Rechazada" | "Bloqueado";
+  estado:
+    | "APROBADO"
+    | "EN PROGRESO"
+    | "RECHAZADO"
+    | "BLOQUEADO"
+    | "CREADO"
+    | "ABIERTO"
+    | "EXPIRADO"
+    | "REEMBOLSADO";
 };
 
 const lifecycleTooltip =
-  "Una transacción nace Pendiente: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a Aprobada. Si no, pasa a Rechazada y el saldo se revierte.";
+  "Una transacción de depósito o retiro nace en EN PROGRESO: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, pasa a APROBADO; si no, pasa a RECHAZADO y el saldo se revierte.";
 
 const estadoMap: Record<
   string,
   { label: string; tone: "neutral" | "success" | "warn" | "danger" }
 > = {
-  Aprobada: { label: "Aprobada", tone: "success" },
-  Pendiente: { label: "Pendiente", tone: "warn" },
-  Rechazada: { label: "Rechazada", tone: "danger" },
-  Bloqueado: { label: "Bloqueado", tone: "danger" },
-  Creado: { label: "Creado", tone: "neutral" },
-  Abierto: { label: "Abierto", tone: "warn" },
-  Completado: { label: "Completado", tone: "success" },
-  Expirado: { label: "Expirado", tone: "neutral" },
-  Rechazado: { label: "Rechazado", tone: "danger" },
-  Fallido: { label: "Fallido", tone: "danger" },
-  Reembolsado: { label: "Reembolsado", tone: "warn" },
+  APROBADO: { label: "APROBADO", tone: "success" },
+  "EN PROGRESO": { label: "EN PROGRESO", tone: "warn" },
+  RECHAZADO: { label: "RECHAZADO", tone: "danger" },
+  BLOQUEADO: { label: "BLOQUEADO", tone: "danger" },
+  CREADO: { label: "CREADO", tone: "neutral" },
+  ABIERTO: { label: "ABIERTO", tone: "warn" },
+  EXPIRADO: { label: "EXPIRADO", tone: "neutral" },
+  REEMBOLSADO: { label: "REEMBOLSADO", tone: "warn" },
   Activo: { label: "Activo", tone: "success" },
   Usado: { label: "Usado", tone: "neutral" },
+  Expirado: { label: "Expirado", tone: "neutral" },
   Cancelado: { label: "Cancelado", tone: "danger" },
 };
 
 export const estadoBadge = (e: string) => {
   const m = estadoMap[e] ?? { label: e, tone: "neutral" as const };
   const badge = <Badge tone={m.tone}>{m.label}</Badge>;
-  return e === "Pendiente" || e === "Aprobada" || e === "Rechazada" ? (
+  return e === "EN PROGRESO" || e === "APROBADO" || e === "RECHAZADO" ? (
     <span title={lifecycleTooltip} className="cursor-help">
       {badge}
     </span>

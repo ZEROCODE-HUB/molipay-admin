@@ -5,9 +5,9 @@ type Message = { role: "user" | "bot"; text: string };
 
 const KB = [
   {
-    keywords: ["transacción", "movimiento", "estado", "COELSA", "pendiente", "aprobada", "rechazada"],
+    keywords: ["transacción", "movimiento", "estado", "COELSA", "en progreso", "aprobado", "rechazado"],
     response:
-      "Una transacción nace Pendiente: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a Aprobada. Si no, pasa a Rechazada y el saldo se revierte. Moli solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
+      "Una transacción nace EN PROGRESO: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a APROBADO. Si no, pasa a RECHAZADO y el saldo se revierte. Moli solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
   },
   {
     keywords: ["impuesto", "ganancias", "ingresos brutos", "retención", "débito", "crédito"],

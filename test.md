@@ -1,151 +1,87 @@
-# Suite de Tests — Detalle de Usuario (Persona Física / Persona Jurídica)
+# Test Plan — Estados de Movimiento por Tipo (MoliPay Backoffice — General → Movimientos)
 
-Suite de pruebas generado a partir de los requerimientos de mejora sobre la vista de detalle de usuario (física y jurídica): espaciados, reorganización de cajas de datos, badge de estado, tabs, subtabs con tablas paginadas, popups de módulos y productos, y paridad de la sección Subcuentas y CVU con el proyecto MollyPay-Enterprises.
+Basado en `MAPEO_ESTADOS.xlsx`. Regla aplicada: el estado final de cada operación es el texto literal de la celda, o lo que sigue a "cambia a" cuando existe. Cada caso debe marcarse **PASA / NO PASA**.
 
-**Total de casos de prueba:** se detalla al pie de cada sección.
-## Índice
-
-- [1. ESPACIADOS Y LAYOUT GENERAL — Detalle de usuario (Física / Jurídica)](#1-espaciados-y-layout-general-detalle-de-usuario-física-jurídica)
-- [2. CAJAS DE DATOS DEL USUARIO (antes 4, ahora 3)](#2-cajas-de-datos-del-usuario-antes-4-ahora-3)
-- [3. BADGE DE ESTADO JUNTO AL TÍTULO](#3-badge-de-estado-junto-al-título)
-- [4. TABS GENERALES — Estado actual eliminado / Historial de cambios](#4-tabs-generales-estado-actual-eliminado-historial-de-cambios)
-- [5. CONTEXTO OPERATIVO — Subtabs 'Ver movimientos' / 'Ver impuestos'](#5-contexto-operativo-subtabs-ver-movimientos-ver-impuestos)
-- [6. RIESGO Y MONITOREO — Subtabs 'Ver alertas' / 'Ver bloqueos'](#6-riesgo-y-monitoreo-subtabs-ver-alertas-ver-bloqueos)
-- [7. MÓDULOS Y PRODUCTOS — Popups con botón 'Ver todos'](#7-módulos-y-productos-popups-con-botón-ver-todos)
-- [8. SUBCUENTAS Y CVU — Paridad con proyecto MollyPay-Enterprises (/app/subcuentas)](#8-subcuentas-y-cvu-paridad-con-proyecto-mollypay-enterprises-app-subcuentas)
+## Protocolo de iteración (obligatorio)
+1. Ejecutar todos los casos de este documento contra la implementación actual.
+2. Reportar el resultado completo (PASA/NO PASA por caso).
+3. Si hay al menos un NO PASA: corregir puntualmente y volver a ejecutar el documento completo desde el caso 1.
+4. Repetir hasta 0 casos en NO PASA, con un **máximo de 5 iteraciones totales**.
+5. Si tras la iteración 5 persiste algún NO PASA, reportarlo como bloqueante explícito — no cerrar la tarea igual.
 
 ---
 
+## 1. Tab Depósitos
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| DEP1 | El filtro de Estado muestra exactamente 4 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO — sin ningún estado adicional (ni CREADO, ni REEMBOLSADO, etc.) |
+| DEP2 | Datos mock cubren los 4 estados | Existe al menos un registro mock por cada uno de los 4 estados |
+| DEP3 | No aparece el literal "PENDIENTE" en ningún registro visible | Todo registro que internamente parte de "PENDIENTE" se muestra como "EN PROGRESO" — el texto "PENDIENTE" no debe ser visible en la UI |
+| DEP4 | Filtrar por "EN PROGRESO" devuelve solo esos registros | El filtro funciona correctamente (ver principio general 1.1) |
+
+## 2. Tab Retiros
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| RET1 | El filtro de Estado muestra exactamente 4 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO |
+| RET2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
+| RET3 | No aparece el literal "FINALIZADO" en ningún registro visible | Todo registro que parte de "FINALIZADO" se muestra como "APROBADO" |
+| RET4 | Filtrar por "APROBADO" devuelve solo esos registros | Filtro funcional |
+
+## 3. Tab Pagos con Tarjeta
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| TAR1 | El filtro de Estado muestra exactamente 6 opciones | CREADO, ABIERTO, EN PROGRESO, APROBADO, EXPIRADO, RECHAZADO |
+| TAR2 | Datos mock cubren los 6 estados | Al menos un registro mock por cada uno de los 6 |
+| TAR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
+| TAR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
+| TAR5 | "CREADO" y "ABIERTO" existen como estados propios | No deben colapsar ni transformarse a ningún otro estado — quedan tal cual |
+| TAR6 | "EXPIRADO" existe como estado propio | No colapsa a ningún otro estado |
+| TAR7 | Filtrar por "CREADO" devuelve solo esos registros | Filtro funcional (valida que el estado exclusivo de Tarjeta también sea filtrable) |
+
+## 4. Tab Pagos PCT (QR)
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| PQR1 | El filtro de Estado muestra exactamente 4 opciones | EN PROGRESO, APROBADO, RECHAZADO, REEMBOLSADO |
+| PQR2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
+| PQR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
+| PQR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
+| PQR5 | No aparece el literal "FALLIDO" en ningún registro visible | Se muestra como "RECHAZADO" |
+| PQR6 | "REEMBOLSADO" existe como estado propio | No colapsa a BLOQUEADO ni a ningún otro estado |
+
+## 5. Tab Cobros PCT (QR)
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| CQR1 | El filtro de Estado muestra exactamente 4 opciones | EN PROGRESO, APROBADO, RECHAZADO, REEMBOLSADO |
+| CQR2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
+| CQR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
+| CQR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
+| CQR5 | No aparece el literal "FALLIDO" en ningún registro visible | Se muestra como "RECHAZADO" |
+| CQR6 | "REEMBOLSADO" existe como estado propio | Consistente con Pagos PCT |
+
+## 6. Tab Todos los movimientos (unión completa)
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| TOD1 | El filtro de Estado muestra exactamente 8 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO, CREADO, ABIERTO, EXPIRADO, REEMBOLSADO |
+| TOD2 | No falta ningún estado de los tipos individuales | Cada estado presente en Depósitos, Retiros, Tarjeta, Pagos PCT o Cobros PCT aparece también en el filtro de Todos |
+| TOD3 | No sobra ningún estado no usado por ningún tipo | El filtro de Todos no incluye ningún estado que no exista en al menos un tipo individual |
+| TOD4 | Datos mock cubren los 8 estados | Al menos un registro mock por cada uno de los 8, y las combinaciones deben poder identificarse por tipo de movimiento (depósito/retiro/tarjeta/PCT pago/PCT cobro) |
+| TOD5 | Filtrar por "BLOQUEADO" en Todos | Devuelve únicamente registros de Depósitos/Retiros con ese estado (ya que Tarjeta y PCT no tienen BLOQUEADO) |
+| TOD6 | Filtrar por "CREADO" en Todos | Devuelve únicamente registros de Pagos con Tarjeta (único tipo con ese estado) |
+| TOD7 | Filtrar por "REEMBOLSADO" en Todos | Devuelve únicamente registros de Pagos PCT y Cobros PCT |
+| TOD8 | Ningún registro en Todos muestra un estado crudo no normalizado | No debe aparecer "PENDIENTE", "FINALIZADO", "COMPLETADO" ni "FALLIDO" como texto de estado en ningún registro de esta tabla |
+
+## 7. Confirmación — REEMBOLSADO en "Todos" (resuelto)
+
+**Confirmado por el cliente:** REEMBOLSADO se incluye en el filtro de "Todos los movimientos" (8 estados totales), y los datos mock deben cubrir los 8 estados, incluyendo los minoritarios que solo pertenecen a un tipo (CREADO, ABIERTO, EXPIRADO de Tarjeta; REEMBOLSADO de PCT). Los casos TOD1, TOD4, TOD6 y TOD7 quedan tal como están definidos arriba — no requieren ajuste.
 
 ---
 
-## 1. ESPACIADOS Y LAYOUT GENERAL — Detalle de usuario (Física / Jurídica)
-
-*Casos en esta sección: 4*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-001 | Layout general | Espacio botón 'Volver a la lista' / nombre | Ambas | Espaciado entre botón 'Volver a la lista' y nombre de usuario | Usuario con acceso al detalle de un usuario física o jurídica | 1. Ingresar al detalle de un usuario.<br>2. Observar la zona superior donde está el botón 'Volver a la lista' y el nombre del usuario.<br>3. Medir/inspeccionar el espacio (margin/padding) entre ambos elementos. | Existe una separación visual clara (mayor a la actual) entre el botón 'Volver a la lista' y el nombre del usuario. Ningún elemento se ve pegado o solapado. | UI / Visual | Media | Pendiente |
-| TC-002 | Layout general | Espacio botón 'Volver a la lista' / nombre | Ambas | Espaciado se mantiene en distintas resoluciones | Mismo que el caso anterior | 1. Repetir la inspección visual en resoluciones desktop, tablet y mobile.<br>2. Verificar el espaciado en cada breakpoint. | El espacio agregado entre el botón y el nombre se mantiene proporcional y consistente en todos los tamaños de pantalla, sin romper el layout responsive. | UI / Visual | Baja | Pendiente |
-| TC-003 | Layout general | Espacio correo / contenedor blanco | Ambas | Espaciado entre correo del usuario y contenedor de datos | Usuario con acceso al detalle de un usuario | 1. Ingresar al detalle de un usuario.<br>2. Ubicar el correo electrónico mostrado en el encabezado.<br>3. Ubicar el contenedor blanco donde se listan los datos (cajas de información).<br>4. Verificar el espacio entre ambos. | Existe una separación visual clara (mayor a la actual) entre el correo del usuario y el contenedor blanco de datos, mejorando la legibilidad y evitando sensación de elementos apilados. | UI / Visual | Media | Pendiente |
-| TC-004 | Layout general | Espacio correo / contenedor blanco | Jurídica | Espaciado correcto en persona jurídica (con razón social/correo de contacto) | Usuario jurídico con datos de correo cargados | 1. Ingresar al detalle de un usuario jurídico.<br>2. Verificar que el espaciado agregado también se aplica correctamente cuando hay campos adicionales propios de persona jurídica (ej. razón social). | El espaciado es consistente entre persona física y jurídica, sin generar huecos excesivos ni desalineaciones cuando cambia la cantidad de campos del encabezado. | UI / Visual | Baja | Pendiente |
-
-## 2. CAJAS DE DATOS DEL USUARIO (antes 4, ahora 3)
-
-*Casos en esta sección: 8*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-005 | Cajas de datos | Reducción de 4 a 3 cajas | Ambas | Se muestran solo 3 cajas de información | Detalle de usuario física o jurídica cargado | 1. Ingresar al detalle de usuario.<br>2. Contar la cantidad de cajas/tarjetas de información mostradas en la parte superior (debajo del encabezado). | Se muestran exactamente 3 cajas de información (antes eran 4). La caja 'Estado Actual' ya no se encuentra entre ellas. | Funcional | Alta | Pendiente |
-| TC-006 | Cajas de datos | Caja 'Estado Actual' eliminada | Ambas | La caja 'Estado Actual' no aparece más en la sección superior | Detalle de usuario cargado | 1. Ingresar al detalle de usuario.<br>2. Revisar cada una de las cajas superiores.<br>3. Confirmar que ninguna corresponde a 'Estado Actual'. | La caja 'Estado Actual' fue removida de la parte superior. Su información (si sigue siendo relevante) no debe duplicarse visualmente en otro lugar salvo el badge de estado del título. | Funcional | Alta | Pendiente |
-| TC-007 | Cajas de datos | Primera caja = Identificación | Ambas | La primera caja corresponde a 'Identificación' | Detalle de usuario cargado | 1. Ingresar al detalle de usuario.<br>2. Verificar que la primera caja (más a la izquierda / arriba) es la de 'Identificación'.<br>3. Verificar que contiene los datos de identificación esperados (DNI/CUIT, tipo de documento, etc. según física/jurídica). | La primera caja mostrada es 'Identificación' y contiene correctamente los datos de identificación del usuario según su tipo (física o jurídica). | Funcional | Alta | Pendiente |
-| TC-008 | Cajas de datos | Botón 'Eximir débitos y créditos' dentro de Identificación | Ambas | El botón 'Eximir débitos y créditos' se encuentra dentro de la caja de Identificación | Detalle de usuario cargado, usuario con permisos para eximir | 1. Ingresar al detalle de usuario.<br>2. Ubicar la caja de 'Identificación'.<br>3. Verificar que el botón 'Eximir débitos y créditos' está dentro de dicha caja (no en otra caja ni flotante). | El botón 'Eximir débitos y créditos' se encuentra visualmente contenido dentro de la caja de 'Identificación', con estilo consistente al resto del diseño. | UI / Visual | Alta | Pendiente |
-| TC-009 | Cajas de datos | Funcionalidad botón 'Eximir débitos y créditos' | Ambas | El botón 'Eximir débitos y créditos' ejecuta la acción correctamente | Usuario con permisos para eximir débitos/créditos | 1. Hacer clic en el botón 'Eximir débitos y créditos'.<br>2. Confirmar la acción en el modal/confirmación que se despliegue (si aplica).<br>3. Verificar el resultado. | Se ejecuta correctamente la exención de débitos y créditos del usuario, se muestra confirmación/feedback (toast o mensaje) y el estado se refleja donde corresponda. | Funcional | Alta | Pendiente |
-| TC-010 | Cajas de datos | Restricción de permisos sobre 'Eximir débitos y créditos' | Ambas | Usuario sin permisos no puede eximir | Usuario logueado sin el permiso específico | 1. Ingresar al detalle de usuario con un rol sin permiso de exención.<br>2. Verificar si el botón se oculta o se muestra deshabilitado. | El botón 'Eximir débitos y créditos' respeta los permisos del rol: se oculta o se deshabilita con tooltip explicativo para usuarios sin autorización. | Funcional / Seguridad | Media | Pendiente |
-| TC-011 | Cajas de datos | Contenido de las 3 cajas restantes | Ambas | Las 3 cajas muestran la información correcta y completa | Detalle de usuario cargado | 1. Revisar el contenido de cada una de las 3 cajas (Identificación + 2 restantes).<br>2. Contrastar contra los datos reales del usuario en base de datos / backend. | Los datos mostrados en las 3 cajas son correctos, completos y corresponden al usuario consultado, sin campos vacíos inesperados ni duplicación de información. | Funcional | Media | Pendiente |
-| TC-012 | Cajas de datos | Responsive de las 3 cajas | Ambas | Las 3 cajas se reacomodan correctamente en mobile/tablet | Detalle de usuario cargado | 1. Reducir el ancho de pantalla a tablet y luego a mobile.<br>2. Verificar que las 3 cajas se apilan/reorganizan sin overlap ni contenido cortado. | Las 3 cajas se muestran correctamente en todas las resoluciones, manteniendo la caja de Identificación (con el botón de eximir) legible y usable. | UI / Visual | Baja | Pendiente |
-
-## 3. BADGE DE ESTADO JUNTO AL TÍTULO
-
-*Casos en esta sección: 4*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-013 | Badge de estado | Tamaño del badge | Ambas | El badge de estado se muestra más grande y notorio | Detalle de usuario cargado | 1. Ingresar al detalle de usuario.<br>2. Ubicar el título 'Ver y editar usuario - Persona Física / Persona Jurídica'.<br>3. Verificar el badge de estado a su costado. | El badge de estado tiene un tamaño notoriamente mayor al anterior (tipografía y padding incrementados), destacándose claramente junto al título. | UI / Visual | Alta | Pendiente |
-| TC-014 | Badge de estado | Colores por estado | Ambas | El badge refleja el color/estilo correspondiente a cada estado | Usuarios de prueba en distintos estados (activo, inactivo, bloqueado, pendiente, etc.) | 1. Consultar el detalle de usuarios con distintos estados.<br>2. Verificar que el badge cambia de color/ícono según el estado real del usuario. | El badge muestra el color y texto correcto para cada estado posible, manteniendo el tamaño ampliado en todos los casos. | Funcional / UI | Alta | Pendiente |
-| TC-015 | Badge de estado | Título dinámico física/jurídica | Ambas | El título muestra correctamente 'Persona Física' o 'Persona Jurídica' | Un usuario físico y uno jurídico de prueba | 1. Ingresar al detalle de un usuario física.<br>2. Verificar el título.<br>3. Repetir con un usuario jurídica. | El título 'Ver y editar usuario - Persona Física' o '...Persona Jurídica' se muestra correctamente según el tipo de usuario, con el badge de estado ampliado a su costado en ambos casos. | Funcional | Media | Pendiente |
-| TC-016 | Badge de estado | Responsive del badge | Ambas | El badge no rompe el layout del título en mobile | Detalle de usuario cargado | 1. Reducir el ancho de pantalla a mobile.<br>2. Verificar el título y el badge de estado. | El badge ampliado se reubica correctamente (debajo o al costado del título) sin solaparse ni cortar texto en pantallas pequeñas. | UI / Visual | Baja | Pendiente |
-
-## 4. TABS GENERALES — Estado actual eliminado / Historial de cambios
-
-*Casos en esta sección: 7*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-017 | Tabs | Eliminación caja 'Estado actual' de tabs | Ambas | La caja/sección 'Estado actual' ya no existe debajo de las 3 cajas | Detalle de usuario cargado | 1. Ingresar al detalle de usuario.<br>2. Revisar la fila de tabs debajo de las 3 cajas de información.<br>3. Confirmar que no existe una caja separada de 'Estado actual'. | La caja 'Estado actual' fue eliminada por completo de la vista de tabs; no queda un espacio vacío ni un elemento residual. | Funcional | Alta | Pendiente |
-| TC-018 | Tabs | Tab 'Historial de cambios' al mismo nivel | Ambas | El tab 'Historial de cambios' está alineado con los demás tabs | Detalle de usuario cargado | 1. Ingresar al detalle de usuario.<br>2. Observar la fila de tabs (Contexto operativo, Riesgo y monitoreo, Módulos y productos, Subcuentas y CVU, Historial de cambios, etc.).<br>3. Verificar que 'Historial de cambios' está a la misma altura/nivel visual que los demás. | El tab 'Historial de cambios' se encuentra en la misma fila y con el mismo estilo (altura, tipografía, estado activo/inactivo) que el resto de los tabs principales. | UI / Visual | Alta | Pendiente |
-| TC-019 | Tabs | Contenido mock de Historial de cambios | Ambas | El tab 'Historial de cambios' muestra datos de ejemplo (mock) | Detalle de usuario cargado, tab 'Historial de cambios' seleccionado | 1. Hacer clic en el tab 'Historial de cambios'.<br>2. Verificar el listado mostrado. | Se muestra una tabla mock con al menos las columnas: campo/valor actualizado, valor anterior, valor nuevo, fecha y hora de actualización, y usuario que realizó el cambio. Los datos son de ejemplo pero consistentes en formato. | Funcional / Mock | Alta | Pendiente |
-| TC-020 | Tabs | Formato de fecha y hora en Historial | Ambas | La fecha y hora del historial se muestran en formato correcto | Tab 'Historial de cambios' con datos mock | 1. Revisar la columna de fecha/hora en el historial.<br>2. Verificar el formato (DD/MM/AAAA HH:mm). | La fecha y hora se muestran en un formato legible y consistente con el resto del sistema. | UI / Visual | Media | Pendiente |
-| TC-021 | Tabs | Columna 'Actualizado por' en Historial | Ambas | Se identifica correctamente quién realizó cada cambio | Tab 'Historial de cambios' con datos mock | 1. Revisar la columna correspondiente al usuario/operador que realizó el cambio. | Cada fila del historial indica claramente el nombre/usuario responsable del cambio registrado. | Funcional / Mock | Media | Pendiente |
-| TC-022 | Tabs | Paginación del Historial de cambios | Ambas | El listado de historial es una tabla paginada | Tab 'Historial de cambios' con datos mock (más de 1 página) | 1. Ingresar al tab 'Historial de cambios'.<br>2. Verificar controles de paginación (números de página, siguiente/anterior).<br>3. Cambiar de página. | El historial se muestra como tabla paginada, consistente con el resto de las tablas del detalle de usuario (movimientos, impuestos, alertas, bloqueos). | Funcional | Media | Pendiente |
-| TC-023 | Tabs | Estado vacío del Historial | Ambas | Manejo correcto cuando no hay historial de cambios | Usuario sin cambios registrados | 1. Ingresar al tab 'Historial de cambios' de un usuario sin modificaciones. | Se muestra un mensaje de estado vacío claro (ej. 'No hay cambios registrados'), sin errores ni tabla rota. | Funcional | Baja | Pendiente |
-
-## 5. CONTEXTO OPERATIVO — Subtabs 'Ver movimientos' / 'Ver impuestos'
-
-*Casos en esta sección: 7*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-024 | Contexto operativo | Subtabs dentro de Contexto operativo | Ambas | 'Ver movimientos' y 'Ver impuestos' son subtabs de Contexto operativo | Detalle de usuario cargado, tab 'Contexto operativo' seleccionado | 1. Ingresar al tab 'Contexto operativo'.<br>2. Verificar que 'Ver movimientos' y 'Ver impuestos' se presentan como subtabs dentro del mismo tab (no como secciones separadas ni páginas distintas). | 'Ver movimientos' y 'Ver impuestos' aparecen como subtabs navegables dentro de 'Contexto operativo', sin salir de la página de detalle del usuario. | Funcional / UI | Alta | Pendiente |
-| TC-025 | Contexto operativo | Tabla paginada de movimientos | Ambas | El subtab 'Ver movimientos' muestra tabla paginada | Usuario con movimientos registrados | 1. Seleccionar el subtab 'Ver movimientos'.<br>2. Verificar que los movimientos se listan en una tabla con paginación.<br>3. Navegar entre páginas. | Se muestra una tabla paginada con los movimientos del usuario (fecha, tipo, monto, estado, etc.) y la paginación funciona correctamente. | Funcional | Alta | Pendiente |
-| TC-026 | Contexto operativo | Botón 'Ir a página de movimientos' | Ambas | El botón navega a la página completa de movimientos | Subtab 'Ver movimientos' visible | 1. Hacer clic en el botón 'Ir a página de movimientos'.<br>2. Verificar la navegación. | El usuario es redirigido a la página completa/listado general de movimientos, preferentemente con el filtro de usuario ya aplicado. | Funcional / Navegación | Alta | Pendiente |
-| TC-027 | Contexto operativo | Tabla paginada de impuestos | Ambas | El subtab 'Ver impuestos' muestra tabla paginada | Usuario con impuestos registrados | 1. Seleccionar el subtab 'Ver impuestos'.<br>2. Verificar que los impuestos se listan en una tabla con paginación.<br>3. Navegar entre páginas. | Se muestra una tabla paginada con los impuestos del usuario y la paginación funciona correctamente. | Funcional | Alta | Pendiente |
-| TC-028 | Contexto operativo | Botón 'Ir a página de impuestos' | Ambas | El botón navega a la página completa de impuestos | Subtab 'Ver impuestos' visible | 1. Hacer clic en el botón 'Ir a página de impuestos'.<br>2. Verificar la navegación. | El usuario es redirigido a la página completa/listado general de impuestos, preferentemente con el filtro de usuario ya aplicado. | Funcional / Navegación | Alta | Pendiente |
-| TC-029 | Contexto operativo | Persistencia de contexto al cambiar de subtab | Ambas | Cambiar entre subtabs no recarga toda la página | Tab 'Contexto operativo' con ambos subtabs disponibles | 1. Alternar varias veces entre 'Ver movimientos' y 'Ver impuestos'.<br>2. Verificar que no hay recarga completa de la página ni pérdida de datos de otras secciones. | La navegación entre subtabs es fluida (sin recarga completa), y el resto de la información del usuario permanece intacta. | Funcional | Media | Pendiente |
-| TC-030 | Contexto operativo | Estado vacío de movimientos/impuestos | Ambas | Manejo de usuario sin movimientos o sin impuestos | Usuario sin movimientos y/o sin impuestos registrados | 1. Ingresar a los subtabs de un usuario sin datos en alguna de las dos categorías. | Se muestra un mensaje de estado vacío adecuado en cada subtab sin datos, sin romper la tabla ni el botón de navegación. | Funcional | Baja | Pendiente |
-
-## 6. RIESGO Y MONITOREO — Subtabs 'Ver alertas' / 'Ver bloqueos'
-
-*Casos en esta sección: 6*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-031 | Riesgo y monitoreo | Subtabs dentro de Riesgo y monitoreo | Ambas | 'Ver alertas' y 'Ver bloqueos' son subtabs de Riesgo y monitoreo | Detalle de usuario cargado, tab 'Riesgo y monitoreo' seleccionado | 1. Ingresar al tab 'Riesgo y monitoreo'.<br>2. Verificar que 'Ver alertas' y 'Ver bloqueos' se presentan como subtabs dentro del mismo tab. | 'Ver alertas' y 'Ver bloqueos' aparecen como subtabs navegables dentro de 'Riesgo y monitoreo', sin salir de la página de detalle del usuario. | Funcional / UI | Alta | Pendiente |
-| TC-032 | Riesgo y monitoreo | Tabla paginada de alertas | Ambas | El subtab 'Ver alertas' muestra tabla paginada | Usuario con alertas registradas | 1. Seleccionar el subtab 'Ver alertas'.<br>2. Verificar tabla con paginación.<br>3. Navegar entre páginas. | Se muestra una tabla paginada con las alertas del usuario (tipo, severidad, fecha, estado) y la paginación funciona correctamente. | Funcional | Alta | Pendiente |
-| TC-033 | Riesgo y monitoreo | Botón 'Ir a alertas' | Ambas | El botón navega a la página completa de alertas | Subtab 'Ver alertas' visible | 1. Hacer clic en el botón 'Ir a alertas'.<br>2. Verificar la navegación. | El usuario es redirigido a la página completa/listado general de alertas, preferentemente con el filtro de usuario ya aplicado. | Funcional / Navegación | Alta | Pendiente |
-| TC-034 | Riesgo y monitoreo | Tabla paginada de bloqueos | Ambas | El subtab 'Ver bloqueos' muestra tabla paginada | Usuario con bloqueos registrados | 1. Seleccionar el subtab 'Ver bloqueos'.<br>2. Verificar tabla con paginación.<br>3. Navegar entre páginas. | Se muestra una tabla paginada con los bloqueos del usuario (motivo, fecha, estado, responsable) y la paginación funciona correctamente. | Funcional | Alta | Pendiente |
-| TC-035 | Riesgo y monitoreo | Botón 'Ir a bloqueos' | Ambas | El botón navega a la página completa de bloqueos | Subtab 'Ver bloqueos' visible | 1. Hacer clic en el botón 'Ir a bloqueos'.<br>2. Verificar la navegación. | El usuario es redirigido a la página completa/listado general de bloqueos, preferentemente con el filtro de usuario ya aplicado. | Funcional / Navegación | Alta | Pendiente |
-| TC-036 | Riesgo y monitoreo | Consistencia de patrón subtab con Contexto operativo | Ambas | El patrón de subtabs+paginación+botón es idéntico al de Contexto operativo | Ambos tabs (Contexto operativo y Riesgo y monitoreo) disponibles | 1. Comparar la estructura visual y de interacción entre los subtabs de 'Contexto operativo' y 'Riesgo y monitoreo'. | Ambos tabs siguen el mismo patrón de diseño: subtabs, tabla paginada y botón de navegación a la página completa, garantizando consistencia de UX. | UI / Visual | Media | Pendiente |
-
-## 7. MÓDULOS Y PRODUCTOS — Popups con botón 'Ver todos'
-
-*Casos en esta sección: 8*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-037 | Módulos y productos | Popup 'Ver comercios PCT' | Ambas | El botón abre el popup actual con la información completa | Usuario con comercios PCT asociados | 1. Ingresar al tab 'Módulos y productos'.<br>2. Hacer clic en 'Ver comercios PCT'.<br>3. Verificar que se abre el popup con la información tal como se muestra actualmente. | El popup se abre correctamente y muestra toda la información de comercios PCT del usuario, igual que el comportamiento actual. | Funcional | Alta | Pendiente |
-| TC-038 | Módulos y productos | Botón 'Ver todos los comercios PCT' | Ambas | El popup incluye botón inferior que navega a la página completa | Popup de comercios PCT abierto | 1. Con el popup de comercios PCT abierto, ubicar el botón inferior.<br>2. Verificar que dice 'Ver todos los comercios PCT'.<br>3. Hacer clic y verificar la navegación. | El popup muestra el botón 'Ver todos los comercios PCT' al pie, y al hacer clic navega correctamente a la página general de comercios PCT. | Funcional / Navegación | Alta | Pendiente |
-| TC-039 | Módulos y productos | Popup 'Ver links de pago' | Ambas | El botón abre el popup actual con la información completa | Usuario con links de pago asociados | 1. Hacer clic en 'Ver links de pago'.<br>2. Verificar que se abre el popup con la información tal como se muestra actualmente. | El popup se abre correctamente y muestra toda la información de links de pago del usuario, igual que el comportamiento actual. | Funcional | Alta | Pendiente |
-| TC-040 | Módulos y productos | Botón 'Ver todos los links PCT' | Ambas | El popup incluye botón inferior que navega a la página completa | Popup de links de pago abierto | 1. Con el popup de links de pago abierto, ubicar el botón inferior.<br>2. Verificar que dice 'Ver todos los links PCT'.<br>3. Hacer clic y verificar la navegación. | El popup muestra el botón 'Ver todos los links PCT' al pie, y al hacer clic navega correctamente a la página general de links de pago. | Funcional / Navegación | Alta | Pendiente |
-| TC-041 | Módulos y productos | Popup 'Ver usuarios API' | Ambas | El botón abre el popup actual con la información completa | Usuario con usuarios API asociados | 1. Hacer clic en 'Ver usuarios API'.<br>2. Verificar que se abre el popup con la información tal como se muestra actualmente. | El popup se abre correctamente y muestra toda la información de usuarios API del usuario, igual que el comportamiento actual. | Funcional | Alta | Pendiente |
-| TC-042 | Módulos y productos | Botón 'Ver todos los usuarios API' | Ambas | El popup incluye botón inferior que navega a la página completa | Popup de usuarios API abierto | 1. Con el popup de usuarios API abierto, ubicar el botón inferior.<br>2. Verificar que dice 'Ver todos los usuarios API'.<br>3. Hacer clic y verificar la navegación. | El popup muestra el botón 'Ver todos los usuarios API' al pie, y al hacer clic navega correctamente a la página general de usuarios API. | Funcional / Navegación | Alta | Pendiente |
-| TC-043 | Módulos y productos | Cierre de los 3 popups | Ambas | Los popups se cierran correctamente con X, click afuera y ESC | Cualquiera de los 3 popups abierto | 1. Abrir cada popup.<br>2. Probar cerrar con el botón X, haciendo clic fuera del popup y presionando la tecla ESC. | Los 3 popups se cierran correctamente con cualquiera de los 3 métodos, sin afectar el estado del resto de la página. | Funcional / UI | Media | Pendiente |
-| TC-044 | Módulos y productos | Estado vacío en los 3 popups | Ambas | Manejo de usuario sin comercios/links/usuarios API asociados | Usuario sin datos en alguna de las 3 categorías | 1. Abrir cada popup para un usuario sin datos asociados en esa categoría. | Cada popup muestra un mensaje de estado vacío claro y el botón 'Ver todos...' sigue disponible y funcional. | Funcional | Baja | Pendiente |
-
-## 8. SUBCUENTAS Y CVU — Paridad con proyecto MollyPay-Enterprises (/app/subcuentas)
-
-*Casos en esta sección: 5*
-
-| ID | Módulo / Sección | Requerimiento relacionado | Aplica a | Caso de prueba | Precondiciones | Pasos | Resultado esperado | Tipo | Prioridad | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TC-045 | Subcuentas y CVU | Paridad de columnas de la tabla | Ambas | La tabla de subcuentas muestra las mismas columnas que /app/subcuentas | Acceso al proyecto de referencia MollyPay-Enterprises y al tab 'Subcuentas y CVU' | 1. Relevar las columnas mostradas en /app/subcuentas del proyecto MollyPay-Enterprises.<br>2. Comparar contra las columnas mostradas en el tab 'Subcuentas y CVU' del detalle de usuario. | Ambas tablas muestran exactamente el mismo set de columnas e información por subcuenta (CVU/CBU, alias, estado, saldo, fecha de creación, etc., según corresponda). | Funcional | Alta | Pendiente |
-| TC-046 | Subcuentas y CVU | Paridad de acciones por fila | Ambas | Las acciones disponibles por subcuenta coinciden con las de Enterprises | Mismo relevamiento de referencia | 1. Relevar las acciones disponibles por fila en /app/subcuentas (Enterprises).<br>2. Comparar contra las acciones disponibles en el tab 'Subcuentas y CVU'. | El conjunto de acciones (ver detalle, editar, bloquear, dar de baja, etc.) es idéntico entre ambos proyectos, respetando los mismos permisos por rol. | Funcional | Alta | Pendiente |
-| TC-047 | Subcuentas y CVU | Paridad de información al ejecutar cada acción | Ambas | La información mostrada al ejecutar cada acción coincide con Enterprises | Mismo relevamiento de referencia | 1. Ejecutar cada acción disponible (una por una) en /app/subcuentas (Enterprises) y registrar la información/modal mostrado.<br>2. Repetir la misma acción en el tab 'Subcuentas y CVU' del detalle de usuario.<br>3. Comparar campo por campo. | Cada acción muestra exactamente la misma información (mismos campos, formato y comportamiento) en ambos proyectos. | Funcional | Alta | Pendiente |
-| TC-048 | Subcuentas y CVU | Paginación de la tabla de subcuentas | Ambas | La tabla de subcuentas es paginada, igual que en Enterprises | Usuario con más de una página de subcuentas | 1. Ingresar al tab 'Subcuentas y CVU'.<br>2. Verificar que el listado usa paginación y comparar el comportamiento (tamaño de página, controles) contra Enterprises. | La paginación se comporta de forma equivalente a la de /app/subcuentas en el proyecto Enterprises. | Funcional | Media | Pendiente |
-| TC-049 | Subcuentas y CVU | Verificación de acceso al proyecto de referencia (BLOQUEANTE) | Ambas | Confirmar disponibilidad del proyecto Enterprises para el relevamiento | N/A | 1. Confirmar que el equipo de QA/desarrollo tiene acceso al repositorio/entorno de MollyPay-Enterprises (ruta local D:\Zerocode\PROYECTOS\MollyPay-Enterprises) para relevar /app/subcuentas. | Se cuenta con acceso confirmado (repo o ambiente desplegado) al proyecto Enterprises para poder ejecutar los casos TC de esta sección con precisión. Nota: esta ruta es local a la máquina del usuario y no fue accesible durante la generación de este documento; los casos de paridad deben validarse contra el proyecto real antes de darlos por aprobados. | Preparación / Bloqueante | Alta | Pendiente |
-
----
-
-**Total general de casos de prueba: 49**
-
----
-
-## Notas, supuestos y bloqueos del suite de pruebas
-
-
-**1. Acceso al proyecto de referencia (MollyPay-Enterprises):**
-La ruta 'D:\Zerocode\PROYECTOS\MollyPay-Enterprises' es una carpeta local en la máquina del usuario y no fue accesible desde este entorno para relevar el ítem de menú /app/subcuentas. Los casos de la Sección 8 (Subcuentas y CVU) fueron redactados en base a la paridad funcional descrita en el requerimiento (columnas, acciones y datos mostrados al ejecutar cada acción), pero deben validarse/afinarse contra el proyecto real antes de ejecutarlos, agregando el detalle exacto de columnas y acciones una vez relevadas.
-
-**2. Datos mock del Historial de cambios:**
-El requerimiento pide 'información de mock' para reflejar el funcionamiento del historial. Se recomienda que el equipo de desarrollo defina un set de datos de ejemplo (mínimo 5-10 registros) que cubra: alta de campo, modificación de campo existente y distintos usuarios/fechas, de forma de poder ejecutar los casos TC de paginación y contenido con variedad suficiente.
-
-**3. Nomenclatura de botones de navegación:**
-El requerimiento sugiere etiquetas como 'Ir a página de movimientos' / 'Ir a página de impuestos' y deja abierta la nomenclatura para 'Ir a alertas' / 'Ir a bloqueos'. Ajustar los textos exactos de los casos de prueba (Secciones 5 y 6) según el naming final que defina el equipo de producto/diseño.
-
-**4. Prioridades:**
-Se asignó 'Alta' a los cambios funcionales (reestructuración de cajas, subtabs, popups, paridad de subcuentas) y 'Media/Baja' a ajustes puramente visuales (espaciados, tamaños) o casos de borde (estados vacíos, responsive).
-
-**5. Cobertura no incluida explícitamente en el requerimiento (sugerida para el equipo):**
-- Pruebas de accesibilidad (contraste del badge ampliado, navegación por teclado en subtabs y popups).
-- Pruebas de regresión general del detalle de usuario tras los cambios (que no se rompan otras funcionalidades existentes).
-- Pruebas de performance al cargar tablas paginadas con grandes volúmenes de datos.
+## Resumen de cobertura
+- Depósitos: 4 casos · Retiros: 4 casos · Tarjeta: 7 casos · Pagos PCT: 6 casos · Cobros PCT: 6 casos · Todos: 8 casos · Confirmación: resuelta.
+- **Total: 35 casos de prueba ejecutables**, más el protocolo de iteración con tester (máximo 5 ciclos, Sección de protocolo arriba).

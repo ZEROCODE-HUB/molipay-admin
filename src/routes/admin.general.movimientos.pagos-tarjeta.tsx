@@ -19,7 +19,7 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")
   component: PagosTarjetaPage,
 });
 
-const estados = ["Creado", "Abierto", "Pendiente", "Completado", "Expirado", "Rechazado"];
+const estados = ["CREADO", "ABIERTO", "EN PROGRESO", "APROBADO", "EXPIRADO", "RECHAZADO"];
 
 type PagoTarjeta = {
   legajo: string;
@@ -38,7 +38,7 @@ const data: PagoTarjeta[] = [
     monto: "$ 22.400,00",
     medioPago: "Visa",
     cuotas: "3",
-    estado: "Completado",
+    estado: "APROBADO",
     fecha: "13/01/2025 10:00",
   },
   {
@@ -47,8 +47,44 @@ const data: PagoTarjeta[] = [
     monto: "$ 12.499,00",
     medioPago: "Mastercard",
     cuotas: "1",
-    estado: "Pendiente",
+    estado: "EN PROGRESO",
     fecha: "10/01/2025 20:15",
+  },
+  {
+    legajo: "MOV-022",
+    usuario: "lucas.rivas@email.com",
+    monto: "$ 8.900,00",
+    medioPago: "Visa",
+    cuotas: "0",
+    estado: "CREADO",
+    fecha: "10/01/2025 11:30",
+  },
+  {
+    legajo: "MOV-023",
+    usuario: "sofia.moreno@email.com",
+    monto: "$ 31.250,00",
+    medioPago: "American Express",
+    cuotas: "6",
+    estado: "ABIERTO",
+    fecha: "09/01/2025 16:45",
+  },
+  {
+    legajo: "MOV-024",
+    usuario: "marcos.peralta@email.com",
+    monto: "$ 5.600,00",
+    medioPago: "Mastercard",
+    cuotas: "1",
+    estado: "EXPIRADO",
+    fecha: "08/01/2025 19:00",
+  },
+  {
+    legajo: "MOV-025",
+    usuario: "clara.molina@email.com",
+    monto: "$ 14.300,00",
+    medioPago: "Visa",
+    cuotas: "3",
+    estado: "RECHAZADO",
+    fecha: "07/01/2025 13:10",
   },
 ];
 

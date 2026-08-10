@@ -19,7 +19,7 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-qr")({
   component: PagosQrPage,
 });
 
-const estados = ["Pendiente", "Completado", "Fallido", "Reembolsado"];
+const estados = ["EN PROGRESO", "APROBADO", "RECHAZADO", "REEMBOLSADO"];
 
 type PagoQr = {
   usuario: string;
@@ -38,8 +38,35 @@ const data: PagoQr[] = [
     qrIdTx: "QR-TX-008",
     monto: "$ 3.750,00",
     cuitMerchant: "30-89012345-6",
-    estado: "Completado",
+    estado: "APROBADO",
     fecha: "13/01/2025 12:15",
+  },
+  {
+    usuario: "agustin.vila@email.com",
+    legajo: "MOV-026",
+    qrIdTx: "QR-TX-026",
+    monto: "$ 2.100,00",
+    cuitMerchant: "30-11223344-7",
+    estado: "EN PROGRESO",
+    fecha: "12/01/2025 09:25",
+  },
+  {
+    usuario: "florencia.sosa@email.com",
+    legajo: "MOV-027",
+    qrIdTx: "QR-TX-027",
+    monto: "$ 7.890,00",
+    cuitMerchant: "30-55667788-9",
+    estado: "RECHAZADO",
+    fecha: "11/01/2025 18:40",
+  },
+  {
+    usuario: "matias.luna@email.com",
+    legajo: "MOV-028",
+    qrIdTx: "QR-TX-028",
+    monto: "$ 1.450,00",
+    cuitMerchant: "30-22334455-6",
+    estado: "REEMBOLSADO",
+    fecha: "10/01/2025 10:05",
   },
 ];
 

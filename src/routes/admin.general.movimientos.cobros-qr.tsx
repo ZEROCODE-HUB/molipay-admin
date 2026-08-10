@@ -22,7 +22,7 @@ export const Route = createFileRoute("/admin/general/movimientos/cobros-qr")({
 
 const tiposQr = ["Estático", "Dinámico", "Modo abierto"];
 const estadosQr = ["Activo", "Usado", "Expirado", "Cancelado"];
-const estados = ["Pendiente", "Completado", "Fallido", "Reembolsado"];
+const estados = ["EN PROGRESO", "APROBADO", "RECHAZADO", "REEMBOLSADO"];
 
 type CobroQr = {
   usuario: string;
@@ -45,7 +45,7 @@ const initialData: CobroQr[] = [
     montoTotal: "$ 1.200,00",
     comision: "$ 36,00",
     montoNeto: "$ 1.164,00",
-    estado: "Completado",
+    estado: "APROBADO",
     fecha: "12/01/2025 18:45",
   },
   {
@@ -56,8 +56,30 @@ const initialData: CobroQr[] = [
     montoTotal: "$ 4.500,00",
     comision: "$ 135,00",
     montoNeto: "$ 4.365,00",
-    estado: "Pendiente",
+    estado: "EN PROGRESO",
     fecha: "12/01/2025 20:10",
+  },
+  {
+    usuario: "nicolas.aguirre@email.com",
+    legajo: "MOV-029",
+    tipoQr: "Dinámico",
+    estadoQr: "Usado",
+    montoTotal: "$ 6.300,00",
+    comision: "$ 189,00",
+    montoNeto: "$ 6.111,00",
+    estado: "RECHAZADO",
+    fecha: "11/01/2025 15:20",
+  },
+  {
+    usuario: "martina.diaz@email.com",
+    legajo: "MOV-030",
+    tipoQr: "Estático",
+    estadoQr: "Expirado",
+    montoTotal: "$ 980,00",
+    comision: "$ 29,40",
+    montoNeto: "$ 950,60",
+    estado: "REEMBOLSADO",
+    fecha: "10/01/2025 11:35",
   },
 ];
 
@@ -109,12 +131,12 @@ function CobrosQrPage() {
           open={!!reembolsar}
           onClose={() => setReembolsar(null)}
           title="Reembolsar cobro"
-          message={`¿Estás seguro de reembolsar el cobro ${reembolsar.legajo}? El estado pasará a Reembolsado.`}
+          message={`¿Estás seguro de reembolsar el cobro ${reembolsar.legajo}? El estado pasará a REEMBOLSADO.`}
           confirmLabel="Reembolsar"
           onConfirm={() =>
             setData((prev) =>
               prev.map((c) =>
-                c.legajo === reembolsar.legajo ? { ...c, estado: "Reembolsado" } : c,
+                c.legajo === reembolsar.legajo ? { ...c, estado: "REEMBOLSADO" } : c,
               ),
             )
           }
