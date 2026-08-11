@@ -40,6 +40,7 @@ import { Route as AdminGeneralMovimientosIndexRouteImport } from './routes/admin
 import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
 import { Route as AdminComerciosTransferenciaIndexRouteImport } from './routes/admin.comercios.transferencia.index'
 import { Route as AdminComerciosImpuestosIndexRouteImport } from './routes/admin.comercios.impuestos.index'
+import { Route as AdminComerciosApisIndexRouteImport } from './routes/admin.comercios.apis.index'
 import { Route as AdminAdministracionUsuariosIndexRouteImport } from './routes/admin.administracion.usuarios.index'
 import { Route as AdminAdministracionSoporteIndexRouteImport } from './routes/admin.administracion.soporte.index'
 import { Route as AdminAdministracionRegistrosIndexRouteImport } from './routes/admin.administracion.registros.index'
@@ -62,12 +63,13 @@ import { Route as AdminComerciosTransferenciaCategoriasRouteImport } from './rou
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
 import { Route as AdminComerciosImpuestosIngresosBrutosRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos'
 import { Route as AdminComerciosImpuestosDebitosCreditosRouteImport } from './routes/admin.comercios.impuestos.debitos-creditos'
+import { Route as AdminComerciosApisRestriccionesRouteImport } from './routes/admin.comercios.apis.restricciones'
+import { Route as AdminComerciosApisEndpointsRouteImport } from './routes/admin.comercios.apis.endpoints'
 import { Route as AdminAdministracionUsuariosRolesRouteImport } from './routes/admin.administracion.usuarios.roles'
 import { Route as AdminAdministracionSoporteBloqueoRouteImport } from './routes/admin.administracion.soporte.bloqueo'
 import { Route as AdminAdministracionRegistrosTotalRouteImport } from './routes/admin.administracion.registros.total'
 import { Route as AdminAdministracionRegistrosActividadRouteImport } from './routes/admin.administracion.registros.actividad'
 import { Route as AdminComerciosImpuestosIngresosBrutosIndexRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos.index'
-import { Route as AdminComerciosImpuestosIngresosBrutosReportesRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos.reportes'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -236,6 +238,11 @@ const AdminComerciosImpuestosIndexRoute =
     path: '/',
     getParentRoute: () => AdminComerciosImpuestosRoute,
   } as any)
+const AdminComerciosApisIndexRoute = AdminComerciosApisIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminComerciosApisRoute,
+} as any)
 const AdminAdministracionUsuariosIndexRoute =
   AdminAdministracionUsuariosIndexRouteImport.update({
     id: '/',
@@ -367,6 +374,18 @@ const AdminComerciosImpuestosDebitosCreditosRoute =
     path: '/debitos-creditos',
     getParentRoute: () => AdminComerciosImpuestosRoute,
   } as any)
+const AdminComerciosApisRestriccionesRoute =
+  AdminComerciosApisRestriccionesRouteImport.update({
+    id: '/restricciones',
+    path: '/restricciones',
+    getParentRoute: () => AdminComerciosApisRoute,
+  } as any)
+const AdminComerciosApisEndpointsRoute =
+  AdminComerciosApisEndpointsRouteImport.update({
+    id: '/endpoints',
+    path: '/endpoints',
+    getParentRoute: () => AdminComerciosApisRoute,
+  } as any)
 const AdminAdministracionUsuariosRolesRoute =
   AdminAdministracionUsuariosRolesRouteImport.update({
     id: '/roles',
@@ -397,12 +416,6 @@ const AdminComerciosImpuestosIngresosBrutosIndexRoute =
     path: '/',
     getParentRoute: () => AdminComerciosImpuestosIngresosBrutosRoute,
   } as any)
-const AdminComerciosImpuestosIngresosBrutosReportesRoute =
-  AdminComerciosImpuestosIngresosBrutosReportesRouteImport.update({
-    id: '/reportes',
-    path: '/reportes',
-    getParentRoute: () => AdminComerciosImpuestosIngresosBrutosRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -420,7 +433,7 @@ export interface FileRoutesByFullPath {
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
-  '/admin/comercios/apis': typeof AdminComerciosApisRoute
+  '/admin/comercios/apis': typeof AdminComerciosApisRouteWithChildren
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
@@ -435,6 +448,8 @@ export interface FileRoutesByFullPath {
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
+  '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
@@ -457,12 +472,12 @@ export interface FileRoutesByFullPath {
   '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
   '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
-  '/admin/comercios/impuestos/ingresos-brutos/reportes': typeof AdminComerciosImpuestosIngresosBrutosReportesRoute
   '/admin/comercios/impuestos/ingresos-brutos/': typeof AdminComerciosImpuestosIngresosBrutosIndexRoute
 }
 export interface FileRoutesByTo {
@@ -475,7 +490,6 @@ export interface FileRoutesByTo {
   '/legales/terminos': typeof LegalesTerminosRoute
   '/admin': typeof AdminIndexRoute
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
-  '/admin/comercios/apis': typeof AdminComerciosApisRoute
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
   '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
@@ -485,6 +499,8 @@ export interface FileRoutesByTo {
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
+  '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
@@ -506,12 +522,12 @@ export interface FileRoutesByTo {
   '/admin/administracion/registros': typeof AdminAdministracionRegistrosIndexRoute
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/comercios/apis': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaIndexRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios': typeof AdminGeneralUsuariosIndexRoute
-  '/admin/comercios/impuestos/ingresos-brutos/reportes': typeof AdminComerciosImpuestosIngresosBrutosReportesRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosIndexRoute
 }
 export interface FileRoutesById {
@@ -531,7 +547,7 @@ export interface FileRoutesById {
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
-  '/admin/comercios/apis': typeof AdminComerciosApisRoute
+  '/admin/comercios/apis': typeof AdminComerciosApisRouteWithChildren
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
@@ -546,6 +562,8 @@ export interface FileRoutesById {
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
+  '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
+  '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
@@ -568,12 +586,12 @@ export interface FileRoutesById {
   '/admin/administracion/registros/': typeof AdminAdministracionRegistrosIndexRoute
   '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
+  '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
-  '/admin/comercios/impuestos/ingresos-brutos/reportes': typeof AdminComerciosImpuestosIngresosBrutosReportesRoute
   '/admin/comercios/impuestos/ingresos-brutos/': typeof AdminComerciosImpuestosIngresosBrutosIndexRoute
 }
 export interface FileRouteTypes {
@@ -609,6 +627,8 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
+    | '/admin/comercios/apis/endpoints'
+    | '/admin/comercios/apis/restricciones'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
@@ -631,12 +651,12 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros/'
     | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
+    | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
-    | '/admin/comercios/impuestos/ingresos-brutos/reportes'
     | '/admin/comercios/impuestos/ingresos-brutos/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -649,7 +669,6 @@ export interface FileRouteTypes {
     | '/legales/terminos'
     | '/admin'
     | '/admin/administracion/reportes'
-    | '/admin/comercios/apis'
     | '/admin/comercios/link-pago'
     | '/admin/configuracion/mensajes'
     | '/admin/configuracion/telegram'
@@ -659,6 +678,8 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
+    | '/admin/comercios/apis/endpoints'
+    | '/admin/comercios/apis/restricciones'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
@@ -680,12 +701,12 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros'
     | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
+    | '/admin/comercios/apis'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/transferencia'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
-    | '/admin/comercios/impuestos/ingresos-brutos/reportes'
     | '/admin/comercios/impuestos/ingresos-brutos'
   id:
     | '__root__'
@@ -719,6 +740,8 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
     | '/admin/administracion/usuarios/roles'
+    | '/admin/comercios/apis/endpoints'
+    | '/admin/comercios/apis/restricciones'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
@@ -741,12 +764,12 @@ export interface FileRouteTypes {
     | '/admin/administracion/registros/'
     | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
+    | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
-    | '/admin/comercios/impuestos/ingresos-brutos/reportes'
     | '/admin/comercios/impuestos/ingresos-brutos/'
   fileRoutesById: FileRoutesById
 }
@@ -978,6 +1001,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosImpuestosIndexRouteImport
       parentRoute: typeof AdminComerciosImpuestosRoute
     }
+    '/admin/comercios/apis/': {
+      id: '/admin/comercios/apis/'
+      path: '/'
+      fullPath: '/admin/comercios/apis/'
+      preLoaderRoute: typeof AdminComerciosApisIndexRouteImport
+      parentRoute: typeof AdminComerciosApisRoute
+    }
     '/admin/administracion/usuarios/': {
       id: '/admin/administracion/usuarios/'
       path: '/'
@@ -1132,6 +1162,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosImpuestosDebitosCreditosRouteImport
       parentRoute: typeof AdminComerciosImpuestosRoute
     }
+    '/admin/comercios/apis/restricciones': {
+      id: '/admin/comercios/apis/restricciones'
+      path: '/restricciones'
+      fullPath: '/admin/comercios/apis/restricciones'
+      preLoaderRoute: typeof AdminComerciosApisRestriccionesRouteImport
+      parentRoute: typeof AdminComerciosApisRoute
+    }
+    '/admin/comercios/apis/endpoints': {
+      id: '/admin/comercios/apis/endpoints'
+      path: '/endpoints'
+      fullPath: '/admin/comercios/apis/endpoints'
+      preLoaderRoute: typeof AdminComerciosApisEndpointsRouteImport
+      parentRoute: typeof AdminComerciosApisRoute
+    }
     '/admin/administracion/usuarios/roles': {
       id: '/admin/administracion/usuarios/roles'
       path: '/roles'
@@ -1167,25 +1211,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosImpuestosIngresosBrutosIndexRouteImport
       parentRoute: typeof AdminComerciosImpuestosIngresosBrutosRoute
     }
-    '/admin/comercios/impuestos/ingresos-brutos/reportes': {
-      id: '/admin/comercios/impuestos/ingresos-brutos/reportes'
-      path: '/reportes'
-      fullPath: '/admin/comercios/impuestos/ingresos-brutos/reportes'
-      preLoaderRoute: typeof AdminComerciosImpuestosIngresosBrutosReportesRouteImport
-      parentRoute: typeof AdminComerciosImpuestosIngresosBrutosRoute
-    }
   }
 }
 
+interface AdminComerciosApisRouteChildren {
+  AdminComerciosApisEndpointsRoute: typeof AdminComerciosApisEndpointsRoute
+  AdminComerciosApisRestriccionesRoute: typeof AdminComerciosApisRestriccionesRoute
+  AdminComerciosApisIndexRoute: typeof AdminComerciosApisIndexRoute
+}
+
+const AdminComerciosApisRouteChildren: AdminComerciosApisRouteChildren = {
+  AdminComerciosApisEndpointsRoute: AdminComerciosApisEndpointsRoute,
+  AdminComerciosApisRestriccionesRoute: AdminComerciosApisRestriccionesRoute,
+  AdminComerciosApisIndexRoute: AdminComerciosApisIndexRoute,
+}
+
+const AdminComerciosApisRouteWithChildren =
+  AdminComerciosApisRoute._addFileChildren(AdminComerciosApisRouteChildren)
+
 interface AdminComerciosImpuestosIngresosBrutosRouteChildren {
-  AdminComerciosImpuestosIngresosBrutosReportesRoute: typeof AdminComerciosImpuestosIngresosBrutosReportesRoute
   AdminComerciosImpuestosIngresosBrutosIndexRoute: typeof AdminComerciosImpuestosIngresosBrutosIndexRoute
 }
 
 const AdminComerciosImpuestosIngresosBrutosRouteChildren: AdminComerciosImpuestosIngresosBrutosRouteChildren =
   {
-    AdminComerciosImpuestosIngresosBrutosReportesRoute:
-      AdminComerciosImpuestosIngresosBrutosReportesRoute,
     AdminComerciosImpuestosIngresosBrutosIndexRoute:
       AdminComerciosImpuestosIngresosBrutosIndexRoute,
   }
@@ -1239,7 +1288,7 @@ const AdminComerciosTransferenciaRouteWithChildren =
   )
 
 interface AdminComerciosRouteChildren {
-  AdminComerciosApisRoute: typeof AdminComerciosApisRoute
+  AdminComerciosApisRoute: typeof AdminComerciosApisRouteWithChildren
   AdminComerciosImpuestosRoute: typeof AdminComerciosImpuestosRouteWithChildren
   AdminComerciosLinkPagoRoute: typeof AdminComerciosLinkPagoRoute
   AdminComerciosTransferenciaRoute: typeof AdminComerciosTransferenciaRouteWithChildren
@@ -1247,7 +1296,7 @@ interface AdminComerciosRouteChildren {
 }
 
 const AdminComerciosRouteChildren: AdminComerciosRouteChildren = {
-  AdminComerciosApisRoute: AdminComerciosApisRoute,
+  AdminComerciosApisRoute: AdminComerciosApisRouteWithChildren,
   AdminComerciosImpuestosRoute: AdminComerciosImpuestosRouteWithChildren,
   AdminComerciosLinkPagoRoute: AdminComerciosLinkPagoRoute,
   AdminComerciosTransferenciaRoute:

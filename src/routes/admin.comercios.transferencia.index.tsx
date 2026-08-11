@@ -3,8 +3,9 @@ import { useState, type ReactNode } from "react";
 import { Eye, Edit3, CheckCircle, XCircle, FileCheck, Trash2, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { PageHeader, Badge, Card, BtnOutline } from "@/components/portal-shell";
+import { PageHeader, Badge, Card, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { FormDialog } from "@/components/form-dialog";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/")({
   component: Page,
@@ -343,13 +344,125 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
   );
 }
 
+function ComercioFormModal({
+  comercio,
+  onClose,
+  onSave,
+}: {
+  comercio: Comercio;
+  onClose: () => void;
+  onSave: (updated: Comercio) => void;
+}) {
+  const [form, setForm] = useState({
+    usuario: comercio.usuario,
+    legajo: comercio.legajo,
+    categoria: comercio.categoria,
+    descripcionCategoria: comercio.descripcionCategoria,
+    estado: comercio.estado,
+    nivel: comercio.nivel,
+  });
+
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title="Editar comercio"
+      description={`Modificá los datos del comercio ${comercio.usuario}.`}
+      onSubmit={() =>
+        onSave({
+          ...comercio,
+          usuario: form.usuario,
+          legajo: form.legajo,
+          categoria: form.categoria,
+          descripcionCategoria: form.descripcionCategoria,
+          estado: form.estado,
+          nivel: form.nivel,
+        })
+      }
+      submitLabel="Guardar cambios"
+      size="lg"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <Label htmlFor="com-usuario">Usuario</Label>
+          <Input
+            id="com-usuario"
+            value={form.usuario}
+            onChange={(e) => setForm((f) => ({ ...f, usuario: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="com-legajo">Legajo</Label>
+          <Input
+            id="com-legajo"
+            value={form.legajo}
+            onChange={(e) => setForm((f) => ({ ...f, legajo: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="com-categoria">Código de categoría</Label>
+          <Input
+            id="com-categoria"
+            value={form.categoria}
+            onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="com-desc">Descripción de categoría</Label>
+          <Input
+            id="com-desc"
+            value={form.descripcionCategoria}
+            onChange={(e) => setForm((f) => ({ ...f, descripcionCategoria: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="com-estado">Estado</Label>
+          <select
+            id="com-estado"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={form.estado}
+            onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoComercio }))}
+          >
+            {ESTADOS.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="com-nivel">Nivel</Label>
+          <select
+            id="com-nivel"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={form.nivel}
+            onChange={(e) => setForm((f) => ({ ...f, nivel: e.target.value as NivelComercio }))}
+          >
+            {NIVELES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </FormDialog>
+  );
+}
+
 function Page() {
   const [data, setData] = useState<Comercio[]>(dataInicial);
   const [detail, setDetail] = useState<Comercio | null>(null);
+  const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
 
   const setEstado = (id: number, estado: EstadoComercio) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, estado } : d)));
+  };
+
+  const guardarEdicion = (updated: Comercio) => {
+    setData((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+    setEditTarget(null);
   };
 
   const getActions = (r: Comercio): ActionItem[] => [
@@ -362,7 +475,7 @@ function Page() {
     },
     { label: "Validar", icon: FileCheck, onClick: () => setEstado(r.id, "Activado") },
     { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
-    { label: "Editar", icon: Edit3, onClick: () => setDetail(r) },
+    { label: "Editar", icon: Edit3, onClick: () => setEditTarget(r) },
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
   ];
 
@@ -420,6 +533,13 @@ function Page() {
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detail && <ComercioModal comercio={detail} onClose={() => setDetail(null)} />}
+      {editTarget && (
+        <ComercioFormModal
+          comercio={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={guardarEdicion}
+        />
+      )}
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}

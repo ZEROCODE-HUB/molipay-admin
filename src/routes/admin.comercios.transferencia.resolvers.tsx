@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle, XCircle, Edit3 } from "lucide-react";
+import { CheckCircle, XCircle, Edit3, Trash2, Plus } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/resolvers")({
   component: Page,
@@ -119,27 +120,38 @@ const dataInicial: Resolver[] = [
 
 const ESTADOS = ["Activo", "Inactivo"];
 
+const blankForm: ResolverForm = {
+  cuit: "",
+  nombre: "",
+  nombreReverso: "",
+  formatoWeb: "",
+  pcpId: "",
+  idPcp: "",
+  url: "",
+  token: "",
+  asHeader: false,
+  soa: false,
+};
+
 function Page() {
   const [data, setData] = useState<Resolver[]>(dataInicial);
   const [editTarget, setEditTarget] = useState<Resolver | null>(null);
-  const [form, setForm] = useState<ResolverForm>({
-    cuit: "",
-    nombre: "",
-    nombreReverso: "",
-    formatoWeb: "",
-    pcpId: "",
-    idPcp: "",
-    url: "",
-    token: "",
-    asHeader: false,
-    soa: false,
-  });
+  const [showNew, setShowNew] = useState(false);
+  const [form, setForm] = useState<ResolverForm>(blankForm);
+  const [confirmDelete, setConfirmDelete] = useState<Resolver | null>(null);
 
   const toggleEstado = (id: number, estado: Resolver["estado"]) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, estado } : d)));
   };
 
+  const openNew = () => {
+    setEditTarget(null);
+    setForm(blankForm);
+    setShowNew(true);
+  };
+
   const openEdit = (r: Resolver) => {
+    setShowNew(false);
     setEditTarget(r);
     setForm({
       cuit: r.cuit,
@@ -156,27 +168,55 @@ function Page() {
   };
 
   const guardar = () => {
-    if (!editTarget) return;
-    setData((prev) =>
-      prev.map((d) =>
-        d.id === editTarget.id
-          ? {
-              ...d,
-              cuit: form.cuit,
-              nombre: form.nombre,
-              nombreReverso: form.nombreReverso,
-              formatoWeb: form.formatoWeb,
-              pcpId: form.pcpId,
-              idPcp: form.idPcp,
-              url: form.url,
-              token: form.token,
-              asHeader: form.asHeader,
-              soa: form.soa,
-            }
-          : d,
-      ),
-    );
-    setEditTarget(null);
+    if (!editTarget && (form.nombre.trim() === "" || form.cuit.trim() === "")) return;
+    if (editTarget) {
+      setData((prev) =>
+        prev.map((d) =>
+          d.id === editTarget.id
+            ? {
+                ...d,
+                cuit: form.cuit,
+                nombre: form.nombre,
+                nombreReverso: form.nombreReverso,
+                formatoWeb: form.formatoWeb,
+                pcpId: form.pcpId,
+                idPcp: form.idPcp,
+                url: form.url,
+                token: form.token,
+                asHeader: form.asHeader,
+                soa: form.soa,
+              }
+            : d,
+        ),
+      );
+      setEditTarget(null);
+    } else {
+      const id = Math.max(0, ...data.map((d) => d.id)) + 1;
+      setData((prev) => [
+        ...prev,
+        {
+          id,
+          nombre: form.nombre.trim(),
+          cuit: form.cuit.trim(),
+          nombreReverso: form.nombreReverso.trim(),
+          formatoWeb: form.formatoWeb,
+          pcpId: form.pcpId.trim(),
+          idPcp: form.pcpId.trim(),
+          url: form.url.trim(),
+          token: form.token.trim(),
+          asHeader: form.asHeader,
+          soa: form.soa,
+          estado: "Activo",
+        },
+      ]);
+    }
+    setShowNew(false);
+    setForm(blankForm);
+  };
+
+  const eliminar = (id: number) => {
+    setData((prev) => prev.filter((d) => d.id !== id));
+    setConfirmDelete(null);
   };
 
   const getActions = (r: Resolver): ActionItem[] => [
@@ -188,6 +228,7 @@ function Page() {
       onClick: () => toggleEstado(r.id, "Inactivo"),
     },
     { label: "Editar", icon: Edit3, onClick: () => openEdit(r) },
+    { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
   ];
 
   const columns: Column<Resolver>[] = [
@@ -210,7 +251,7 @@ function Page() {
       label: "URL del resolver",
       sortable: true,
       filterable: true,
-      render: (r) => <span className="text-xs font-mono text-foreground/80">{r.url}</span>,
+      render: (r) => <span className="text-xs font-mono text-foreground/80">{r.url || "—"}</span>,
     },
     {
       key: "estado",
@@ -227,6 +268,14 @@ function Page() {
       <PageHeader
         title="Resolvers"
         description="Gestión de resolvers PCT (pagos con transferencia)."
+        action={
+          <button
+            onClick={openNew}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
+          >
+            <Plus size={14} /> Nuevo resolver
+          </button>
+        }
       />
       <DataTable
         columns={columns}
@@ -235,18 +284,33 @@ function Page() {
         pageSize={10}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
-      {editTarget && (
+
+      {(showNew || editTarget) && (
         <FormDialog
           open
-          onClose={() => setEditTarget(null)}
-          title="Editar resolver"
-          description={`Configuración del resolver "${editTarget.nombre}".`}
+          onClose={() => {
+            setShowNew(false);
+            setEditTarget(null);
+          }}
+          title={editTarget ? "Editar resolver" : "Alta nuevo resolver"}
+          description={
+            editTarget
+              ? `Configuración del resolver "${editTarget.nombre}".`
+              : "Complete los datos para crear un nuevo resolver."
+          }
           onSubmit={guardar}
-          submitLabel="Guardar"
-          cancelLabel="Cerrar"
+          submitLabel={editTarget ? "Guardar cambios" : "Crear resolver"}
           size="lg"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="res-nombre">Nombre</Label>
+              <Input
+                id="res-nombre"
+                value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+              />
+            </div>
             <div>
               <Label htmlFor="res-cuit">CUIT</Label>
               <Input
@@ -257,43 +321,21 @@ function Page() {
               />
             </div>
             <div>
-              <Label htmlFor="res-nombre">Nombre</Label>
-              <Input
-                id="res-nombre"
-                value={form.nombre}
-                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="res-reverso">Nombre reverso</Label>
+              <Label htmlFor="res-reverso">Nombre Reverso (formato web)</Label>
               <Input
                 id="res-reverso"
                 value={form.nombreReverso}
                 onChange={(e) => setForm((f) => ({ ...f, nombreReverso: e.target.value }))}
+                placeholder="com.ejemplo.app"
               />
             </div>
             <div>
-              <Label htmlFor="res-formato">Formato web</Label>
+              <Label htmlFor="res-psp-id">PSP ID</Label>
               <Input
-                id="res-formato"
-                value={form.formatoWeb}
-                onChange={(e) => setForm((f) => ({ ...f, formatoWeb: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="res-pcp-id">PCP ID</Label>
-              <Input
-                id="res-pcp-id"
+                id="res-psp-id"
                 value={form.pcpId}
                 onChange={(e) => setForm((f) => ({ ...f, pcpId: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="res-id-pcp">ID del PCP</Label>
-              <Input
-                id="res-id-pcp"
-                value={form.idPcp}
-                onChange={(e) => setForm((f) => ({ ...f, idPcp: e.target.value }))}
+                placeholder="PCP-XXXX"
               />
             </div>
             <div className="sm:col-span-2">
@@ -302,7 +344,11 @@ function Page() {
                 id="res-url"
                 value={form.url}
                 onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+                placeholder="https://..."
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Si no se coloca URL, no llevará IEP.
+              </p>
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="res-token">Token</Label>
@@ -319,7 +365,7 @@ function Page() {
                 checked={form.asHeader}
                 onChange={(e) => setForm((f) => ({ ...f, asHeader: e.target.checked }))}
               />
-              As header
+              AC en Header
             </label>
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
@@ -328,11 +374,23 @@ function Page() {
                 checked={form.soa}
                 onChange={(e) => setForm((f) => ({ ...f, soa: e.target.checked }))}
               />
-              SOA
+              Es OAuth
             </label>
           </div>
         </FormDialog>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Eliminar resolver"
+        message={`¿Estás seguro de eliminar el resolver "${confirmDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDelete) eliminar(confirmDelete.id);
+        }}
+      />
     </>
   );
 }
