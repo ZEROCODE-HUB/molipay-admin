@@ -25,8 +25,7 @@ import { Route as AdminComerciosIndexRouteImport } from './routes/admin.comercio
 import { Route as AdminGeneralUsuariosRouteImport } from './routes/admin.general.usuarios'
 import { Route as AdminGeneralMovimientosRouteImport } from './routes/admin.general.movimientos'
 import { Route as AdminGeneralAlertasRouteImport } from './routes/admin.general.alertas'
-import { Route as AdminConfiguracionTelegramRouteImport } from './routes/admin.configuracion.telegram'
-import { Route as AdminConfiguracionMensajesRouteImport } from './routes/admin.configuracion.mensajes'
+import { Route as AdminConfiguracionNotificacionesRouteImport } from './routes/admin.configuracion.notificaciones'
 import { Route as AdminComerciosTransferenciaRouteImport } from './routes/admin.comercios.transferencia'
 import { Route as AdminComerciosLinkPagoRouteImport } from './routes/admin.comercios.link-pago'
 import { Route as AdminComerciosImpuestosRouteImport } from './routes/admin.comercios.impuestos'
@@ -38,6 +37,7 @@ import { Route as AdminAdministracionRegistrosRouteImport } from './routes/admin
 import { Route as AdminGeneralUsuariosIndexRouteImport } from './routes/admin.general.usuarios.index'
 import { Route as AdminGeneralMovimientosIndexRouteImport } from './routes/admin.general.movimientos.index'
 import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
+import { Route as AdminConfiguracionNotificacionesIndexRouteImport } from './routes/admin.configuracion.notificaciones.index'
 import { Route as AdminComerciosTransferenciaIndexRouteImport } from './routes/admin.comercios.transferencia.index'
 import { Route as AdminComerciosImpuestosIndexRouteImport } from './routes/admin.comercios.impuestos.index'
 import { Route as AdminComerciosApisIndexRouteImport } from './routes/admin.comercios.apis.index'
@@ -58,6 +58,8 @@ import { Route as AdminGeneralMovimientosCobrosQrRouteImport } from './routes/ad
 import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './routes/admin.general.alertas.parametros-bloqueos'
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
+import { Route as AdminConfiguracionNotificacionesCatalogoRouteImport } from './routes/admin.configuracion.notificaciones.catalogo'
+import { Route as AdminConfiguracionNotificacionesCanalesRouteImport } from './routes/admin.configuracion.notificaciones.canales'
 import { Route as AdminComerciosTransferenciaResolversRouteImport } from './routes/admin.comercios.transferencia.resolvers'
 import { Route as AdminComerciosTransferenciaCategoriasRouteImport } from './routes/admin.comercios.transferencia.categorias'
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
@@ -151,16 +153,10 @@ const AdminGeneralAlertasRoute = AdminGeneralAlertasRouteImport.update({
   path: '/general/alertas',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminConfiguracionTelegramRoute =
-  AdminConfiguracionTelegramRouteImport.update({
-    id: '/telegram',
-    path: '/telegram',
-    getParentRoute: () => AdminConfiguracionRoute,
-  } as any)
-const AdminConfiguracionMensajesRoute =
-  AdminConfiguracionMensajesRouteImport.update({
-    id: '/mensajes',
-    path: '/mensajes',
+const AdminConfiguracionNotificacionesRoute =
+  AdminConfiguracionNotificacionesRouteImport.update({
+    id: '/notificaciones',
+    path: '/notificaciones',
     getParentRoute: () => AdminConfiguracionRoute,
   } as any)
 const AdminComerciosTransferenciaRoute =
@@ -225,6 +221,12 @@ const AdminGeneralAlertasIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AdminGeneralAlertasRoute,
+  } as any)
+const AdminConfiguracionNotificacionesIndexRoute =
+  AdminConfiguracionNotificacionesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
   } as any)
 const AdminComerciosTransferenciaIndexRoute =
   AdminComerciosTransferenciaIndexRouteImport.update({
@@ -344,6 +346,18 @@ const AdminGeneralAlertasBloqueosRoute =
     path: '/bloqueos',
     getParentRoute: () => AdminGeneralAlertasRoute,
   } as any)
+const AdminConfiguracionNotificacionesCatalogoRoute =
+  AdminConfiguracionNotificacionesCatalogoRouteImport.update({
+    id: '/catalogo',
+    path: '/catalogo',
+    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
+  } as any)
+const AdminConfiguracionNotificacionesCanalesRoute =
+  AdminConfiguracionNotificacionesCanalesRouteImport.update({
+    id: '/canales',
+    path: '/canales',
+    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
+  } as any)
 const AdminComerciosTransferenciaResolversRoute =
   AdminComerciosTransferenciaResolversRouteImport.update({
     id: '/resolvers',
@@ -437,8 +451,7 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
-  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
-  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
+  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesRouteWithChildren
   '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
   '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
   '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
@@ -455,6 +468,8 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
+  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
+  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -475,6 +490,7 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
+  '/admin/configuracion/notificaciones/': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
@@ -491,8 +507,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
-  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
-  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
   '/admin/comercios': typeof AdminComerciosIndexRoute
   '/admin/configuracion': typeof AdminConfiguracionIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
@@ -505,6 +519,8 @@ export interface FileRoutesByTo {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
+  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
+  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -525,6 +541,7 @@ export interface FileRoutesByTo {
   '/admin/comercios/apis': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaIndexRoute
+  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios': typeof AdminGeneralUsuariosIndexRoute
@@ -551,8 +568,7 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
-  '/admin/configuracion/mensajes': typeof AdminConfiguracionMensajesRoute
-  '/admin/configuracion/telegram': typeof AdminConfiguracionTelegramRoute
+  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesRouteWithChildren
   '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
   '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
   '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
@@ -569,6 +585,8 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
+  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
+  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -589,6 +607,7 @@ export interface FileRoutesById {
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
+  '/admin/configuracion/notificaciones/': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
@@ -616,8 +635,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
-    | '/admin/configuracion/mensajes'
-    | '/admin/configuracion/telegram'
+    | '/admin/configuracion/notificaciones'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
@@ -634,6 +652,8 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
+    | '/admin/configuracion/notificaciones/canales'
+    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -654,6 +674,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
+    | '/admin/configuracion/notificaciones/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
@@ -670,8 +691,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/administracion/reportes'
     | '/admin/comercios/link-pago'
-    | '/admin/configuracion/mensajes'
-    | '/admin/configuracion/telegram'
     | '/admin/comercios'
     | '/admin/configuracion'
     | '/admin/administracion/registros/actividad'
@@ -684,6 +703,8 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
+    | '/admin/configuracion/notificaciones/canales'
+    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -704,6 +725,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/transferencia'
+    | '/admin/configuracion/notificaciones'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
@@ -729,8 +751,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
-    | '/admin/configuracion/mensajes'
-    | '/admin/configuracion/telegram'
+    | '/admin/configuracion/notificaciones'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
@@ -747,6 +768,8 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
+    | '/admin/configuracion/notificaciones/canales'
+    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -767,6 +790,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
+    | '/admin/configuracion/notificaciones/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
@@ -896,18 +920,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGeneralAlertasRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/configuracion/telegram': {
-      id: '/admin/configuracion/telegram'
-      path: '/telegram'
-      fullPath: '/admin/configuracion/telegram'
-      preLoaderRoute: typeof AdminConfiguracionTelegramRouteImport
-      parentRoute: typeof AdminConfiguracionRoute
-    }
-    '/admin/configuracion/mensajes': {
-      id: '/admin/configuracion/mensajes'
-      path: '/mensajes'
-      fullPath: '/admin/configuracion/mensajes'
-      preLoaderRoute: typeof AdminConfiguracionMensajesRouteImport
+    '/admin/configuracion/notificaciones': {
+      id: '/admin/configuracion/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/admin/configuracion/notificaciones'
+      preLoaderRoute: typeof AdminConfiguracionNotificacionesRouteImport
       parentRoute: typeof AdminConfiguracionRoute
     }
     '/admin/comercios/transferencia': {
@@ -986,6 +1003,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/general/alertas/'
       preLoaderRoute: typeof AdminGeneralAlertasIndexRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/configuracion/notificaciones/': {
+      id: '/admin/configuracion/notificaciones/'
+      path: '/'
+      fullPath: '/admin/configuracion/notificaciones/'
+      preLoaderRoute: typeof AdminConfiguracionNotificacionesIndexRouteImport
+      parentRoute: typeof AdminConfiguracionNotificacionesRoute
     }
     '/admin/comercios/transferencia/': {
       id: '/admin/comercios/transferencia/'
@@ -1126,6 +1150,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/general/alertas/bloqueos'
       preLoaderRoute: typeof AdminGeneralAlertasBloqueosRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
+    }
+    '/admin/configuracion/notificaciones/catalogo': {
+      id: '/admin/configuracion/notificaciones/catalogo'
+      path: '/catalogo'
+      fullPath: '/admin/configuracion/notificaciones/catalogo'
+      preLoaderRoute: typeof AdminConfiguracionNotificacionesCatalogoRouteImport
+      parentRoute: typeof AdminConfiguracionNotificacionesRoute
+    }
+    '/admin/configuracion/notificaciones/canales': {
+      id: '/admin/configuracion/notificaciones/canales'
+      path: '/canales'
+      fullPath: '/admin/configuracion/notificaciones/canales'
+      preLoaderRoute: typeof AdminConfiguracionNotificacionesCanalesRouteImport
+      parentRoute: typeof AdminConfiguracionNotificacionesRoute
     }
     '/admin/comercios/transferencia/resolvers': {
       id: '/admin/comercios/transferencia/resolvers'
@@ -1308,15 +1346,35 @@ const AdminComerciosRouteWithChildren = AdminComerciosRoute._addFileChildren(
   AdminComerciosRouteChildren,
 )
 
+interface AdminConfiguracionNotificacionesRouteChildren {
+  AdminConfiguracionNotificacionesCanalesRoute: typeof AdminConfiguracionNotificacionesCanalesRoute
+  AdminConfiguracionNotificacionesCatalogoRoute: typeof AdminConfiguracionNotificacionesCatalogoRoute
+  AdminConfiguracionNotificacionesIndexRoute: typeof AdminConfiguracionNotificacionesIndexRoute
+}
+
+const AdminConfiguracionNotificacionesRouteChildren: AdminConfiguracionNotificacionesRouteChildren =
+  {
+    AdminConfiguracionNotificacionesCanalesRoute:
+      AdminConfiguracionNotificacionesCanalesRoute,
+    AdminConfiguracionNotificacionesCatalogoRoute:
+      AdminConfiguracionNotificacionesCatalogoRoute,
+    AdminConfiguracionNotificacionesIndexRoute:
+      AdminConfiguracionNotificacionesIndexRoute,
+  }
+
+const AdminConfiguracionNotificacionesRouteWithChildren =
+  AdminConfiguracionNotificacionesRoute._addFileChildren(
+    AdminConfiguracionNotificacionesRouteChildren,
+  )
+
 interface AdminConfiguracionRouteChildren {
-  AdminConfiguracionMensajesRoute: typeof AdminConfiguracionMensajesRoute
-  AdminConfiguracionTelegramRoute: typeof AdminConfiguracionTelegramRoute
+  AdminConfiguracionNotificacionesRoute: typeof AdminConfiguracionNotificacionesRouteWithChildren
   AdminConfiguracionIndexRoute: typeof AdminConfiguracionIndexRoute
 }
 
 const AdminConfiguracionRouteChildren: AdminConfiguracionRouteChildren = {
-  AdminConfiguracionMensajesRoute: AdminConfiguracionMensajesRoute,
-  AdminConfiguracionTelegramRoute: AdminConfiguracionTelegramRoute,
+  AdminConfiguracionNotificacionesRoute:
+    AdminConfiguracionNotificacionesRouteWithChildren,
   AdminConfiguracionIndexRoute: AdminConfiguracionIndexRoute,
 }
 

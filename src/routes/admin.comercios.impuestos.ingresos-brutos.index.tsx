@@ -21,16 +21,8 @@ import {
   padronesIniciales,
   reportesIniciales,
   type Padron,
-  type PadronEstado,
   type ReporteImpuesto,
 } from "@/data/impuestos";
-
-const estadoTone: Record<PadronEstado, "success" | "warn" | "danger" | "neutral"> = {
-  Cargando: "neutral",
-  Procesando: "warn",
-  Finalizado: "success",
-  Error: "danger",
-};
 
 type PreviewKPIs = {
   usuariosAnalizados: number;
@@ -489,49 +481,6 @@ function Page() {
     setFile(null);
   };
 
-  const columns: Column<Padron>[] = [
-    { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
-    {
-      key: "impuesto",
-      label: "Impuesto",
-      sortable: true,
-      filterable: true,
-      render: (r) => r.impuesto,
-    },
-    {
-      key: "nombre",
-      label: "Nombre del padrón",
-      sortable: true,
-      filterable: true,
-      render: (r) => r.nombre,
-    },
-    {
-      key: "archivo",
-      label: "Archivo",
-      render: (r) => <span className="font-mono text-xs">{r.archivo}</span>,
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["Cargando", "Procesando", "Finalizado", "Error"],
-      render: (r) => <Badge tone={estadoTone[r.estado]}>{r.estado}</Badge>,
-    },
-    {
-      key: "progreso",
-      label: "Procesamiento",
-      render: (r) => (
-        <div className="w-32 h-2 rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${r.progreso}%` }}
-          />
-        </div>
-      ),
-    },
-  ];
-
   return (
     <>
       <PageHeader
@@ -582,9 +531,6 @@ function Page() {
             <div className="flex justify-end">
               <BtnPrimary onClick={cargar}>Cargar padrón</BtnPrimary>
             </div>
-          </div>
-          <div className="px-5 pb-5">
-            <DataTable columns={columns} data={data} keyExtractor={(r) => r.id} pageSize={10} />
           </div>
         </section>
 

@@ -1,171 +1,588 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Users, Activity, ShieldAlert, TrendingDown, CheckCircle2, XCircle, Eye } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  ServerCog,
+  Database,
+  Layers,
+  Timer,
+  Play,
+  FileCog,
+  RotateCw,
+  Zap,
+} from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
-import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { PageHeader, Card, Stat, Badge, BtnOutline } from "@/components/portal-shell";
+import { PageHeader, Card, Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DeveloperModeToggle } from "@/components/developer-mode-toggle";
+import { useDeveloperMode } from "@/hooks/use-developer-mode";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/configuracion/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Gestor de Logins — Admin — Moli" },
-      { name: "description", content: "Gestión de inicios de sesión y actividad de usuarios." },
+      { title: "Gestor de Integraciones — Admin — Moli" },
+      { name: "description", content: "Estado y gestión de las integraciones de la plataforma." },
     ],
   }),
 });
 
-type LoginActivity = {
-  id: number;
-  usuario: string;
-  email: string;
-  ip: string;
-  fecha: string;
-  estado: "éxito" | "fallo";
+type Salud = "ok" | "warning" | "error";
+
+type Integracion = {
+  id: string;
+  nombre: string;
+  salud: Salud;
+  ultimaEjecucion: string;
+  proximaEjecucion: string;
+  ejecuciones: number;
 };
 
-const loginData: LoginActivity[] = [
-  { id: 1, usuario: "Empresa Demo SA", email: "admin@demo.com", ip: "192.168.1.10", fecha: "17/07/2026 09:15", estado: "éxito" },
-  { id: 2, usuario: "Microcreditos del Sur", email: "ops@microcreditos.com", ip: "190.210.33.45", fecha: "17/07/2026 09:02", estado: "éxito" },
-  { id: 3, usuario: "Pagos Express SRL", email: "soporte@pagos-express.com", ip: "201.132.78.12", fecha: "17/07/2026 08:55", estado: "fallo" },
-  { id: 4, usuario: "Administradora Plaza", email: "admin@admplaza.com", ip: "186.124.56.89", fecha: "17/07/2026 08:30", estado: "éxito" },
-  { id: 5, usuario: "Consorcio Larrea 1200", email: "tesoreria@larrea1200.com", ip: "190.45.67.23", fecha: "17/07/2026 08:12", estado: "éxito" },
-  { id: 6, usuario: "Comercializadora ABC", email: "contable@comercabc.com", ip: "200.89.12.34", fecha: "17/07/2026 07:55", estado: "fallo" },
-  { id: 7, usuario: "Municipalidad de Chivilcoy", email: "cobranzas@chivilcoy.gov.ar", ip: "181.67.90.11", fecha: "17/07/2026 07:30", estado: "éxito" },
-  { id: 8, usuario: "Desconocido", email: "bot@malicious.com", ip: "45.33.22.156", fecha: "17/07/2026 07:15", estado: "fallo" },
-  { id: 9, usuario: "Inmobiliaria del Centro", email: "admin@inmocentro.com", ip: "190.123.45.67", fecha: "17/07/2026 06:45", estado: "éxito" },
-  { id: 10, usuario: "Clínica Privada del Sur", email: "sys@clinicapr.com", ip: "192.168.2.50", fecha: "17/07/2026 06:20", estado: "éxito" },
-  { id: 11, usuario: "Colegio San Martín", email: "admisiones@sanmartin.edu", ip: "186.78.34.90", fecha: "16/07/2026 23:10", estado: "fallo" },
-  { id: 12, usuario: "Gimnasio FitLife", email: "caja@fitlife.com", ip: "190.210.11.22", fecha: "16/07/2026 22:30", estado: "fallo" },
+const integraciones: Integracion[] = [
+  {
+    id: "pct:wondersoft",
+    nombre: "Wondersoft (QR)",
+    salud: "ok",
+    ultimaEjecucion: "11/08/2026 08:00",
+    proximaEjecucion: "11/08/2026 08:15",
+    ejecuciones: 12480,
+  },
+  {
+    id: "pds:pago_mis_cuentas",
+    nombre: "Pago Mis Cuentas",
+    salud: "ok",
+    ultimaEjecucion: "11/08/2026 07:55",
+    proximaEjecucion: "11/08/2026 08:10",
+    ejecuciones: 8931,
+  },
+  {
+    id: "bank.bdc_conecta",
+    nombre: "BDC Conecta",
+    salud: "warning",
+    ultimaEjecucion: "11/08/2026 07:30",
+    proximaEjecucion: "11/08/2026 08:00",
+    ejecuciones: 4572,
+  },
+  {
+    id: "cpf:coelsa_cpf",
+    nombre: "Coelsa — CPF",
+    salud: "ok",
+    ultimaEjecucion: "11/08/2026 08:05",
+    proximaEjecucion: "11/08/2026 08:20",
+    ejecuciones: 21003,
+  },
+  {
+    id: "pct:coelsa_cvu",
+    nombre: "Coelsa — CVU",
+    salud: "ok",
+    ultimaEjecucion: "11/08/2026 08:02",
+    proximaEjecucion: "11/08/2026 08:17",
+    ejecuciones: 20177,
+  },
+  {
+    id: "pct:coelsa_debin",
+    nombre: "Coelsa — DEBIN",
+    salud: "error",
+    ultimaEjecucion: "11/08/2026 07:45",
+    proximaEjecucion: "11/08/2026 08:10",
+    ejecuciones: 18954,
+  },
 ];
 
+const saludMeta: Record<
+  Salud,
+  { label: string; tone: "success" | "warn" | "danger"; icon: typeof CheckCircle2 }
+> = {
+  ok: { label: "Funcionando correctamente", tone: "success", icon: CheckCircle2 },
+  warning: { label: "Ejecución reciente con demoras", tone: "warn", icon: AlertTriangle },
+  error: { label: "Última ejecución fallida", tone: "danger", icon: XCircle },
+};
+
+type LoginConfig = {
+  nombre: string;
+  negocio: string;
+  programacion: string;
+  ultimaEjecucion: string;
+  proximaEjecucion: string;
+  tiempoRestante: string;
+  ejecuciones: number;
+};
+
+const loginsConfigurados: LoginConfig[] = [
+  {
+    nombre: "pct:wondersoft",
+    negocio: "Wondersoft (QR)",
+    programacion: "*/15 * * * *",
+    ultimaEjecucion: "11/08/2026 08:00",
+    proximaEjecucion: "11/08/2026 08:15",
+    tiempoRestante: "02:41",
+    ejecuciones: 12480,
+  },
+  {
+    nombre: "pds:pago_mis_cuentas",
+    negocio: "Pago Mis Cuentas",
+    programacion: "*/15 * * * *",
+    ultimaEjecucion: "11/08/2026 07:55",
+    proximaEjecucion: "11/08/2026 08:10",
+    tiempoRestante: "00:12",
+    ejecuciones: 8931,
+  },
+  {
+    nombre: "bank.bdc_conecta",
+    negocio: "BDC Conecta",
+    programacion: "*/30 * * * *",
+    ultimaEjecucion: "11/08/2026 07:30",
+    proximaEjecucion: "11/08/2026 08:00",
+    tiempoRestante: "05:44",
+    ejecuciones: 4572,
+  },
+  {
+    nombre: "cpf:coelsa_cpf",
+    negocio: "Coelsa — CPF",
+    programacion: "*/15 * * * *",
+    ultimaEjecucion: "11/08/2026 08:05",
+    proximaEjecucion: "11/08/2026 08:20",
+    tiempoRestante: "08:01",
+    ejecuciones: 21003,
+  },
+  {
+    nombre: "pct:coelsa_cvu",
+    negocio: "Coelsa — CVU",
+    programacion: "*/15 * * * *",
+    ultimaEjecucion: "11/08/2026 08:02",
+    proximaEjecucion: "11/08/2026 08:17",
+    tiempoRestante: "05:33",
+    ejecuciones: 20177,
+  },
+  {
+    nombre: "pct:coelsa_debin",
+    negocio: "Coelsa — DEBIN",
+    programacion: "*/15 * * * *",
+    ultimaEjecucion: "11/08/2026 07:45",
+    proximaEjecucion: "11/08/2026 08:10",
+    tiempoRestante: "00:51",
+    ejecuciones: 18954,
+  },
+];
+
+type ConfiguracionLogin = { nombre: string; url: string; metodo: string };
+
+const configuraciones: ConfiguracionLogin[] = [
+  { nombre: "pct:wondersoft", url: "https://wondersoft.providers.ar/ws/login", metodo: "POST" },
+  {
+    nombre: "pds:pago_mis_cuentas",
+    url: "https://api.pagomiscuentas.com/v2/auth/login",
+    metodo: "POST",
+  },
+  {
+    nombre: "bank.bdc_conecta",
+    url: "http://10.116.0.7:8083/ms-login-providers/login",
+    metodo: "POST",
+  },
+  { nombre: "cpf:coelsa_cpf", url: "https://coelsa.com.ar/cpf/ws/login", metodo: "POST" },
+  { nombre: "pct:coelsa_cvu", url: "https://coelsa.com.ar/cvu/ws/login", metodo: "POST" },
+  { nombre: "pct:coelsa_debin", url: "https://coelsa.com.ar/debin/ws/login", metodo: "POST" },
+];
+
+const proximoGrupo = ["pct:wondersoft", "pds:pago_mis_cuentas", "cpf:coelsa_cpf"];
+
 function Page() {
-  const [selected, setSelected] = useState<Set<string | number>>(new Set());
+  const { devMode } = useDeveloperMode();
 
-  const toggle = (id: string | number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
+  const [showLogs, setShowLogs] = useState(false);
+  const [logNivel, setLogNivel] = useState("INFO");
+  const [logRetencion, setLogRetencion] = useState("7");
+  const [showEjecutarEspecifico, setShowEjecutarEspecifico] = useState(false);
+  const [loginSeleccionado, setLoginSeleccionado] = useState(integraciones[0].id);
+  const [confirmEjecutarTodos, setConfirmEjecutarTodos] = useState(false);
 
-  const toggleAll = () => {
-    if (selected.size === loginData.length) setSelected(new Set());
-    else setSelected(new Set(loginData.map((d) => d.id)));
-  };
-
-  const getActions = (r: LoginActivity): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => {} },
-  ];
-
-  const columns: Column<LoginActivity>[] = [
+  const loginColumns: Column<LoginConfig>[] = [
     {
-      key: "usuario",
-      label: "Usuario",
+      key: "nombre",
+      label: "Nombre",
       sortable: true,
       filterable: true,
-      render: (r) => <span className="font-semibold">{r.usuario}</span>,
-    },
-    {
-      key: "email",
-      label: "Email",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="text-xs text-muted-foreground">{r.email}</span>,
-    },
-    {
-      key: "ip",
-      label: "IP",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs">{r.ip}</span>,
-    },
-    {
-      key: "fecha",
-      label: "Fecha",
-      sortable: true, filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true, filterable: "enum", filterOptions: ["éxito", "fallo"],
       render: (r) => (
-        <div className="flex items-center gap-1.5">
-          {r.estado === "éxito" ? (
-            <CheckCircle2 size={14} className="text-primary" />
-          ) : (
-            <XCircle size={14} className="text-red-500" />
-          )}
-          <Badge tone={r.estado === "éxito" ? "success" : "danger"}>{r.estado}</Badge>
+        <div>
+          <div className="font-mono text-xs font-semibold">{r.nombre}</div>
+          <div className="text-[11px] text-muted-foreground">{r.negocio}</div>
         </div>
       ),
+    },
+    {
+      key: "programacion",
+      label: "Programación",
+      sortable: true,
+      render: (r) => <span className="font-mono text-xs">{r.programacion}</span>,
+    },
+    {
+      key: "ultimaEjecucion",
+      label: "Última ejecución",
+      sortable: true,
+      filterable: "date",
+      render: (r) => <span className="font-mono text-xs tabular-nums">{r.ultimaEjecucion}</span>,
+    },
+    {
+      key: "proximaEjecucion",
+      label: "Próxima ejecución",
+      sortable: true,
+      filterable: "date",
+      render: (r) => <span className="font-mono text-xs tabular-nums">{r.proximaEjecucion}</span>,
+    },
+    {
+      key: "tiempoRestante",
+      label: "Tiempo restante",
+      sortable: true,
+      render: (r) => <span className="font-mono text-xs tabular-nums">{r.tiempoRestante}</span>,
+    },
+    {
+      key: "ejecuciones",
+      label: "Ejecuciones",
+      sortable: true,
+      render: (r) => (
+        <span className="font-semibold tabular-nums">{r.ejecuciones.toLocaleString()}</span>
+      ),
+    },
+  ];
+
+  const configuracionColumns: Column<ConfiguracionLogin>[] = [
+    {
+      key: "nombre",
+      label: "Nombre",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs font-semibold">{r.nombre}</span>,
+    },
+    {
+      key: "url",
+      label: "URL",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.url}</span>,
+    },
+    {
+      key: "metodo",
+      label: "Método",
+      sortable: true,
+      filterable: "enum",
+      filterOptions: ["GET", "POST", "PUT", "PATCH"],
+      render: (r) => <Badge tone="neutral">{r.metodo}</Badge>,
     },
   ];
 
   return (
     <>
       <PageHeader
-        title="Gestor de Logins"
-        description="Monitoreo de inicios de sesión y métricas de acceso."
+        title="Gestor de Integraciones"
+        description="Seguimiento del estado de las integraciones que alimentan a la plataforma."
+        action={<DeveloperModeToggle />}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Stat label="Total de usuarios" value="312" sub="registrados" />
-        <Stat label="Usuarios activos hoy" value="48" sub="últimas 24 h" />
-        <Stat label="Intentos de login fallidos (24h)" value="7" sub="3 bloqueados" />
-        <Stat label="Tasa de error" value="4.2%" sub="últimos 7 días" />
-      </div>
+      {!devMode ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {integraciones.map((i) => {
+            const meta = saludMeta[i.salud];
+            const Icon = meta.icon;
+            return (
+              <Card key={i.id} className="flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-display font-semibold text-base text-foreground truncate">
+                      {i.nombre}
+                    </h3>
+                    <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">
+                      {i.id}
+                    </div>
+                  </div>
+                  <Icon
+                    size={22}
+                    className={
+                      i.salud === "ok"
+                        ? "text-emerald-500 shrink-0"
+                        : i.salud === "warning"
+                          ? "text-amber-500 shrink-0"
+                          : "text-red-500 shrink-0"
+                    }
+                  />
+                </div>
 
-      <Card className="mb-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users size={20} className="text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Usuarios únicos hoy</div>
-              <div className="text-lg font-semibold">36</div>
+                <Badge tone={meta.tone} className="w-fit">
+                  {meta.label}
+                </Badge>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                      Última ejecución
+                    </div>
+                    <div className="font-mono text-xs tabular-nums mt-1">{i.ultimaEjecucion}</div>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                      Próxima ejecución
+                    </div>
+                    <div className="font-mono text-xs tabular-nums mt-1">{i.proximaEjecucion}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <span className="text-xs text-muted-foreground">Ejecuciones totales</span>
+                  <span className="font-display text-lg font-semibold tabular-nums">
+                    {i.ejecuciones.toLocaleString()}
+                  </span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300">
+            Vista de desarrollador: información técnica de infraestructura. Se accede con el rol
+            Developer (lectura sobre este recurso).{" "}
+            <span className="font-semibold">Pregunta abierta:</span> ¿esta vista vive dentro del
+            panel (protegida por rol) o se separa en un portal técnico? — pendiente de confirmación.
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <ServerCog size={18} className="text-moli-blue" />
+                <h3 className="font-display font-semibold">Estado del Servicio</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Servicio</span>
+                  <span className="font-mono text-xs font-semibold">ms-login-providers</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Versión</span>
+                  <span className="font-mono text-xs">1.24.7</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Cron</span>
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Ejecutándose
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Database size={18} className="text-moli-blue" />
+                <h3 className="font-display font-semibold">Conexiones</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Redis</span>
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Conectado
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
+                  redis://10.116.0.7:6379
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Base de Datos</span>
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Conectada
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
+                  postgres://10.116.0.7:5432/molipay
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Servicio de login</span>
+                  <span className="font-mono text-[11px] font-semibold">10.116.0.7:8083</span>
+                </div>
+              </div>
+            </Card>
+
+            <div className="space-y-6">
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Layers size={18} className="text-moli-blue" />
+                  <h3 className="font-display font-semibold">Estadísticas paralelas</h3>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Total de logins</span>
+                    <span className="font-semibold tabular-nums">6</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Grupos de ejecución</span>
+                    <span className="font-semibold tabular-nums">2</span>
+                  </div>
+                  <div className="py-2">
+                    <div className="text-muted-foreground">Próximo grupo a ejecutar</div>
+                    <div className="mt-2 rounded-lg bg-muted/50 p-3">
+                      <div className="font-semibold flex items-center gap-1.5">
+                        <Timer size={14} className="text-moli-blue" /> Grupo A — en 45 s
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {proximoGrupo.map((l) => (
+                          <span
+                            key={l}
+                            className="font-mono text-[11px] bg-card border border-border rounded px-1.5 py-0.5"
+                          >
+                            {l}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Activity size={20} className="text-amber-600" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Sesiones activas</div>
-              <div className="text-lg font-semibold">12</div>
-            </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Zap size={18} className="text-moli-blue" />
+                <h3 className="font-display font-semibold">Próxima ejecución</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">¿Ejecutaría ahora?</span>
+                  <Badge tone="warn">No — próxima corrida en 45 s</Badge>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Logins en paralelo</span>
+                  <span className="font-semibold tabular-nums">3</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <FileCog size={18} className="text-moli-blue" />
+                <h3 className="font-display font-semibold">Controles técnicos</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <BtnOutline onClick={() => setShowLogs(true)}>
+                  <FileCog size={15} /> Configurar Logs
+                </BtnOutline>
+                <BtnOutline onClick={() => setConfirmEjecutarTodos(true)}>
+                  <Play size={15} /> Ejecutar Todos
+                </BtnOutline>
+                <BtnOutline onClick={() => setShowEjecutarEspecifico(true)}>
+                  <Zap size={15} /> Ejecutar Específico
+                </BtnOutline>
+                <BtnOutline onClick={() => toast.success("Datos de integraciones actualizados")}>
+                  <RotateCw size={15} /> Actualizar Datos
+                </BtnOutline>
+              </div>
+            </Card>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <ShieldAlert size={20} className="text-red-600" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">IPs bloqueadas</div>
-              <div className="text-lg font-semibold">3</div>
-            </div>
+
+          <div className="space-y-2">
+            <h3 className="font-display font-semibold text-lg">Logins Configurados</h3>
+            <DataTable
+              columns={loginColumns}
+              data={loginsConfigurados}
+              keyExtractor={(r) => r.nombre}
+              pageSize={10}
+            />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-moli-blue-light flex items-center justify-center">
-              <TrendingDown size={20} className="text-moli-blue" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Tiempo promedio</div>
-              <div className="text-lg font-semibold">2.4 s</div>
-            </div>
+
+          <div className="space-y-2">
+            <h3 className="font-display font-semibold text-lg">Configuraciones de Login</h3>
+            <DataTable
+              columns={configuracionColumns}
+              data={configuraciones}
+              keyExtractor={(r) => r.nombre}
+              pageSize={10}
+            />
           </div>
         </div>
-      </Card>
+      )}
 
-      <DataTable
-        columns={columns}
-        data={loginData}
-        keyExtractor={(r) => r.id}
-        selection={{ selected, onToggle: toggle, onToggleAll: toggleAll }}
-        pageSize={10}
-        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+      <FormDialog
+        open={showLogs}
+        onClose={() => setShowLogs(false)}
+        title="Configurar Logs"
+        description="Nivel de registro del servicio ms-login-providers."
+        submitLabel="Guardar"
+        onSubmit={() => {
+          setShowLogs(false);
+          toast.success(`Nivel de log actualizado a ${logNivel}`);
+        }}
+      >
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Nivel de log</label>
+          <select
+            value={logNivel}
+            onChange={(e) => setLogNivel(e.target.value)}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            {["DEBUG", "INFO", "WARN", "ERROR"].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">
+            Retención (días)
+          </label>
+          <select
+            value={logRetencion}
+            onChange={(e) => setLogRetencion(e.target.value)}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            {["3", "7", "15", "30"].map((n) => (
+              <option key={n} value={n}>
+                {n} días
+              </option>
+            ))}
+          </select>
+        </div>
+      </FormDialog>
+
+      <FormDialog
+        open={showEjecutarEspecifico}
+        onClose={() => setShowEjecutarEspecifico(false)}
+        title="Ejecutar Específico"
+        description="Ejecutar manualmente un login configurado."
+        submitLabel="Ejecutar"
+        onSubmit={() => {
+          setShowEjecutarEspecifico(false);
+          toast.success(`Ejecución manual iniciada para ${loginSeleccionado}`);
+        }}
+      >
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Login</label>
+          <select
+            value={loginSeleccionado}
+            onChange={(e) => setLoginSeleccionado(e.target.value)}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            {integraciones.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.id} — {i.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      </FormDialog>
+
+      <ConfirmDialog
+        open={confirmEjecutarTodos}
+        onClose={() => setConfirmEjecutarTodos(false)}
+        title="Ejecutar todos los logins"
+        message="Se disparará una corrida manual de los 6 logins configurados. ¿Deseás continuar?"
+        confirmLabel="Ejecutar todos"
+        onConfirm={() => toast.success("Corrida manual de todos los logins iniciada")}
       />
     </>
   );
