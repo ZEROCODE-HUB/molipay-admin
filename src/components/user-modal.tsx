@@ -245,7 +245,7 @@ const DEFAULT_MODULOS: ModuloVinculado[] = [
     cantidad: 0,
     verLabel: "Ver comercios PCT",
     vacioMsg: "No se encontró comercio PCT asociado",
-    ruta: "/admin/modulos/transferencia",
+    ruta: "/admin/comercios/transferencia",
   },
   {
     clave: "blp",
@@ -253,7 +253,7 @@ const DEFAULT_MODULOS: ModuloVinculado[] = [
     cantidad: 0,
     verLabel: "Ver links de pago",
     vacioMsg: "No se encontró link de pago asociado",
-    ruta: "/admin/modulos/link-pago",
+    ruta: "/admin/comercios/link-pago",
   },
   {
     clave: "api",
@@ -261,7 +261,7 @@ const DEFAULT_MODULOS: ModuloVinculado[] = [
     cantidad: 0,
     verLabel: "Ver usuarios API",
     vacioMsg: "No se encontró usuario API asociado",
-    ruta: "/admin/modulos/apis",
+    ruta: "/admin/comercios/apis",
   },
 ];
 

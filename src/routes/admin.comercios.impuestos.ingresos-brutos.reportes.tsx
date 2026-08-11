@@ -7,7 +7,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
 import { reportesIniciales, type ReporteImpuesto } from "@/data/impuestos";
 
-export const Route = createFileRoute("/admin/modulos/impuestos/ingresos-brutos/reportes")({
+export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos/reportes")({
   head: () => ({ meta: [{ title: "Reportes de Impuestos — Admin — Moli" }] }),
   component: Page,
 });

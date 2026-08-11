@@ -5,7 +5,7 @@ import { PageHeader, Badge, BtnPrimary, BtnOutline, Input, Label } from "@/compo
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
-export const Route = createFileRoute("/admin/modulos/transferencia/categorias")({
+export const Route = createFileRoute("/admin/comercios/transferencia/categorias")({
   component: Page,
   head: () => ({
     meta: [

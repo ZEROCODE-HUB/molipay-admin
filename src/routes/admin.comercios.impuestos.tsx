@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { TabLayout, type Tab } from "@/components/tab-layout";
 
-export const Route = createFileRoute("/admin/modulos/impuestos")({
+export const Route = createFileRoute("/admin/comercios/impuestos")({
   component: Layout,
   head: () => ({
     meta: [
@@ -15,10 +15,10 @@ export const Route = createFileRoute("/admin/modulos/impuestos")({
 });
 
 const tabs: Tab[] = [
-  { label: "Impuestos", to: "/admin/modulos/impuestos" },
-  { label: "Usuarios con Impuestos", to: "/admin/modulos/impuestos/usuarios" },
-  { label: "Ingresos Brutos", to: "/admin/modulos/impuestos/ingresos-brutos" },
-  { label: "Débitos y Créditos", to: "/admin/modulos/impuestos/debitos-creditos" },
+  { label: "Impuestos", to: "/admin/comercios/impuestos" },
+  { label: "Usuarios con impuestos", to: "/admin/comercios/impuestos/usuarios" },
+  { label: "Ingresos brutos", to: "/admin/comercios/impuestos/ingresos-brutos" },
+  { label: "Débitos y créditos", to: "/admin/comercios/impuestos/debitos-creditos" },
 ];
 
 function Layout() {

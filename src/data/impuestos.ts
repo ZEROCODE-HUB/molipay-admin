@@ -1,21 +1,14 @@
 export type Estatus = "Activo" | "Inactivo";
 
-export type Tasa = {
-  codigo: string;
-  tasa: string;
-  descripcion: string;
-  estado: Estatus;
-};
-
 export type Impuesto = {
   id: number;
   nombre: string;
   descripcion: string;
   tipoImpuesto: "Porcentaje" | "Fijo" | "Otro";
+  monto: number | null;
   estado: Estatus;
   fechaCreacion: string;
   fechaActualizacion: string;
-  tasas: Tasa[];
 };
 
 export const impuestosIniciales: Impuesto[] = [
@@ -24,169 +17,182 @@ export const impuestosIniciales: Impuesto[] = [
     nombre: "Ganancias",
     descripcion: "Impuesto a las ganancias anual de la plataforma.",
     tipoImpuesto: "Porcentaje",
+    monto: 35,
     estado: "Activo",
     fechaCreacion: "2026-01-12",
     fechaActualizacion: "2026-06-30",
-    tasas: [
-      {
-        codigo: "GAN-001",
-        tasa: "35%",
-        descripcion: "Escala progresiva general",
-        estado: "Activo",
-      },
-    ],
   },
   {
     id: 2,
     nombre: "Ingresos Brutos",
     descripcion: "Impuesto provincial sobre la comisión de Molly.",
     tipoImpuesto: "Porcentaje",
+    monto: 4,
     estado: "Activo",
     fechaCreacion: "2026-01-12",
     fechaActualizacion: "2026-07-10",
-    tasas: [
-      { codigo: "IB-CABA", tasa: "4%", descripcion: "CABA", estado: "Activo" },
-      { codigo: "IB-BA", tasa: "3.6%", descripcion: "Buenos Aires", estado: "Activo" },
-    ],
   },
   {
     id: 3,
     nombre: "Débito/Crédito (Sellos)",
     descripcion: "Retención de sellos sobre ingresos y egresos del cliente.",
     tipoImpuesto: "Fijo",
+    monto: 0.6,
     estado: "Activo",
     fechaCreacion: "2026-02-01",
     fechaActualizacion: "2026-07-20",
-    tasas: [
-      {
-        codigo: "DC-001",
-        tasa: "0,6%",
-        descripcion: "Aplicable a ingresos y egresos",
-        estado: "Activo",
-      },
-    ],
   },
 ];
 
 export type AsignacionImpuesto = {
+  legajo: number;
   usuario: string;
   nombreCompleto: string;
   impuesto: string;
   tipo: string;
+  monto: string;
   estado: Estatus;
   fechaAsignacion: string;
 };
 
 export const asignacionesIniciales: AsignacionImpuesto[] = [
   {
+    legajo: 1001,
     usuario: "jperez",
     nombreCompleto: "Juan Pérez",
     impuesto: "Ingresos Brutos",
     tipo: "Porcentaje",
+    monto: "4%",
     estado: "Activo",
     fechaAsignacion: "2026-03-04",
   },
   {
+    legajo: 1002,
     usuario: "mlopez",
     nombreCompleto: "María López",
     impuesto: "Ganancias",
     tipo: "Porcentaje",
+    monto: "35%",
     estado: "Activo",
     fechaAsignacion: "2026-03-09",
   },
   {
+    legajo: 1003,
     usuario: "cgomez",
     nombreCompleto: "Carlos Gómez",
     impuesto: "Débito/Crédito (Sellos)",
     tipo: "Fijo",
+    monto: "0,6%",
     estado: "Activo",
     fechaAsignacion: "2026-04-12",
   },
   {
+    legajo: 1004,
     usuario: "rdiaz",
     nombreCompleto: "Romina Díaz",
     impuesto: "Ingresos Brutos",
     tipo: "Porcentaje",
+    monto: "4%",
     estado: "Inactivo",
     fechaAsignacion: "2026-04-18",
   },
   {
+    legajo: 1005,
     usuario: "fsilva",
     nombreCompleto: "Federico Silva",
     impuesto: "Ganancias",
     tipo: "Porcentaje",
+    monto: "35%",
     estado: "Activo",
     fechaAsignacion: "2026-05-02",
   },
   {
+    legajo: 1006,
     usuario: "aaros",
     nombreCompleto: "Ana Ríos",
     impuesto: "Débito/Crédito (Sellos)",
     tipo: "Fijo",
+    monto: "0,6%",
     estado: "Activo",
     fechaAsignacion: "2026-05-15",
   },
   {
+    legajo: 1007,
     usuario: "jtorres",
     nombreCompleto: "Joaquín Torres",
     impuesto: "Ingresos Brutos",
     tipo: "Porcentaje",
+    monto: "4%",
     estado: "Activo",
     fechaAsignacion: "2026-05-21",
   },
   {
+    legajo: 1008,
     usuario: "lcastro",
     nombreCompleto: "Lucía Castro",
     impuesto: "Ganancias",
     tipo: "Porcentaje",
+    monto: "35%",
     estado: "Inactivo",
     fechaAsignacion: "2026-06-03",
   },
   {
+    legajo: 1009,
     usuario: "pramos",
     nombreCompleto: "Pablo Ramos",
     impuesto: "Débito/Crédito (Sellos)",
     tipo: "Fijo",
+    monto: "0,6%",
     estado: "Activo",
     fechaAsignacion: "2026-06-11",
   },
   {
+    legajo: 1010,
     usuario: "vduarte",
     nombreCompleto: "Valentina Duarte",
     impuesto: "Ingresos Brutos",
     tipo: "Porcentaje",
+    monto: "4%",
     estado: "Activo",
     fechaAsignacion: "2026-06-19",
   },
   {
+    legajo: 1011,
     usuario: "mruiz",
     nombreCompleto: "Marta Ruiz",
     impuesto: "Ganancias",
     tipo: "Porcentaje",
+    monto: "35%",
     estado: "Activo",
     fechaAsignacion: "2026-06-25",
   },
   {
+    legajo: 1012,
     usuario: "escobar",
     nombreCompleto: "Esteban Escobar",
     impuesto: "Ingresos Brutos",
     tipo: "Porcentaje",
+    monto: "4%",
     estado: "Activo",
     fechaAsignacion: "2026-07-01",
   },
   {
-    usuario: "饰",
+    legajo: 1013,
+    usuario: "snunez",
     nombreCompleto: "Sofía Núñez",
     impuesto: "Débito/Crédito (Sellos)",
     tipo: "Fijo",
+    monto: "0,6%",
     estado: "Inactivo",
     fechaAsignacion: "2026-07-08",
   },
   {
+    legajo: 1014,
     usuario: "jcampos",
     nombreCompleto: "Julieta Campos",
     impuesto: "Ganancias",
     tipo: "Porcentaje",
+    monto: "35%",
     estado: "Activo",
     fechaAsignacion: "2026-07-14",
   },
@@ -283,10 +289,13 @@ export const reportesIniciales: ReporteImpuesto[] = [
 
 export type DireccionExcepcion = "Entrantes" | "Salientes" | "Ambos";
 
+export type TipoExcepcion = "Alta manual" | "Convenio multilateral" | "Exención";
+
 export type Excepcion = {
   id: number;
   usuario: string;
   cuit: string;
+  tipo: TipoExcepcion;
   direccion: DireccionExcepcion;
   motivo: string;
   vigenciaDesde: string;
@@ -301,6 +310,7 @@ export const excepcionesIniciales: Excepcion[] = [
     id: 1,
     usuario: "jperez",
     cuit: "20-12345678-9",
+    tipo: "Convenio multilateral",
     direccion: "Ambos",
     motivo: "Convenio multilateral",
     vigenciaDesde: "2026-01-01",
@@ -313,6 +323,7 @@ export const excepcionesIniciales: Excepcion[] = [
     id: 2,
     usuario: "cgomez",
     cuit: "27-87654321-0",
+    tipo: "Exención",
     direccion: "Entrantes",
     motivo: "Exento provisional",
     vigenciaDesde: "2026-03-10",
@@ -325,6 +336,7 @@ export const excepcionesIniciales: Excepcion[] = [
     id: 3,
     usuario: "lcastro",
     cuit: "23-11223344-5",
+    tipo: "Alta manual",
     direccion: "Salientes",
     motivo: "Revisión fiscal",
     vigenciaDesde: "2026-05-20",

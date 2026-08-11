@@ -12,6 +12,7 @@ export function FormDialog({
   submitLabel = "Crear",
   size = "md",
   hideCancel = false,
+  cancelLabel = "Cancelar",
 }: {
   open: boolean;
   onClose: () => void;
@@ -22,6 +23,7 @@ export function FormDialog({
   submitLabel?: string;
   size?: "md" | "lg";
   hideCancel?: boolean;
+  cancelLabel?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -58,7 +60,7 @@ export function FormDialog({
           <div className="flex gap-2 pt-2">
             {!hideCancel && (
               <BtnOutline type="button" className="flex-1" onClick={onClose}>
-                Cancelar
+                {cancelLabel}
               </BtnOutline>
             )}
             <BtnPrimary type="submit" className="flex-1">

@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { TabLayout, type Tab } from "@/components/tab-layout";
 
-export const Route = createFileRoute("/admin/modulos/impuestos/ingresos-brutos")({
+export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos")({
   component: Layout,
   head: () => ({
     meta: [{ title: "Ingresos Brutos — Admin — Moli" }],
@@ -9,12 +9,8 @@ export const Route = createFileRoute("/admin/modulos/impuestos/ingresos-brutos")
 });
 
 const tabs: Tab[] = [
-  { label: "Gestión de Padrones", to: "/admin/modulos/impuestos/ingresos-brutos" },
-  {
-    label: "Normalización Retroactiva",
-    to: "/admin/modulos/impuestos/ingresos-brutos/normalizacion",
-  },
-  { label: "Reportes", to: "/admin/modulos/impuestos/ingresos-brutos/reportes" },
+  { label: "Padrones y Normalización", to: "/admin/comercios/impuestos/ingresos-brutos" },
+  { label: "Reportes", to: "/admin/comercios/impuestos/ingresos-brutos/reportes" },
 ];
 
 function Layout() {

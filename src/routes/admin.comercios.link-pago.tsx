@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/admin/modulos/link-pago")({
+export const Route = createFileRoute("/admin/comercios/link-pago")({
   component: Page,
   head: () => ({
     meta: [

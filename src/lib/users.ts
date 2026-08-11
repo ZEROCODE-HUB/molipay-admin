@@ -486,7 +486,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
         cantidad: u.legajo.endsWith("3") ? 0 : 3,
         verLabel: "Ver comercios PCT",
         vacioMsg: "No se encontró comercio PCT asociado",
-        ruta: "/admin/modulos/transferencia",
+        ruta: "/admin/comercios/transferencia",
       },
       {
         clave: "blp",
@@ -494,7 +494,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
         cantidad: 2,
         verLabel: "Ver links de pago",
         vacioMsg: "No se encontró link de pago asociado",
-        ruta: "/admin/modulos/link-pago",
+        ruta: "/admin/comercios/link-pago",
       },
       {
         clave: "api",
@@ -502,7 +502,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
         cantidad: 1,
         verLabel: "Ver usuarios API",
         vacioMsg: "No se encontró usuario API asociado",
-        ruta: "/admin/modulos/apis",
+        ruta: "/admin/comercios/apis",
       },
     ],
     entidad: { maximoSubcuentas: 3, redireccionAutomatica: true, presionOperativa: "Normal" },
@@ -621,7 +621,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
         cantidad: 3,
         verLabel: "Ver comercios PCT",
         vacioMsg: "No se encontró comercio PCT asociado",
-        ruta: "/admin/modulos/transferencia",
+        ruta: "/admin/comercios/transferencia",
       },
       {
         clave: "blp",
@@ -629,7 +629,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
         cantidad: 2,
         verLabel: "Ver links de pago",
         vacioMsg: "No se encontró link de pago asociado",
-        ruta: "/admin/modulos/link-pago",
+        ruta: "/admin/comercios/link-pago",
       },
       {
         clave: "api",
@@ -637,7 +637,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
         cantidad: 1,
         verLabel: "Ver usuarios API",
         vacioMsg: "No se encontró usuario API asociado",
-        ruta: "/admin/modulos/apis",
+        ruta: "/admin/comercios/apis",
       },
     ],
     entidad: { maximoSubcuentas: 3, redireccionAutomatica: true, presionOperativa: "Normal" },

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, PlayCircle, Power, PowerOff } from "lucide-react";
+import { Plus, PlayCircle, Power, PowerOff, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
@@ -14,10 +14,11 @@ import {
   type Excepcion,
   type DireccionExcepcion,
   type Estatus,
+  type TipoExcepcion,
 } from "@/data/impuestos";
 
-export const Route = createFileRoute("/admin/modulos/impuestos/debitos-creditos")({
-  head: () => ({ meta: [{ title: "Débitos y Créditos — Admin — Moli" }] }),
+export const Route = createFileRoute("/admin/comercios/impuestos/debitos-creditos")({
+  head: () => ({ meta: [{ title: "Débitos y créditos — Admin — Moli" }] }),
   component: Page,
 });
 
@@ -25,8 +26,8 @@ function Page() {
   const [data, setData] = useState<Excepcion[]>(excepcionesIniciales);
   const [showAlta, setShowAlta] = useState(false);
   const [alta, setAlta] = useState({
-    usuario: "",
     cuit: "",
+    tipo: "Alta manual" as TipoExcepcion,
     direccion: "Ambos" as DireccionExcepcion,
     motivo: "",
     desde: "",
@@ -35,18 +36,21 @@ function Page() {
   const [showSinRetro, setShowSinRetro] = useState(false);
   const [srForm, setSrForm] = useState({ cuit: "", desde: "", hasta: "" });
   const [srGenerated, setSrGenerated] = useState(false);
-  const [srEjecutado, setSrEjecutado] = useState(false);
   const [confirm, setConfirm] = useState<{ ex: Excepcion; activar: boolean } | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
 
   const hoy = () => new Date().toISOString().slice(0, 10);
 
+  const altaValida = alta.cuit.trim() !== "" && alta.motivo.trim() !== "";
+
   const guardarAlta = () => {
-    if (!alta.cuit.trim() || !alta.usuario.trim()) return;
+    if (!altaValida) return;
     const id = Math.max(0, ...data.map((d) => d.id)) + 1;
     const nueva: Excepcion = {
       id,
-      usuario: alta.usuario.trim(),
+      usuario: `u${alta.cuit.replace(/\D/g, "").slice(-6)}`,
       cuit: alta.cuit.trim(),
+      tipo: alta.tipo,
       direccion: alta.direccion,
       motivo: alta.motivo.trim(),
       vigenciaDesde: alta.desde || hoy(),
@@ -57,7 +61,15 @@ function Page() {
     };
     setData((prev) => [nueva, ...prev]);
     setShowAlta(false);
-    setAlta({ usuario: "", cuit: "", direccion: "Ambos", motivo: "", desde: "", hasta: "" });
+    setBanner(`Alta manual creada correctamente (${nueva.autorizacion}).`);
+    setAlta({
+      cuit: "",
+      tipo: "Alta manual",
+      direccion: "Ambos",
+      motivo: "",
+      desde: "",
+      hasta: "",
+    });
   };
 
   const getActions = (ex: Excepcion): ActionItem[] => [
@@ -91,26 +103,28 @@ function Page() {
     },
     {
       key: "direccion",
-      label: "Dirección",
+      label: "Dirección / Tipo",
       sortable: true,
       filterable: "enum",
       filterOptions: ["Entrantes", "Salientes", "Ambos"],
-      render: (r) => r.direccion,
+      render: (r) => (
+        <div className="flex flex-col">
+          <span>{r.direccion}</span>
+          <span className="text-xs text-muted-foreground">{r.tipo}</span>
+        </div>
+      ),
     },
     { key: "motivo", label: "Motivo", sortable: true, filterable: true, render: (r) => r.motivo },
     {
-      key: "vigenciaDesde",
-      label: "Vigencia desde",
+      key: "vigencia",
+      label: "Vigencia",
       sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.vigenciaDesde || "—"}</span>,
-    },
-    {
-      key: "vigenciaHasta",
-      label: "Vigencia hasta",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.vigenciaHasta || "Abierta"}</span>,
+      render: (r) => (
+        <div className="flex flex-col">
+          <span className="font-mono tabular-nums text-xs">{r.vigenciaDesde || "—"}</span>
+          <span className="text-xs text-muted-foreground">→ {r.vigenciaHasta || "Abierta"}</span>
+        </div>
+      ),
     },
     {
       key: "estado",
@@ -122,7 +136,7 @@ function Page() {
     },
     {
       key: "fechaCreacion",
-      label: "Fecha de creación",
+      label: "Fechas",
       sortable: true,
       filterable: "date",
       render: (r) => <span className="font-mono tabular-nums">{r.fechaCreacion}</span>,
@@ -139,6 +153,11 @@ function Page() {
       label: "Configurar",
       content: (
         <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Cargá el CUIT y el rango de fechas del proceso. Esta operación{" "}
+            <strong>no tiene efecto retroactivo</strong>: no se reaplicarán cargos previos a la
+            fecha de vigencia.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-1">
               <Label>CUIT</Label>
@@ -196,31 +215,46 @@ function Page() {
   return (
     <>
       <PageHeader
-        title="Débitos y Créditos — Excepciones"
+        title="Débitos y créditos"
         description="Excepciones a retenciones y procesos sin efecto retroactivo."
-        action={
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowAlta(true)}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
-            >
-              <Plus size={14} /> Alta manual de excepción
-            </button>
-            <BtnOutline
-              onClick={() => {
-                setSrGenerated(false);
-                setShowSinRetro(true);
-              }}
-            >
-              <PlayCircle size={16} /> Sin retroactivo
-            </BtnOutline>
-          </div>
-        }
       />
 
-      {srEjecutado && (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm text-emerald-800 dark:text-emerald-300">
-          Proceso sin retroactivo ejecutado correctamente.
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <section className="bg-card border rounded-lg p-5 space-y-4">
+          <div>
+            <h3 className="font-display font-semibold text-base">Alta manual de excepciones</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Cargá una excepción a las retenciones indicando CUIT, dirección, tipo, motivo y
+              vigencia.
+            </p>
+          </div>
+          <BtnPrimary onClick={() => setShowAlta(true)}>
+            <Plus size={16} /> Iniciar alta manual
+          </BtnPrimary>
+        </section>
+
+        <section className="bg-card border rounded-lg p-5 space-y-4">
+          <div>
+            <h3 className="font-display font-semibold text-base">Sin retroactivo</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Ejecutá un proceso sin efecto retroactivo cargando CUIT y fechas, con preview del
+              impacto previo a confirmar.
+            </p>
+          </div>
+          <BtnOutline
+            onClick={() => {
+              setSrGenerated(false);
+              setShowSinRetro(true);
+            }}
+          >
+            <PlayCircle size={16} /> Ejecutar sin retroactivo
+          </BtnOutline>
+        </section>
+      </div>
+
+      {banner && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 size={16} /> {banner}
         </div>
       )}
 
@@ -237,19 +271,12 @@ function Page() {
           open
           onClose={() => setShowAlta(false)}
           title="Alta manual de excepción"
-          description="Definí CUIT, dirección, motivo y vigencia."
+          description="Definí CUIT, dirección, tipo, motivo y vigencia."
           onSubmit={guardarAlta}
           submitLabel="Crear excepción"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Usuario</Label>
-              <Input
-                value={alta.usuario}
-                onChange={(e) => setAlta({ ...alta, usuario: e.target.value })}
-              />
-            </div>
-            <div>
+            <div className="sm:col-span-2">
               <Label>CUIT</Label>
               <Input
                 value={alta.cuit}
@@ -272,6 +299,18 @@ function Page() {
               </select>
             </div>
             <div>
+              <Label>Tipo</Label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                value={alta.tipo}
+                onChange={(e) => setAlta({ ...alta, tipo: e.target.value as TipoExcepcion })}
+              >
+                <option value="Alta manual">Alta manual</option>
+                <option value="Convenio multilateral">Convenio multilateral</option>
+                <option value="Exención">Exención</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
               <Label>Motivo</Label>
               <Input
                 value={alta.motivo}
@@ -295,7 +334,12 @@ function Page() {
               />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-3">
+          {altaValida && (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 size={16} /> Datos validados correctamente.
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
             Si no se completa “desde” se usa la fecha actual. Si no se completa “hasta”, la
             excepción queda abierta.
           </p>
@@ -310,7 +354,7 @@ function Page() {
         finishLabel="Ejecutar proceso definitivo"
         finishDisabled={!srGenerated}
         onFinish={() => {
-          setSrEjecutado(true);
+          setBanner("Proceso sin retroactivo ejecutado correctamente.");
           setShowSinRetro(false);
           setSrForm({ cuit: "", desde: "", hasta: "" });
         }}
@@ -327,6 +371,9 @@ function Page() {
           if (confirm) {
             const estado: Estatus = confirm.activar ? "Activo" : "Inactivo";
             setData((prev) => prev.map((ex) => (ex.id === confirm.ex.id ? { ...ex, estado } : ex)));
+            setBanner(
+              `Excepción de ${confirm.ex.usuario} ${confirm.activar ? "activada" : "desactivada"} correctamente.`,
+            );
           }
           setConfirm(null);
         }}

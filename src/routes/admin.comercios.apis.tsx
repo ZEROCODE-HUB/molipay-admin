@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/admin/modulos/apis")({
+export const Route = createFileRoute("/admin/comercios/apis")({
   component: Page,
   head: () => ({
     meta: [

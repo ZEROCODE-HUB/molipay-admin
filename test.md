@@ -1,87 +1,165 @@
-# Test Plan — Estados de Movimiento por Tipo (MoliPay Backoffice — General → Movimientos)
+# Test Plan — Sección Comercios (Admin → Comercios → Transferencia)
 
-Basado en `MAPEO_ESTADOS.xlsx`. Regla aplicada: el estado final de cada operación es el texto literal de la celda, o lo que sigue a "cambia a" cuando existe. Cada caso debe marcarse **PASA / NO PASA**.
+Basado en las instrucciones de la sección Comercios. Cada caso debe marcarse **PASA / NO PASA**. Ningún caso puede quedar en NO PASA para dar por cerrada la entrega.
 
 ## Protocolo de iteración (obligatorio)
 1. Ejecutar todos los casos de este documento contra la implementación actual.
 2. Reportar el resultado completo (PASA/NO PASA por caso).
 3. Si hay al menos un NO PASA: corregir puntualmente y volver a ejecutar el documento completo desde el caso 1.
 4. Repetir hasta 0 casos en NO PASA, con un **máximo de 5 iteraciones totales**.
-5. Si tras la iteración 5 persiste algún NO PASA, reportarlo como bloqueante explícito — no cerrar la tarea igual.
+5. Si tras la iteración 5 persiste algún NO PASA, reportarlo como bloqueante explícito.
 
 ---
 
-## 1. Tab Depósitos
+## 1. Estructura y navegación
 
 | ID | Caso | Resultado esperado |
 |----|------|---------------------|
-| DEP1 | El filtro de Estado muestra exactamente 4 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO — sin ningún estado adicional (ni CREADO, ni REEMBOLSADO, etc.) |
-| DEP2 | Datos mock cubren los 4 estados | Existe al menos un registro mock por cada uno de los 4 estados |
-| DEP3 | No aparece el literal "PENDIENTE" en ningún registro visible | Todo registro que internamente parte de "PENDIENTE" se muestra como "EN PROGRESO" — el texto "PENDIENTE" no debe ser visible en la UI |
-| DEP4 | Filtrar por "EN PROGRESO" devuelve solo esos registros | El filtro funciona correctamente (ver principio general 1.1) |
+| NAV1 | El tab "Módulos" ya no existe dentro de Comercios | Al entrar a Comercios, no aparece ningún tab llamado "Módulos" |
+| NAV2 | Los tabs de Comercios son exactamente 4, en este orden | Pago por referencia, Link de pago, Impuestos, APIs externas — sin tabs adicionales ni faltantes |
+| NAV3 | "Módulos" no fue eliminado del sistema, solo reubicado | El contenido de "Módulos" sigue accesible en Sistema → Salud de módulos, sin pérdida de funcionalidad |
+| NAV4 | El breadcrumb/ruta superior es correcto | Al entrar a la sección de Transferencia dentro de Comercios, se muestra "Admin → Comercios → Transferencia" |
+| NAV5 | La ruta anterior ya no existe | No debe encontrarse en ningún lugar de la navegación la ruta "Admin → Módulos → Transferencia" |
 
-## 2. Tab Retiros
+## 2. Transferencia → Comercios — tabla principal
 
-| ID | Caso | Resultado esperado |
-|----|------|---------------------|
-| RET1 | El filtro de Estado muestra exactamente 4 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO |
-| RET2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
-| RET3 | No aparece el literal "FINALIZADO" en ningún registro visible | Todo registro que parte de "FINALIZADO" se muestra como "APROBADO" |
-| RET4 | Filtrar por "APROBADO" devuelve solo esos registros | Filtro funcional |
-
-## 3. Tab Pagos con Tarjeta
+### 2.1 Eliminación de checkboxes
 
 | ID | Caso | Resultado esperado |
 |----|------|---------------------|
-| TAR1 | El filtro de Estado muestra exactamente 6 opciones | CREADO, ABIERTO, EN PROGRESO, APROBADO, EXPIRADO, RECHAZADO |
-| TAR2 | Datos mock cubren los 6 estados | Al menos un registro mock por cada uno de los 6 |
-| TAR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
-| TAR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
-| TAR5 | "CREADO" y "ABIERTO" existen como estados propios | No deben colapsar ni transformarse a ningún otro estado — quedan tal cual |
-| TAR6 | "EXPIRADO" existe como estado propio | No colapsa a ningún otro estado |
-| TAR7 | Filtrar por "CREADO" devuelve solo esos registros | Filtro funcional (valida que el estado exclusivo de Tarjeta también sea filtrable) |
+| CHK1 | No existe el checkbox "Seleccionar todos" | El header de la tabla no muestra ningún checkbox de selección masiva |
+| CHK2 | No existen checkboxes individuales por fila | Ninguna fila de comercio muestra checkbox de selección |
+| CHK3 | No queda ninguna acción masiva dependiente de selección | No hay botones de acción en lote (ej. "Eliminar seleccionados") que dependieran de los checkboxes eliminados |
 
-## 4. Tab Pagos PCT (QR)
+### 2.2 Columnas de la tabla
 
 | ID | Caso | Resultado esperado |
 |----|------|---------------------|
-| PQR1 | El filtro de Estado muestra exactamente 4 opciones | EN PROGRESO, APROBADO, RECHAZADO, REEMBOLSADO |
-| PQR2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
-| PQR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
-| PQR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
-| PQR5 | No aparece el literal "FALLIDO" en ningún registro visible | Se muestra como "RECHAZADO" |
-| PQR6 | "REEMBOLSADO" existe como estado propio | No colapsa a BLOQUEADO ni a ningún otro estado |
+| COL1 | La tabla muestra exactamente estas columnas, en este orden | Usuario, Legajo, Categoría, Estado, Nivel, Acciones |
+| COL2 | Columna "Usuario" muestra el correo electrónico del comercio | El valor mostrado tiene formato de email válido |
+| COL3 | Columna "Categoría" muestra código numérico | Valores tipo 780, 763, 742, 4829 — solo números, sin texto descriptivo en esta columna |
+| COL4 | No aparecen columnas adicionales no especificadas | No hay columnas extra ni columnas de la especificación anterior que debieran removerse |
 
-## 5. Tab Cobros PCT (QR)
+### 2.3 Filtro de Estado
 
 | ID | Caso | Resultado esperado |
 |----|------|---------------------|
-| CQR1 | El filtro de Estado muestra exactamente 4 opciones | EN PROGRESO, APROBADO, RECHAZADO, REEMBOLSADO |
-| CQR2 | Datos mock cubren los 4 estados | Al menos un registro mock por estado |
-| CQR3 | No aparece el literal "PENDIENTE" en ningún registro visible | Se muestra como "EN PROGRESO" |
-| CQR4 | No aparece el literal "COMPLETADO" en ningún registro visible | Se muestra como "APROBADO" |
-| CQR5 | No aparece el literal "FALLIDO" en ningún registro visible | Se muestra como "RECHAZADO" |
-| CQR6 | "REEMBOLSADO" existe como estado propio | Consistente con Pagos PCT |
+| EST1 | El filtro de Estado es un desplegable | No es texto libre ni checkboxes, es un dropdown/select |
+| EST2 | El desplegable contiene exactamente 5 opciones | Activado, Desactivado, Pendiente de aprobación, Rechazado, Suspendido |
+| EST3 | Los datos mock cubren los 5 estados | Existe al menos un comercio mock por cada uno de los 5 estados |
+| EST4 | Filtrar por "Pendiente de aprobación" devuelve solo esos registros | Filtro funcional (ver principio general de filtros por columna) |
+| EST5 | Filtrar por "Suspendido" devuelve solo esos registros | Filtro funcional |
 
-## 6. Tab Todos los movimientos (unión completa)
+### 2.4 Filtro de Nivel
 
 | ID | Caso | Resultado esperado |
 |----|------|---------------------|
-| TOD1 | El filtro de Estado muestra exactamente 8 opciones | APROBADO, EN PROGRESO, RECHAZADO, BLOQUEADO, CREADO, ABIERTO, EXPIRADO, REEMBOLSADO |
-| TOD2 | No falta ningún estado de los tipos individuales | Cada estado presente en Depósitos, Retiros, Tarjeta, Pagos PCT o Cobros PCT aparece también en el filtro de Todos |
-| TOD3 | No sobra ningún estado no usado por ningún tipo | El filtro de Todos no incluye ningún estado que no exista en al menos un tipo individual |
-| TOD4 | Datos mock cubren los 8 estados | Al menos un registro mock por cada uno de los 8, y las combinaciones deben poder identificarse por tipo de movimiento (depósito/retiro/tarjeta/PCT pago/PCT cobro) |
-| TOD5 | Filtrar por "BLOQUEADO" en Todos | Devuelve únicamente registros de Depósitos/Retiros con ese estado (ya que Tarjeta y PCT no tienen BLOQUEADO) |
-| TOD6 | Filtrar por "CREADO" en Todos | Devuelve únicamente registros de Pagos con Tarjeta (único tipo con ese estado) |
-| TOD7 | Filtrar por "REEMBOLSADO" en Todos | Devuelve únicamente registros de Pagos PCT y Cobros PCT |
-| TOD8 | Ningún registro en Todos muestra un estado crudo no normalizado | No debe aparecer "PENDIENTE", "FINALIZADO", "COMPLETADO" ni "FALLIDO" como texto de estado en ningún registro de esta tabla |
+| NIV1 | El filtro de Nivel es un desplegable | Dropdown/select, no texto libre |
+| NIV2 | El desplegable contiene exactamente 7 opciones | Pequeño, Mediano, Grande, Premium, Estándar, Básico, Enterprise |
+| NIV3 | Los datos mock cubren los 7 niveles | Existe al menos un comercio mock por cada uno de los 7 niveles |
+| NIV4 | Filtrar por "Enterprise" devuelve solo esos registros | Filtro funcional |
+| NIV5 | Filtrar por "Básico" devuelve solo esos registros | Filtro funcional |
 
-## 7. Confirmación — REEMBOLSADO en "Todos" (resuelto)
+## 3. Acciones de Comercio (columna Acciones en la tabla)
 
-**Confirmado por el cliente:** REEMBOLSADO se incluye en el filtro de "Todos los movimientos" (8 estados totales), y los datos mock deben cubrir los 8 estados, incluyendo los minoritarios que solo pertenecen a un tipo (CREADO, ABIERTO, EXPIRADO de Tarjeta; REEMBOLSADO de PCT). Los casos TOD1, TOD4, TOD6 y TOD7 quedan tal como están definidos arriba — no requieren ajuste.
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| ACC1 | Existen exactamente 6 acciones disponibles | Activar, Suspender, Validar, Eliminar, Editar, Ver comercio |
+| ACC2 | "Activar" ejecuta la acción correspondiente | Cambia el estado del comercio a Activado |
+| ACC3 | "Suspender" ejecuta la acción correspondiente | Cambia el estado del comercio a Suspendido |
+| ACC4 | "Validar" ejecuta la acción correspondiente | Dispara el flujo de validación (ej. cambia estado desde Pendiente de aprobación) |
+| ACC5 | "Eliminar" muestra confirmación mediante pop-up | Al hacer click en Eliminar, se abre un pop-up de confirmación antes de ejecutar la acción — no se elimina directamente |
+| ACC6 | Confirmar la eliminación en el pop-up elimina el comercio | Tras confirmar, el registro desaparece del listado |
+| ACC7 | Cancelar la eliminación en el pop-up no elimina nada | El comercio permanece en el listado sin cambios |
+| ACC8 | "Editar" abre el flujo de edición | Ver sección 4 |
+| ACC9 | "Ver comercio" abre el flujo de visualización | Ver sección 4 |
+
+## 4. Ver / Editar comercio — Pop-up ampliado
+
+### 4.1 Comportamiento general del pop-up
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| POP1 | "Ver comercio" y "Editar comercio" abren un pop-up amplio | El pop-up es notablemente más grande que el "detalle pequeño" anterior; no debe seguir existiendo esa versión reducida |
+| POP2 | Ambas acciones (Ver y Editar) están completamente habilitadas | Ningún botón/acción aparece deshabilitado o placeholder |
+| POP3 | El pop-up anterior (detalle pequeño) fue reemplazado, no duplicado | No debe coexistir una versión antigua accesible desde algún otro punto de la UI |
+
+### 4.2 Card "Información general"
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| INF1 | La card muestra exactamente estos campos | Usuario, Legajo, Fecha de creación, Hora de creación, Estado, Nivel |
+| INF2 | Fecha y Hora de creación se muestran como campos separados | No deben estar combinados en un solo campo de fecha-hora |
+| INF3 | Estado y Nivel reflejan el valor real del comercio | Coinciden con lo mostrado en la tabla principal para ese mismo comercio |
+
+### 4.3 Card "Código de categoría"
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| CAT1 | La card muestra Código de categoría y Descripción | Ej. ID: 780, Descripción: "Paisajismo y cultura" |
+| CAT2 | El código coincide con el mostrado en la columna "Categoría" de la tabla principal | Mismo valor numérico |
+| CAT3 | La descripción corresponde al código (no es texto genérico) | Cada código numérico tiene su descripción específica asociada, no un texto placeholder repetido |
+
+### 4.4 Tabla "Puntos de venta"
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| PDV1 | La tabla muestra exactamente estas columnas | Nombre del punto de venta, Estado, Fecha de creación |
+| PDV2 | El filtro/valor de Estado admite solo 2 opciones | Activado, Desactivado |
+| PDV3 | Un comercio con múltiples puntos de venta los lista todos | Ningún punto de venta queda oculto o truncado |
+| PDV4 | Un comercio sin puntos de venta muestra estado vacío | Mensaje claro de "sin puntos de venta", no tabla en blanco sin explicación |
+
+## 5. Transferencia → Resolvers
+
+### 5.1 Tabla principal
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| RES1 | La tabla muestra exactamente estas columnas | Nombre del resolver, CUIT del resolver, URL del resolver, Estado, Acciones |
+| RES2 | El título/contexto de la sección refleja que gestiona Resolvers PCT | Debe quedar claro en la UI que son Resolvers de PCT específicamente |
+
+### 5.2 Filtro de Estado
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| RES3 | El filtro de Estado es un desplegable | Dropdown/select |
+| RES4 | El desplegable contiene exactamente 2 opciones | Activo, Inactivo |
+| RES5 | Los datos mock cubren ambos estados | Al menos un resolver mock Activo y uno Inactivo |
+| RES6 | Filtrar por "Activo" devuelve solo esos registros | Filtro funcional |
+| RES7 | Filtrar por "Inactivo" devuelve solo esos registros | Filtro funcional |
+
+### 5.3 Acciones de Resolver
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| RES8 | Existen exactamente 3 acciones | Activar, Desactivar, Editar |
+| RES9 | "Activar" cambia el estado a Activo | Reflejado en la tabla tras la acción |
+| RES10 | "Desactivar" cambia el estado a Inactivo | Reflejado en la tabla tras la acción |
+| RES11 | "Editar" abre el pop-up de edición | Ver sección 6 |
+
+## 6. Editar Resolver — Pop-up
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| EDR1 | El pop-up permite editar exactamente estos campos | CUIT, Nombre, Nombre reverso, Formato web, PCP ID, ID del PCP, URL, Token, As header (checkbox), SOA (checkbox) |
+| EDR2 | "As header" es un checkbox editable | Se puede marcar/desmarcar y el valor persiste al guardar |
+| EDR3 | "SOA" es un checkbox editable | Se puede marcar/desmarcar y el valor persiste al guardar |
+| EDR4 | El pop-up tiene botón "Guardar" | Al presionarlo, persiste los cambios y cierra o confirma el guardado |
+| EDR5 | El pop-up tiene botón "Cerrar" | Al presionarlo, descarta cambios no guardados y cierra el pop-up |
+| EDR6 | Cerrar sin guardar no modifica el resolver | Los valores originales se mantienen intactos tras reabrir |
+| EDR7 | Guardar con datos válidos actualiza el resolver | Los nuevos valores se reflejan en la tabla principal de Resolvers |
+| EDR8 | PCP ID e ID del PCP son campos distinguibles entre sí | No deben fusionarse en un solo campo ni confundirse en el formulario (son dos campos separados según la especificación) |
+
+## 7. Estilo visual y consistencia
+
+| ID | Caso | Resultado esperado |
+|----|------|---------------------|
+| STY1 | La sección Comercios mantiene el estilo visual existente del módulo | No se introdujeron cambios de layout, tipografía o color fuera de lo especificado en estas instrucciones |
+| STY2 | La sección Resolvers se mantiene como tabla tabulada | No se convirtió en cards, lista u otro formato distinto a tabla |
+| STY3 | Ningún otro submódulo de "Pago con transferencia" fue modificado | Códigos de categoría y otras secciones vecinas permanecen sin cambios como consecuencia de esta entrega |
 
 ---
 
 ## Resumen de cobertura
-- Depósitos: 4 casos · Retiros: 4 casos · Tarjeta: 7 casos · Pagos PCT: 6 casos · Cobros PCT: 6 casos · Todos: 8 casos · Confirmación: resuelta.
-- **Total: 35 casos de prueba ejecutables**, más el protocolo de iteración con tester (máximo 5 ciclos, Sección de protocolo arriba).
+- Navegación: 5 casos · Tabla Comercios (checkboxes + columnas + filtros): 17 casos · Acciones de Comercio: 9 casos · Pop-up Ver/Editar comercio: 11 casos · Resolvers (tabla + filtro + acciones): 11 casos · Editar Resolver: 8 casos · Estilo y consistencia: 3 casos.
+- **Total: 64 casos de prueba**, sujetos al protocolo de iteración con tester (máximo 5 ciclos).
