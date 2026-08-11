@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Eye, CheckCircle2, Circle } from "lucide-react";
+import { Download, Eye, FileText, FileArchive, CheckCircle2, Circle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
 import { reportesIniciales, type ReporteImpuesto } from "@/data/impuestos";
 
@@ -12,41 +13,34 @@ export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos
   component: Page,
 });
 
-function downloadCsv(rows: ReporteImpuesto[]) {
-  const header = [
-    "ID",
-    "Periodo",
-    "Tramo",
-    "FechaCreacion",
-    "Presentado",
-    "Pagado",
-    "TotalMovimientos",
-    "TotalMontos",
-    "TotalRetenciones",
-  ];
-  const lines = rows.map((r) =>
-    [
-      r.id,
-      r.periodo,
-      r.tramo,
-      r.fechaCreacion,
-      r.presentado ? "Sí" : "No",
-      r.pagado ? "Sí" : "No",
-      r.totalMovimientos,
-      r.totalMontos,
-      r.totalRetenciones,
-    ].join(","),
-  );
-  const csv = [header.join(","), ...lines].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+function downloadFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: "application/octet-stream" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "reportes-impuestos.csv";
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function reportText(r: ReporteImpuesto) {
+  return [
+    `Período: ${r.periodo}`,
+    `Tramo: ${r.tramo}`,
+    `Fecha de creación: ${r.fechaCreacion}`,
+    `Presentado: ${r.presentado ? "Sí" : "No"}`,
+    `Pagado: ${r.pagado ? "Sí" : "No"}`,
+    `Total de movimientos: ${r.totalMovimientos}`,
+    `Total de montos: $ ${r.totalMontos.toLocaleString()}`,
+    `Total de retenciones: $ ${r.totalRetenciones.toLocaleString()}`,
+  ].join("\n");
+}
+
+function downloadZip(rows: ReporteImpuesto[]) {
+  const content = rows.map(reportText).join("\n\n---\n\n");
+  downloadFile("reportes-impuestos.zip", content);
 }
 
 function Page() {
@@ -58,13 +52,29 @@ function Page() {
     setData((prev) => prev.map((r) => (r.id === id ? { ...r, [campo]: true } : r)));
   };
 
+  const getActions = (r: ReporteImpuesto): ActionItem[] => [
+    { label: "Ver detalle", icon: Eye, onClick: () => setDetailId(r.id) },
+    {
+      label: "Descargar txt",
+      icon: FileText,
+      onClick: () =>
+        downloadFile(`reporte-${r.periodo}-${r.tramo.replace(/\s+/g, "-")}.txt`, reportText(r)),
+    },
+    {
+      label: "Descargar ZIP",
+      icon: FileArchive,
+      onClick: () =>
+        downloadFile(`reporte-${r.periodo}-${r.tramo.replace(/\s+/g, "-")}.zip`, reportText(r)),
+    },
+  ];
+
   const columns: Column<ReporteImpuesto>[] = [
     {
       key: "periodo",
       label: "Período",
       sortable: true,
       filterable: true,
-      render: (r) => r.periodo,
+      render: (r) => <span className="font-mono tabular-nums">{r.periodo}</span>,
     },
     { key: "tramo", label: "Tramo", sortable: true, filterable: true, render: (r) => r.tramo },
     {
@@ -100,7 +110,7 @@ function Page() {
         title="Reportes de Impuestos"
         description="Reportes de presentación de impuestos por período y tramo."
         action={
-          <BtnOutline onClick={() => downloadCsv(data)}>
+          <BtnOutline onClick={() => downloadZip(data)}>
             <Download size={16} /> Descargar ZIP
           </BtnOutline>
         }
@@ -111,14 +121,7 @@ function Page() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
-        actions={(r) => (
-          <button
-            onClick={() => setDetailId(r.id)}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-          >
-            <Eye size={14} /> Ver detalle
-          </button>
-        )}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 
       {detail && (

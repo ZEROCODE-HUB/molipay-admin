@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Eye, Edit3, CheckCircle, XCircle, FileCheck, Trash2, X } from "lucide-react";
+import { Eye, CheckCircle, XCircle, FileCheck, Trash2, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card, BtnOutline } from "@/components/portal-shell";
@@ -10,27 +10,20 @@ export const Route = createFileRoute("/admin/comercios/transferencia/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Comercios — Pagos por referencia — Admin Molly" },
-      { name: "description", content: "Gestión de comercios habilitados para pagos por referencia." },
+      { title: "Comercios — Pagos con transferencia — Admin Molly" },
+      {
+        name: "description",
+        content: "Gestión de comercios habilitados para pagos con transferencia.",
+      },
     ],
   }),
 });
 
 type EstadoComercio =
-  | "Activado"
-  | "Desactivado"
-  | "Pendiente de aprobación"
-  | "Rechazado"
-  | "Suspendido";
+  "Activado" | "Desactivado" | "Pendiente de aprobación" | "Rechazado" | "Suspendido";
 
 type NivelComercio =
-  | "Pequeño"
-  | "Mediano"
-  | "Grande"
-  | "Premium"
-  | "Estándar"
-  | "Básico"
-  | "Enterprise";
+  "Pequeño" | "Mediano" | "Grande" | "Premium" | "Estándar" | "Básico" | "Enterprise";
 
 type PuntoVenta = {
   nombre: string;
@@ -157,9 +150,7 @@ const dataInicial: Comercio[] = [
     nivel: "Básico",
     fechaCreacion: "08/01/2025",
     horaCreacion: "10:10",
-    puntosDeVenta: [
-      { nombre: "Electro Hogar", estado: "Activado", fechaCreacion: "08/01/2025" },
-    ],
+    puntosDeVenta: [{ nombre: "Electro Hogar", estado: "Activado", fechaCreacion: "08/01/2025" }],
   },
   {
     id: 7,
@@ -208,9 +199,7 @@ const dataInicial: Comercio[] = [
     nivel: "Mediano",
     fechaCreacion: "05/01/2025",
     horaCreacion: "12:15",
-    puntosDeVenta: [
-      { nombre: "Burgers Centro", estado: "Activado", fechaCreacion: "05/01/2025" },
-    ],
+    puntosDeVenta: [{ nombre: "Burgers Centro", estado: "Activado", fechaCreacion: "05/01/2025" }],
   },
   {
     id: 10,
@@ -242,13 +231,7 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function ComercioModal({
-  comercio,
-  onClose,
-}: {
-  comercio: Comercio;
-  onClose: () => void;
-}) {
+function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -272,10 +255,16 @@ function ComercioModal({
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
               <Field label="Usuario" value={comercio.usuario} />
-              <Field label="Legajo" value={<span className="font-mono tabular-nums">{comercio.legajo}</span>} />
+              <Field
+                label="Legajo"
+                value={<span className="font-mono tabular-nums">{comercio.legajo}</span>}
+              />
               <Field label="Fecha de creación" value={comercio.fechaCreacion} />
               <Field label="Hora de creación" value={comercio.horaCreacion} />
-              <Field label="Estado" value={<Badge tone={estadoBadgeTone(comercio.estado)}>{comercio.estado}</Badge>} />
+              <Field
+                label="Estado"
+                value={<Badge tone={estadoBadgeTone(comercio.estado)}>{comercio.estado}</Badge>}
+              />
               <Field label="Nivel" value={comercio.nivel} />
             </div>
           </Card>
@@ -285,7 +274,10 @@ function ComercioModal({
               Código de categoría
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <Field label="Código de categoría" value={<span className="font-mono tabular-nums">{comercio.categoria}</span>} />
+              <Field
+                label="Código de categoría"
+                value={<span className="font-mono tabular-nums">{comercio.categoria}</span>}
+              />
               <Field label="Descripción" value={comercio.descripcionCategoria} />
             </div>
           </Card>
@@ -307,9 +299,15 @@ function ComercioModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50 text-left">
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Nombre del punto de venta</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Estado</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Fecha de creación</th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
+                        Nombre del punto de venta
+                      </th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
+                        Estado
+                      </th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
+                        Fecha de creación
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -317,10 +315,14 @@ function ComercioModal({
                       <tr key={pdv.nombre} className="border-b last:border-0">
                         <td className="px-3 py-2.5 font-medium">{pdv.nombre}</td>
                         <td className="px-3 py-2.5">
-                          <Badge tone={pdv.estado === "Activado" ? "success" : "neutral"}>{pdv.estado}</Badge>
+                          <Badge tone={pdv.estado === "Activado" ? "success" : "neutral"}>
+                            {pdv.estado}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2.5">
-                          <span className="font-mono tabular-nums text-xs">{pdv.fechaCreacion}</span>
+                          <span className="font-mono tabular-nums text-xs">
+                            {pdv.fechaCreacion}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -332,7 +334,9 @@ function ComercioModal({
         </div>
 
         <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex justify-end">
-          <BtnOutline type="button" onClick={onClose}>Cerrar</BtnOutline>
+          <BtnOutline type="button" onClick={onClose}>
+            Cerrar
+          </BtnOutline>
         </div>
       </div>
     </div>
@@ -350,11 +354,15 @@ function Page() {
 
   const getActions = (r: Comercio): ActionItem[] => [
     { label: "Activar", icon: CheckCircle, onClick: () => setEstado(r.id, "Activado") },
-    { label: "Suspender", icon: XCircle, variant: "danger", onClick: () => setEstado(r.id, "Suspendido") },
+    {
+      label: "Suspender",
+      icon: XCircle,
+      variant: "danger",
+      onClick: () => setEstado(r.id, "Suspendido"),
+    },
     { label: "Validar", icon: FileCheck, onClick: () => setEstado(r.id, "Activado") },
     { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
-    { label: "Editar", icon: Edit3, onClick: () => setDetail(r) },
-    { label: "Ver comercio", icon: Eye, onClick: () => setDetail(r) },
+    { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
   ];
 
   const columns: Column<Comercio>[] = [
@@ -401,7 +409,7 @@ function Page() {
     <>
       <PageHeader
         title="Comercios"
-        description="Gestión de comercios habilitados para pagos por referencia (PCT)."
+        description="Gestión de comercios habilitados para pagos con transferencia (PCT)."
       />
       <DataTable
         columns={columns}

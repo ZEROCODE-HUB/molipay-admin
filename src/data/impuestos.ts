@@ -2,6 +2,7 @@ export type Estatus = "Activo" | "Inactivo";
 
 export type Impuesto = {
   id: number;
+  codigo: string;
   nombre: string;
   descripcion: string;
   tipoImpuesto: "Porcentaje" | "Fijo" | "Otro";
@@ -14,6 +15,7 @@ export type Impuesto = {
 export const impuestosIniciales: Impuesto[] = [
   {
     id: 1,
+    codigo: "GAN",
     nombre: "Ganancias",
     descripcion: "Impuesto a las ganancias anual de la plataforma.",
     tipoImpuesto: "Porcentaje",
@@ -24,6 +26,7 @@ export const impuestosIniciales: Impuesto[] = [
   },
   {
     id: 2,
+    codigo: "IIBB",
     nombre: "Ingresos Brutos",
     descripcion: "Impuesto provincial sobre la comisión de Molly.",
     tipoImpuesto: "Porcentaje",
@@ -34,6 +37,7 @@ export const impuestosIniciales: Impuesto[] = [
   },
   {
     id: 3,
+    codigo: "SELL",
     nombre: "Débito/Crédito (Sellos)",
     descripcion: "Retención de sellos sobre ingresos y egresos del cliente.",
     tipoImpuesto: "Fijo",
@@ -243,9 +247,9 @@ export type ReporteImpuesto = {
 export const reportesIniciales: ReporteImpuesto[] = [
   {
     id: 1,
-    periodo: "Junio 2026",
-    tramo: "Quincena 2",
-    fechaCreacion: "2026-07-02",
+    periodo: "2026-02",
+    tramo: "Tramo 1",
+    fechaCreacion: "2026-02-05 10:32",
     presentado: true,
     pagado: true,
     totalMovimientos: 1840,
@@ -254,9 +258,9 @@ export const reportesIniciales: ReporteImpuesto[] = [
   },
   {
     id: 2,
-    periodo: "Junio 2026",
-    tramo: "Quincena 1",
-    fechaCreacion: "2026-06-18",
+    periodo: "2026-01",
+    tramo: "Tramo 2",
+    fechaCreacion: "2026-01-18 15:07",
     presentado: true,
     pagado: false,
     totalMovimientos: 1720,
@@ -265,9 +269,9 @@ export const reportesIniciales: ReporteImpuesto[] = [
   },
   {
     id: 3,
-    periodo: "Mayo 2026",
-    tramo: "Quincena 2",
-    fechaCreacion: "2026-06-02",
+    periodo: "2026-01",
+    tramo: "Tramo 1",
+    fechaCreacion: "2026-01-02 09:15",
     presentado: true,
     pagado: true,
     totalMovimientos: 1655,
@@ -276,9 +280,9 @@ export const reportesIniciales: ReporteImpuesto[] = [
   },
   {
     id: 4,
-    periodo: "Mayo 2026",
-    tramo: "Quincena 1",
-    fechaCreacion: "2026-05-18",
+    periodo: "2025-12",
+    tramo: "Tramo 2",
+    fechaCreacion: "2025-12-18 14:40",
     presentado: false,
     pagado: false,
     totalMovimientos: 1590,
@@ -302,7 +306,7 @@ export type Excepcion = {
   vigenciaHasta: string;
   estado: Estatus;
   fechaCreacion: string;
-  autorizacion: string;
+  fechaActualizacion: string;
 };
 
 export const excepcionesIniciales: Excepcion[] = [
@@ -317,7 +321,7 @@ export const excepcionesIniciales: Excepcion[] = [
     vigenciaHasta: "",
     estado: "Activo",
     fechaCreacion: "2026-01-05",
-    autorizacion: "AUT-0001",
+    fechaActualizacion: "2026-06-12",
   },
   {
     id: 2,
@@ -330,7 +334,7 @@ export const excepcionesIniciales: Excepcion[] = [
     vigenciaHasta: "2026-09-10",
     estado: "Activo",
     fechaCreacion: "2026-03-10",
-    autorizacion: "AUT-0002",
+    fechaActualizacion: "2026-03-10",
   },
   {
     id: 3,
@@ -343,6 +347,6 @@ export const excepcionesIniciales: Excepcion[] = [
     vigenciaHasta: "",
     estado: "Inactivo",
     fechaCreacion: "2026-05-20",
-    autorizacion: "AUT-0003",
+    fechaActualizacion: "2026-07-02",
   },
 ];

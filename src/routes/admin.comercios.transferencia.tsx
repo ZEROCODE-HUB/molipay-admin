@@ -5,19 +5,21 @@ export const Route = createFileRoute("/admin/comercios/transferencia")({
   component: TransferenciaLayout,
   head: () => ({
     meta: [
-      { title: "Pago por referencia — Admin — Moli" },
-      { name: "description", content: "Gestión de pagos por referencia (transferencia)." },
+      { title: "Pagos con transferencia — Admin — Moli" },
+      { name: "description", content: "Gestión de pagos con transferencia." },
     ],
   }),
 });
 
 function TransferenciaLayout() {
   return (
-    <TabLayout tabs={[
-      { label: "Comercios", to: "/admin/comercios/transferencia" },
-      { label: "Resolvers", to: "/admin/comercios/transferencia/resolvers" },
-      { label: "Códigos de categoría", to: "/admin/comercios/transferencia/categorias" },
-    ]}>
+    <TabLayout
+      tabs={[
+        { label: "Comercios", to: "/admin/comercios/transferencia" },
+        { label: "Resolvers", to: "/admin/comercios/transferencia/resolvers" },
+        { label: "Códigos de categoría", to: "/admin/comercios/transferencia/categorias" },
+      ]}
+    >
       <Outlet />
     </TabLayout>
   );

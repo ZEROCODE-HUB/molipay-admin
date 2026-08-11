@@ -1,16 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { CheckCircle, XCircle, Edit3, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
-import { PageHeader, Badge, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
+import { PageHeader, Badge, BtnPrimary, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/categorias")({
   component: Page,
   head: () => ({
     meta: [
       { title: "Códigos de categoría — Admin — Moli" },
-      { name: "description", content: "Administración de códigos de categoría para organizaciones." },
+      {
+        name: "description",
+        content: "Administración de códigos de categoría para organizaciones.",
+      },
     ],
   }),
 });
@@ -24,16 +29,76 @@ type Categoria = {
 };
 
 const initialData: Categoria[] = [
-  { id: 1, codigo: "CAT-001", nombre: "Consorcio", descripcion: "Edificios residenciales y comerciales", estado: "activo" },
-  { id: 2, codigo: "CAT-002", nombre: "Alquileres", descripcion: "Gestión de alquileres inmobiliarios", estado: "activo" },
-  { id: 3, codigo: "CAT-003", nombre: "Microcrédito", descripcion: "Préstamos de bajo monto", estado: "activo" },
-  { id: 4, codigo: "CAT-004", nombre: "Municipio", descripcion: "Entidades gubernamentales locales", estado: "activo" },
-  { id: 5, codigo: "CAT-005", nombre: "Empresa", descripcion: "Personas jurídicas en general", estado: "activo" },
-  { id: 6, codigo: "CAT-006", nombre: "Educación", descripcion: "Instituciones educativas", estado: "inactivo" },
-  { id: 7, codigo: "CAT-007", nombre: "Salud", descripcion: "Clínicas y centros de salud", estado: "activo" },
-  { id: 8, codigo: "CAT-008", nombre: "Comercio", descripcion: "Comercios minoristas", estado: "activo" },
-  { id: 9, codigo: "CAT-009", nombre: "Transporte", descripcion: "Empresas de transporte", estado: "inactivo" },
-  { id: 10, codigo: "CAT-010", nombre: "Servicios", descripcion: "Servicios profesionales", estado: "activo" },
+  {
+    id: 1,
+    codigo: "CAT-001",
+    nombre: "Consorcio",
+    descripcion: "Edificios residenciales y comerciales",
+    estado: "activo",
+  },
+  {
+    id: 2,
+    codigo: "CAT-002",
+    nombre: "Alquileres",
+    descripcion: "Gestión de alquileres inmobiliarios",
+    estado: "activo",
+  },
+  {
+    id: 3,
+    codigo: "CAT-003",
+    nombre: "Microcrédito",
+    descripcion: "Préstamos de bajo monto",
+    estado: "activo",
+  },
+  {
+    id: 4,
+    codigo: "CAT-004",
+    nombre: "Municipio",
+    descripcion: "Entidades gubernamentales locales",
+    estado: "activo",
+  },
+  {
+    id: 5,
+    codigo: "CAT-005",
+    nombre: "Empresa",
+    descripcion: "Personas jurídicas en general",
+    estado: "activo",
+  },
+  {
+    id: 6,
+    codigo: "CAT-006",
+    nombre: "Educación",
+    descripcion: "Instituciones educativas",
+    estado: "inactivo",
+  },
+  {
+    id: 7,
+    codigo: "CAT-007",
+    nombre: "Salud",
+    descripcion: "Clínicas y centros de salud",
+    estado: "activo",
+  },
+  {
+    id: 8,
+    codigo: "CAT-008",
+    nombre: "Comercio",
+    descripcion: "Comercios minoristas",
+    estado: "activo",
+  },
+  {
+    id: 9,
+    codigo: "CAT-009",
+    nombre: "Transporte",
+    descripcion: "Empresas de transporte",
+    estado: "inactivo",
+  },
+  {
+    id: 10,
+    codigo: "CAT-010",
+    nombre: "Servicios",
+    descripcion: "Servicios profesionales",
+    estado: "activo",
+  },
 ];
 
 function Page() {
@@ -59,8 +124,10 @@ function Page() {
     if (editRow) {
       setData((prev) =>
         prev.map((d) =>
-          d.id === editRow.id ? { ...d, codigo: form.codigo, nombre: form.nombre, descripcion: form.descripcion } : d
-        )
+          d.id === editRow.id
+            ? { ...d, codigo: form.codigo, nombre: form.nombre, descripcion: form.descripcion }
+            : d,
+        ),
       );
     } else {
       const id = Math.max(...data.map((d) => d.id), 0) + 1;
@@ -72,6 +139,22 @@ function Page() {
   const eliminar = (id: number) => {
     setData((prev) => prev.filter((d) => d.id !== id));
   };
+
+  const toggleEstado = (id: number) => {
+    setData((prev) =>
+      prev.map((d) =>
+        d.id === id ? { ...d, estado: d.estado === "activo" ? "inactivo" : "activo" } : d,
+      ),
+    );
+  };
+
+  const getActions = (r: Categoria): ActionItem[] => [
+    r.estado === "activo"
+      ? { label: "Desactivar", icon: XCircle, variant: "danger", onClick: () => toggleEstado(r.id) }
+      : { label: "Activar", icon: CheckCircle, onClick: () => toggleEstado(r.id) },
+    { label: "Editar", icon: Edit3, onClick: () => openEdit(r) },
+    { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
+  ];
 
   const columns: Column<Categoria>[] = [
     {
@@ -98,10 +181,10 @@ function Page() {
     {
       key: "estado",
       label: "Estado",
-      sortable: true, filterable: "enum", filterOptions: ["activo", "inactivo"],
-      render: (r) => (
-        <Badge tone={r.estado === "activo" ? "success" : "neutral"}>{r.estado}</Badge>
-      ),
+      sortable: true,
+      filterable: "enum",
+      filterOptions: ["activo", "inactivo"],
+      render: (r) => <Badge tone={r.estado === "activo" ? "success" : "neutral"}>{r.estado}</Badge>,
     },
   ];
 
@@ -121,26 +204,17 @@ function Page() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
-        actions={(r) => (
-          <div className="flex gap-1 justify-end">
-            <BtnOutline type="button" className="h-7 text-xs px-2" onClick={() => openEdit(r)}>
-              Editar
-            </BtnOutline>
-            <BtnOutline
-              type="button"
-              className="h-7 text-xs px-2 text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => setConfirmDelete(r)}
-            >
-              Eliminar
-            </BtnOutline>
-          </div>
-        )}
+        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         title={editRow ? "Editar categoría" : "Nueva categoría"}
-        description={editRow ? "Modifique los datos de la categoría." : "Complete los datos para crear una nueva categoría."}
+        description={
+          editRow
+            ? "Modifique los datos de la categoría."
+            : "Complete los datos para crear una nueva categoría."
+        }
         onSubmit={submit}
         submitLabel={editRow ? "Guardar cambios" : "Crear categoría"}
       >

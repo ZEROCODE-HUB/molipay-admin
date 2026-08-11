@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/comercios/transferencia/resolvers")
   component: Page,
   head: () => ({
     meta: [
-      { title: "Resolvers — Pagos por referencia — Admin Molly" },
+      { title: "Resolvers — Pagos con transferencia — Admin Molly" },
       { name: "description", content: "Gestión de resolvers PCT (pagos con transferencia)." },
     ],
   }),
@@ -181,7 +181,12 @@ function Page() {
 
   const getActions = (r: Resolver): ActionItem[] => [
     { label: "Activar", icon: CheckCircle, onClick: () => toggleEstado(r.id, "Activo") },
-    { label: "Desactivar", icon: XCircle, variant: "danger", onClick: () => toggleEstado(r.id, "Inactivo") },
+    {
+      label: "Desactivar",
+      icon: XCircle,
+      variant: "danger",
+      onClick: () => toggleEstado(r.id, "Inactivo"),
+    },
     { label: "Editar", icon: Edit3, onClick: () => openEdit(r) },
   ];
 

@@ -5,7 +5,15 @@ type Message = { role: "user" | "bot"; text: string };
 
 const KB = [
   {
-    keywords: ["transacción", "movimiento", "estado", "COELSA", "en progreso", "aprobado", "rechazado"],
+    keywords: [
+      "transacción",
+      "movimiento",
+      "estado",
+      "COELSA",
+      "en progreso",
+      "aprobado",
+      "rechazado",
+    ],
     response:
       "Una transacción nace EN PROGRESO: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a APROBADO. Si no, pasa a RECHAZADO y el saldo se revierte. Moli solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
   },
@@ -22,7 +30,7 @@ const KB = [
   {
     keywords: ["navegación", "dónde está", "cómo encuentro", "menú", "sección"],
     response:
-      "El panel administrativo está organizado así:\n\n• General: Usuarios (Personas físicas, jurídicas, CVU, comisiones), Movimientos (8 tipos), Alertas (listados y parámetros)\n• Administración: Usuarios backoffice (personal y roles), Reportes, Registros (fondos, actividad), Soporte (Consultas frecuentes, Bloqueo de funciones)\n• Comercios: Pago por referencia, Link de pago, Impuestos, APIs externas\n• Configuración: Logins, Mensajes de error, Telegram",
+      "El panel administrativo está organizado así:\n\n• General: Usuarios (Personas físicas, jurídicas, CVU, comisiones), Movimientos (8 tipos), Alertas (listados y parámetros)\n• Administración: Usuarios backoffice (personal y roles), Reportes, Registros (fondos, actividad), Soporte (Consultas frecuentes, Bloqueo de funciones)\n• Comercios: Pagos con transferencia, Link de pago, Impuestos, APIs externas\n• Configuración: Logins, Mensajes de error, Telegram",
   },
 ];
 
@@ -123,16 +131,19 @@ export function AdminChatbot() {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+              <div
+                key={i}
+                className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+              >
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                     msg.role === "bot"
                       ? "bg-moli-blue-light text-moli-blue"
                       : "bg-primary text-primary-foreground"
-                    }`}
-                  >
-                    {msg.role === "bot" ? <Bot size={14} /> : <User size={14} />}
-                  </div>
+                  }`}
+                >
+                  {msg.role === "bot" ? <Bot size={14} /> : <User size={14} />}
+                </div>
                 <div
                   className={`max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "bot"

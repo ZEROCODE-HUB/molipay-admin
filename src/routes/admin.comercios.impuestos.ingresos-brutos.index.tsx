@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Eye, PlayCircle } from "lucide-react";
+import { Eye, PlayCircle, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { Badge, Input, Label, BtnPrimary, BtnOutline } from "@/components/portal-shell";
 import { FileDropzone } from "@/components/file-dropzone";
-import { WizardModal } from "@/components/wizard-modal";
 import { KpiCard } from "@/components/kpi-card";
 import { padronesIniciales, type Padron, type PadronEstado } from "@/data/impuestos";
 
@@ -18,7 +17,7 @@ const estadoTone: Record<PadronEstado, "success" | "warn" | "danger" | "neutral"
 
 type PreviewKPIs = {
   usuariosAnalizados: number;
-  impuestosRevisados: number;
+  impuestosActualizados: number;
   impuestosCreados: number;
   impuestosDesactivados: number;
   cargosAjustados: number;
@@ -39,7 +38,7 @@ type Omitido = { cuit: string; motivo: string; usuario: string };
 
 const kpisMock: PreviewKPIs = {
   usuariosAnalizados: 1240,
-  impuestosRevisados: 58,
+  impuestosActualizados: 58,
   impuestosCreados: 12,
   impuestosDesactivados: 3,
   cargosAjustados: 940,
@@ -82,6 +81,149 @@ export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos
   component: Page,
 });
 
+type PreviewTab = "creados" | "desactivados" | "omitidos";
+
+const previewTabs: { key: PreviewTab; label: string }[] = [
+  { key: "creados", label: "Impuestos creados" },
+  { key: "desactivados", label: "Impuestos desactivados" },
+  { key: "omitidos", label: "Impuestos omitidos" },
+];
+
+function PreviewModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  const [tab, setTab] = useState<PreviewTab>("creados");
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start z-10">
+          <div>
+            <h3 className="font-display font-semibold text-lg">
+              Preview de normalización retroactiva
+            </h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Revisá el impacto esperado antes de aplicar los cambios definitivos.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="Usuarios analizados" value={kpisMock.usuariosAnalizados} />
+            <KpiCard label="Impuestos actualizados" value={kpisMock.impuestosActualizados} />
+            <KpiCard label="Impuestos creados" value={kpisMock.impuestosCreados} />
+            <KpiCard label="Desactivados" value={kpisMock.impuestosDesactivados} />
+            <KpiCard label="Cargos ajustados" value={kpisMock.cargosAjustados} />
+            <KpiCard label="Omitidos" value={kpisMock.registrosOmitidos} />
+            <KpiCard label="Con error" value={kpisMock.errores} />
+            <KpiCard label="Diferencia total" value={kpisMock.diferencias} />
+          </div>
+
+          <div>
+            <div className="flex gap-1 border-b border-border mb-3">
+              {previewTabs.map((t) => {
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setTab(t.key)}
+                    className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "creados" && (
+              <DataTable
+                columns={columnsCreados}
+                data={creadosMock}
+                keyExtractor={(r) => r.cuit}
+                pageSize={5}
+              />
+            )}
+            {tab === "desactivados" && (
+              <DataTable
+                columns={columnsDesactivados}
+                data={desactivadosMock}
+                keyExtractor={(r) => r.cuit}
+                pageSize={5}
+              />
+            )}
+            {tab === "omitidos" && (
+              <DataTable
+                columns={columnsOmitidos}
+                data={omitidosMock}
+                keyExtractor={(r) => r.cuit}
+                pageSize={5}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-card border-t px-6 py-4 flex justify-end gap-2">
+          <BtnOutline type="button" onClick={onClose}>
+            Cancelar
+          </BtnOutline>
+          <BtnPrimary type="button" onClick={onConfirm}>
+            Confirmar y aplicar
+          </BtnPrimary>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const columnsCreados: Column<ImpuestoCreado>[] = [
+  {
+    key: "cuit",
+    label: "CUIT",
+    render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
+  },
+  { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
+  {
+    key: "tasa",
+    label: "Tasa",
+    render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span>,
+  },
+  { key: "usuario", label: "Usuario", render: (r) => r.usuario },
+];
+
+const columnsDesactivados: Column<ImpuestoDesactivado>[] = [
+  {
+    key: "cuit",
+    label: "CUIT",
+    render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
+  },
+  { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
+  {
+    key: "tasa",
+    label: "Tasa",
+    render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span>,
+  },
+  { key: "usuario", label: "Usuario", render: (r) => r.usuario },
+  { key: "motivo", label: "Motivo", render: (r) => r.motivo },
+];
+
+const columnsOmitidos: Column<Omitido>[] = [
+  {
+    key: "cuit",
+    label: "CUIT",
+    render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
+  },
+  { key: "motivo", label: "Motivo", render: (r) => r.motivo },
+  { key: "usuario", label: "Usuario", render: (r) => r.usuario },
+];
+
 function Page() {
   const [data, setData] = useState<Padron[]>(padronesIniciales);
   const [impuesto, setImpuesto] = useState("");
@@ -91,8 +233,7 @@ function Page() {
   const [impuestos] = useState(["Ganancias", "Ingresos Brutos", "Débito/Crédito (Sellos)"]);
   const timers = useRef<Record<number, ReturnType<typeof setInterval>>>({});
 
-  const [showWizard, setShowWizard] = useState(false);
-  const [generated, setGenerated] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [aplicado, setAplicado] = useState(false);
 
   useEffect(() => {
@@ -139,11 +280,6 @@ function Page() {
     setFile(null);
   };
 
-  const openWizard = (preview: boolean) => {
-    setGenerated(preview);
-    setShowWizard(true);
-  };
-
   const columns: Column<Padron>[] = [
     { key: "id", label: "ID", render: (r) => <span className="font-mono text-xs">#{r.id}</span> },
     {
@@ -187,124 +323,6 @@ function Page() {
     },
   ];
 
-  const columnsCreados: Column<ImpuestoCreado>[] = [
-    {
-      key: "cuit",
-      label: "CUIT",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
-    },
-    { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
-    {
-      key: "tasa",
-      label: "Tasa",
-      render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span>,
-    },
-    { key: "usuario", label: "Usuario", render: (r) => r.usuario },
-  ];
-
-  const columnsDesactivados: Column<ImpuestoDesactivado>[] = [
-    {
-      key: "cuit",
-      label: "CUIT",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
-    },
-    { key: "impuesto", label: "Impuesto", render: (r) => r.impuesto },
-    {
-      key: "tasa",
-      label: "Tasa",
-      render: (r) => <span className="font-mono tabular-nums">{r.tasa}</span>,
-    },
-    { key: "usuario", label: "Usuario", render: (r) => r.usuario },
-    { key: "motivo", label: "Motivo", render: (r) => r.motivo },
-  ];
-
-  const columnsOmitidos: Column<Omitido>[] = [
-    {
-      key: "cuit",
-      label: "CUIT",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
-    },
-    { key: "motivo", label: "Motivo", render: (r) => r.motivo },
-    { key: "usuario", label: "Usuario", render: (r) => r.usuario },
-  ];
-
-  const steps = [
-    {
-      label: "Generar preview",
-      content: (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Esta revisión histórica evalúa las asignaciones de impuestos antes de aplicar cambios.
-            No se modifica ningún dato hasta confirmar la aplicación.
-          </p>
-          {!generated ? (
-            <BtnPrimary onClick={() => setGenerated(true)}>Generar preview</BtnPrimary>
-          ) : (
-            <p className="text-sm font-medium text-emerald-600">
-              Preview generado. Usá “Siguiente” para revisar los resultados.
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      label: "Revisar",
-      content: (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Usuarios analizados" value={kpisMock.usuariosAnalizados} />
-            <KpiCard label="Impuestos revisados" value={kpisMock.impuestosRevisados} />
-            <KpiCard label="Impuestos creados" value={kpisMock.impuestosCreados} />
-            <KpiCard label="Impuestos desactivados" value={kpisMock.impuestosDesactivados} />
-            <KpiCard label="Cargos ajustados" value={kpisMock.cargosAjustados} />
-            <KpiCard label="Registros omitidos" value={kpisMock.registrosOmitidos} />
-            <KpiCard label="Errores" value={kpisMock.errores} />
-            <KpiCard label="Diferencias" value={kpisMock.diferencias} />
-          </div>
-
-          <Section title="Impuestos creados">
-            <DataTable
-              columns={columnsCreados}
-              data={creadosMock}
-              keyExtractor={(r) => r.cuit}
-              pageSize={5}
-            />
-          </Section>
-          <Section title="Impuestos desactivados">
-            <DataTable
-              columns={columnsDesactivados}
-              data={desactivadosMock}
-              keyExtractor={(r) => r.cuit}
-              pageSize={5}
-            />
-          </Section>
-          <Section title="Omitidos">
-            <DataTable
-              columns={columnsOmitidos}
-              data={omitidosMock}
-              keyExtractor={(r) => r.cuit}
-              pageSize={5}
-            />
-          </Section>
-        </div>
-      ),
-    },
-    {
-      label: "Confirmar",
-      content: (
-        <div className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            Al aplicar se ejecutarán {kpisMock.impuestosCreados} altas,{" "}
-            {kpisMock.impuestosDesactivados} bajas y {kpisMock.cargosAjustados} ajustes de cargos.
-          </p>
-          <Badge tone={aplicado ? "success" : "warn"}>
-            {aplicado ? "Aplicado" : "Pendiente de aplicación"}
-          </Badge>
-        </div>
-      ),
-    },
-  ];
-
   return (
     <>
       <PageHeader
@@ -312,7 +330,7 @@ function Page() {
         description="Gestión de padrones y normalización retroactiva de asignaciones de impuestos."
       />
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <section className="bg-card border rounded-lg overflow-hidden">
           <header className="px-5 py-4 border-b">
             <h3 className="font-display font-semibold text-base">Gestión de Padrones</h3>
@@ -377,39 +395,25 @@ function Page() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <BtnOutline onClick={() => openWizard(false)}>
+            <BtnOutline onClick={() => setShowPreview(true)}>
               <Eye size={16} /> Ver preview
             </BtnOutline>
-            <BtnPrimary onClick={() => openWizard(true)}>
+            <BtnPrimary onClick={() => setShowPreview(true)}>
               <PlayCircle size={16} /> Aplicar
             </BtnPrimary>
           </div>
         </section>
       </div>
 
-      <WizardModal
-        open={showWizard}
-        onClose={() => setShowWizard(false)}
-        title="Normalización retroactiva"
-        steps={steps}
-        finishLabel="Aplicar normalización"
-        finishDisabled={!generated}
-        onFinish={() => {
-          setAplicado(true);
-          setShowWizard(false);
-        }}
-      />
+      {showPreview && (
+        <PreviewModal
+          onClose={() => setShowPreview(false)}
+          onConfirm={() => {
+            setAplicado(true);
+            setShowPreview(false);
+          }}
+        />
+      )}
     </>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-        {title}
-      </h4>
-      {children}
-    </div>
   );
 }
