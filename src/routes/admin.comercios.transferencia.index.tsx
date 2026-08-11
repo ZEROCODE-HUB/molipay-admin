@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Eye, CheckCircle, XCircle, FileCheck, Trash2, X } from "lucide-react";
+import { Eye, Edit3, CheckCircle, XCircle, FileCheck, Trash2, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card, BtnOutline } from "@/components/portal-shell";
@@ -362,6 +362,7 @@ function Page() {
     },
     { label: "Validar", icon: FileCheck, onClick: () => setEstado(r.id, "Activado") },
     { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
+    { label: "Editar", icon: Edit3, onClick: () => setDetail(r) },
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
   ];
 
