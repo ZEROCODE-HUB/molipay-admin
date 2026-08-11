@@ -6,7 +6,7 @@ import { PageHeader, Card, Badge, BtnOutline } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { DeveloperModeToggle } from "@/components/developer-mode-toggle";
 
-export const Route = createFileRoute("/admin/configuracion/notificaciones/")({
+export const Route = createFileRoute("/admin/notificaciones/")({
   component: Page,
   head: () => ({
     meta: [

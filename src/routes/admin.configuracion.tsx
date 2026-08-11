@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout } from "@/components/tab-layout";
+import { TabLayout, type Tab } from "@/components/tab-layout";
+import { PageHeader } from "@/components/portal-shell";
+import { DeveloperModeToggle } from "@/components/developer-mode-toggle";
 
 export const Route = createFileRoute("/admin/configuracion")({
   component: ConfiguracionLayout,
@@ -11,14 +13,23 @@ export const Route = createFileRoute("/admin/configuracion")({
   }),
 });
 
+const tabs: Tab[] = [
+  { label: "Resumen", to: "/admin/configuracion" },
+  { label: "Logins configurados", to: "/admin/configuracion/logins" },
+  { label: "Configuraciones de login", to: "/admin/configuracion/configuraciones" },
+];
+
 function ConfiguracionLayout() {
   return (
-    <TabLayout tabs={[
-      { label: "Gestor de Logins", to: "/admin/configuracion" },
-      { label: "Gestor de mensajes de error", to: "/admin/configuracion/mensajes" },
-      { label: "Mensajes de Telegram", to: "/admin/configuracion/telegram" },
-    ]}>
-      <Outlet />
-    </TabLayout>
+    <div className="space-y-4">
+      <PageHeader
+        title="Gestor de Integraciones"
+        description="Seguimiento del estado de las integraciones que alimentan a la plataforma."
+        action={<DeveloperModeToggle />}
+      />
+      <TabLayout tabs={tabs}>
+        <Outlet />
+      </TabLayout>
+    </div>
   );
 }

@@ -13,11 +13,9 @@ import {
   RotateCw,
   Zap,
 } from "lucide-react";
-import { DataTable, type Column } from "@/components/data-table";
-import { PageHeader, Card, Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { Card, Badge, BtnOutline } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { DeveloperModeToggle } from "@/components/developer-mode-toggle";
 import { useDeveloperMode } from "@/hooks/use-developer-mode";
 import { toast } from "sonner";
 
@@ -102,92 +100,6 @@ const saludMeta: Record<
   error: { label: "Última ejecución fallida", tone: "danger", icon: XCircle },
 };
 
-type LoginConfig = {
-  nombre: string;
-  negocio: string;
-  programacion: string;
-  ultimaEjecucion: string;
-  proximaEjecucion: string;
-  tiempoRestante: string;
-  ejecuciones: number;
-};
-
-const loginsConfigurados: LoginConfig[] = [
-  {
-    nombre: "pct:wondersoft",
-    negocio: "Wondersoft (QR)",
-    programacion: "*/15 * * * *",
-    ultimaEjecucion: "11/08/2026 08:00",
-    proximaEjecucion: "11/08/2026 08:15",
-    tiempoRestante: "02:41",
-    ejecuciones: 12480,
-  },
-  {
-    nombre: "pds:pago_mis_cuentas",
-    negocio: "Pago Mis Cuentas",
-    programacion: "*/15 * * * *",
-    ultimaEjecucion: "11/08/2026 07:55",
-    proximaEjecucion: "11/08/2026 08:10",
-    tiempoRestante: "00:12",
-    ejecuciones: 8931,
-  },
-  {
-    nombre: "bank.bdc_conecta",
-    negocio: "BDC Conecta",
-    programacion: "*/30 * * * *",
-    ultimaEjecucion: "11/08/2026 07:30",
-    proximaEjecucion: "11/08/2026 08:00",
-    tiempoRestante: "05:44",
-    ejecuciones: 4572,
-  },
-  {
-    nombre: "cpf:coelsa_cpf",
-    negocio: "Coelsa — CPF",
-    programacion: "*/15 * * * *",
-    ultimaEjecucion: "11/08/2026 08:05",
-    proximaEjecucion: "11/08/2026 08:20",
-    tiempoRestante: "08:01",
-    ejecuciones: 21003,
-  },
-  {
-    nombre: "pct:coelsa_cvu",
-    negocio: "Coelsa — CVU",
-    programacion: "*/15 * * * *",
-    ultimaEjecucion: "11/08/2026 08:02",
-    proximaEjecucion: "11/08/2026 08:17",
-    tiempoRestante: "05:33",
-    ejecuciones: 20177,
-  },
-  {
-    nombre: "pct:coelsa_debin",
-    negocio: "Coelsa — DEBIN",
-    programacion: "*/15 * * * *",
-    ultimaEjecucion: "11/08/2026 07:45",
-    proximaEjecucion: "11/08/2026 08:10",
-    tiempoRestante: "00:51",
-    ejecuciones: 18954,
-  },
-];
-
-type ConfiguracionLogin = { nombre: string; url: string; metodo: string };
-
-const configuraciones: ConfiguracionLogin[] = [
-  { nombre: "pct:wondersoft", url: "https://wondersoft.providers.ar/ws/login", metodo: "POST" },
-  {
-    nombre: "pds:pago_mis_cuentas",
-    url: "https://api.pagomiscuentas.com/v2/auth/login",
-    metodo: "POST",
-  },
-  {
-    nombre: "bank.bdc_conecta",
-    url: "http://10.116.0.7:8083/ms-login-providers/login",
-    metodo: "POST",
-  },
-  { nombre: "cpf:coelsa_cpf", url: "https://coelsa.com.ar/cpf/ws/login", metodo: "POST" },
-  { nombre: "pct:coelsa_cvu", url: "https://coelsa.com.ar/cvu/ws/login", metodo: "POST" },
-  { nombre: "pct:coelsa_debin", url: "https://coelsa.com.ar/debin/ws/login", metodo: "POST" },
-];
-
 const proximoGrupo = ["pct:wondersoft", "pds:pago_mis_cuentas", "cpf:coelsa_cpf"];
 
 function Page() {
@@ -200,311 +112,211 @@ function Page() {
   const [loginSeleccionado, setLoginSeleccionado] = useState(integraciones[0].id);
   const [confirmEjecutarTodos, setConfirmEjecutarTodos] = useState(false);
 
-  const loginColumns: Column<LoginConfig>[] = [
-    {
-      key: "nombre",
-      label: "Nombre",
-      sortable: true,
-      filterable: true,
-      render: (r) => (
-        <div>
-          <div className="font-mono text-xs font-semibold">{r.nombre}</div>
-          <div className="text-[11px] text-muted-foreground">{r.negocio}</div>
-        </div>
-      ),
-    },
-    {
-      key: "programacion",
-      label: "Programación",
-      sortable: true,
-      render: (r) => <span className="font-mono text-xs">{r.programacion}</span>,
-    },
-    {
-      key: "ultimaEjecucion",
-      label: "Última ejecución",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.ultimaEjecucion}</span>,
-    },
-    {
-      key: "proximaEjecucion",
-      label: "Próxima ejecución",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.proximaEjecucion}</span>,
-    },
-    {
-      key: "tiempoRestante",
-      label: "Tiempo restante",
-      sortable: true,
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.tiempoRestante}</span>,
-    },
-    {
-      key: "ejecuciones",
-      label: "Ejecuciones",
-      sortable: true,
-      render: (r) => (
-        <span className="font-semibold tabular-nums">{r.ejecuciones.toLocaleString()}</span>
-      ),
-    },
-  ];
+  if (!devMode) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {integraciones.map((i) => {
+          const meta = saludMeta[i.salud];
+          const Icon = meta.icon;
+          return (
+            <Card key={i.id} className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-display font-semibold text-base text-foreground truncate">
+                    {i.nombre}
+                  </h3>
+                  <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {i.id}
+                  </div>
+                </div>
+                <Icon
+                  size={22}
+                  className={
+                    i.salud === "ok"
+                      ? "text-emerald-500 shrink-0"
+                      : i.salud === "warning"
+                        ? "text-amber-500 shrink-0"
+                        : "text-red-500 shrink-0"
+                  }
+                />
+              </div>
 
-  const configuracionColumns: Column<ConfiguracionLogin>[] = [
-    {
-      key: "nombre",
-      label: "Nombre",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs font-semibold">{r.nombre}</span>,
-    },
-    {
-      key: "url",
-      label: "URL",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.url}</span>,
-    },
-    {
-      key: "metodo",
-      label: "Método",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["GET", "POST", "PUT", "PATCH"],
-      render: (r) => <Badge tone="neutral">{r.metodo}</Badge>,
-    },
-  ];
+              <Badge tone={meta.tone} className="w-fit">
+                {meta.label}
+              </Badge>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                    Última ejecución
+                  </div>
+                  <div className="font-mono text-xs tabular-nums mt-1">{i.ultimaEjecucion}</div>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                    Próxima ejecución
+                  </div>
+                  <div className="font-mono text-xs tabular-nums mt-1">{i.proximaEjecucion}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-3">
+                <span className="text-xs text-muted-foreground">Ejecuciones totales</span>
+                <span className="font-display text-lg font-semibold tabular-nums">
+                  {i.ejecuciones.toLocaleString()}
+                </span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <PageHeader
-        title="Gestor de Integraciones"
-        description="Seguimiento del estado de las integraciones que alimentan a la plataforma."
-        action={<DeveloperModeToggle />}
-      />
+    <div className="space-y-6">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300">
+        Vista de desarrollador: información técnica de infraestructura. Se accede con el rol
+        Developer (lectura sobre este recurso).{" "}
+        <span className="font-semibold">Pregunta abierta:</span> ¿esta vista vive dentro del panel
+        (protegida por rol) o se separa en un portal técnico? — pendiente de confirmación.
+      </div>
 
-      {!devMode ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {integraciones.map((i) => {
-            const meta = saludMeta[i.salud];
-            const Icon = meta.icon;
-            return (
-              <Card key={i.id} className="flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-display font-semibold text-base text-foreground truncate">
-                      {i.nombre}
-                    </h3>
-                    <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">
-                      {i.id}
-                    </div>
-                  </div>
-                  <Icon
-                    size={22}
-                    className={
-                      i.salud === "ok"
-                        ? "text-emerald-500 shrink-0"
-                        : i.salud === "warning"
-                          ? "text-amber-500 shrink-0"
-                          : "text-red-500 shrink-0"
-                    }
-                  />
-                </div>
-
-                <Badge tone={meta.tone} className="w-fit">
-                  {meta.label}
-                </Badge>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      Última ejecución
-                    </div>
-                    <div className="font-mono text-xs tabular-nums mt-1">{i.ultimaEjecucion}</div>
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      Próxima ejecución
-                    </div>
-                    <div className="font-mono text-xs tabular-nums mt-1">{i.proximaEjecucion}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border pt-3">
-                  <span className="text-xs text-muted-foreground">Ejecuciones totales</span>
-                  <span className="font-display text-lg font-semibold tabular-nums">
-                    {i.ejecuciones.toLocaleString()}
-                  </span>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300">
-            Vista de desarrollador: información técnica de infraestructura. Se accede con el rol
-            Developer (lectura sobre este recurso).{" "}
-            <span className="font-semibold">Pregunta abierta:</span> ¿esta vista vive dentro del
-            panel (protegida por rol) o se separa en un portal técnico? — pendiente de confirmación.
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <ServerCog size={18} className="text-moli-blue" />
+            <h3 className="font-display font-semibold">Estado del Servicio</h3>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <ServerCog size={18} className="text-moli-blue" />
-                <h3 className="font-display font-semibold">Estado del Servicio</h3>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Servicio</span>
-                  <span className="font-mono text-xs font-semibold">ms-login-providers</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Versión</span>
-                  <span className="font-mono text-xs">1.24.7</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Cron</span>
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Ejecutándose
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <Database size={18} className="text-moli-blue" />
-                <h3 className="font-display font-semibold">Conexiones</h3>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Redis</span>
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Conectado
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
-                  redis://10.116.0.7:6379
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Base de Datos</span>
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Conectada
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
-                  postgres://10.116.0.7:5432/molipay
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Servicio de login</span>
-                  <span className="font-mono text-[11px] font-semibold">10.116.0.7:8083</span>
-                </div>
-              </div>
-            </Card>
-
-            <div className="space-y-6">
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Layers size={18} className="text-moli-blue" />
-                  <h3 className="font-display font-semibold">Estadísticas paralelas</h3>
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Total de logins</span>
-                    <span className="font-semibold tabular-nums">6</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Grupos de ejecución</span>
-                    <span className="font-semibold tabular-nums">2</span>
-                  </div>
-                  <div className="py-2">
-                    <div className="text-muted-foreground">Próximo grupo a ejecutar</div>
-                    <div className="mt-2 rounded-lg bg-muted/50 p-3">
-                      <div className="font-semibold flex items-center gap-1.5">
-                        <Timer size={14} className="text-moli-blue" /> Grupo A — en 45 s
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {proximoGrupo.map((l) => (
-                          <span
-                            key={l}
-                            className="font-mono text-[11px] bg-card border border-border rounded px-1.5 py-0.5"
-                          >
-                            {l}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Servicio</span>
+              <span className="font-mono text-xs font-semibold">ms-login-providers</span>
+            </div>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Versión</span>
+              <span className="font-mono text-xs">1.24.7</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-muted-foreground">Cron</span>
+              <span className="font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                Ejecutándose
+              </span>
             </div>
           </div>
+        </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <Zap size={18} className="text-moli-blue" />
-                <h3 className="font-display font-semibold">Próxima ejecución</h3>
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <Database size={18} className="text-moli-blue" />
+            <h3 className="font-display font-semibold">Conexiones</h3>
+          </div>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Redis</span>
+              <span className="font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                Conectado
+              </span>
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
+              redis://10.116.0.7:6379
+            </div>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Base de Datos</span>
+              <span className="font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                Conectada
+              </span>
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground -mt-2 pb-2 border-b">
+              postgres://10.116.0.7:5432/molipay
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-muted-foreground">Servicio de login</span>
+              <span className="font-mono text-[11px] font-semibold">10.116.0.7:8083</span>
+            </div>
+          </div>
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Layers size={18} className="text-moli-blue" />
+              <h3 className="font-display font-semibold">Estadísticas paralelas</h3>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Total de logins</span>
+                <span className="font-semibold tabular-nums">6</span>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">¿Ejecutaría ahora?</span>
-                  <Badge tone="warn">No — próxima corrida en 45 s</Badge>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Grupos de ejecución</span>
+                <span className="font-semibold tabular-nums">2</span>
+              </div>
+              <div className="py-2">
+                <div className="text-muted-foreground">Próximo grupo a ejecutar</div>
+                <div className="mt-2 rounded-lg bg-muted/50 p-3">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <Timer size={14} className="text-moli-blue" /> Grupo A — en 45 s
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {proximoGrupo.map((l) => (
+                      <span
+                        key={l}
+                        className="font-mono text-[11px] bg-card border border-border rounded px-1.5 py-0.5"
+                      >
+                        {l}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Logins en paralelo</span>
-                  <span className="font-semibold tabular-nums">3</span>
-                </div>
               </div>
-            </Card>
-
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <FileCog size={18} className="text-moli-blue" />
-                <h3 className="font-display font-semibold">Controles técnicos</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <BtnOutline onClick={() => setShowLogs(true)}>
-                  <FileCog size={15} /> Configurar Logs
-                </BtnOutline>
-                <BtnOutline onClick={() => setConfirmEjecutarTodos(true)}>
-                  <Play size={15} /> Ejecutar Todos
-                </BtnOutline>
-                <BtnOutline onClick={() => setShowEjecutarEspecifico(true)}>
-                  <Zap size={15} /> Ejecutar Específico
-                </BtnOutline>
-                <BtnOutline onClick={() => toast.success("Datos de integraciones actualizados")}>
-                  <RotateCw size={15} /> Actualizar Datos
-                </BtnOutline>
-              </div>
-            </Card>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-display font-semibold text-lg">Logins Configurados</h3>
-            <DataTable
-              columns={loginColumns}
-              data={loginsConfigurados}
-              keyExtractor={(r) => r.nombre}
-              pageSize={10}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-display font-semibold text-lg">Configuraciones de Login</h3>
-            <DataTable
-              columns={configuracionColumns}
-              data={configuraciones}
-              keyExtractor={(r) => r.nombre}
-              pageSize={10}
-            />
-          </div>
+            </div>
+          </Card>
         </div>
-      )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={18} className="text-moli-blue" />
+            <h3 className="font-display font-semibold">Próxima ejecución</h3>
+          </div>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">¿Ejecutaría ahora?</span>
+              <Badge tone="warn">No — próxima corrida en 45 s</Badge>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-muted-foreground">Logins en paralelo</span>
+              <span className="font-semibold tabular-nums">3</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <FileCog size={18} className="text-moli-blue" />
+            <h3 className="font-display font-semibold">Controles técnicos</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <BtnOutline onClick={() => setShowLogs(true)}>
+              <FileCog size={15} /> Configurar Logs
+            </BtnOutline>
+            <BtnOutline onClick={() => setConfirmEjecutarTodos(true)}>
+              <Play size={15} /> Ejecutar Todos
+            </BtnOutline>
+            <BtnOutline onClick={() => setShowEjecutarEspecifico(true)}>
+              <Zap size={15} /> Ejecutar Específico
+            </BtnOutline>
+            <BtnOutline onClick={() => toast.success("Datos de integraciones actualizados")}>
+              <RotateCw size={15} /> Actualizar Datos
+            </BtnOutline>
+          </div>
+        </Card>
+      </div>
 
       <FormDialog
         open={showLogs}
@@ -584,6 +396,6 @@ function Page() {
         confirmLabel="Ejecutar todos"
         onConfirm={() => toast.success("Corrida manual de todos los logins iniciada")}
       />
-    </>
+    </div>
   );
 }

@@ -70,7 +70,7 @@ const nav: NavItem[] = [
     items: [
       { to: "/admin/modulos", label: "Salud de módulos", icon: Puzzle },
       { to: "/admin/configuracion", label: "Integraciones", icon: Cable },
-      { to: "/admin/configuracion/notificaciones", label: "Notificaciones", icon: BellRing },
+      { to: "/admin/notificaciones", label: "Notificaciones", icon: BellRing },
     ],
   },
   { to: "/admin/incidentes", label: "Comunicación", icon: Bell },

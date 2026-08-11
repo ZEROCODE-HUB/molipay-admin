@@ -16,16 +16,19 @@ import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
 import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
 import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
 import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
+import { Route as AdminNotificacionesRouteImport } from './routes/admin.notificaciones'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminIncidentesRouteImport } from './routes/admin.incidentes'
 import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
 import { Route as AdminComerciosRouteImport } from './routes/admin.comercios'
+import { Route as AdminNotificacionesIndexRouteImport } from './routes/admin.notificaciones.index'
 import { Route as AdminConfiguracionIndexRouteImport } from './routes/admin.configuracion.index'
 import { Route as AdminComerciosIndexRouteImport } from './routes/admin.comercios.index'
 import { Route as AdminGeneralUsuariosRouteImport } from './routes/admin.general.usuarios'
 import { Route as AdminGeneralMovimientosRouteImport } from './routes/admin.general.movimientos'
 import { Route as AdminGeneralAlertasRouteImport } from './routes/admin.general.alertas'
-import { Route as AdminConfiguracionNotificacionesRouteImport } from './routes/admin.configuracion.notificaciones'
+import { Route as AdminConfiguracionLoginsRouteImport } from './routes/admin.configuracion.logins'
+import { Route as AdminConfiguracionConfiguracionesRouteImport } from './routes/admin.configuracion.configuraciones'
 import { Route as AdminComerciosTransferenciaRouteImport } from './routes/admin.comercios.transferencia'
 import { Route as AdminComerciosLinkPagoRouteImport } from './routes/admin.comercios.link-pago'
 import { Route as AdminComerciosImpuestosRouteImport } from './routes/admin.comercios.impuestos'
@@ -37,7 +40,6 @@ import { Route as AdminAdministracionRegistrosRouteImport } from './routes/admin
 import { Route as AdminGeneralUsuariosIndexRouteImport } from './routes/admin.general.usuarios.index'
 import { Route as AdminGeneralMovimientosIndexRouteImport } from './routes/admin.general.movimientos.index'
 import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
-import { Route as AdminConfiguracionNotificacionesIndexRouteImport } from './routes/admin.configuracion.notificaciones.index'
 import { Route as AdminComerciosTransferenciaIndexRouteImport } from './routes/admin.comercios.transferencia.index'
 import { Route as AdminComerciosImpuestosIndexRouteImport } from './routes/admin.comercios.impuestos.index'
 import { Route as AdminComerciosApisIndexRouteImport } from './routes/admin.comercios.apis.index'
@@ -58,8 +60,6 @@ import { Route as AdminGeneralMovimientosCobrosQrRouteImport } from './routes/ad
 import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './routes/admin.general.alertas.parametros-bloqueos'
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
-import { Route as AdminConfiguracionNotificacionesCatalogoRouteImport } from './routes/admin.configuracion.notificaciones.catalogo'
-import { Route as AdminConfiguracionNotificacionesCanalesRouteImport } from './routes/admin.configuracion.notificaciones.canales'
 import { Route as AdminComerciosTransferenciaResolversRouteImport } from './routes/admin.comercios.transferencia.resolvers'
 import { Route as AdminComerciosTransferenciaCategoriasRouteImport } from './routes/admin.comercios.transferencia.categorias'
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
@@ -108,6 +108,11 @@ const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
   path: '/legales/arrepentimiento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNotificacionesRoute = AdminNotificacionesRouteImport.update({
+  id: '/notificaciones',
+  path: '/notificaciones',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminModulosRoute = AdminModulosRouteImport.update({
   id: '/modulos',
   path: '/modulos',
@@ -128,6 +133,12 @@ const AdminComerciosRoute = AdminComerciosRouteImport.update({
   path: '/comercios',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNotificacionesIndexRoute =
+  AdminNotificacionesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminNotificacionesRoute,
+  } as any)
 const AdminConfiguracionIndexRoute = AdminConfiguracionIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -153,10 +164,16 @@ const AdminGeneralAlertasRoute = AdminGeneralAlertasRouteImport.update({
   path: '/general/alertas',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminConfiguracionNotificacionesRoute =
-  AdminConfiguracionNotificacionesRouteImport.update({
-    id: '/notificaciones',
-    path: '/notificaciones',
+const AdminConfiguracionLoginsRoute =
+  AdminConfiguracionLoginsRouteImport.update({
+    id: '/logins',
+    path: '/logins',
+    getParentRoute: () => AdminConfiguracionRoute,
+  } as any)
+const AdminConfiguracionConfiguracionesRoute =
+  AdminConfiguracionConfiguracionesRouteImport.update({
+    id: '/configuraciones',
+    path: '/configuraciones',
     getParentRoute: () => AdminConfiguracionRoute,
   } as any)
 const AdminComerciosTransferenciaRoute =
@@ -221,12 +238,6 @@ const AdminGeneralAlertasIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AdminGeneralAlertasRoute,
-  } as any)
-const AdminConfiguracionNotificacionesIndexRoute =
-  AdminConfiguracionNotificacionesIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
   } as any)
 const AdminComerciosTransferenciaIndexRoute =
   AdminComerciosTransferenciaIndexRouteImport.update({
@@ -346,18 +357,6 @@ const AdminGeneralAlertasBloqueosRoute =
     path: '/bloqueos',
     getParentRoute: () => AdminGeneralAlertasRoute,
   } as any)
-const AdminConfiguracionNotificacionesCatalogoRoute =
-  AdminConfiguracionNotificacionesCatalogoRouteImport.update({
-    id: '/catalogo',
-    path: '/catalogo',
-    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
-  } as any)
-const AdminConfiguracionNotificacionesCanalesRoute =
-  AdminConfiguracionNotificacionesCanalesRouteImport.update({
-    id: '/canales',
-    path: '/canales',
-    getParentRoute: () => AdminConfiguracionNotificacionesRoute,
-  } as any)
 const AdminComerciosTransferenciaResolversRoute =
   AdminComerciosTransferenciaResolversRouteImport.update({
     id: '/resolvers',
@@ -438,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
   '/admin/modulos': typeof AdminModulosRoute
+  '/admin/notificaciones': typeof AdminNotificacionesRouteWithChildren
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -451,12 +451,14 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
-  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesRouteWithChildren
+  '/admin/configuracion/configuraciones': typeof AdminConfiguracionConfiguracionesRoute
+  '/admin/configuracion/logins': typeof AdminConfiguracionLoginsRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
   '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
   '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
   '/admin/comercios/': typeof AdminComerciosIndexRoute
   '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
+  '/admin/notificaciones/': typeof AdminNotificacionesIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
@@ -468,8 +470,6 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
-  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
-  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -490,7 +490,6 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
-  '/admin/configuracion/notificaciones/': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
@@ -507,8 +506,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/admin/administracion/reportes': typeof AdminAdministracionReportesRoute
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
+  '/admin/configuracion/configuraciones': typeof AdminConfiguracionConfiguracionesRoute
+  '/admin/configuracion/logins': typeof AdminConfiguracionLoginsRoute
   '/admin/comercios': typeof AdminComerciosIndexRoute
   '/admin/configuracion': typeof AdminConfiguracionIndexRoute
+  '/admin/notificaciones': typeof AdminNotificacionesIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
@@ -519,8 +521,6 @@ export interface FileRoutesByTo {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
-  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
-  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -541,7 +541,6 @@ export interface FileRoutesByTo {
   '/admin/comercios/apis': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaIndexRoute
-  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios': typeof AdminGeneralUsuariosIndexRoute
@@ -555,6 +554,7 @@ export interface FileRoutesById {
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
   '/admin/modulos': typeof AdminModulosRoute
+  '/admin/notificaciones': typeof AdminNotificacionesRouteWithChildren
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -568,12 +568,14 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
-  '/admin/configuracion/notificaciones': typeof AdminConfiguracionNotificacionesRouteWithChildren
+  '/admin/configuracion/configuraciones': typeof AdminConfiguracionConfiguracionesRoute
+  '/admin/configuracion/logins': typeof AdminConfiguracionLoginsRoute
   '/admin/general/alertas': typeof AdminGeneralAlertasRouteWithChildren
   '/admin/general/movimientos': typeof AdminGeneralMovimientosRouteWithChildren
   '/admin/general/usuarios': typeof AdminGeneralUsuariosRouteWithChildren
   '/admin/comercios/': typeof AdminComerciosIndexRoute
   '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
+  '/admin/notificaciones/': typeof AdminNotificacionesIndexRoute
   '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
@@ -585,8 +587,6 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/comercios/transferencia/resolvers': typeof AdminComerciosTransferenciaResolversRoute
-  '/admin/configuracion/notificaciones/canales': typeof AdminConfiguracionNotificacionesCanalesRoute
-  '/admin/configuracion/notificaciones/catalogo': typeof AdminConfiguracionNotificacionesCatalogoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -607,7 +607,6 @@ export interface FileRoutesById {
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
-  '/admin/configuracion/notificaciones/': typeof AdminConfiguracionNotificacionesIndexRoute
   '/admin/general/alertas/': typeof AdminGeneralAlertasIndexRoute
   '/admin/general/movimientos/': typeof AdminGeneralMovimientosIndexRoute
   '/admin/general/usuarios/': typeof AdminGeneralUsuariosIndexRoute
@@ -622,6 +621,7 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/incidentes'
     | '/admin/modulos'
+    | '/admin/notificaciones'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -635,12 +635,14 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
-    | '/admin/configuracion/notificaciones'
+    | '/admin/configuracion/configuraciones'
+    | '/admin/configuracion/logins'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
     | '/admin/comercios/'
     | '/admin/configuracion/'
+    | '/admin/notificaciones/'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
@@ -652,8 +654,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
-    | '/admin/configuracion/notificaciones/canales'
-    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -674,7 +674,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
-    | '/admin/configuracion/notificaciones/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
@@ -691,8 +690,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/administracion/reportes'
     | '/admin/comercios/link-pago'
+    | '/admin/configuracion/configuraciones'
+    | '/admin/configuracion/logins'
     | '/admin/comercios'
     | '/admin/configuracion'
+    | '/admin/notificaciones'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
@@ -703,8 +705,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
-    | '/admin/configuracion/notificaciones/canales'
-    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -725,7 +725,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/transferencia'
-    | '/admin/configuracion/notificaciones'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
@@ -738,6 +737,7 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/incidentes'
     | '/admin/modulos'
+    | '/admin/notificaciones'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -751,12 +751,14 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
-    | '/admin/configuracion/notificaciones'
+    | '/admin/configuracion/configuraciones'
+    | '/admin/configuracion/logins'
     | '/admin/general/alertas'
     | '/admin/general/movimientos'
     | '/admin/general/usuarios'
     | '/admin/comercios/'
     | '/admin/configuracion/'
+    | '/admin/notificaciones/'
     | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
@@ -768,8 +770,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/transferencia/categorias'
     | '/admin/comercios/transferencia/resolvers'
-    | '/admin/configuracion/notificaciones/canales'
-    | '/admin/configuracion/notificaciones/catalogo'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -790,7 +790,6 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/transferencia/'
-    | '/admin/configuracion/notificaciones/'
     | '/admin/general/alertas/'
     | '/admin/general/movimientos/'
     | '/admin/general/usuarios/'
@@ -857,6 +856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalesArrepentimientoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/notificaciones': {
+      id: '/admin/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/admin/notificaciones'
+      preLoaderRoute: typeof AdminNotificacionesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/modulos': {
       id: '/admin/modulos'
       path: '/modulos'
@@ -884,6 +890,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/comercios'
       preLoaderRoute: typeof AdminComerciosRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/admin/notificaciones/': {
+      id: '/admin/notificaciones/'
+      path: '/'
+      fullPath: '/admin/notificaciones/'
+      preLoaderRoute: typeof AdminNotificacionesIndexRouteImport
+      parentRoute: typeof AdminNotificacionesRoute
     }
     '/admin/configuracion/': {
       id: '/admin/configuracion/'
@@ -920,11 +933,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGeneralAlertasRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/configuracion/notificaciones': {
-      id: '/admin/configuracion/notificaciones'
-      path: '/notificaciones'
-      fullPath: '/admin/configuracion/notificaciones'
-      preLoaderRoute: typeof AdminConfiguracionNotificacionesRouteImport
+    '/admin/configuracion/logins': {
+      id: '/admin/configuracion/logins'
+      path: '/logins'
+      fullPath: '/admin/configuracion/logins'
+      preLoaderRoute: typeof AdminConfiguracionLoginsRouteImport
+      parentRoute: typeof AdminConfiguracionRoute
+    }
+    '/admin/configuracion/configuraciones': {
+      id: '/admin/configuracion/configuraciones'
+      path: '/configuraciones'
+      fullPath: '/admin/configuracion/configuraciones'
+      preLoaderRoute: typeof AdminConfiguracionConfiguracionesRouteImport
       parentRoute: typeof AdminConfiguracionRoute
     }
     '/admin/comercios/transferencia': {
@@ -1003,13 +1023,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/general/alertas/'
       preLoaderRoute: typeof AdminGeneralAlertasIndexRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
-    }
-    '/admin/configuracion/notificaciones/': {
-      id: '/admin/configuracion/notificaciones/'
-      path: '/'
-      fullPath: '/admin/configuracion/notificaciones/'
-      preLoaderRoute: typeof AdminConfiguracionNotificacionesIndexRouteImport
-      parentRoute: typeof AdminConfiguracionNotificacionesRoute
     }
     '/admin/comercios/transferencia/': {
       id: '/admin/comercios/transferencia/'
@@ -1150,20 +1163,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/general/alertas/bloqueos'
       preLoaderRoute: typeof AdminGeneralAlertasBloqueosRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
-    }
-    '/admin/configuracion/notificaciones/catalogo': {
-      id: '/admin/configuracion/notificaciones/catalogo'
-      path: '/catalogo'
-      fullPath: '/admin/configuracion/notificaciones/catalogo'
-      preLoaderRoute: typeof AdminConfiguracionNotificacionesCatalogoRouteImport
-      parentRoute: typeof AdminConfiguracionNotificacionesRoute
-    }
-    '/admin/configuracion/notificaciones/canales': {
-      id: '/admin/configuracion/notificaciones/canales'
-      path: '/canales'
-      fullPath: '/admin/configuracion/notificaciones/canales'
-      preLoaderRoute: typeof AdminConfiguracionNotificacionesCanalesRouteImport
-      parentRoute: typeof AdminConfiguracionNotificacionesRoute
     }
     '/admin/comercios/transferencia/resolvers': {
       id: '/admin/comercios/transferencia/resolvers'
@@ -1346,40 +1345,32 @@ const AdminComerciosRouteWithChildren = AdminComerciosRoute._addFileChildren(
   AdminComerciosRouteChildren,
 )
 
-interface AdminConfiguracionNotificacionesRouteChildren {
-  AdminConfiguracionNotificacionesCanalesRoute: typeof AdminConfiguracionNotificacionesCanalesRoute
-  AdminConfiguracionNotificacionesCatalogoRoute: typeof AdminConfiguracionNotificacionesCatalogoRoute
-  AdminConfiguracionNotificacionesIndexRoute: typeof AdminConfiguracionNotificacionesIndexRoute
-}
-
-const AdminConfiguracionNotificacionesRouteChildren: AdminConfiguracionNotificacionesRouteChildren =
-  {
-    AdminConfiguracionNotificacionesCanalesRoute:
-      AdminConfiguracionNotificacionesCanalesRoute,
-    AdminConfiguracionNotificacionesCatalogoRoute:
-      AdminConfiguracionNotificacionesCatalogoRoute,
-    AdminConfiguracionNotificacionesIndexRoute:
-      AdminConfiguracionNotificacionesIndexRoute,
-  }
-
-const AdminConfiguracionNotificacionesRouteWithChildren =
-  AdminConfiguracionNotificacionesRoute._addFileChildren(
-    AdminConfiguracionNotificacionesRouteChildren,
-  )
-
 interface AdminConfiguracionRouteChildren {
-  AdminConfiguracionNotificacionesRoute: typeof AdminConfiguracionNotificacionesRouteWithChildren
+  AdminConfiguracionConfiguracionesRoute: typeof AdminConfiguracionConfiguracionesRoute
+  AdminConfiguracionLoginsRoute: typeof AdminConfiguracionLoginsRoute
   AdminConfiguracionIndexRoute: typeof AdminConfiguracionIndexRoute
 }
 
 const AdminConfiguracionRouteChildren: AdminConfiguracionRouteChildren = {
-  AdminConfiguracionNotificacionesRoute:
-    AdminConfiguracionNotificacionesRouteWithChildren,
+  AdminConfiguracionConfiguracionesRoute:
+    AdminConfiguracionConfiguracionesRoute,
+  AdminConfiguracionLoginsRoute: AdminConfiguracionLoginsRoute,
   AdminConfiguracionIndexRoute: AdminConfiguracionIndexRoute,
 }
 
 const AdminConfiguracionRouteWithChildren =
   AdminConfiguracionRoute._addFileChildren(AdminConfiguracionRouteChildren)
+
+interface AdminNotificacionesRouteChildren {
+  AdminNotificacionesIndexRoute: typeof AdminNotificacionesIndexRoute
+}
+
+const AdminNotificacionesRouteChildren: AdminNotificacionesRouteChildren = {
+  AdminNotificacionesIndexRoute: AdminNotificacionesIndexRoute,
+}
+
+const AdminNotificacionesRouteWithChildren =
+  AdminNotificacionesRoute._addFileChildren(AdminNotificacionesRouteChildren)
 
 interface AdminAdministracionRegistrosRouteChildren {
   AdminAdministracionRegistrosActividadRoute: typeof AdminAdministracionRegistrosActividadRoute
@@ -1512,6 +1503,7 @@ interface AdminRouteChildren {
   AdminConfiguracionRoute: typeof AdminConfiguracionRouteWithChildren
   AdminIncidentesRoute: typeof AdminIncidentesRoute
   AdminModulosRoute: typeof AdminModulosRoute
+  AdminNotificacionesRoute: typeof AdminNotificacionesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAdministracionRegistrosRoute: typeof AdminAdministracionRegistrosRouteWithChildren
   AdminAdministracionReportesRoute: typeof AdminAdministracionReportesRoute
@@ -1527,6 +1519,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminConfiguracionRoute: AdminConfiguracionRouteWithChildren,
   AdminIncidentesRoute: AdminIncidentesRoute,
   AdminModulosRoute: AdminModulosRoute,
+  AdminNotificacionesRoute: AdminNotificacionesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminAdministracionRegistrosRoute:
     AdminAdministracionRegistrosRouteWithChildren,
@@ -1552,13 +1545,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
