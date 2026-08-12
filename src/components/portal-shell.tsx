@@ -85,7 +85,7 @@ export function PortalShell({
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar desktop */}
-        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-600 bg-navy-700 shrink-0">
+        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-600 bg-[#1c2e4a] shrink-0">
           <nav className="p-3 flex-1 overflow-y-auto">
             <SidebarNav nav={nav} path={path} />
           </nav>
@@ -95,7 +95,7 @@ export function PortalShell({
         {open && (
           <div className="lg:hidden fixed inset-0 z-40">
             <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-700 border-r border-navy-600 flex flex-col">
+            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-[#1c2e4a] border-r border-navy-600 flex flex-col">
               <div className="p-4 border-b border-navy-600">
                 <MollyLogo size={28} />
               </div>
