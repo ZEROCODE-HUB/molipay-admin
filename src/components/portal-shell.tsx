@@ -4,6 +4,8 @@ import {
   LogOut,
   MoreHorizontal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -37,6 +39,7 @@ export function PortalShell({
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { setRole } = useDemoMode();
   const navigate = useNavigate();
 
@@ -85,9 +88,33 @@ export function PortalShell({
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar desktop */}
-        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-600 bg-[#1c2e4a] shrink-0">
+        <aside
+          className={`hidden lg:flex flex-col border-r border-navy-600 bg-[#1c2e4a] shrink-0 transition-[width] duration-200 ${
+            collapsed ? "w-16 min-w-16" : "w-60"
+          }`}
+        >
+          <div
+            className={`flex items-center shrink-0 border-b border-navy-600 ${
+              collapsed ? "justify-center py-2" : "justify-between px-3 h-11"
+            }`}
+          >
+            {!collapsed && (
+              <span className="text-xs font-semibold uppercase tracking-wider text-white/60 truncate">
+                Navegación
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setCollapsed((v) => !v)}
+              className="p-2 rounded-sm text-white/60 hover:text-white hover:bg-navy-600 transition-colors"
+              title={collapsed ? "Expandir menú" : "Minimizar menú"}
+              aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+          </div>
           <nav className="p-3 flex-1 overflow-y-auto">
-            <SidebarNav nav={nav} path={path} />
+            <SidebarNav nav={nav} path={path} collapsed={collapsed} />
           </nav>
         </aside>
 
@@ -147,12 +174,42 @@ export function PortalShell({
 function SidebarNav({
   nav,
   path,
+  collapsed,
   onNavigate,
 }: {
   nav: NavItem[];
   path: string;
+  collapsed?: boolean;
   onNavigate?: () => void;
 }) {
+  if (collapsed) {
+    return (
+      <>
+        {nav.map((item) =>
+          isGroup(item) ? (
+            item.items.map((leaf) => (
+              <SidebarLink
+                key={leaf.to}
+                item={leaf}
+                active={isActive(leaf.to, path)}
+                onNavigate={onNavigate}
+                collapsed
+              />
+            ))
+          ) : (
+            <SidebarLink
+              key={item.to}
+              item={item}
+              active={isActive(item.to, path)}
+              onNavigate={onNavigate}
+              collapsed
+            />
+          ),
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       {nav.map((item, idx) =>
@@ -171,13 +228,34 @@ function SidebarLink({
   active,
   onNavigate,
   nested = false,
+  collapsed = false,
 }: {
   item: NavLeaf;
   active: boolean;
   onNavigate?: () => void;
   nested?: boolean;
+  collapsed?: boolean;
 }) {
   const Icon = item.icon;
+
+  if (collapsed) {
+    return (
+      <Link
+        to={item.to}
+        onClick={onNavigate}
+        title={item.label}
+        aria-label={item.label}
+        className={`flex items-center justify-center w-11 h-11 mx-auto mb-1 rounded-lg transition-colors ${
+          active
+            ? "bg-navy-500 text-white font-semibold"
+            : "text-white/80 hover:text-white hover:bg-navy-600"
+        }`}
+      >
+        <Icon size={20} strokeWidth={1.75} />
+      </Link>
+    );
+  }
+
   return (
     <Link
       to={item.to}
