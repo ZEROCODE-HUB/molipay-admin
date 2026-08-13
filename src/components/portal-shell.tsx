@@ -135,7 +135,7 @@ export function PortalShell({
 
         {/* Main */}
         <main className="flex-1 min-w-0 overflow-y-auto pb-20 lg:pb-6">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:py-8">{children}</div>
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:pt-5 lg:pb-8">{children}</div>
         </main>
       </div>
 
@@ -148,9 +148,9 @@ export function PortalShell({
             <Link
               key={item.to}
               to={item.to}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
-                active ? "text-red-500 font-semibold" : "text-black-400"
-              }`}
+className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
+          active ? "text-moli-orange font-semibold" : "text-black-400"
+        }`}
             >
               <Icon size={20} strokeWidth={1.75} />
               <span className="truncate px-1">{item.label}</span>
@@ -247,7 +247,7 @@ function SidebarLink({
         aria-label={item.label}
         className={`flex items-center justify-center w-11 h-11 mx-auto mb-1 rounded-lg transition-colors ${
           active
-            ? "bg-navy-500 text-white font-semibold"
+            ? "bg-moli-orange text-white font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
         }`}
       >
@@ -265,10 +265,10 @@ function SidebarLink({
       } ${
         nested
           ? active
-            ? "bg-navy-600 text-white font-semibold"
+            ? "bg-moli-orange-dark text-white font-semibold"
             : "text-white/60 hover:text-white hover:bg-navy-600/50"
           : active
-            ? "bg-navy-500 text-white font-semibold"
+            ? "bg-moli-orange text-white font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
       }`}
     >
@@ -299,7 +299,7 @@ function SidebarGroup({
         onClick={() => setOpen((v) => !v)}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
           containsActive
-            ? "text-white font-semibold"
+            ? "text-moli-orange font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
         }`}
         aria-expanded={expanded}
@@ -340,7 +340,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+    <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
       <div>
         <h1 className="font-display text-xl md:text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}

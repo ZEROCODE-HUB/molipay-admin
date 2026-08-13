@@ -49,6 +49,10 @@
   --color-plata-50: var(--plata-50);
 
   --color-moli-red: var(--moli-red);
+  --color-moli-orange: var(--moli-orange);
+  --color-moli-orange-dark: var(--moli-orange-dark);
+  --color-moli-orange-darker: var(--moli-orange-darker);
+  --color-moli-orange-light: var(--moli-orange-light);
   --color-moli-blue: var(--moli-blue);
   --color-moli-light-blue: var(--moli-light-blue);
   --color-moli-gray: var(--moli-gray);
@@ -109,6 +113,12 @@
 
   /* ── Brand palette (IDENTIDAD/BrandRules.md) ── */
   --moli-red: #d21523;
+
+  --moli-orange: #f97316;
+  --moli-orange-dark: #ea580c;
+  --moli-orange-darker: #c2410c;
+  --moli-orange-light: #fff7ed;
+
   --moli-blue: #334596;
   --moli-light-blue: #9cb0d9;
   --moli-gray: #8c9297;
