@@ -476,7 +476,7 @@ function Page() {
     { label: "Validar", icon: FileCheck, onClick: () => setEstado(r.id, "Activado") },
     { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
     { label: "Editar", icon: Edit3, onClick: () => setEditTarget(r) },
-    { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
+    { label: "Ver comercio", icon: Eye, onClick: () => setDetail(r) },
   ];
 
   const columns: Column<Comercio>[] = [
@@ -530,6 +530,7 @@ function Page() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
+        showEnumAllOption={false}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detail && <ComercioModal comercio={detail} onClose={() => setDetail(null)} />}

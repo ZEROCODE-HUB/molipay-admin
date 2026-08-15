@@ -30,7 +30,7 @@ const KB = [
   {
     keywords: ["navegación", "dónde está", "cómo encuentro", "menú", "sección"],
     response:
-      "El panel administrativo está organizado así:\n\n• General: Usuarios (Personas físicas, jurídicas, CVU, comisiones), Movimientos (8 tipos), Alertas (listados y parámetros)\n• Administración: Usuarios backoffice (personal y roles), Reportes, Registros (fondos, actividad), Soporte (Consultas frecuentes, Bloqueo de funciones)\n• Comercios: Pagos con transferencia, Link de pago, Impuestos, APIs externas\n• Configuración: Integraciones, Notificaciones",
+      "El panel administrativo está organizado así:\n\n• General: Usuarios (Personas físicas, jurídicas, CVU, comisiones), Movimientos (8 tipos), Alertas (listados y parámetros)\n• Administración: Usuarios backoffice (personal y roles), Reportes, Registros (fondos, actividad), Soporte (Consultas frecuentes, Bloqueo de funciones)\n• Comercios: Pago por referencia, Link de pago, Impuestos, APIs externas\n• Configuración: Integraciones, Notificaciones",
   },
 ];
 

@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle, XCircle, Edit3, Trash2, Plus } from "lucide-react";
+import { CheckCircle, XCircle, Edit3, Plus } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/resolvers")({
   component: Page,
@@ -138,7 +137,6 @@ function Page() {
   const [editTarget, setEditTarget] = useState<Resolver | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState<ResolverForm>(blankForm);
-  const [confirmDelete, setConfirmDelete] = useState<Resolver | null>(null);
 
   const toggleEstado = (id: number, estado: Resolver["estado"]) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, estado } : d)));
@@ -214,11 +212,6 @@ function Page() {
     setForm(blankForm);
   };
 
-  const eliminar = (id: number) => {
-    setData((prev) => prev.filter((d) => d.id !== id));
-    setConfirmDelete(null);
-  };
-
   const getActions = (r: Resolver): ActionItem[] => [
     { label: "Activar", icon: CheckCircle, onClick: () => toggleEstado(r.id, "Activo") },
     {
@@ -228,7 +221,6 @@ function Page() {
       onClick: () => toggleEstado(r.id, "Inactivo"),
     },
     { label: "Editar", icon: Edit3, onClick: () => openEdit(r) },
-    { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
   ];
 
   const columns: Column<Resolver>[] = [
@@ -282,6 +274,7 @@ function Page() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
+        showEnumAllOption={false}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 
@@ -300,6 +293,7 @@ function Page() {
           }
           onSubmit={guardar}
           submitLabel={editTarget ? "Guardar cambios" : "Crear resolver"}
+          cancelLabel="Cerrar"
           size="lg"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -321,7 +315,7 @@ function Page() {
               />
             </div>
             <div>
-              <Label htmlFor="res-reverso">Nombre Reverso (formato web)</Label>
+              <Label htmlFor="res-reverso">Nombre Reverso</Label>
               <Input
                 id="res-reverso"
                 value={form.nombreReverso}
@@ -330,12 +324,30 @@ function Page() {
               />
             </div>
             <div>
-              <Label htmlFor="res-psp-id">PSP ID</Label>
+              <Label htmlFor="res-formato-web">Formato web</Label>
               <Input
-                id="res-psp-id"
+                id="res-formato-web"
+                value={form.formatoWeb}
+                onChange={(e) => setForm((f) => ({ ...f, formatoWeb: e.target.value }))}
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="res-pcp-id">PCP ID</Label>
+              <Input
+                id="res-pcp-id"
                 value={form.pcpId}
                 onChange={(e) => setForm((f) => ({ ...f, pcpId: e.target.value }))}
                 placeholder="PCP-XXXX"
+              />
+            </div>
+            <div>
+              <Label htmlFor="res-id-pcp">ID del PCP</Label>
+              <Input
+                id="res-id-pcp"
+                value={form.idPcp}
+                onChange={(e) => setForm((f) => ({ ...f, idPcp: e.target.value }))}
+                placeholder="0001"
               />
             </div>
             <div className="sm:col-span-2">
@@ -365,7 +377,7 @@ function Page() {
                 checked={form.asHeader}
                 onChange={(e) => setForm((f) => ({ ...f, asHeader: e.target.checked }))}
               />
-              AC en Header
+              As header
             </label>
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
@@ -374,23 +386,11 @@ function Page() {
                 checked={form.soa}
                 onChange={(e) => setForm((f) => ({ ...f, soa: e.target.checked }))}
               />
-              Es OAuth
+              SOA
             </label>
           </div>
         </FormDialog>
       )}
-
-      <ConfirmDialog
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        title="Eliminar resolver"
-        message={`¿Estás seguro de eliminar el resolver "${confirmDelete?.nombre}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        variant="danger"
-        onConfirm={() => {
-          if (confirmDelete) eliminar(confirmDelete.id);
-        }}
-      />
     </>
   );
 }

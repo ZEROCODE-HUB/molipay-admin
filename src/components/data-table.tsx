@@ -27,6 +27,7 @@ type DataTableProps<T> = {
     onToggleAll: () => void;
   };
   onDownloadCSV?: () => void;
+  showEnumAllOption?: boolean;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -57,6 +58,7 @@ export function DataTable<T>({
   pageSize: defaultPageSize = 10,
   selection,
   onDownloadCSV,
+  showEnumAllOption = true,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -169,13 +171,9 @@ export function DataTable<T>({
         const raw = (row as Record<string, unknown>)[col.key];
         const rendered = col.render(row);
         const renderedText =
-          typeof rendered === "string" || typeof rendered === "number"
-            ? String(rendered)
-            : "";
+          typeof rendered === "string" || typeof rendered === "number" ? String(rendered) : "";
         const text =
-          typeof raw === "string" || typeof raw === "number"
-            ? String(raw)
-            : renderedText;
+          typeof raw === "string" || typeof raw === "number" ? String(raw) : renderedText;
         if (text !== value && renderedText !== value) return false;
       }
       if (dateRange.from || dateRange.to) {
@@ -341,7 +339,7 @@ export function DataTable<T>({
                     }
                     className="h-8 min-w-[130px] px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
                   >
-                    <option value="">Todos</option>
+                    {showEnumAllOption && <option value="">Todos</option>}
                     {(col.filterOptions ?? []).map((opt) => (
                       <option key={opt} value={opt}>
                         {opt}

@@ -48,7 +48,7 @@ const nav: NavItem[] = [
     label: "Comercios",
     icon: Store,
     items: [
-      { to: "/admin/comercios/transferencia", label: "Pagos con transferencia", icon: CreditCard },
+      { to: "/admin/comercios/transferencia", label: "Pago por referencia", icon: CreditCard },
       { to: "/admin/comercios/link-pago", label: "Link de pago", icon: Link2 },
       { to: "/admin/comercios/impuestos", label: "Impuestos", icon: Receipt },
       { to: "/admin/comercios/apis", label: "APIs externas", icon: Code2 },
