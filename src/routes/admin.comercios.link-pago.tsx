@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/portal-shell";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { TabLayout, type Tab } from "@/components/tab-layout";
 
 export const Route = createFileRoute("/admin/comercios/link-pago")({
-  component: Page,
+  component: LinkPagoLayout,
   head: () => ({
     meta: [
       { title: "Link de pago — Admin — Moli" },
@@ -12,17 +11,15 @@ export const Route = createFileRoute("/admin/comercios/link-pago")({
   }),
 });
 
-function Page() {
+const tabs: Tab[] = [
+  { label: "Comercios", to: "/admin/comercios/link-pago" },
+  { label: "Métodos de pago", to: "/admin/comercios/link-pago/metodos-pago" },
+];
+
+function LinkPagoLayout() {
   return (
-    <>
-      <PageHeader
-        title="Link de pago"
-        description="Gestión de enlaces de pago."
-      />
-      <EmptyState
-        title="Módulo Link de pago — pendiente de definición."
-        description="Esta funcionalidad se encuentra en etapa de definición. Estará disponible próximamente."
-      />
-    </>
+    <TabLayout tabs={tabs}>
+      <Outlet />
+    </TabLayout>
   );
 }
