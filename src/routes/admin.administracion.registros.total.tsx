@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, Stat } from "@/components/portal-shell";
+import { Card } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/admin/administracion/registros/total")({
   head: () => ({ meta: [{ title: "Total de fondos — Admin Panel" }] }),
@@ -85,19 +85,6 @@ function Page() {
           </div>
         </Card>
       </div>
-
-      <Card className="p-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat label="Interno usuarios" value={`$ ${interno.toLocaleString()}`} />
-          <Stat label="Impuestos cobrados" value={`$ ${impuestos.toLocaleString()}`} />
-          <Stat label="Banco (cuenta recaudadora)" value={`$ ${banco.toLocaleString()}`} />
-          <Stat
-            label="Interno nuevo"
-            value={"$ " + internoNuevo.toLocaleString()}
-            sub={formula2 !== 0 ? "⚠ Diferencia detectada" : "OK"}
-          />
-        </div>
-      </Card>
     </>
   );
 }

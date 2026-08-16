@@ -70,9 +70,9 @@ import { Route as AdminComerciosImpuestosDebitosCreditosRouteImport } from './ro
 import { Route as AdminComerciosApisRestriccionesRouteImport } from './routes/admin.comercios.apis.restricciones'
 import { Route as AdminComerciosApisEndpointsRouteImport } from './routes/admin.comercios.apis.endpoints'
 import { Route as AdminAdministracionUsuariosRolesRouteImport } from './routes/admin.administracion.usuarios.roles'
+import { Route as AdminAdministracionUsuariosActividadRouteImport } from './routes/admin.administracion.usuarios.actividad'
 import { Route as AdminAdministracionSoporteBloqueoRouteImport } from './routes/admin.administracion.soporte.bloqueo'
 import { Route as AdminAdministracionRegistrosTotalRouteImport } from './routes/admin.administracion.registros.total'
-import { Route as AdminAdministracionRegistrosActividadRouteImport } from './routes/admin.administracion.registros.actividad'
 import { Route as AdminComerciosImpuestosIngresosBrutosIndexRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos.index'
 
 const AdminRoute = AdminRouteImport.update({
@@ -419,6 +419,12 @@ const AdminAdministracionUsuariosRolesRoute =
     path: '/roles',
     getParentRoute: () => AdminAdministracionUsuariosRoute,
   } as any)
+const AdminAdministracionUsuariosActividadRoute =
+  AdminAdministracionUsuariosActividadRouteImport.update({
+    id: '/actividad',
+    path: '/actividad',
+    getParentRoute: () => AdminAdministracionUsuariosRoute,
+  } as any)
 const AdminAdministracionSoporteBloqueoRoute =
   AdminAdministracionSoporteBloqueoRouteImport.update({
     id: '/bloqueo',
@@ -429,12 +435,6 @@ const AdminAdministracionRegistrosTotalRoute =
   AdminAdministracionRegistrosTotalRouteImport.update({
     id: '/total',
     path: '/total',
-    getParentRoute: () => AdminAdministracionRegistrosRoute,
-  } as any)
-const AdminAdministracionRegistrosActividadRoute =
-  AdminAdministracionRegistrosActividadRouteImport.update({
-    id: '/actividad',
-    path: '/actividad',
     getParentRoute: () => AdminAdministracionRegistrosRoute,
   } as any)
 const AdminComerciosImpuestosIngresosBrutosIndexRoute =
@@ -473,9 +473,9 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/': typeof AdminComerciosIndexRoute
   '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
   '/admin/notificaciones/': typeof AdminNotificacionesIndexRoute
-  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
+  '/admin/administracion/usuarios/actividad': typeof AdminAdministracionUsuariosActividadRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
@@ -526,9 +526,9 @@ export interface FileRoutesByTo {
   '/admin/comercios': typeof AdminComerciosIndexRoute
   '/admin/configuracion': typeof AdminConfiguracionIndexRoute
   '/admin/notificaciones': typeof AdminNotificacionesIndexRoute
-  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
+  '/admin/administracion/usuarios/actividad': typeof AdminAdministracionUsuariosActividadRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
@@ -593,9 +593,9 @@ export interface FileRoutesById {
   '/admin/comercios/': typeof AdminComerciosIndexRoute
   '/admin/configuracion/': typeof AdminConfiguracionIndexRoute
   '/admin/notificaciones/': typeof AdminNotificacionesIndexRoute
-  '/admin/administracion/registros/actividad': typeof AdminAdministracionRegistrosActividadRoute
   '/admin/administracion/registros/total': typeof AdminAdministracionRegistrosTotalRoute
   '/admin/administracion/soporte/bloqueo': typeof AdminAdministracionSoporteBloqueoRoute
+  '/admin/administracion/usuarios/actividad': typeof AdminAdministracionUsuariosActividadRoute
   '/admin/administracion/usuarios/roles': typeof AdminAdministracionUsuariosRolesRoute
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
@@ -662,9 +662,9 @@ export interface FileRouteTypes {
     | '/admin/comercios/'
     | '/admin/configuracion/'
     | '/admin/notificaciones/'
-    | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
+    | '/admin/administracion/usuarios/actividad'
     | '/admin/administracion/usuarios/roles'
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/restricciones'
@@ -715,9 +715,9 @@ export interface FileRouteTypes {
     | '/admin/comercios'
     | '/admin/configuracion'
     | '/admin/notificaciones'
-    | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
+    | '/admin/administracion/usuarios/actividad'
     | '/admin/administracion/usuarios/roles'
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/restricciones'
@@ -781,9 +781,9 @@ export interface FileRouteTypes {
     | '/admin/comercios/'
     | '/admin/configuracion/'
     | '/admin/notificaciones/'
-    | '/admin/administracion/registros/actividad'
     | '/admin/administracion/registros/total'
     | '/admin/administracion/soporte/bloqueo'
+    | '/admin/administracion/usuarios/actividad'
     | '/admin/administracion/usuarios/roles'
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/restricciones'
@@ -1258,6 +1258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdministracionUsuariosRolesRouteImport
       parentRoute: typeof AdminAdministracionUsuariosRoute
     }
+    '/admin/administracion/usuarios/actividad': {
+      id: '/admin/administracion/usuarios/actividad'
+      path: '/actividad'
+      fullPath: '/admin/administracion/usuarios/actividad'
+      preLoaderRoute: typeof AdminAdministracionUsuariosActividadRouteImport
+      parentRoute: typeof AdminAdministracionUsuariosRoute
+    }
     '/admin/administracion/soporte/bloqueo': {
       id: '/admin/administracion/soporte/bloqueo'
       path: '/bloqueo'
@@ -1270,13 +1277,6 @@ declare module '@tanstack/react-router' {
       path: '/total'
       fullPath: '/admin/administracion/registros/total'
       preLoaderRoute: typeof AdminAdministracionRegistrosTotalRouteImport
-      parentRoute: typeof AdminAdministracionRegistrosRoute
-    }
-    '/admin/administracion/registros/actividad': {
-      id: '/admin/administracion/registros/actividad'
-      path: '/actividad'
-      fullPath: '/admin/administracion/registros/actividad'
-      preLoaderRoute: typeof AdminAdministracionRegistrosActividadRouteImport
       parentRoute: typeof AdminAdministracionRegistrosRoute
     }
     '/admin/comercios/impuestos/ingresos-brutos/': {
@@ -1428,15 +1428,12 @@ const AdminNotificacionesRouteWithChildren =
   AdminNotificacionesRoute._addFileChildren(AdminNotificacionesRouteChildren)
 
 interface AdminAdministracionRegistrosRouteChildren {
-  AdminAdministracionRegistrosActividadRoute: typeof AdminAdministracionRegistrosActividadRoute
   AdminAdministracionRegistrosTotalRoute: typeof AdminAdministracionRegistrosTotalRoute
   AdminAdministracionRegistrosIndexRoute: typeof AdminAdministracionRegistrosIndexRoute
 }
 
 const AdminAdministracionRegistrosRouteChildren: AdminAdministracionRegistrosRouteChildren =
   {
-    AdminAdministracionRegistrosActividadRoute:
-      AdminAdministracionRegistrosActividadRoute,
     AdminAdministracionRegistrosTotalRoute:
       AdminAdministracionRegistrosTotalRoute,
     AdminAdministracionRegistrosIndexRoute:
@@ -1466,12 +1463,15 @@ const AdminAdministracionSoporteRouteWithChildren =
   )
 
 interface AdminAdministracionUsuariosRouteChildren {
+  AdminAdministracionUsuariosActividadRoute: typeof AdminAdministracionUsuariosActividadRoute
   AdminAdministracionUsuariosRolesRoute: typeof AdminAdministracionUsuariosRolesRoute
   AdminAdministracionUsuariosIndexRoute: typeof AdminAdministracionUsuariosIndexRoute
 }
 
 const AdminAdministracionUsuariosRouteChildren: AdminAdministracionUsuariosRouteChildren =
   {
+    AdminAdministracionUsuariosActividadRoute:
+      AdminAdministracionUsuariosActividadRoute,
     AdminAdministracionUsuariosRolesRoute:
       AdminAdministracionUsuariosRolesRoute,
     AdminAdministracionUsuariosIndexRoute:

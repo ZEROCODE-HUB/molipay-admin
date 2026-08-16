@@ -149,6 +149,7 @@ function Page() {
             <Field label="Nombre" value={result.nombre} />
             <Field label="Email" value={result.email} />
             <Field label="Monto" value={result.monto} mono />
+            <Field label="Estado" value={result.estado} />
             <Field label={campoFecha} value={result.fecha} mono />
             <Field label={campoTercero} value={result.terceroNombre} />
             <Field label={labelCvu} value={result.terceroCvu} mono />

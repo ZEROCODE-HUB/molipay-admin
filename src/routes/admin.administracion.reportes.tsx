@@ -135,13 +135,167 @@ function downloadCSV(filename: string, rows: Record<string, unknown>[]) {
   downloadFile(filename, lines.join("\n"));
 }
 
-type Archivo = { archivo: string; fecha: string; estado: "Analizado" | "Pendiente" };
+type Archivo = {
+  archivo: string;
+  fecha: string;
+  estado: "Analizado" | "Pendiente";
+  downloadRows: Record<string, unknown>[];
+};
+
+const CONCILIACION_COLS = [
+  "FECHA_NEGOCIO",
+  "ID_DEBIN",
+  "TIPO_MOV_COELSA",
+  "CBU",
+  "CTA_BT_DEL_CUI",
+  "BT_SBO",
+  "BT_TOP",
+  "DENOMINACION",
+  "CUIT",
+  "IMPORTE_COELSA",
+  "ESTADO_COELSA",
+  "ASTO_ESTADO",
+  "CVU",
+  "CUIT_VIRTUAL",
+  "CVU_2",
+  "CUIT_VIRTUAL_2",
+  "CBU_2",
+  "CUIT_2",
+  "CONCEPTO",
+  "MISMO_TIT",
+  "DETALLE",
+  "CVU_CREDITO",
+  "FECHA_HORA_COELSA",
+];
+
+const CONCILIACION_MOCK_ROWS: Record<string, unknown>[] = [
+  {
+    FECHA_NEGOCIO: "16/07/2026",
+    ID_DEBIN: "DE-00123",
+    TIPO_MOV_COELSA: "DEPOSITO",
+    CBU: "0000000000000000000001",
+    CTA_BT_DEL_CUI: "SI",
+    BT_SBO: "0000000000000000000001",
+    BT_TOP: "",
+    DENOMINACION: "Molipay SRL",
+    CUIT: "30123456789",
+    IMPORTE_COELSA: 50000,
+    ESTADO_COELSA: "OK",
+    ASTO_ESTADO: "Acreditado",
+    CVU: "1234567890123456789012",
+    CUIT_VIRTUAL: "",
+    CVU_2: "",
+    CUIT_VIRTUAL_2: "",
+    CBU_2: "",
+    CUIT_2: "",
+    CONCEPTO: "Deposito PSE",
+    MISMO_TIT: "SI",
+    DETALLE: "Deposito vía PSE",
+    CVU_CREDITO: "1234567890123456789012",
+    FECHA_HORA_COELSA: "2026-07-16 14:32",
+  },
+  {
+    FECHA_NEGOCIO: "15/07/2026",
+    ID_DEBIN: "RE-00456",
+    TIPO_MOV_COELSA: "RETIRO",
+    CBU: "0000000000000000000002",
+    CTA_BT_DEL_CUI: "NO",
+    BT_SBO: "",
+    BT_TOP: "1234567890123456789002",
+    DENOMINACION: "Juan Pérez",
+    CUIT: "20123456789",
+    IMPORTE_COELSA: 15000,
+    ESTADO_COELSA: "OK",
+    ASTO_ESTADO: "Acreditado",
+    CVU: "1234567890123456789023",
+    CUIT_VIRTUAL: "20123456789",
+    CVU_2: "",
+    CUIT_VIRTUAL_2: "",
+    CBU_2: "",
+    CUIT_2: "",
+    CONCEPTO: "Retiro QR",
+    MISMO_TIT: "NO",
+    DETALLE: "Retiro QR",
+    CVU_CREDITO: "",
+    FECHA_HORA_COELSA: "2026-07-15 09:15",
+  },
+  {
+    FECHA_NEGOCIO: "15/07/2026",
+    ID_DEBIN: "DE-00789",
+    TIPO_MOV_COELSA: "DEPOSITO",
+    CBU: "0000000000000000000003",
+    CTA_BT_DEL_CUI: "SI",
+    BT_SBO: "0000000000000000000003",
+    BT_TOP: "",
+    DENOMINACION: "María García",
+    CUIT: "30555666777",
+    IMPORTE_COELSA: 250000,
+    ESTADO_COELSA: "OK",
+    ASTO_ESTADO: "Pendiente",
+    CVU: "1234567890123456789934",
+    CUIT_VIRTUAL: "",
+    CVU_2: "",
+    CUIT_VIRTUAL_2: "",
+    CBU_2: "",
+    CUIT_2: "",
+    CONCEPTO: "Transferencia",
+    MISMO_TIT: "SI",
+    DETALLE: "Deposito transferencia",
+    CVU_CREDITO: "1234567890123456789934",
+    FECHA_HORA_COELSA: "2026-07-15 10:45",
+  },
+  {
+    FECHA_NEGOCIO: "14/07/2026",
+    ID_DEBIN: "RE-00321",
+    TIPO_MOV_COELSA: "RETIRO",
+    CBU: "0000000000000000000004",
+    CTA_BT_DEL_CUI: "NO",
+    BT_SBO: "",
+    BT_TOP: "1234567890123456789004",
+    DENOMINACION: "Comercio Express SRL",
+    CUIT: "30987654321",
+    IMPORTE_COELSA: 75000,
+    ESTADO_COELSA: "OK",
+    ASTO_ESTADO: "Acreditado",
+    CVU: "1234567890123456789045",
+    CUIT_VIRTUAL: "30987654321",
+    CVU_2: "",
+    CUIT_VIRTUAL_2: "",
+    CBU_2: "",
+    CUIT_2: "",
+    CONCEPTO: "Pago de tarjeta",
+    MISMO_TIT: "NO",
+    DETALLE: "Pago de tarjeta",
+    CVU_CREDITO: "",
+    FECHA_HORA_COELSA: "2026-07-14 12:10",
+  },
+];
 
 const ARCHIVOS_INICIALES: Archivo[] = [
-  { archivo: "conciliacion_20260716.csv", fecha: "2026-07-16", estado: "Pendiente" },
-  { archivo: "conciliacion_20260715.csv", fecha: "2026-07-15", estado: "Analizado" },
-  { archivo: "conciliacion_20260714.csv", fecha: "2026-07-14", estado: "Analizado" },
-  { archivo: "conciliacion_20260713.csv", fecha: "2026-07-13", estado: "Analizado" },
+  {
+    archivo: "conciliacion_20260716.csv",
+    fecha: "2026-07-16",
+    estado: "Pendiente",
+    downloadRows: CONCILIACION_MOCK_ROWS.slice(0, 1),
+  },
+  {
+    archivo: "conciliacion_20260715.csv",
+    fecha: "2026-07-15",
+    estado: "Analizado",
+    downloadRows: CONCILIACION_MOCK_ROWS.slice(1, 3),
+  },
+  {
+    archivo: "conciliacion_20260714.csv",
+    fecha: "2026-07-14",
+    estado: "Analizado",
+    downloadRows: [CONCILIACION_MOCK_ROWS[3]],
+  },
+  {
+    archivo: "conciliacion_20260713.csv",
+    fecha: "2026-07-13",
+    estado: "Analizado",
+    downloadRows: [],
+  },
 ];
 
 type AnalisisResumen = {
@@ -327,24 +481,7 @@ function AnalisisConciliacionModal({
 
 function Conciliaciones() {
   const [archivos, setArchivos] = useState<Archivo[]>(ARCHIVOS_INICIALES);
-  const [cargando, setCargando] = useState(false);
   const [analisisTarget, setAnalisisTarget] = useState<Archivo | null>(null);
-  const [cargarForm, setCargarForm] = useState({
-    nombre: "",
-    fecha: "",
-    file: null as File | null,
-  });
-
-  const guardarArchivo = () => {
-    if (!cargarForm.nombre.trim() || !cargarForm.fecha || !cargarForm.file) return;
-    setArchivos((prev) => [
-      { archivo: cargarForm.file!.name, fecha: cargarForm.fecha, estado: "Pendiente" },
-      ...prev,
-    ]);
-    setCargarForm({ nombre: "", fecha: "", file: null });
-    setCargando(false);
-    toast.success("Archivo cargado correctamente");
-  };
 
   const columns: Column<Archivo>[] = [
     {
@@ -363,9 +500,20 @@ function Conciliaciones() {
       key: "analizar",
       label: "Acción",
       render: (r) => (
-        <BtnOutline className="h-7 text-xs px-3" onClick={() => setAnalisisTarget(r)}>
-          Analizar
-        </BtnOutline>
+        <div className="flex items-center gap-1">
+          <BtnOutline
+            className="h-7 text-xs px-3"
+            onClick={() => {
+              downloadExcel(r.archivo.replace(".csv", ".xlsx"), r.downloadRows);
+              toast.success("Archivo descargado correctamente");
+            }}
+          >
+            <Download size={14} /> Descargar
+          </BtnOutline>
+          <BtnOutline className="h-7 text-xs px-3" onClick={() => setAnalisisTarget(r)}>
+            Analizar
+          </BtnOutline>
+        </div>
       ),
     },
   ];
@@ -376,52 +524,8 @@ function Conciliaciones() {
         <p className="text-sm text-muted-foreground">
           El banco sube diariamente (día anterior) todas las transacciones.
         </p>
-        <BtnPrimary type="button" className="h-9 text-sm" onClick={() => setCargando(true)}>
-          <Plus size={14} /> Cargar nuevo archivo
-        </BtnPrimary>
       </div>
       <DataTable columns={columns} data={archivos} keyExtractor={(r) => r.archivo} />
-
-      {cargando && (
-        <FormDialog
-          open
-          onClose={() => setCargando(false)}
-          title="Cargar nuevo archivo"
-          description="Seleccioná el archivo CSV/Excel de conciliación."
-          onSubmit={guardarArchivo}
-          submitLabel="Guardar"
-          size="md"
-        >
-          <div>
-            <Label htmlFor="ca-nombre">Nombre del archivo</Label>
-            <Input
-              id="ca-nombre"
-              value={cargarForm.nombre}
-              onChange={(e) => setCargarForm((f) => ({ ...f, nombre: e.target.value }))}
-              placeholder="conciliacion_YYYYMMDD.csv"
-            />
-          </div>
-          <div>
-            <Label htmlFor="ca-fecha">Fecha</Label>
-            <input
-              id="ca-fecha"
-              type="date"
-              value={cargarForm.fecha}
-              onChange={(e) => setCargarForm((f) => ({ ...f, fecha: e.target.value }))}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-            />
-          </div>
-          <div>
-            <Label>Carga del archivo</Label>
-            <FileDropzone
-              accept=".csv,.xlsx,.xls"
-              onFile={(f) =>
-                setCargarForm((fr) => ({ ...fr, file: f, nombre: f?.name ?? fr.nombre }))
-              }
-            />
-          </div>
-        </FormDialog>
-      )}
 
       {analisisTarget && (
         <AnalisisConciliacionModal
@@ -438,32 +542,6 @@ function Conciliaciones() {
 function ReportesBCRA() {
   return (
     <div className="space-y-6">
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="p-5">
-          <h4 className="font-display font-semibold text-sm">
-            SISCEN — Régimen informativo mensual
-          </h4>
-          <p className="text-xs text-muted-foreground mt-1">Presentado el 15/07/2026</p>
-          <div className="mt-2">
-            <Badge tone="success">Presentado</Badge>
-          </div>
-        </Card>
-        <Card className="p-5">
-          <h4 className="font-display font-semibold text-sm">Régimen de transparencia</h4>
-          <p className="text-xs text-muted-foreground mt-1">Tasas activas y pasivas — Julio 2026</p>
-          <div className="mt-2">
-            <Badge tone="warn">Pendiente</Badge>
-          </div>
-        </Card>
-        <Card className="p-5">
-          <h4 className="font-display font-semibold text-sm">Información de clientes</h4>
-          <p className="text-xs text-muted-foreground mt-1">Base consolidada al 30/06/2026</p>
-          <div className="mt-2">
-            <BtnOutline className="h-7 text-xs px-3">Exportar TXT</BtnOutline>
-          </div>
-        </Card>
-      </div>
-
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <Label htmlFor="bsra-fecha">Fecha</Label>
@@ -528,10 +606,14 @@ function BsraTabla() {
       render: (r) => (
         <button
           type="button"
-          onClick={() => downloadCSV(r.apartadoA, [{ concepto: "Apertura A", valor: 0 }])}
+          onClick={() =>
+            downloadExcel(r.apartadoA.replace(".csv", ".xls"), [
+              { concepto: "Apertura A", valor: 0 },
+            ])
+          }
           className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
         >
-          <Download size={14} /> CSV
+          <Download size={14} /> XLS
         </button>
       ),
     },
@@ -630,33 +712,18 @@ function ReportesAFIP() {
         </div>
       </Card>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label htmlFor="afip-fecha">Fecha</Label>
-          <input
-            id="afip-fecha"
-            type="month"
-            defaultValue="2026-07"
-            className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-          />
-        </div>
-        <BtnOutline className="h-9 text-xs px-3">
-          <Search size={14} /> Buscar
-        </BtnOutline>
-      </div>
-
       <AfipTabla params={params} />
     </div>
   );
 }
 
-type AfipRow = { fecha: string; b8_25: string; b8_26: string };
+type AfipRow = { fecha: string; b8125: string; b8126: string };
 
 const afipData: AfipRow[] = [
-  { fecha: "01/08/2026", b8_25: "B-8-1-25_202608.xlsx", b8_26: "B-8-1-26_202608.xlsx" },
-  { fecha: "01/07/2026", b8_25: "B-8-1-25_202607.xlsx", b8_26: "B-8-1-26_202607.xlsx" },
-  { fecha: "01/06/2026", b8_25: "B-8-1-25_202606.xlsx", b8_26: "B-8-1-26_202606.xlsx" },
-  { fecha: "01/05/2026", b8_25: "B-8-1-25_202605.xlsx", b8_26: "B-8-1-26_202605.xlsx" },
+  { fecha: "01/08/2026", b8125: "B-8-1-25_202608.xlsx", b8126: "B-8-1-26_202608.xlsx" },
+  { fecha: "01/07/2026", b8125: "B-8-1-25_202607.xlsx", b8126: "B-8-1-26_202607.xlsx" },
+  { fecha: "01/06/2026", b8125: "B-8-1-25_202606.xlsx", b8126: "B-8-1-26_202606.xlsx" },
+  { fecha: "01/05/2026", b8125: "B-8-1-25_202605.xlsx", b8126: "B-8-1-26_202605.xlsx" },
 ];
 
 function AfipTabla({ params }: { params: AfipParams }) {
@@ -669,32 +736,32 @@ function AfipTabla({ params }: { params: AfipParams }) {
 
   const columns: Column<AfipRow>[] = [
     {
-      key: "b8_25",
-      label: "B-8-1-25",
+      key: "b8125",
+      label: "B8125",
       sortable: true,
       filterable: true,
       render: (r) => (
         <button
           type="button"
-          onClick={() => downloadExcel(r.b8_25, [filaReporte(r)])}
+          onClick={() => downloadExcel(r.b8125, [filaReporte(r)])}
           className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
         >
-          <Download size={14} /> Excel
+          <Download size={14} /> XLS
         </button>
       ),
     },
     {
-      key: "b8_26",
-      label: "B-8-1-26",
+      key: "b8126",
+      label: "B8126",
       sortable: true,
       filterable: true,
       render: (r) => (
         <button
           type="button"
-          onClick={() => downloadExcel(r.b8_26, [filaReporte(r)])}
+          onClick={() => downloadExcel(r.b8126, [filaReporte(r)])}
           className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
         >
-          <Download size={14} /> Excel
+          <Download size={14} /> XLS
         </button>
       ),
     },
@@ -708,7 +775,13 @@ function AfipTabla({ params }: { params: AfipParams }) {
   ];
 
   return (
-    <DataTable columns={columns} data={afipData} keyExtractor={(r) => r.fecha} pageSize={10} />
+    <DataTable
+      columns={columns}
+      data={afipData}
+      keyExtractor={(r) => r.fecha}
+      pageSize={10}
+      showDownloadButton={false}
+    />
   );
 }
 
@@ -824,6 +897,29 @@ function ReportesComisiones() {
       sortable: true,
       render: (r) => <span className="font-mono tabular-nums">{r.comision}</span>,
     },
+    {
+      key: "xls",
+      label: "XLS",
+      render: (r) => (
+        <button
+          type="button"
+          onClick={() =>
+            downloadExcel(`comisiones_${r.periodo}_${r.tipo}.xlsx`, [
+              {
+                periodo: r.periodo,
+                tipo: r.tipo,
+                cantidad: r.cantidad,
+                monto: r.monto,
+                comision: r.comision,
+              },
+            ])
+          }
+          className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+        >
+          <Download size={14} /> XLS
+        </button>
+      ),
+    },
   ];
   return (
     <div className="space-y-3">
@@ -839,6 +935,7 @@ function ReportesComisiones() {
         data={data}
         keyExtractor={(r) => r.periodo + r.tipo}
         pageSize={10}
+        showDownloadButton={false}
       />
     </div>
   );
@@ -847,39 +944,102 @@ function ReportesComisiones() {
 /* ---------- Reportes de Movimientos (CUIT) ---------- */
 
 type Movimiento = {
-  id: number;
+  coelsaId: string;
+  legajo: string;
+  email: string;
+  cvu: string;
+  dia: string;
+  hora: string;
   tipo: "Depósito" | "Retiro";
-  fecha: string;
-  detalle: string;
   monto: string;
-  estado: "Accreditado" | "Pendiente" | "Rechazado";
+  cvuRemitente: string;
+  cuitRemitente: string;
+  nombreRemitente: string;
 };
 
 const MOVIMIENTOS: Record<string, Movimiento[]> = {
   "30123456789": [
     {
-      id: 1,
+      coelsaId: "COELSA-0001",
+      legajo: "LEG-001",
+      email: "jperez@email.com",
+      cvu: "1234567890123456789012",
+      dia: "2026-07-28",
+      hora: "14:32",
       tipo: "Depósito",
-      fecha: "2026-07-28",
-      detalle: "Depósito vía PSE",
       monto: "$ 50.000",
-      estado: "Accreditado",
+      cvuRemitente: "1234567890123456789012",
+      cuitRemitente: "30123456789",
+      nombreRemitente: "Juan Pérez",
     },
     {
-      id: 2,
+      coelsaId: "COELSA-0002",
+      legajo: "LEG-001",
+      email: "jperez@email.com",
+      cvu: "1234567890123456789012",
+      dia: "2026-07-26",
+      hora: "09:15",
       tipo: "Retiro",
-      fecha: "2026-07-26",
-      detalle: "Retiro QR",
       monto: "$ 5.000",
-      estado: "Accreditado",
+      cvuRemitente: "1234567890123456789023",
+      cuitRemitente: "20123456789",
+      nombreRemitente: "María García",
     },
     {
-      id: 3,
+      coelsaId: "COELSA-0003",
+      legajo: "LEG-001",
+      email: "jperez@email.com",
+      cvu: "1234567890123456789012",
+      dia: "2026-07-20",
+      hora: "10:45",
       tipo: "Depósito",
-      fecha: "2026-07-20",
-      detalle: "Depósito transferencia",
       monto: "$ 120.000",
-      estado: "Accreditado",
+      cvuRemitente: "1234567890123456789934",
+      cuitRemitente: "30555666777",
+      nombreRemitente: "María García",
+    },
+  ],
+  "20123456789": [
+    {
+      coelsaId: "COELSA-0004",
+      legajo: "LEG-002",
+      email: "mgarcia@email.com",
+      cvu: "1234567890123456789023",
+      dia: "2026-07-28",
+      hora: "11:00",
+      tipo: "Depósito",
+      monto: "$ 200.000",
+      cvuRemitente: "1234567890123456789012",
+      cuitRemitente: "30123456789",
+      nombreRemitente: "Juan Pérez",
+    },
+    {
+      coelsaId: "COELSA-0005",
+      legajo: "LEG-002",
+      email: "mgarcia@email.com",
+      cvu: "1234567890123456789023",
+      dia: "2026-07-22",
+      hora: "08:30",
+      tipo: "Retiro",
+      monto: "$ 25.000",
+      cvuRemitente: "1234567890123456789023",
+      cuitRemitente: "30555666777",
+      nombreRemitente: "Carlos López",
+    },
+  ],
+  "30987654321": [
+    {
+      coelsaId: "COELSA-0006",
+      legajo: "LEG-003",
+      email: "clopez@email.com",
+      cvu: "1234567890123456789034",
+      dia: "2026-07-25",
+      hora: "16:00",
+      tipo: "Depósito",
+      monto: "$ 75.000",
+      cvuRemitente: "1234567890123456789012",
+      cuitRemitente: "30123456789",
+      nombreRemitente: "Ana Martínez",
     },
   ],
 };
@@ -892,6 +1052,40 @@ function ReportesMovimientos() {
 
   const columns: Column<Movimiento>[] = [
     {
+      key: "coelsaId",
+      label: "ID COELSA",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs">{r.coelsaId}</span>,
+    },
+    {
+      key: "legajo",
+      label: "Legajo",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+    },
+    { key: "email", label: "Email", filterable: true, render: (r) => r.email },
+    {
+      key: "cvu",
+      label: "CVU",
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs tabular-nums">{r.cvu}</span>,
+    },
+    {
+      key: "dia",
+      label: "Día",
+      sortable: true,
+      filterable: "date",
+      render: (r) => <span className="font-mono tabular-nums">{r.dia}</span>,
+    },
+    {
+      key: "hora",
+      label: "Hora",
+      sortable: true,
+      render: (r) => <span className="font-mono tabular-nums">{r.hora}</span>,
+    },
+    {
       key: "tipo",
       label: "Tipo",
       sortable: true,
@@ -900,36 +1094,48 @@ function ReportesMovimientos() {
       render: (r) => r.tipo,
     },
     {
-      key: "fecha",
-      label: "Fecha",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
-    },
-    { key: "detalle", label: "Detalle", filterable: true, render: (r) => r.detalle },
-    {
       key: "monto",
       label: "Monto",
       sortable: true,
       render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
     },
     {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["Accreditado", "Pendiente", "Rechazado"],
+      key: "cvuRemitente",
+      label: "CVU remitente",
+      filterable: true,
       render: (r) => (
-        <Badge
-          tone={
-            r.estado === "Accreditado" ? "success" : r.estado === "Pendiente" ? "warn" : "danger"
-          }
-        >
-          {r.estado}
-        </Badge>
+        <span className="font-mono text-xs tabular-nums">{r.cvuRemitente || "—"}</span>
       ),
     },
+    {
+      key: "cuitRemitente",
+      label: "CUIT remitente",
+      filterable: true,
+      render: (r) => (
+        <span className="font-mono tabular-nums text-xs">{r.cuitRemitente || "—"}</span>
+      ),
+    },
+    {
+      key: "nombreRemitente",
+      label: "Nombre remitente",
+      filterable: true,
+      render: (r) => r.nombreRemitente || "—",
+    },
   ];
+
+  const excelRows = rows.map((r) => ({
+    "ID COELSA": r.coelsaId,
+    Legajo: r.legajo,
+    Email: r.email,
+    CVU: r.cvu,
+    Día: r.dia,
+    Hora: r.hora,
+    Tipo: r.tipo,
+    Monto: r.monto,
+    "CVU remitente": r.cvuRemitente,
+    "CUIT remitente": r.cuitRemitente,
+    "Nombre remitente": r.nombreRemitente,
+  }));
 
   return (
     <div className="space-y-4">
@@ -965,7 +1171,7 @@ function ReportesMovimientos() {
       {valido && consulta && (
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <BtnOutline onClick={() => downloadExcel(`movimientos_${consulta}.xlsx`, rows)}>
+            <BtnOutline onClick={() => downloadExcel(`movimientos_${consulta}.xlsx`, excelRows)}>
               <Download size={14} /> Descargar Excel
             </BtnOutline>
             <span className="text-sm text-muted-foreground">
@@ -981,107 +1187,101 @@ function ReportesMovimientos() {
             No se encontraron movimientos para el CUIT consultado.
           </p>
         ) : (
-          <DataTable columns={columns} data={rows} keyExtractor={(r) => r.id} pageSize={10} />
+          <DataTable
+            columns={columns}
+            data={rows}
+            keyExtractor={(r) => r.coelsaId}
+            pageSize={10}
+            showDownloadButton={false}
+          />
         ))}
     </div>
   );
 }
 
-/* ---------- Actividad deUsuarios ---------- */
+/* ---------- Actividad de Usuarios ---------- */
 
 type Actividad = {
-  legajo: string;
-  email: string;
+  campo: string;
+  valorAnterior: string;
+  valorNuevo: string;
   fecha: string;
   hora: string;
-  tipoTransaccion: string;
-  monto: string;
-  estado: string;
-  nombre: string;
-  destino: string;
-  cuit: string;
-  destinatario: string;
-  cvu: string;
-  cvuBalance: string;
+  usuario: string;
 };
 
-const ACTIVIDAD: Actividad[] = [
-  {
-    legajo: "ADM-001",
-    email: "m.rodriguez@admin.com",
-    fecha: "15/07/2026",
-    hora: "14:32",
-    tipoTransaccion: "Aprobó bloqueo",
-    monto: "$ 0",
-    estado: "OK",
-    nombre: "M. Rodríguez",
-    destino: "Alerta BL-001",
-    cuit: "30123456789",
-    destinatario: "M. Rodríguez",
-    cvu: "1234567890123456789012",
-    cvuBalance: "1234567890123456789011",
-  },
-  {
-    legajo: "ADM-001",
-    email: "m.rodriguez@admin.com",
-    fecha: "15/07/2026",
-    hora: "11:15",
-    tipoTransaccion: "Editó parámetros de alertas",
-    monto: "$ 0",
-    estado: "OK",
-    nombre: "M. Rodríguez",
-    destino: "Parámetros de alertas",
-    cuit: "",
-    destinatario: "",
-    cvu: "",
-    cvuBalance: "",
-  },
-  {
-    legajo: "ADM-001",
-    email: "m.rodriguez@admin.com",
-    fecha: "14/07/2026",
-    hora: "16:48",
-    tipoTransaccion: "Descargó reporte BCRA",
-    monto: "$ 0",
-    estado: "OK",
-    nombre: "M. Rodríguez",
-    destino: "Reportes",
-    cuit: "",
-    destinatario: "",
-    cvu: "",
-    cvuBalance: "",
-  },
-  {
-    legajo: "ADM-001",
-    email: "m.rodriguez@admin.com",
-    fecha: "14/07/2026",
-    hora: "09:00",
-    tipoTransaccion: "Creó usuario backoffice",
-    monto: "$ 0",
-    estado: "OK",
-    nombre: "M. Rodríguez",
-    destino: "Usuarios backoffice",
-    cuit: "30777777777",
-    destinatario: "Nuevo usuario",
-    cvu: "",
-    cvuBalance: "",
-  },
-  {
-    legajo: "ADM-002",
-    email: "l.fernandez@admin.com",
-    fecha: "15/07/2026",
-    hora: "10:00",
-    tipoTransaccion: "Editó parámetros de bloqueo",
-    monto: "$ 0",
-    estado: "OK",
-    nombre: "L. Fernández",
-    destino: "Parámetros de bloqueo",
-    cuit: "",
-    destinatario: "",
-    cvu: "",
-    cvuBalance: "",
-  },
-];
+const ACTIVIDAD_BASE: Record<string, Actividad[]> = {
+  "ADM-001": [
+    {
+      campo: "Estado",
+      valorAnterior: "Pendiente",
+      valorNuevo: "Activo",
+      fecha: "15/07/2026",
+      hora: "14:32",
+      usuario: "admin.operaciones",
+    },
+    {
+      campo: "Email",
+      valorAnterior: "mrodriguez@oldmail.com",
+      valorNuevo: "mrodriguez@molipay.com",
+      fecha: "15/07/2026",
+      hora: "11:15",
+      usuario: "admin.operaciones",
+    },
+    {
+      campo: "Rol",
+      valorAnterior: "Reader",
+      valorNuevo: "Admin",
+      fecha: "14/07/2026",
+      hora: "16:48",
+      usuario: "soporte.nivel2",
+    },
+    {
+      campo: "Ocupación",
+      valorAnterior: "Empleado",
+      valorNuevo: "Comerciante",
+      fecha: "14/07/2026",
+      hora: "09:00",
+      usuario: "admin.operaciones",
+    },
+  ],
+  "ADM-002": [
+    {
+      campo: "Parámetros de bloqueo",
+      valorAnterior: "Límite $ 500.000",
+      valorNuevo: "Límite $ 100.000",
+      fecha: "15/07/2026",
+      hora: "10:00",
+      usuario: "admin.operaciones",
+    },
+    {
+      campo: "Parámetros de alertas",
+      valorAnterior: "Volumen anormal $ 1.000.000–$ 5.000.000",
+      valorNuevo: "Volumen anormal $ 500.000–$ 2.000.000",
+      fecha: "13/07/2026",
+      hora: "08:30",
+      usuario: "soporte.nivel1",
+    },
+  ],
+  "ADM-003": [
+    {
+      campo: "Nombre",
+      valorAnterior: "Pedro Sánchez",
+      valorNuevo: "Pedro Sánchez Gómez",
+      fecha: "12/07/2026",
+      hora: "15:20",
+      usuario: "admin.operaciones",
+    },
+    {
+      campo: "Estado",
+      valorAnterior: "Activo",
+      valorNuevo: "Suspendido",
+      fecha: "10/07/2026",
+      hora: "09:45",
+      usuario: "soporte.nivel2",
+    },
+  ],
+};
 
 function parseFechaDMY(v: string): Date | null {
   const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -1096,9 +1296,8 @@ function ActividadUsuarios() {
   const [consultado, setConsultado] = useState(false);
 
   const filtrados = consultado
-    ? ACTIVIDAD.filter(
+    ? (ACTIVIDAD_BASE[legajo] ?? []).filter(
         (a) =>
-          (!legajo || a.legajo === legajo) &&
           (!desde || (parseFechaDMY(a.fecha) ?? 0) >= (parseFechaDMY(desde) ?? 0)) &&
           (!hasta || (parseFechaDMY(a.fecha) ?? 0) <= (parseFechaDMY(hasta) ?? 0)),
       )
@@ -1106,97 +1305,57 @@ function ActividadUsuarios() {
 
   const columns: Column<Actividad>[] = [
     {
-      key: "legajo",
-      label: "Legajo",
+      key: "campo",
+      label: "Campo actualizado",
+      sortable: true,
       filterable: true,
-      render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+      render: (r) => <span className="font-medium">{r.campo}</span>,
     },
-    { key: "email", label: "Email", filterable: true, render: (r) => r.email },
+    {
+      key: "valorAnterior",
+      label: "Valor anterior",
+      render: (r) => <span className="text-muted-foreground line-through">{r.valorAnterior}</span>,
+    },
+    {
+      key: "valorNuevo",
+      label: "Valor nuevo",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="text-foreground font-medium">{r.valorNuevo}</span>,
+    },
     {
       key: "fecha",
-      label: "Fecha",
+      label: "Fecha y hora",
       sortable: true,
       filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
-    },
-    {
-      key: "hora",
-      label: "Hora",
-      sortable: true,
-      render: (r) => <span className="font-mono tabular-nums">{r.hora}</span>,
-    },
-    {
-      key: "tipoTransaccion",
-      label: "Tipo de transacción",
-      filterable: true,
-      render: (r) => r.tipoTransaccion,
-    },
-    {
-      key: "monto",
-      label: "Monto",
-      sortable: true,
-      render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["OK", "Error", "Pendiente"],
       render: (r) => (
-        <Badge tone={r.estado === "OK" ? "success" : r.estado === "Pendiente" ? "warn" : "danger"}>
-          {r.estado}
-        </Badge>
+        <span className="text-muted-foreground tabular-nums">
+          {r.fecha} {r.hora}
+        </span>
       ),
     },
-    { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
-    { key: "destino", label: "Destino", filterable: true, render: (r) => r.destino },
     {
-      key: "cuit",
-      label: "CUIT",
+      key: "usuario",
+      label: "Actualizado por",
+      sortable: true,
       filterable: true,
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit || "—"}</span>,
-    },
-    {
-      key: "destinatario",
-      label: "Destinatario",
-      filterable: true,
-      render: (r) => r.destinatario || "—",
-    },
-    {
-      key: "cvu",
-      label: "CVU",
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.cvu || "—"}</span>,
-    },
-    {
-      key: "cvuBalance",
-      label: "CVU de balance",
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.cvuBalance || "—"}</span>,
+      render: (r) => <span className="font-mono text-xs">{r.usuario}</span>,
     },
   ];
 
   const excelRows = filtrados.map((a) => ({
-    Legajo: a.legajo,
-    Email: a.email,
-    Fecha: a.fecha,
-    Hora: a.hora,
-    "Tipo de transacción": a.tipoTransaccion,
-    Monto: a.monto,
-    Estado: a.estado,
-    Nombre: a.nombre,
-    Destino: a.destino,
-    CUIT: a.cuit,
-    Destinatario: a.destinatario,
-    CVU: a.cvu,
-    "CVU de balance": a.cvuBalance,
+    "Campo actualizado": a.campo,
+    "Valor anterior": a.valorAnterior,
+    "Valor nuevo": a.valorNuevo,
+    "Fecha y hora": `${a.fecha} ${a.hora}`,
+    "Actualizado por": a.usuario,
   }));
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Ingresá un Legajo y un rango de fechas para consultar la actividad del usuario.
+        Ingresá un Legajo para consultar la actividad del usuario. Los datos se muestran como en el
+        historial de cambios del detalle del usuario.
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[180px]">
@@ -1238,7 +1397,7 @@ function ActividadUsuarios() {
           />
         </div>
         <button
-          disabled={!legajo && !desde && !hasta}
+          disabled={!legajo}
           onClick={() => setConsultado(true)}
           className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -1246,15 +1405,15 @@ function ActividadUsuarios() {
         </button>
       </div>
       {consultado && filtrados.length > 0 && (
-        <div className="flex items-center gap-2">
-          <BtnOutline
-            onClick={() => downloadExcel(`actividad_${legajo || "todos"}.xlsx`, excelRows)}
-          >
-            <Download size={14} /> Descargar Excel
-          </BtnOutline>
-          <span className="text-sm text-muted-foreground">
-            {filtrados.length} registros encontrados
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BtnOutline onClick={() => downloadExcel(`actividad_${legajo}.xlsx`, excelRows)}>
+              <Download size={14} /> Descargar reporte
+            </BtnOutline>
+            <span className="text-sm text-muted-foreground">
+              {filtrados.length} registros encontrados
+            </span>
+          </div>
         </div>
       )}
       {consultado && filtrados.length === 0 ? (
@@ -1265,8 +1424,9 @@ function ActividadUsuarios() {
         <DataTable
           columns={columns}
           data={filtrados}
-          keyExtractor={(r) => r.legajo + r.fecha + r.hora}
+          keyExtractor={(r) => r.fecha + r.hora + r.campo}
           pageSize={10}
+          showDownloadButton={false}
         />
       ) : null}
     </div>
@@ -1359,6 +1519,26 @@ function generarTxtImpuesto(r: Impuesto): string {
     `Total movimientos: ${r.totalMovimientos}`,
     `Total monto: ${r.totalMonto}`,
     `Total retenciones: ${r.totalRetenciones}`,
+  ].join("\n");
+}
+
+function generarXmlImpuesto(r: Impuesto): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    "<reporte_impuesto>",
+    `  <id>${esc(r.id)}</id>`,
+    `  <reporte>${esc(r.reporte)}</reporte>`,
+    `  <periodo>${esc(r.periodo)}</periodo>`,
+    `  <tramo>${esc(r.tramo)}</tramo>`,
+    `  <fecha_creacion>${esc(r.creado)}</fecha_creacion>`,
+    `  <presentado>${esc(r.presentado)}</presentado>`,
+    `  <pagado>${esc(r.pagado)}</pagado>`,
+    `  <total_registros>${r.totalRegistros}</total_registros>`,
+    `  <total_movimientos>${r.totalMovimientos}</total_movimientos>`,
+    `  <total_monto>${esc(r.totalMonto)}</total_monto>`,
+    `  <total_retenciones>${esc(r.totalRetenciones)}</total_retenciones>`,
+    "</reporte_impuesto>",
   ].join("\n");
 }
 
@@ -1573,6 +1753,7 @@ function ReportesImpuestos() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
+        showDownloadButton={false}
         actions={(r) => (
           <div className="flex items-center gap-1">
             <BtnOutline
@@ -1588,6 +1769,13 @@ function ReportesImpuestos() {
               title="Descargar TXT"
             >
               <Download size={14} /> TXT
+            </BtnOutline>
+            <BtnOutline
+              className="h-7 px-2 text-xs"
+              onClick={() => downloadFile(`${r.reporte}_${r.periodo}.xml`, generarXmlImpuesto(r))}
+              title="Descargar XML"
+            >
+              <Download size={14} /> XML
             </BtnOutline>
             <BtnOutline
               className="h-7 px-2 text-xs"
@@ -1795,29 +1983,25 @@ function ConciliacionesBLP() {
       render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
     },
     {
-      key: "descargar",
-      label: "Descargar conciliación",
+      key: "accion",
+      label: "Acción",
       render: (r) => (
-        <BtnOutline
-          className="h-7 text-xs px-3"
-          onClick={() =>
-            downloadFile(
-              r.archivo,
-              `Archivo de conciliación BLP: ${r.archivo}\nFecha: ${r.fecha}\nEstado: ${r.estado}`,
-            )
-          }
-        >
-          <Download size={14} /> Descargar
-        </BtnOutline>
-      ),
-    },
-    {
-      key: "analizar",
-      label: "Analizar conciliación",
-      render: (r) => (
-        <BtnOutline className="h-7 text-xs px-3" onClick={() => abrirAnalisis(r)}>
-          Analizar
-        </BtnOutline>
+        <div className="flex items-center gap-1">
+          <BtnOutline
+            className="h-7 text-xs px-3"
+            onClick={() =>
+              downloadFile(
+                r.archivo,
+                `Archivo de conciliación BLP: ${r.archivo}\nFecha: ${r.fecha}\nEstado: ${r.estado}`,
+              )
+            }
+          >
+            <Download size={14} /> Descargar
+          </BtnOutline>
+          <BtnOutline className="h-7 text-xs px-3" onClick={() => abrirAnalisis(r)}>
+            Analizar
+          </BtnOutline>
+        </div>
       ),
     },
   ];
@@ -1833,7 +2017,13 @@ function ConciliacionesBLP() {
         </BtnPrimary>
       </div>
 
-      <DataTable columns={columns} data={data} keyExtractor={(r) => r.archivo} pageSize={10} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.archivo}
+        pageSize={10}
+        showDownloadButton={false}
+      />
 
       {cargando && (
         <FormDialog

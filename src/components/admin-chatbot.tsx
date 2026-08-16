@@ -1,36 +1,28 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, Bot, Send, X, User } from "lucide-react";
+import { KB } from "@/data/knowledge-base";
+import { KB_NAVIGATION, KB_ROUTES } from "@/data/kb-navigation";
 
 type Message = { role: "user" | "bot"; text: string };
 
-const KB = [
+const FULL_KB = [
+  ...KB,
   {
     keywords: [
-      "transacción",
-      "movimiento",
-      "estado",
-      "COELSA",
-      "en progreso",
-      "aprobado",
-      "rechazado",
+      "navegación",
+      "navegar",
+      "dónde",
+      "dónde está",
+      "cómo encuentro",
+      "ruta",
+      "sección",
+      "menú",
+      "ubicar",
+      "encontrar",
+      "mapa del panel",
+      "estructura",
     ],
-    response:
-      "Una transacción nace EN PROGRESO: el saldo se descuenta para el cliente, pero el dinero aún no salió realmente. La plataforma espera confirmación de la cuenta recaudadora del banco. Si confirma, se genera el ID COELSA —prueba definitiva de salida— y pasa a APROBADO. Si no, pasa a RECHAZADO y el saldo se revierte. Moli solo disponibiliza saldos; la verdad de si el dinero se movió vive en la cuenta recaudadora, y COELSA la certifica.",
-  },
-  {
-    keywords: ["impuesto", "ganancias", "ingresos brutos", "retención", "débito", "crédito"],
-    response:
-      "Moli maneja dos tipos de impuestos, totalmente separados.\n\n(1) Impuestos propios de Molly: Ganancias (anual) e Ingresos Brutos sobre su comisión — es ganancia del negocio, gestionada por su contabilidad, no afecta al cliente.\n\n(2) Impuestos retenidos al cliente: Molly es agente de retención, no pagador. Se retienen dos impuestos por operación — Débito/crédito (0,6% en ingresos, 0,6% en egresos, transferido mensualmente) e Ingresos Brutos del cliente (porcentaje variable según base del organismo fiscal, transferido cada 10 días). Ese dinero nunca es ganancia de Molly: se retiene transitoriamente y se transfiere al organismo.",
-  },
-  {
-    keywords: ["alerta", "bloqueo", "compliance", "suspender"],
-    response:
-      "Alerta = solo notifica, queda pendiente de revisión manual. Bloqueo = suspende la cuenta automáticamente hasta revisión de compliance.",
-  },
-  {
-    keywords: ["navegación", "dónde está", "cómo encuentro", "menú", "sección"],
-    response:
-      "El panel administrativo está organizado así:\n\n• General: Usuarios (Personas físicas, jurídicas, CVU, comisiones), Movimientos (8 tipos), Alertas (listados y parámetros)\n• Administración: Usuarios backoffice (personal y roles), Reportes, Registros (fondos, actividad), Soporte (Consultas frecuentes, Bloqueo de funciones)\n• Comercios: Pago por referencia, Link de pago, Impuestos, APIs externas\n• Configuración: Integraciones, Notificaciones",
+    response: KB_NAVIGATION,
   },
 ];
 
@@ -48,14 +40,26 @@ function findResponse(input: string): string {
   const lower = input.toLowerCase();
   let best: string | null = null;
   let bestCount = 0;
-  for (const entry of KB) {
+  for (const entry of FULL_KB) {
     const count = entry.keywords.filter((kw) => lower.includes(kw)).length;
     if (count > bestCount) {
       bestCount = count;
       best = entry.response;
     }
   }
-  return best ?? DEFAULT_RESPONSE;
+  if (best) return best;
+
+  const routeHit = KB_ROUTES.find(
+    (r) =>
+      lower.includes(r.title.toLowerCase()) ||
+      lower.includes(r.path.toLowerCase()) ||
+      r.path.toLowerCase().includes(lower.replace(/[^a-z0-9/]/g, "")),
+  );
+  if (routeHit) {
+    return `Podés encontrarlo en: ${routeHit.title} (${routeHit.path}).`;
+  }
+
+  return DEFAULT_RESPONSE;
 }
 
 export function AdminChatbot() {

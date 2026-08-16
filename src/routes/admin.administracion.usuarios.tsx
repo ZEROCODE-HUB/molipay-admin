@@ -8,8 +8,13 @@ export const Route = createFileRoute("/admin/administracion/usuarios")({
 const tabs: Tab[] = [
   { label: "Administración de personal", to: "/admin/administracion/usuarios" },
   { label: "Roles y permisos", to: "/admin/administracion/usuarios/roles" },
+  { label: "Actividad en backoffice", to: "/admin/administracion/usuarios/actividad" },
 ];
 
 function Layout() {
-  return <TabLayout tabs={tabs}><Outlet /></TabLayout>;
+  return (
+    <TabLayout tabs={tabs}>
+      <Outlet />
+    </TabLayout>
+  );
 }

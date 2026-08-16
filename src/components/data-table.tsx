@@ -26,8 +26,10 @@ type DataTableProps<T> = {
     onToggle: (id: string | number) => void;
     onToggleAll: () => void;
   };
-  onDownloadCSV?: () => void;
+  onDownloadCSV?: (rows: T[]) => void;
+  downloadExcel?: (rows: T[]) => void;
   showEnumAllOption?: boolean;
+  showDownloadButton?: boolean;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -58,7 +60,9 @@ export function DataTable<T>({
   pageSize: defaultPageSize = 10,
   selection,
   onDownloadCSV,
+  downloadExcel,
   showEnumAllOption = true,
+  showDownloadButton = true,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -252,11 +256,18 @@ export function DataTable<T>({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">{sortedData.length} resultados</span>
-        <div className="flex items-center gap-3">
-          <BtnOutline onClick={onDownloadCSV ?? exportCSV}>
-            <Download size={16} /> Descargar CSV
-          </BtnOutline>
-        </div>
+        {showDownloadButton && (
+          <div className="flex items-center gap-3">
+            <BtnOutline onClick={() => (onDownloadCSV ? onDownloadCSV(sortedData) : exportCSV())}>
+              <Download size={16} /> Descargar CSV
+            </BtnOutline>
+            {downloadExcel && (
+              <BtnOutline onClick={() => downloadExcel(sortedData)}>
+                <Download size={16} /> Descargar Excel
+              </BtnOutline>
+            )}
+          </div>
+        )}
       </div>
 
       {(textSearchableCols.length > 0 || showSpecificFilters) && (

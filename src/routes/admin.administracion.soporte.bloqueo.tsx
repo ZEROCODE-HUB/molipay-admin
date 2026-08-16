@@ -146,11 +146,6 @@ function Page() {
       filterable: "date",
       render: (b) => <span className="font-mono tabular-nums">{b.fecha}</span>,
     },
-    {
-      key: "acciones",
-      label: "Acciones",
-      render: () => null,
-    },
   ];
 
   return (

@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, Input } from "@/components/portal-shell";
+import { ROLES_NOMBRES } from "@/data/roles";
 
 type EstadoBackoffice =
   | "Activado"
@@ -24,7 +25,7 @@ type Staff = {
   rol: string;
 };
 
-const ROLES = ["Admin", "Soporte", "Técnico"];
+const ROLES = ROLES_NOMBRES;
 
 const ESTADOS: { id: string; text: string }[] = [
   { id: "ACTIVATED", text: "Activado" },
@@ -48,35 +49,35 @@ const initialData: Staff[] = [
     apellido: "Fernández",
     email: "lfernandez@molipay.com",
     estado: "Activado",
-    rol: "Soporte",
+    rol: "Reader",
   },
   {
     nombre: "Pedro",
     apellido: "Sánchez",
     email: "psanchez@molipay.com",
     estado: "Activado",
-    rol: "Técnico",
+    rol: "Management",
   },
   {
     nombre: "Ana",
     apellido: "Martínez",
     email: "amartinez@molipay.com",
     estado: "Desactivado",
-    rol: "Soporte",
+    rol: "Accounting",
   },
   {
     nombre: "Carlos",
     apellido: "López",
     email: "clopez@molipay.com",
     estado: "Activado",
-    rol: "Técnico",
+    rol: "Reader",
   },
   {
     nombre: "Sofía",
     apellido: "García",
     email: "sgarcia@molipay.com",
     estado: "Pendiente de validación",
-    rol: "Soporte",
+    rol: "Compliance",
   },
 ];
 
@@ -250,9 +251,11 @@ function Page() {
               value={editTarget.rol}
               onChange={(e) => setEditTarget({ ...editTarget, rol: e.target.value })}
             >
-              <option>Admin</option>
-              <option>Soporte</option>
-              <option>Técnico</option>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
           </div>
         </FormDialog>
@@ -323,9 +326,11 @@ function Page() {
                   Rol
                 </label>
                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40">
-                  <option>Admin</option>
-                  <option>Soporte</option>
-                  <option>Técnico</option>
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
                 </select>
               </div>
               <button className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90">

@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "gen:kb": "node scripts/generate-kb-nav.mjs",
+    "gen:docs": "node scripts/gen-docs.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

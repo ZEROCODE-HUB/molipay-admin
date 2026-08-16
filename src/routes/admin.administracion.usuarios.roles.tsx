@@ -4,6 +4,7 @@ import { Plus, X, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge, BtnPrimary, BtnOutline } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ROLES_DISPONIBLES, type Rol } from "@/data/roles";
 
 type Permiso = {
   recurso: string;
@@ -12,7 +13,7 @@ type Permiso = {
   crear: boolean;
   borrar: boolean;
 };
-type Rol = { id: string; nombre: string; permisos: Permiso[] };
+type RolCompleto = Rol & { permisos: Permiso[] };
 
 const recursos = [
   "Usuarios",
@@ -27,7 +28,16 @@ const recursos = [
   "Incidentes",
 ];
 
-const rolesIniciales: Rol[] = [
+const createPermisosBase = (): Permiso[] =>
+  recursos.map((r) => ({
+    recurso: r,
+    leer: false,
+    modificar: false,
+    crear: false,
+    borrar: false,
+  }));
+
+const rolesIniciales: RolCompleto[] = [
   {
     id: "1",
     nombre: "Admin",
@@ -102,11 +112,11 @@ export const Route = createFileRoute("/admin/administracion/usuarios/roles")({
 });
 
 function Page() {
-  const [roles, setRoles] = useState<Rol[]>(rolesIniciales);
+  const [roles, setRoles] = useState<RolCompleto[]>(rolesIniciales);
   const [selectedRol, setSelectedRol] = useState(rolesIniciales[0].id);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState<Rol | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<RolCompleto | null>(null);
 
   const current = roles.find((r) => r.id === selectedRol)!;
 
@@ -127,16 +137,10 @@ function Page() {
 
   const addRol = () => {
     if (!newName.trim()) return;
-    const newRol: Rol = {
+    const newRol: RolCompleto = {
       id: String(Date.now()),
       nombre: newName,
-      permisos: recursos.map((r) => ({
-        recurso: r,
-        leer: false,
-        modificar: false,
-        crear: false,
-        borrar: false,
-      })),
+      permisos: createPermisosBase(),
     };
     setRoles((prev) => [...prev, newRol]);
     setSelectedRol(newRol.id);
@@ -172,10 +176,10 @@ function Page() {
               <Trash2
                 size={12}
                 className="opacity-60 hover:opacity-100"
-onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDelete(r);
-                  }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(r);
+                }}
               />
             )}
           </button>
