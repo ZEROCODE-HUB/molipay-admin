@@ -9,7 +9,6 @@ import {
   Users,
   FileSpreadsheet,
   Landmark,
-  FileStack,
   Download,
   Search,
   Plus,
@@ -91,14 +90,7 @@ const reports: ReportDef[] = [
     name: "Conciliaciones BLP",
     icon: Landmark,
     color: "text-cyan-500",
-    description: "Conciliación por tramos 1/2/3 para Link de Pago.",
-  },
-  {
-    key: "impuestos-nuevo",
-    name: "Reportes de Impuestos (Nuevo)",
-    icon: FileStack,
-    color: "text-rose-500",
-    description: "Nuevo esquema de reportes de impuestos.",
+    description: "Conciliación de archivos Payway (pagos y liquidaciones).",
   },
 ];
 
@@ -1281,26 +1273,266 @@ function ActividadUsuarios() {
   );
 }
 
-/* ---------- Reportes de Impuestos (actual) ---------- */
+/* ---------- Reportes de Impuestos ---------- */
 
 type Impuesto = {
+  id: string;
+  reporte: string;
   periodo: string;
   tramo: string;
   creado: string;
   presentado: "Sí" | "No";
   pagado: "Sí" | "No";
+  totalRegistros: number;
+  totalMovimientos: number;
+  totalMonto: string;
+  totalRetenciones: string;
 };
 
-function impuestosColumns(): Column<Impuesto>[] {
+const IMPUESTOS_DISPONIBLES = ["Ganancias", "Ingresos Brutos", "IVA", "Débito/Crédito (Sellos)"];
+
+const impuestosData: Impuesto[] = [
+  {
+    id: "IMP-0001",
+    reporte: "Ganancias",
+    periodo: "2026-06",
+    tramo: "Tramo 1",
+    creado: "2026-07-05",
+    presentado: "Sí",
+    pagado: "Sí",
+    totalRegistros: 1240,
+    totalMovimientos: 1240,
+    totalMonto: "$ 8.450.000",
+    totalRetenciones: "$ 1.690.000",
+  },
+  {
+    id: "IMP-0002",
+    reporte: "Ingresos Brutos",
+    periodo: "2026-05",
+    tramo: "Tramo 2",
+    creado: "2026-06-10",
+    presentado: "Sí",
+    pagado: "Sí",
+    totalRegistros: 980,
+    totalMovimientos: 980,
+    totalMonto: "$ 5.120.000",
+    totalRetenciones: "$ 512.000",
+  },
+  {
+    id: "IMP-0003",
+    reporte: "IVA",
+    periodo: "2026-04",
+    tramo: "Tramo 1",
+    creado: "2026-05-05",
+    presentado: "Sí",
+    pagado: "No",
+    totalRegistros: 1530,
+    totalMovimientos: 1530,
+    totalMonto: "$ 12.300.000",
+    totalRetenciones: "$ 2.460.000",
+  },
+  {
+    id: "IMP-0004",
+    reporte: "Débito/Crédito (Sellos)",
+    periodo: "2026-06",
+    tramo: "Tramo 3",
+    creado: "2026-07-08",
+    presentado: "No",
+    pagado: "No",
+    totalRegistros: 640,
+    totalMovimientos: 640,
+    totalMonto: "$ 3.210.000",
+    totalRetenciones: "$ 320.000",
+  },
+];
+
+function generarTxtImpuesto(r: Impuesto): string {
   return [
+    `ID: ${r.id}`,
+    `Reporte: ${r.reporte}`,
+    `Periodo: ${r.periodo}`,
+    `Tramo: ${r.tramo}`,
+    `Fecha de creacion: ${r.creado}`,
+    `Presentado: ${r.presentado}`,
+    `Pagado: ${r.pagado}`,
+    `Total registros: ${r.totalRegistros}`,
+    `Total movimientos: ${r.totalMovimientos}`,
+    `Total monto: ${r.totalMonto}`,
+    `Total retenciones: ${r.totalRetenciones}`,
+  ].join("\n");
+}
+
+function ImpuestoDetalleModal({
+  impuesto,
+  onClose,
+  onMarcarPresentado,
+  onMarcarPagado,
+}: {
+  impuesto: Impuesto;
+  onClose: () => void;
+  onMarcarPresentado: (id: string) => void;
+  onMarcarPagado: (id: string) => void;
+}) {
+  const Field = ({ label, value }: { label: string; value: ReactNode }) => (
+    <div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className="font-medium mt-0.5">{value}</div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
+          <div>
+            <h3 className="font-display font-semibold text-lg">Detalle del reporte</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">{impuesto.reporte}</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
+            ×
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <Card className="p-5">
+            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+              Información del reporte
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+              <Field label="ID" value={<span className="font-mono">{impuesto.id}</span>} />
+              <Field label="Reporte" value={impuesto.reporte} />
+              <Field label="Período" value={impuesto.periodo} />
+              <Field label="Tramo" value={impuesto.tramo} />
+              <Field
+                label="Fecha de creación"
+                value={<span className="font-mono tabular-nums">{impuesto.creado}</span>}
+              />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+              KPIs
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+              <Field label="Total de registros" value={impuesto.totalRegistros} />
+              <Field label="Total de movimientos" value={impuesto.totalMovimientos} />
+              <Field
+                label="Total de monto"
+                value={<span className="font-mono">{impuesto.totalMonto}</span>}
+              />
+              <Field
+                label="Total de retenciones"
+                value={<span className="font-mono">{impuesto.totalRetenciones}</span>}
+              />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+              Estado
+            </h4>
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Presentado
+                </div>
+                <div className="mt-1">
+                  <Badge tone={impuesto.presentado === "Sí" ? "success" : "danger"}>
+                    {impuesto.presentado}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Pagado</div>
+                <div className="mt-1">
+                  <Badge tone={impuesto.pagado === "Sí" ? "success" : "danger"}>
+                    {impuesto.pagado}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex flex-wrap justify-end gap-2">
+          {impuesto.presentado === "No" && (
+            <BtnPrimary className="h-9 text-sm" onClick={() => onMarcarPresentado(impuesto.id)}>
+              Marcar como presentado
+            </BtnPrimary>
+          )}
+          {impuesto.pagado === "No" && (
+            <BtnOutline className="h-9 text-sm" onClick={() => onMarcarPagado(impuesto.id)}>
+              Marcar como pagado
+            </BtnOutline>
+          )}
+          <BtnOutline className="h-9 text-sm" onClick={onClose}>
+            Cerrar
+          </BtnOutline>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportesImpuestos() {
+  const [data, setData] = useState<Impuesto[]>(impuestosData);
+  const [detalle, setDetalle] = useState<Impuesto | null>(null);
+  const [generando, setGenerando] = useState(false);
+  const [form, setForm] = useState({ fecha: "", impuesto: "", tramo: "" });
+
+  const marcarPresentado = (id: string) => {
+    setData((prev) => prev.map((d) => (d.id === id ? { ...d, presentado: "Sí" } : d)));
+    setDetalle((prev) => (prev && prev.id === id ? { ...prev, presentado: "Sí" } : prev));
+    toast.success("Reporte marcado como presentado");
+  };
+
+  const marcarPagado = (id: string) => {
+    setData((prev) => prev.map((d) => (d.id === id ? { ...d, pagado: "Sí" } : d)));
+    setDetalle((prev) => (prev && prev.id === id ? { ...prev, pagado: "Sí" } : prev));
+    toast.success("Reporte marcado como pagado");
+  };
+
+  const generarReporte = () => {
+    if (!form.fecha || !form.impuesto || !form.tramo) return;
+    const id = `IMP-${String(data.length + 1).padStart(4, "0")}`;
+    setData((prev) => [
+      ...prev,
+      {
+        id,
+        reporte: form.impuesto,
+        periodo: form.fecha.slice(0, 7),
+        tramo: form.tramo,
+        creado: form.fecha,
+        presentado: "No",
+        pagado: "No",
+        totalRegistros: 0,
+        totalMovimientos: 0,
+        totalMonto: "$ 0",
+        totalRetenciones: "$ 0",
+      },
+    ]);
+    setForm({ fecha: "", impuesto: "", tramo: "" });
+    setGenerando(false);
+    toast.success("Reporte generado correctamente");
+  };
+
+  const columns: Column<Impuesto>[] = [
     {
       key: "periodo",
-      label: "Periodo",
+      label: "Período",
       filterable: true,
       sortable: true,
-      render: (r) => r.periodo,
+      render: (r) => <span className="font-mono tabular-nums">{r.periodo}</span>,
     },
-    { key: "tramo", label: "Tramo", filterable: true, render: (r) => r.tramo },
+    {
+      key: "tramo",
+      label: "Tramo",
+      filterable: "enum",
+      filterOptions: ["Tramo 1", "Tramo 2", "Tramo 3"],
+      render: (r) => r.tramo,
+    },
     {
       key: "creado",
       label: "Fecha de creación",
@@ -1313,7 +1545,7 @@ function impuestosColumns(): Column<Impuesto>[] {
       filterable: "enum",
       filterOptions: ["Sí", "No"],
       render: (r) => (
-        <Badge tone={r.presentado === "Sí" ? "success" : "warn"}>{r.presentado}</Badge>
+        <Badge tone={r.presentado === "Sí" ? "success" : "danger"}>{r.presentado}</Badge>
       ),
     },
     {
@@ -1324,76 +1556,332 @@ function impuestosColumns(): Column<Impuesto>[] {
       render: (r) => <Badge tone={r.pagado === "Sí" ? "success" : "danger"}>{r.pagado}</Badge>,
     },
   ];
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <p className="text-sm text-muted-foreground">
+          Reportes de presentación de impuestos por período y tramo.
+        </p>
+        <BtnPrimary type="button" className="h-9 text-sm" onClick={() => setGenerando(true)}>
+          <Plus size={14} /> Generar reporte
+        </BtnPrimary>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        pageSize={10}
+        actions={(r) => (
+          <div className="flex items-center gap-1">
+            <BtnOutline
+              className="h-7 px-2 text-xs"
+              onClick={() => setDetalle(r)}
+              title="Ver detalle"
+            >
+              <FileText size={14} /> Ver detalle
+            </BtnOutline>
+            <BtnOutline
+              className="h-7 px-2 text-xs"
+              onClick={() => downloadFile(`${r.reporte}_${r.periodo}.txt`, generarTxtImpuesto(r))}
+              title="Descargar TXT"
+            >
+              <Download size={14} /> TXT
+            </BtnOutline>
+            <BtnOutline
+              className="h-7 px-2 text-xs"
+              onClick={() => downloadFile(`${r.reporte}_${r.periodo}.zip`, "")}
+              title="Descargar ZIP"
+            >
+              <Download size={14} /> ZIP
+            </BtnOutline>
+          </div>
+        )}
+      />
+
+      {detalle && (
+        <ImpuestoDetalleModal
+          impuesto={detalle}
+          onClose={() => setDetalle(null)}
+          onMarcarPresentado={marcarPresentado}
+          onMarcarPagado={marcarPagado}
+        />
+      )}
+
+      {generando && (
+        <FormDialog
+          open
+          onClose={() => setGenerando(false)}
+          title="Generar reporte"
+          description="Completá los datos para generar un nuevo reporte de impuesto."
+          onSubmit={generarReporte}
+          submitLabel="Generar reporte"
+          size="md"
+        >
+          <div>
+            <Label htmlFor="ri-fecha">Fecha</Label>
+            <input
+              id="ri-fecha"
+              type="date"
+              value={form.fecha}
+              onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ri-impuesto">Impuesto para el reporte</Label>
+            <select
+              id="ri-impuesto"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              value={form.impuesto}
+              onChange={(e) => setForm((f) => ({ ...f, impuesto: e.target.value }))}
+            >
+              <option value="">Seleccionar impuesto</option>
+              {IMPUESTOS_DISPONIBLES.map((i) => (
+                <option key={i} value={i}>
+                  {i}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="ri-tramo">Tramo</Label>
+            <select
+              id="ri-tramo"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              value={form.tramo}
+              onChange={(e) => setForm((f) => ({ ...f, tramo: e.target.value }))}
+            >
+              <option value="">Seleccionar tramo</option>
+              <option value="Tramo 1">Tramo 1</option>
+              <option value="Tramo 2">Tramo 2</option>
+              <option value="Tramo 3">Tramo 3</option>
+            </select>
+          </div>
+        </FormDialog>
+      )}
+    </div>
+  );
 }
 
-const impuestosData: Impuesto[] = [
-  { periodo: "2026-06", tramo: "1", creado: "2026-07-05", presentado: "Sí", pagado: "Sí" },
-  { periodo: "2026-05", tramo: "2", creado: "2026-06-10", presentado: "Sí", pagado: "Sí" },
-  { periodo: "2026-04", tramo: "1", creado: "2026-05-05", presentado: "Sí", pagado: "No" },
+/* ---------- Conciliaciones BLP ---------- */
+
+type BlpArchivo = {
+  archivo: string;
+  fecha: string;
+  estado: "Presentada" | "Liquidada" | "Pendiente" | "En proceso";
+};
+
+const blpData: BlpArchivo[] = [
+  { archivo: "Liquidada Payway 2026-07.csv", fecha: "2026-07-31", estado: "Liquidada" },
+  { archivo: "Pagos Payway 2026-07.csv", fecha: "2026-07-30", estado: "Presentada" },
+  { archivo: "Pagos Payway 2026-06.csv", fecha: "2026-06-30", estado: "Presentada" },
+  { archivo: "Liquidada Payway 2026-06.csv", fecha: "2026-06-29", estado: "Liquidada" },
+  { archivo: "Pagos Payway 2026-05.csv", fecha: "2026-05-30", estado: "En proceso" },
 ];
 
-function ReportesImpuestos() {
+function BlpNoRequiereModal({ archivo, onClose }: { archivo: string; onClose: () => void }) {
   return (
-    <DataTable
-      columns={impuestosColumns()}
-      data={impuestosData}
-      keyExtractor={(r) => r.periodo + r.tramo}
-      actions={() => (
-        <div className="flex gap-1">
-          <BtnOutline className="h-7 px-2" title="Ver detalle">
-            <FileText size={14} />
-          </BtnOutline>
-          <BtnOutline className="h-7 px-2" title="Descargar TXT">
-            <Download size={14} />
-          </BtnOutline>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-xl w-full max-w-md shadow-xl">
+        <div className="p-6">
+          <h3 className="font-display font-semibold text-lg">Análisis de conciliación</h3>
+          <p className="text-sm text-muted-foreground mt-3">
+            El archivo <span className="font-mono">{archivo}</span> no requiere análisis.
+          </p>
+          <div className="mt-5 flex justify-end">
+            <BtnOutline className="h-9 text-sm px-3" onClick={onClose}>
+              Cerrar
+            </BtnOutline>
+          </div>
         </div>
-      )}
-    />
+      </div>
+    </div>
   );
 }
 
-/* ---------- Conciliaciones BLP (tramos) ---------- */
+function BlpAnalisisModal({ archivo, onClose }: { archivo: BlpArchivo; onClose: () => void }) {
+  const [ejecutado, setEjecutado] = useState(false);
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-xl w-full max-w-md shadow-xl">
+        <div className="p-6 space-y-4">
+          <h3 className="font-display font-semibold text-lg">Analizar conciliación</h3>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <div>
+              <span className="text-foreground font-medium">Archivo:</span>{" "}
+              <span className="font-mono">{archivo.archivo}</span>
+            </div>
+            <div>
+              <span className="text-foreground font-medium">Fecha:</span>{" "}
+              <span className="font-mono">{archivo.fecha}</span>
+            </div>
+            <div>
+              <span className="text-foreground font-medium">Estado:</span> {archivo.estado}
+            </div>
+          </div>
+          <p className="text-sm">
+            Se ejecutará el análisis de la conciliación BLP correspondiente.
+          </p>
+          {ejecutado && (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 text-sm px-3 py-2">
+              Análisis ejecutado correctamente.
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <BtnOutline className="h-9 text-sm px-3" onClick={onClose}>
+              Cerrar
+            </BtnOutline>
+            <BtnPrimary
+              className="h-9 text-sm px-3"
+              onClick={() => {
+                setEjecutado(true);
+                toast.success("Análisis de conciliación ejecutado");
+              }}
+            >
+              Ejecutar análisis
+            </BtnPrimary>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-type TramoBLP = { tramo: string; archivos: number; monto: string };
 function ConciliacionesBLP() {
-  const data: TramoBLP[] = [
-    { tramo: "Tramo 1", archivos: 12, monto: "$ 4.200.000" },
-    { tramo: "Tramo 2", archivos: 8, monto: "$ 3.100.000" },
-    { tramo: "Tramo 3", archivos: 5, monto: "$ 1.800.000" },
-  ];
-  const columns: Column<TramoBLP>[] = [
-    { key: "tramo", label: "Tramo", filterable: true, render: (r) => r.tramo },
-    { key: "archivos", label: "Archivos", filterable: true, render: (r) => r.archivos },
+  const [data, setData] = useState<BlpArchivo[]>(blpData);
+  const [cargando, setCargando] = useState(false);
+  const [analisisTarget, setAnalisisTarget] = useState<BlpArchivo | null>(null);
+  const [noRequiere, setNoRequiere] = useState<string | null>(null);
+  const [cargarForm, setCargarForm] = useState({
+    nombre: "",
+    fecha: "",
+    file: null as File | null,
+  });
+
+  const guardarArchivo = () => {
+    if (!cargarForm.nombre.trim() || !cargarForm.fecha || !cargarForm.file) return;
+    setData((prev) => [
+      { archivo: cargarForm.file!.name, fecha: cargarForm.fecha, estado: "Pendiente" },
+      ...prev,
+    ]);
+    setCargarForm({ nombre: "", fecha: "", file: null });
+    setCargando(false);
+    toast.success("Archivo cargado correctamente");
+  };
+
+  const abrirAnalisis = (r: BlpArchivo) => {
+    if (r.estado === "Presentada" || r.estado === "Liquidada") {
+      setAnalisisTarget(r);
+    } else {
+      setNoRequiere(r.archivo);
+    }
+  };
+
+  const columns: Column<BlpArchivo>[] = [
     {
-      key: "monto",
-      label: "Monto conciliado",
-      render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+      key: "archivo",
+      label: "Nombre del archivo",
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs">{r.archivo}</span>,
+    },
+    {
+      key: "fecha",
+      label: "Fecha",
+      filterable: "date",
+      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+    },
+    {
+      key: "descargar",
+      label: "Descargar conciliación",
+      render: (r) => (
+        <BtnOutline
+          className="h-7 text-xs px-3"
+          onClick={() =>
+            downloadFile(
+              r.archivo,
+              `Archivo de conciliación BLP: ${r.archivo}\nFecha: ${r.fecha}\nEstado: ${r.estado}`,
+            )
+          }
+        >
+          <Download size={14} /> Descargar
+        </BtnOutline>
+      ),
+    },
+    {
+      key: "analizar",
+      label: "Analizar conciliación",
+      render: (r) => (
+        <BtnOutline className="h-7 text-xs px-3" onClick={() => abrirAnalisis(r)}>
+          Analizar
+        </BtnOutline>
+      ),
     },
   ];
+
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      keyExtractor={(r) => r.tramo}
-      actions={() => (
-        <button className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-          <Download size={14} /> Descargar
-        </button>
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <p className="text-sm text-muted-foreground">
+          Conciliación de archivos Payway (pagos y liquidaciones) por Link de Pago.
+        </p>
+        <BtnPrimary type="button" className="h-9 text-sm" onClick={() => setCargando(true)}>
+          <Plus size={14} /> Cargar nuevo archivo
+        </BtnPrimary>
+      </div>
+
+      <DataTable columns={columns} data={data} keyExtractor={(r) => r.archivo} pageSize={10} />
+
+      {cargando && (
+        <FormDialog
+          open
+          onClose={() => setCargando(false)}
+          title="Cargar nuevo archivo"
+          onSubmit={guardarArchivo}
+          submitLabel="Guardar"
+          size="md"
+        >
+          <div>
+            <Label htmlFor="blp-nombre">Nombre del archivo</Label>
+            <Input
+              id="blp-nombre"
+              value={cargarForm.nombre}
+              onChange={(e) => setCargarForm((f) => ({ ...f, nombre: e.target.value }))}
+              placeholder="Liquidada Payway 2026-08.csv"
+            />
+          </div>
+          <div>
+            <Label htmlFor="blp-fecha">Fecha</Label>
+            <input
+              id="blp-fecha"
+              type="date"
+              value={cargarForm.fecha}
+              onChange={(e) => setCargarForm((f) => ({ ...f, fecha: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+          <div>
+            <Label>Archivo de conciliación BLP</Label>
+            <FileDropzone
+              accept=".csv,.xlsx,.xls"
+              onFile={(f) =>
+                setCargarForm((fr) => ({ ...fr, file: f, nombre: f?.name ?? fr.nombre }))
+              }
+            />
+          </div>
+        </FormDialog>
       )}
-    />
-  );
-}
 
-/* ---------- Reportes de Impuestos (Nuevo) ---------- */
-
-function ReportesImpuestosNuevo() {
-  const data: Impuesto[] = [
-    { periodo: "2026-06", tramo: "1", creado: "2026-07-08", presentado: "Sí", pagado: "No" },
-    { periodo: "2026-05", tramo: "3", creado: "2026-06-12", presentado: "Sí", pagado: "Sí" },
-    { periodo: "2026-04", tramo: "2", creado: "2026-05-06", presentado: "No", pagado: "No" },
-  ];
-  return (
-    <DataTable columns={impuestosColumns()} data={data} keyExtractor={(r) => r.periodo + r.tramo} />
+      {noRequiere && (
+        <BlpNoRequiereModal archivo={noRequiere} onClose={() => setNoRequiere(null)} />
+      )}
+      {analisisTarget && (
+        <BlpAnalisisModal archivo={analisisTarget} onClose={() => setAnalisisTarget(null)} />
+      )}
+    </div>
   );
 }
 
@@ -1408,7 +1896,6 @@ const views: Record<string, () => ReactNode> = {
   actividad: ActividadUsuarios,
   impuestos: ReportesImpuestos,
   "conciliaciones-blp": ConciliacionesBLP,
-  "impuestos-nuevo": ReportesImpuestosNuevo,
 };
 
 function Page() {
