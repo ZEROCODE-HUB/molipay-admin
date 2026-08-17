@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Edit3, Power, PowerOff, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/comercios/apis/endpoints")({
 
 type TipoEndpoint = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 type GrupoEndpoint =
-  "Autenticación" | "Enlaces de pago" | "QR" | "Super Accounts" | "Transfer" | "User" | "Webhooks";
+  "Autenticación" | "Enlaces de pago" | "QR" | "SubAccounts" | "Transfer" | "User" | "Webhooks";
 
 type Endpoint = {
   id: number;
@@ -26,7 +26,7 @@ type Endpoint = {
   descripcion: string;
   grupo: GrupoEndpoint;
   estado: "Habilitado" | "Deshabilitado";
-  rec: string;
+  rec: boolean;
 };
 
 const TIPOS: TipoEndpoint[] = ["GET", "POST", "PUT", "DELETE", "PATCH"];
@@ -35,7 +35,7 @@ const GRUPOS: GrupoEndpoint[] = [
   "Autenticación",
   "Enlaces de pago",
   "QR",
-  "Super Accounts",
+  "SubAccounts",
   "Transfer",
   "User",
   "Webhooks",
@@ -50,7 +50,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Inicia y cierra sesión de la API.",
     grupo: "Autenticación",
     estado: "Habilitado",
-    rec: "REC-001",
+    rec: true,
   },
   {
     id: 2,
@@ -60,7 +60,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Renueva el token de acceso.",
     grupo: "Autenticación",
     estado: "Habilitado",
-    rec: "REC-002",
+    rec: false,
   },
   {
     id: 3,
@@ -70,7 +70,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Cancela un pago pendiente.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-003",
+    rec: true,
   },
   {
     id: 4,
@@ -80,7 +80,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Crea un nuevo link de pago.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-004",
+    rec: true,
   },
   {
     id: 5,
@@ -90,7 +90,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Obtiene el detalle de un link de pago.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-005",
+    rec: true,
   },
   {
     id: 6,
@@ -100,7 +100,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Elimina un link de pago existente.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-006",
+    rec: true,
   },
   {
     id: 7,
@@ -110,7 +110,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista los links de pago.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-007",
+    rec: true,
   },
   {
     id: 8,
@@ -120,7 +120,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista los pagos registrados.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-008",
+    rec: false,
   },
   {
     id: 9,
@@ -130,7 +130,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista los métodos de pago disponibles.",
     grupo: "Enlaces de pago",
     estado: "Habilitado",
-    rec: "REC-009",
+    rec: false,
   },
   {
     id: 10,
@@ -140,7 +140,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Utiliza un punto de venta para una operación.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-010",
+    rec: true,
   },
   {
     id: 11,
@@ -150,7 +150,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Cambia el estado de un punto de venta.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-011",
+    rec: true,
   },
   {
     id: 12,
@@ -160,7 +160,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Cancela un código QR activo.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-012",
+    rec: true,
   },
   {
     id: 13,
@@ -170,7 +170,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Carga saldo en un QR estático.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-013",
+    rec: true,
   },
   {
     id: 14,
@@ -180,7 +180,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Crea un nuevo código QR.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-014",
+    rec: true,
   },
   {
     id: 15,
@@ -190,7 +190,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Crea un nuevo punto de venta.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-015",
+    rec: true,
   },
   {
     id: 16,
@@ -200,7 +200,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Obtiene el detalle de un código QR.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-016",
+    rec: false,
   },
   {
     id: 17,
@@ -210,7 +210,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Elimina un punto de venta.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-017",
+    rec: true,
   },
   {
     id: 18,
@@ -220,7 +220,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista los códigos QR.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-018",
+    rec: true,
   },
   {
     id: 19,
@@ -230,7 +230,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista los puntos de venta.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-019",
+    rec: true,
   },
   {
     id: 20,
@@ -238,9 +238,9 @@ const dataInicial: Endpoint[] = [
     path: "/commerces/activate",
     tipo: "POST",
     descripcion: "Activa comercios masivamente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-020",
+    rec: true,
   },
   {
     id: 21,
@@ -250,7 +250,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Reembolsa una operación de QR.",
     grupo: "QR",
     estado: "Habilitado",
-    rec: "REC-021",
+    rec: true,
   },
   {
     id: 22,
@@ -258,9 +258,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/activate",
     tipo: "POST",
     descripcion: "Activa la cuenta del cliente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-022",
+    rec: true,
   },
   {
     id: 23,
@@ -268,9 +268,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/aliases/bulk",
     tipo: "POST",
     descripcion: "Utiliza alias de forma masiva.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-023",
+    rec: true,
   },
   {
     id: 24,
@@ -278,9 +278,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/aliases/{id}",
     tipo: "PUT",
     descripcion: "Actualiza un alias de la cuenta.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-024",
+    rec: true,
   },
   {
     id: 25,
@@ -288,9 +288,9 @@ const dataInicial: Endpoint[] = [
     path: "/account",
     tipo: "POST",
     descripcion: "Crea la cuenta del cliente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-025",
+    rec: true,
   },
   {
     id: 26,
@@ -298,9 +298,9 @@ const dataInicial: Endpoint[] = [
     path: "/account",
     tipo: "GET",
     descripcion: "Obtiene el detalle de la cuenta.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-026",
+    rec: true,
   },
   {
     id: 27,
@@ -308,9 +308,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/aliases/{id}",
     tipo: "DELETE",
     descripcion: "Elimina un alias de la cuenta.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-027",
+    rec: true,
   },
   {
     id: 28,
@@ -318,9 +318,9 @@ const dataInicial: Endpoint[] = [
     path: "/account",
     tipo: "DELETE",
     descripcion: "Elimina la cuenta del cliente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-028",
+    rec: true,
   },
   {
     id: 29,
@@ -328,9 +328,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/list",
     tipo: "GET",
     descripcion: "Lista las cuentas del cliente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-029",
+    rec: false,
   },
   {
     id: 30,
@@ -338,9 +338,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/withdrawal",
     tipo: "PUT",
     descripcion: "Modifica el retiro configurado de la cuenta.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-030",
+    rec: true,
   },
   {
     id: 31,
@@ -348,9 +348,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/suspend",
     tipo: "POST",
     descripcion: "Suspende la cuenta del cliente.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-031",
+    rec: true,
   },
   {
     id: 32,
@@ -358,9 +358,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/transactions",
     tipo: "GET",
     descripcion: "Lista las transacciones de la cuenta.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-032",
+    rec: true,
   },
   {
     id: 33,
@@ -368,9 +368,9 @@ const dataInicial: Endpoint[] = [
     path: "/account/internal-transfer",
     tipo: "POST",
     descripcion: "Realiza un traspaso interno entre cuentas.",
-    grupo: "Super Accounts",
+    grupo: "SubAccounts",
     estado: "Habilitado",
-    rec: "REC-033",
+    rec: true,
   },
   {
     id: 34,
@@ -380,7 +380,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Ejecuta una transferencia de fondos.",
     grupo: "Transfer",
     estado: "Habilitado",
-    rec: "REC-034",
+    rec: true,
   },
   {
     id: 35,
@@ -390,7 +390,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Consulta el estado de una transferencia.",
     grupo: "Transfer",
     estado: "Habilitado",
-    rec: "REC-035",
+    rec: true,
   },
   {
     id: 36,
@@ -400,7 +400,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Verifica la cuenta del cliente.",
     grupo: "Transfer",
     estado: "Habilitado",
-    rec: "REC-036",
+    rec: true,
   },
   {
     id: 37,
@@ -410,7 +410,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Consulta el balance del usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-037",
+    rec: true,
   },
   {
     id: 38,
@@ -420,7 +420,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Autoriza un alias de usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-038",
+    rec: true,
   },
   {
     id: 39,
@@ -430,7 +430,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Elimina un alias de usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-039",
+    rec: true,
   },
   {
     id: 40,
@@ -440,7 +440,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Lista las transacciones del usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-040",
+    rec: true,
   },
   {
     id: 41,
@@ -450,7 +450,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Consulta un usuario por su ID.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-041",
+    rec: true,
   },
   {
     id: 42,
@@ -460,7 +460,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Obtiene información de las billeteras.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-042",
+    rec: false,
   },
   {
     id: 43,
@@ -470,7 +470,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Obtiene la información del usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-043",
+    rec: false,
   },
   {
     id: 44,
@@ -480,7 +480,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Genera un reporte del usuario.",
     grupo: "User",
     estado: "Habilitado",
-    rec: "REC-044",
+    rec: false,
   },
   {
     id: 45,
@@ -490,7 +490,7 @@ const dataInicial: Endpoint[] = [
     descripcion: "Envía un webhook de prueba.",
     grupo: "Webhooks",
     estado: "Deshabilitado",
-    rec: "REC-045",
+    rec: false,
   },
 ];
 
@@ -501,7 +501,7 @@ type EndpointForm = {
   descripcion: string;
   grupo: GrupoEndpoint;
   estado: "Habilitado" | "Deshabilitado";
-  rec: string;
+  rec: boolean;
 };
 
 function Page() {
@@ -514,7 +514,7 @@ function Page() {
     descripcion: "",
     grupo: "Autenticación",
     estado: "Habilitado",
-    rec: "",
+    rec: false,
   });
   const [confirmDelete, setConfirmDelete] = useState<Endpoint | null>(null);
 
@@ -630,8 +630,9 @@ function Page() {
       key: "rec",
       label: "REC",
       sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs">{r.rec}</span>,
+      filterable: "enum",
+      filterOptions: ["Sí", "No"],
+      render: (r) => (r.rec ? <Badge tone="success">Sí</Badge> : <Badge tone="neutral">No</Badge>),
     },
   ];
 
@@ -734,7 +735,15 @@ function Page() {
             </div>
             <div>
               <Label htmlFor="ep-rec">REC</Label>
-              <Input id="ep-rec" value={form.rec} readOnly className="font-mono bg-muted/40" />
+              <select
+                id="ep-rec"
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                value={form.rec ? "true" : "false"}
+                onChange={(e) => setForm({ ...form, rec: e.target.value === "true" })}
+              >
+                <option value="true">Sí</option>
+                <option value="false">No</option>
+              </select>
             </div>
           </div>
         </FormDialog>

@@ -28,7 +28,6 @@ function TransferenciaLayout() {
       <TabLayout
         tabs={[
           { label: "Comercios", to: "/admin/comercios/transferencia" },
-          { label: "Resolvers", to: "/admin/comercios/transferencia/resolvers" },
           { label: "Códigos de categoría", to: "/admin/comercios/transferencia/categorias" },
         ]}
       >

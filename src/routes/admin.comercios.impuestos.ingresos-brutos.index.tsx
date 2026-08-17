@@ -1,15 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  Eye,
-  PlayCircle,
-  X,
-  FileText,
-  FileArchive,
-  Download,
-  CheckCircle2,
-  Circle,
-} from "lucide-react";
+import { Eye, PlayCircle, X, FileText, FileArchive, CheckCircle2, Circle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { Badge, Input, Label, BtnPrimary, BtnOutline } from "@/components/portal-shell";
@@ -258,11 +249,6 @@ function reportText(r: ReporteImpuesto) {
   ].join("\n");
 }
 
-function downloadZip(rows: ReporteImpuesto[]) {
-  const content = rows.map(reportText).join("\n\n---\n\n");
-  downloadFile("reportes-impuestos.zip", content);
-}
-
 function ReportesTable() {
   const [data, setData] = useState<ReporteImpuesto[]>(reportesIniciales);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -333,9 +319,6 @@ function ReportesTable() {
             Reportes de presentación de impuestos por período y tramo.
           </p>
         </div>
-        <BtnOutline onClick={() => downloadZip(data)}>
-          <Download size={16} /> Descargar ZIP
-        </BtnOutline>
       </div>
 
       <DataTable
@@ -343,6 +326,7 @@ function ReportesTable() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
+        showDownloadButton={false}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 

@@ -6,11 +6,11 @@ import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown"
 import { PageHeader, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 
-export const Route = createFileRoute("/admin/comercios/transferencia/resolvers")({
+export const Route = createFileRoute("/admin/comercios/apis/resolvers")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Resolvers — Pagos con transferencia — Admin Molly" },
+      { title: "Resolvers — APIs externas — Admin — Moli" },
       { name: "description", content: "Gestión de resolvers PCT (pagos con transferencia)." },
     ],
   }),

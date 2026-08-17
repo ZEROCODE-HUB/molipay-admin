@@ -38,7 +38,7 @@ export const KB: KbEntry[] = [
       "apis externas",
     ],
     response:
-      "La sección Comercios agrupa los módulos que usan los comercios para operar:\n\n• Pago por referencia (Transferencia): comercios habilitados para pagos con transferencia (PCT), con su conciliación y resolvers.\n• Link de pago: cobro mediante un link, con métodos de pago configurables por comercio.\n• Impuestos: catálogo de impuestos, ingresos brutos, débitos/créditos y asignación a usuarios.\n• APIs externas: endpoints y restricciones de integración.",
+      "La sección Comercios agrupa los módulos que usan los comercios para operar:\n\n• Pago con transferencia (Transferencia): comercios habilitados para pagos con transferencia (PCT), con su conciliación y códigos de categoría.\n• Link de pago: cobro mediante un link, con métodos de pago configurables por comercio.\n• Impuestos: catálogo de impuestos, ingresos brutos, débitos/créditos y asignación a usuarios.\n• APIs externas: usuarios, endpoints, restricciones y resolvers de integración.",
   },
   {
     keywords: ["link de pago", "link-pago", "cobrar link", "métodos de pago", "medio de pago"],

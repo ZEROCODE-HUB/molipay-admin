@@ -1,5 +1,12 @@
 export type Estatus = "Activo" | "Inactivo";
 
+export type Alicuota = {
+  codigo: string;
+  tasa: number;
+  descripcion: string;
+  estado: "Activa" | "Inactiva";
+};
+
 export type Impuesto = {
   id: number;
   codigo: string;
@@ -10,6 +17,7 @@ export type Impuesto = {
   estado: Estatus;
   fechaCreacion: string;
   fechaActualizacion: string;
+  alicuotas: Alicuota[];
 };
 
 export const impuestosIniciales: Impuesto[] = [
@@ -23,6 +31,26 @@ export const impuestosIniciales: Impuesto[] = [
     estado: "Activo",
     fechaCreacion: "2026-01-12",
     fechaActualizacion: "2026-06-30",
+    alicuotas: [
+      {
+        codigo: "GAN_35",
+        tasa: 35,
+        descripcion: "Alícuota 35% sobre el impuesto a las ganancias",
+        estado: "Activa",
+      },
+      {
+        codigo: "GAN_RET",
+        tasa: 6,
+        descripcion: "Retención 6% sobre acreditaciones",
+        estado: "Activa",
+      },
+      {
+        codigo: "GAN_PH",
+        tasa: 35,
+        descripcion: "Alícuota 35% para personas humanas",
+        estado: "Inactiva",
+      },
+    ],
   },
   {
     id: 2,
@@ -34,6 +62,20 @@ export const impuestosIniciales: Impuesto[] = [
     estado: "Activo",
     fechaCreacion: "2026-01-12",
     fechaActualizacion: "2026-07-10",
+    alicuotas: [
+      {
+        codigo: "IIBB_4",
+        tasa: 4,
+        descripcion: "Alícuota 4% sobre la comisión de la plataforma",
+        estado: "Activa",
+      },
+      {
+        codigo: "IIBB_CM",
+        tasa: 3.5,
+        descripcion: "Alícuota 3,5% por convenio multilateral",
+        estado: "Inactiva",
+      },
+    ],
   },
   {
     id: 3,
@@ -45,6 +87,26 @@ export const impuestosIniciales: Impuesto[] = [
     estado: "Activo",
     fechaCreacion: "2026-02-01",
     fechaActualizacion: "2026-07-20",
+    alicuotas: [
+      {
+        codigo: "IN_06",
+        tasa: 0.6,
+        descripcion: "Alícuota 0,60% para transferencias entrantes",
+        estado: "Activa",
+      },
+      {
+        codigo: "OUT_06",
+        tasa: 0.6,
+        descripcion: "Alícuota 0,60% para transferencias salientes",
+        estado: "Activa",
+      },
+      {
+        codigo: "CHEQUE_018",
+        tasa: 0.18,
+        descripcion: "Alícuota 0,18% para cheques",
+        estado: "Inactiva",
+      },
+    ],
   },
 ];
 

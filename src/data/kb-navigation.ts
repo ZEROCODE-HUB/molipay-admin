@@ -9,12 +9,12 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
 
 • Administración:
    - Registros  (/admin/administracion/registros)
-   - Actividad en backoffice — Admin Panel  (/admin/administracion/registros/actividad)
    - Total de fondos — Admin Panel  (/admin/administracion/registros/total)
    - Reportes — Admin Panel  (/admin/administracion/reportes)
    - Soporte  (/admin/administracion/soporte)
    - Bloqueo de funciones — Admin Panel  (/admin/administracion/soporte/bloqueo)
    - Usuarios  (/admin/administracion/usuarios)
+   - Actividad en backoffice — Admin Panel  (/admin/administracion/usuarios/actividad)
    - Roles y permisos — Admin Panel  (/admin/administracion/usuarios/roles)
 
 • Comercios:
@@ -30,7 +30,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Métodos de pago — Link de pago — Admin — Moli  (/admin/comercios/link-pago/metodos-pago)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
    - Códigos de categoría — Admin — Moli  (/admin/comercios/transferencia/categorias)
-   - Resolvers — Pagos con transferencia — Admin Molly  (/admin/comercios/transferencia/resolvers)
+   - Resolvers — APIs externas — Admin — Moli  (/admin/comercios/apis/resolvers)
 
 • Configuración:
    - Configuración — Admin — Moli  (/admin/configuracion)
@@ -89,10 +89,6 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Registros"
   },
   {
-    "path": "/admin/administracion/registros/actividad",
-    "title": "Actividad en backoffice — Admin Panel"
-  },
-  {
     "path": "/admin/administracion/registros/total",
     "title": "Total de fondos — Admin Panel"
   },
@@ -111,6 +107,10 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   {
     "path": "/admin/administracion/usuarios",
     "title": "Usuarios"
+  },
+  {
+    "path": "/admin/administracion/usuarios/actividad",
+    "title": "Actividad en backoffice — Admin Panel"
   },
   {
     "path": "/admin/administracion/usuarios/roles",
@@ -165,8 +165,8 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Códigos de categoría — Admin — Moli"
   },
   {
-    "path": "/admin/comercios/transferencia/resolvers",
-    "title": "Resolvers — Pagos con transferencia — Admin Molly"
+    "path": "/admin/comercios/apis/resolvers",
+    "title": "Resolvers — APIs externas — Admin — Moli"
   },
   {
     "path": "/admin/configuracion",

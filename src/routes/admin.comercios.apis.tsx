@@ -15,6 +15,7 @@ const tabs: Tab[] = [
   { label: "Usuarios", to: "/admin/comercios/apis" },
   { label: "Endpoints", to: "/admin/comercios/apis/endpoints" },
   { label: "Restricciones", to: "/admin/comercios/apis/restricciones" },
+  { label: "Resolvers", to: "/admin/comercios/apis/resolvers" },
 ];
 
 function Layout() {
