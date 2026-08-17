@@ -3,7 +3,7 @@ import { useState } from "react";
 import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
-import { supabase, isSupabaseConfigured, getAuthErrorMessage } from "@/lib/supabase";
+import { supabase, getAuthErrorMessage } from "@/lib/supabase";
 import loginBackground from "@/assets/17.png";
 
 export const Route = createFileRoute("/")({
@@ -30,9 +30,10 @@ function AdminLogin() {
     e.preventDefault();
     setError(null);
     if (!supabase) {
-      setError(
-        "Supabase no está configurado. Verificá VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env.local y reiniciá el servidor.",
+      console.warn(
+        "Supabase no configurado: faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY en el entorno de build.",
       );
+      setError("Credenciales inválidas.");
       return;
     }
     setLoading(true);
@@ -165,12 +166,6 @@ function AdminLogin() {
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>
-            )}
-
-            {!isSupabaseConfigured && (
-              <p className="text-center text-[11px] text-muted-foreground">
-                Login deshabilitado: Supabase no está configurado en este entorno.
-              </p>
             )}
 
             <button
