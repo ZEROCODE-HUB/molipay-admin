@@ -70,7 +70,6 @@ export const KB: KbEntry[] = [
       "comercio",
       "pago por referencia",
       "transferencia",
-      "link de pago",
       "gestión de comercios",
     ],
     response:
@@ -107,13 +106,18 @@ export const KB: KbEntry[] = [
   },
   {
     keywords: [
-      "resolver",
-      "resolvers",
-      "pct",
       "pago con transferencia",
-      "activar resolver",
-      "debin",
+      "pago por transferencia",
+      "módulo de pago con transferencia",
+      "pct",
+      "transferencia",
+      "módulo",
     ],
+    response:
+      "Cómo funciona Pago con Transferencia (PCT): el módulo permite que un comercio cobre a sus clientes mediante transferencias bancarias, usando un código de categoría que clasifica la operación.\n\nEn Comercios → Pago con transferencia (Transferencia) hay dos pestañas:\n\n• Comercios: listado de los comercios habilitados para PCT (usuario, legajo, código de categoría, nivel y estado). Desde las acciones se puede activar, suspender, validar, editar o eliminar cada comercio, y 'Ver comercio' muestra su detalle con la categoría y los puntos de venta (cada uno con su estado y fecha de creación).\n\n• Códigos de categoría: administración de los códigos de categoría que se informan en los pagos con transferencia.\n\nEl procesamiento depende de las integraciones con bancos/entidades: los Resolvers PCT (Comercios → APIs externas → Resolvers) son las conexiones que ejecutan los pagos con transferencia.",
+  },
+  {
+    keywords: ["resolver", "resolvers", "pct", "activar resolver", "debin"],
     response:
       "Los Resolvers PCT son las integraciones con los bancos/entidades para pagos con transferencia. Desde su sección (Comercios → APIs externas → Resolvers) se pueden activar, desactivar y editar (CUIT, nombre, URL, token, PCP ID, ID del PCP, formato web, nombre reverso, y los flags As header y SOA).",
   },
