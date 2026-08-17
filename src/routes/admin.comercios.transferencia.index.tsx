@@ -6,6 +6,8 @@ import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown"
 import { PageHeader, Badge, Card, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { useComercios } from "@/contexts/comercios";
+import { type EstadoGeneral, type NivelComercio } from "@/data/comercios";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/")({
   component: Page,
@@ -20,12 +22,6 @@ export const Route = createFileRoute("/admin/comercios/transferencia/")({
   }),
 });
 
-type EstadoComercio =
-  "Activado" | "Desactivado" | "Pendiente de aprobación" | "Rechazado" | "Suspendido";
-
-type NivelComercio =
-  "Pequeño" | "Mediano" | "Grande" | "Premium" | "Estándar" | "Básico" | "Enterprise";
-
 type PuntoVenta = {
   nombre: string;
   estado: "Activado" | "Desactivado";
@@ -38,14 +34,14 @@ type Comercio = {
   usuario: string;
   categoria: string;
   descripcionCategoria: string;
-  estado: EstadoComercio;
+  estado: EstadoGeneral;
   nivel: NivelComercio;
   fechaCreacion: string;
   horaCreacion: string;
   puntosDeVenta: PuntoVenta[];
 };
 
-const ESTADOS: EstadoComercio[] = [
+const ESTADOS: EstadoGeneral[] = [
   "Activado",
   "Desactivado",
   "Pendiente de aprobación",
@@ -63,160 +59,7 @@ const NIVELES: NivelComercio[] = [
   "Enterprise",
 ];
 
-const dataInicial: Comercio[] = [
-  {
-    id: 1,
-    legajo: "COM-1001",
-    usuario: "maria.lopez@email.com",
-    categoria: "780",
-    descripcionCategoria: "Paisajismo y cultura",
-    estado: "Activado",
-    nivel: "Pequeño",
-    fechaCreacion: "14/01/2025",
-    horaCreacion: "09:15",
-    puntosDeVenta: [
-      { nombre: "Vivero Centro", estado: "Activado", fechaCreacion: "14/01/2025" },
-      { nombre: "Vivero Norte", estado: "Desactivado", fechaCreacion: "15/01/2025" },
-      { nombre: "Sucursal Parque", estado: "Activado", fechaCreacion: "20/01/2025" },
-      { nombre: "Local Mercado Central", estado: "Desactivado", fechaCreacion: "02/02/2025" },
-    ],
-  },
-  {
-    id: 2,
-    legajo: "COM-1002",
-    usuario: "juan.perez@email.com",
-    categoria: "763",
-    descripcionCategoria: "Limpieza y desinfección",
-    estado: "Suspendido",
-    nivel: "Mediano",
-    fechaCreacion: "13/01/2025",
-    horaCreacion: "08:30",
-    puntosDeVenta: [
-      { nombre: "Limpiezas Sur", estado: "Desactivado", fechaCreacion: "13/01/2025" },
-    ],
-  },
-  {
-    id: 3,
-    legajo: "COM-1003",
-    usuario: "empresa.srl@email.com",
-    categoria: "742",
-    descripcionCategoria: "Restaurantes y bares",
-    estado: "Activado",
-    nivel: "Grande",
-    fechaCreacion: "12/01/2025",
-    horaCreacion: "11:00",
-    puntosDeVenta: [
-      { nombre: "Bar Central", estado: "Activado", fechaCreacion: "12/01/2025" },
-      { nombre: "Parrilla del Este", estado: "Activado", fechaCreacion: "18/01/2025" },
-      { nombre: "Food Truck Oeste", estado: "Desactivado", fechaCreacion: "25/01/2025" },
-      { nombre: "Terraza Costanera", estado: "Activado", fechaCreacion: "30/01/2025" },
-      { nombre: "Local Aeropuerto", estado: "Desactivado", fechaCreacion: "05/02/2025" },
-    ],
-  },
-  {
-    id: 4,
-    legajo: "COM-1004",
-    usuario: "consorcio@email.com",
-    categoria: "4829",
-    descripcionCategoria: "Servicios postales y mensajería",
-    estado: "Pendiente de aprobación",
-    nivel: "Premium",
-    fechaCreacion: "10/01/2025",
-    horaCreacion: "17:45",
-    puntosDeVenta: [
-      { nombre: "Mensajería Express", estado: "Activado", fechaCreacion: "10/01/2025" },
-      { nombre: "Sucursal Norte", estado: "Desactivado", fechaCreacion: "22/01/2025" },
-      { nombre: "Centro de distribución", estado: "Activado", fechaCreacion: "01/02/2025" },
-    ],
-  },
-  {
-    id: 5,
-    legajo: "COM-1005",
-    usuario: "minimarket@email.com",
-    categoria: "5411",
-    descripcionCategoria: "Supermercados y almacenes",
-    estado: "Rechazado",
-    nivel: "Estándar",
-    fechaCreacion: "09/01/2025",
-    horaCreacion: "14:20",
-    puntosDeVenta: [],
-  },
-  {
-    id: 6,
-    legajo: "COM-1006",
-    usuario: "electro@email.com",
-    categoria: "5732",
-    descripcionCategoria: "Electrodomésticos y hogar",
-    estado: "Activado",
-    nivel: "Básico",
-    fechaCreacion: "08/01/2025",
-    horaCreacion: "10:10",
-    puntosDeVenta: [{ nombre: "Electro Hogar", estado: "Activado", fechaCreacion: "08/01/2025" }],
-  },
-  {
-    id: 7,
-    legajo: "COM-1007",
-    usuario: "gimnasio.fit@email.com",
-    categoria: "7997",
-    descripcionCategoria: "Clubes, gimnasios y deportes",
-    estado: "Desactivado",
-    nivel: "Pequeño",
-    fechaCreacion: "07/01/2025",
-    horaCreacion: "09:00",
-    puntosDeVenta: [
-      { nombre: "Gym Fit", estado: "Activado", fechaCreacion: "07/01/2025" },
-      { nombre: "CrossFit Centro", estado: "Desactivado", fechaCreacion: "12/01/2025" },
-      { nombre: "Gym Barrio Norte", estado: "Activado", fechaCreacion: "28/01/2025" },
-      { nombre: "Box Zona Sur", estado: "Desactivado", fechaCreacion: "03/02/2025" },
-      { nombre: "Entrenamiento Este", estado: "Activado", fechaCreacion: "06/02/2025" },
-    ],
-  },
-  {
-    id: 8,
-    legajo: "COM-1008",
-    usuario: "clinica.sur@email.com",
-    categoria: "8071",
-    descripcionCategoria: "Servicios médicos y odontológicos",
-    estado: "Activado",
-    nivel: "Enterprise",
-    fechaCreacion: "06/01/2025",
-    horaCreacion: "16:30",
-    puntosDeVenta: [
-      { nombre: "Consultorio Central", estado: "Activado", fechaCreacion: "06/01/2025" },
-      { nombre: "Sucursal Los Olivos", estado: "Desactivado", fechaCreacion: "11/01/2025" },
-      { nombre: "Sucursal Roca", estado: "Activado", fechaCreacion: "19/01/2025" },
-      { nombre: "Diagnóstico por imágenes", estado: "Activado", fechaCreacion: "27/01/2025" },
-      { nombre: "Laboratorio Central", estado: "Desactivado", fechaCreacion: "02/02/2025" },
-      { nombre: "Consultorio Oeste", estado: "Activado", fechaCreacion: "04/02/2025" },
-    ],
-  },
-  {
-    id: 9,
-    legajo: "COM-1009",
-    usuario: "burgers@email.com",
-    categoria: "5814",
-    descripcionCategoria: "Comida rápida",
-    estado: "Pendiente de aprobación",
-    nivel: "Mediano",
-    fechaCreacion: "05/01/2025",
-    horaCreacion: "12:15",
-    puntosDeVenta: [{ nombre: "Burgers Centro", estado: "Activado", fechaCreacion: "05/01/2025" }],
-  },
-  {
-    id: 10,
-    legajo: "COM-1010",
-    usuario: "software.digital@email.com",
-    categoria: "5734",
-    descripcionCategoria: "Software y productos digitales",
-    estado: "Activado",
-    nivel: "Estándar",
-    fechaCreacion: "04/01/2025",
-    horaCreacion: "18:00",
-    puntosDeVenta: [],
-  },
-];
-
-function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" | "danger" {
+function estadoBadgeTone(estado: EstadoGeneral): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Activado") return "success";
   if (estado === "Desactivado") return "neutral";
   if (estado === "Rechazado") return "danger";
@@ -421,7 +264,7 @@ function ComercioFormModal({
             id="com-estado"
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
             value={form.estado}
-            onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoComercio }))}
+            onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoGeneral }))}
           >
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
@@ -451,29 +294,49 @@ function ComercioFormModal({
 }
 
 function Page() {
-  const [data, setData] = useState<Comercio[]>(dataInicial);
+  const { comercios, guardarComercio, eliminarComercio, setEstadoGeneral } = useComercios();
   const [detail, setDetail] = useState<Comercio | null>(null);
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
 
-  const setEstado = (id: number, estado: EstadoComercio) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, estado } : d)));
-  };
+  const data: Comercio[] = comercios
+    .filter((c) => c.pctHabilitado)
+    .map((c) => ({
+      id: c.id,
+      legajo: c.legajo,
+      usuario: c.usuario,
+      categoria: c.categoria,
+      descripcionCategoria: c.descripcionCategoria,
+      estado: c.estado,
+      nivel: c.nivel,
+      fechaCreacion: c.fechaRegistro,
+      horaCreacion: c.horaRegistro,
+      puntosDeVenta: c.pctPuntosDeVenta,
+    }));
 
   const guardarEdicion = (updated: Comercio) => {
-    setData((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+    const original = comercios.find((c) => c.id === updated.id);
+    if (!original) return;
+    guardarComercio({
+      ...original,
+      categoria: updated.categoria,
+      descripcionCategoria: updated.descripcionCategoria,
+      estado: updated.estado,
+      nivel: updated.nivel,
+      pctPuntosDeVenta: updated.puntosDeVenta,
+    });
     setEditTarget(null);
   };
 
   const getActions = (r: Comercio): ActionItem[] => [
-    { label: "Activar", icon: CheckCircle, onClick: () => setEstado(r.id, "Activado") },
+    { label: "Activar", icon: CheckCircle, onClick: () => setEstadoGeneral(r.id, "Activado") },
     {
       label: "Suspender",
       icon: XCircle,
       variant: "danger",
-      onClick: () => setEstado(r.id, "Suspendido"),
+      onClick: () => setEstadoGeneral(r.id, "Suspendido"),
     },
-    { label: "Validar", icon: FileCheck, onClick: () => setEstado(r.id, "Activado") },
+    { label: "Validar", icon: FileCheck, onClick: () => setEstadoGeneral(r.id, "Activado") },
     { label: "Eliminar", icon: Trash2, variant: "danger", onClick: () => setConfirmDelete(r) },
     { label: "Editar", icon: Edit3, onClick: () => setEditTarget(r) },
     { label: "Ver comercio", icon: Eye, onClick: () => setDetail(r) },
@@ -549,7 +412,7 @@ function Page() {
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={() => {
-          if (confirmDelete) setData((prev) => prev.filter((d) => d.id !== confirmDelete.id));
+          if (confirmDelete) eliminarComercio(confirmDelete.id);
           setConfirmDelete(null);
         }}
       />

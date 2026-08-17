@@ -204,6 +204,7 @@ function Page() {
         data={data}
         keyExtractor={(r) => r.id}
         pageSize={10}
+        showDownloadButton={false}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       <FormDialog

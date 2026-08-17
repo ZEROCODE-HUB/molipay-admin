@@ -6,6 +6,8 @@ import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown"
 import { PageHeader, Badge, BtnPrimary, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { useComercios } from "@/contexts/comercios";
+import { type LinkPagoEstado } from "@/data/comercios";
 
 export const Route = createFileRoute("/admin/comercios/link-pago/")({
   component: Page,
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/admin/comercios/link-pago/")({
   }),
 });
 
-type EstadoComercio = "Pendiente de aprobación" | "Activado" | "Suspendido";
+type EstadoComercio = LinkPagoEstado;
 
 type Comercio = {
   id: number;
@@ -32,73 +34,6 @@ type Comercio = {
 };
 
 const ESTADOS: EstadoComercio[] = ["Pendiente de aprobación", "Activado", "Suspendido"];
-
-const dataInicial: Comercio[] = [
-  {
-    id: 1,
-    legajo: "COM-1001",
-    usuario: "maria.lopez@email.com",
-    nombre: "Vivero Centro",
-    estado: "Activado",
-    registro: "14/01/2025",
-  },
-  {
-    id: 2,
-    legajo: "COM-1002",
-    usuario: "juan.perez@email.com",
-    nombre: "Limpiezas Sur",
-    estado: "Pendiente de aprobación",
-    registro: "13/01/2025",
-  },
-  {
-    id: 3,
-    legajo: "COM-1003",
-    usuario: "empresa.srl@email.com",
-    nombre: "Bar Central",
-    estado: "Activado",
-    registro: "12/01/2025",
-  },
-  {
-    id: 4,
-    legajo: "COM-1004",
-    usuario: "consorcio@email.com",
-    nombre: "Mensajería Express",
-    estado: "Activado",
-    registro: "10/01/2025",
-  },
-  {
-    id: 5,
-    legajo: "COM-1005",
-    usuario: "minimarket@email.com",
-    nombre: "Minimarket del barrio",
-    estado: "Pendiente de aprobación",
-    registro: "09/01/2025",
-  },
-  {
-    id: 6,
-    legajo: "COM-1006",
-    usuario: "electro@email.com",
-    nombre: "Electro Hogar",
-    estado: "Activado",
-    registro: "08/01/2025",
-  },
-  {
-    id: 7,
-    legajo: "COM-1007",
-    usuario: "gimnasio.fit@email.com",
-    nombre: "Gym Fit",
-    estado: "Pendiente de aprobación",
-    registro: "07/01/2025",
-  },
-  {
-    id: 8,
-    legajo: "COM-1008",
-    usuario: "clinica.sur@email.com",
-    nombre: "Consultorio Central",
-    estado: "Activado",
-    registro: "06/01/2025",
-  },
-];
 
 function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" {
   if (estado === "Activado") return "success";
@@ -143,7 +78,7 @@ function ComercioFormModal({
       }
       onSubmit={() =>
         onSave({
-          id: comercio?.id ?? nextId,
+          id: comercio?.id ?? 0,
           legajo: form.legajo.trim(),
           usuario: form.usuario.trim(),
           nombre: form.nombre.trim(),
@@ -202,13 +137,24 @@ function ComercioFormModal({
 }
 
 function Page() {
-  const [data, setData] = useState<Comercio[]>(dataInicial);
+  const { comercios, guardarComercio, eliminarComercio, setLinkPagoEstado } = useComercios();
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
 
+  const data: Comercio[] = comercios
+    .filter((c) => c.linkPagoHabilitado)
+    .map((c) => ({
+      id: c.id,
+      legajo: c.legajo,
+      usuario: c.usuario,
+      nombre: c.nombre,
+      estado: c.linkPagoEstado,
+      registro: c.fechaRegistro,
+    }));
+
   const setEstado = (id: number, estado: EstadoComercio) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, estado } : d)));
+    setLinkPagoEstado(id, estado);
   };
 
   const getActions = (r: Comercio): ActionItem[] => {
@@ -296,15 +242,41 @@ function Page() {
       {(showNew || editTarget) && (
         <ComercioFormModal
           comercio={editTarget}
-          nextId={Math.max(0, ...data.map((d) => d.id)) + 1}
+          nextId={Math.max(0, ...comercios.map((d) => d.id)) + 1}
           onClose={() => {
             setShowNew(false);
             setEditTarget(null);
           }}
           onSave={(c) => {
-            setData((prev) =>
-              editTarget ? prev.map((d) => (d.id === c.id ? c : d)) : [...prev, c],
-            );
+            if (editTarget) {
+              const original = comercios.find((d) => d.id === c.id);
+              if (original) {
+                guardarComercio({
+                  ...original,
+                  legajo: c.legajo,
+                  usuario: c.usuario,
+                  nombre: c.nombre,
+                  linkPagoEstado: c.estado,
+                });
+              }
+            } else {
+              guardarComercio({
+                id: 0,
+                legajo: c.legajo,
+                usuario: c.usuario,
+                nombre: c.nombre,
+                categoria: "",
+                descripcionCategoria: "",
+                nivel: "Estándar",
+                estado: "Pendiente de aprobación",
+                fechaRegistro: c.registro,
+                horaRegistro: "",
+                pctHabilitado: false,
+                pctPuntosDeVenta: [],
+                linkPagoHabilitado: true,
+                linkPagoEstado: c.estado,
+              });
+            }
             setShowNew(false);
             setEditTarget(null);
           }}
@@ -318,7 +290,7 @@ function Page() {
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={() => {
-          if (confirmDelete) setData((prev) => prev.filter((d) => d.id !== confirmDelete.id));
+          if (confirmDelete) eliminarComercio(confirmDelete.id);
           setConfirmDelete(null);
         }}
       />
