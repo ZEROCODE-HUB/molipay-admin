@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
+import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import loginBackground from "@/assets/17.png";
 
 export const Route = createFileRoute("/")({
@@ -21,16 +22,30 @@ function AdminLogin() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { setRole } = useDemoMode();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!supabase) {
+      setLoading(true);
+      setTimeout(() => {
+        setRole("admin");
+        navigate({ to: "/admin" });
+      }, 600);
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setRole("admin");
-      navigate({ to: "/admin" });
-    }, 600);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    setRole("admin");
+    navigate({ to: "/admin" });
   };
 
   return (
@@ -63,13 +78,12 @@ function AdminLogin() {
           <h1 className="font-display text-2xl md:text-3xl font-semibold text-white tracking-tight">
             Panel de Administración
           </h1>
-          <p className="text-base text-white/50 mt-2">
-            Inicia sesión para continuar.
-          </p>
+          <p className="text-base text-white/50 mt-2">Inicia sesión para continuar.</p>
         </div>
 
         {/* Glass card */}
-        <div className="rounded-2xl p-8 shadow-[0_16px_48px_rgba(0,0,0,0.35)] relative overflow-hidden"
+        <div
+          className="rounded-2xl p-8 shadow-[0_16px_48px_rgba(0,0,0,0.35)] relative overflow-hidden"
           style={{
             background: "rgba(255, 255, 255, 0.55)",
             backdropFilter: "blur(32px)",
@@ -78,12 +92,16 @@ function AdminLogin() {
           }}
         >
           {/* Light reflection highlight */}
-          <div aria-hidden className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-30 pointer-events-none"
+          <div
+            aria-hidden
+            className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-30 pointer-events-none"
             style={{
               background: "radial-gradient(circle, rgba(255,255,255,0.6) 0%, transparent 70%)",
             }}
           />
-          <div aria-hidden className="absolute -bottom-16 -left-16 w-32 h-32 rounded-full opacity-20 pointer-events-none"
+          <div
+            aria-hidden
+            className="absolute -bottom-16 -left-16 w-32 h-32 rounded-full opacity-20 pointer-events-none"
             style={{
               background: "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
             }}
@@ -94,7 +112,10 @@ function AdminLogin() {
                 Correo electrónico
               </label>
               <div className="relative">
-                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+                <Mail
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60"
+                />
                 <input
                   id="email"
                   type="email"
@@ -109,11 +130,17 @@ function AdminLogin() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-foreground mb-1.5">
+              <label
+                htmlFor="password"
+                className="block text-xs font-semibold text-foreground mb-1.5"
+              >
                 Contraseña
               </label>
               <div className="relative">
-                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+                <Lock
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60"
+                />
                 <input
                   id="password"
                   type={showPw ? "text" : "password"}
@@ -134,6 +161,19 @@ function AdminLogin() {
                 </button>
               </div>
             </div>
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {!isSupabaseConfigured && (
+              <p className="text-center text-[11px] text-muted-foreground">
+                Modo demo: el login es simulado porque Supabase no está configurado.
+              </p>
+            )}
 
             <button
               type="submit"

@@ -1,5 +1,5 @@
-﻿import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
+﻿import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -27,6 +27,7 @@ import { PortalShell, type NavItem } from "@/components/portal-shell";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { RouteSkeleton } from "@/components/route-skeleton";
 import { AdminChatbot } from "@/components/admin-chatbot";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -79,9 +80,34 @@ const nav: NavItem[] = [
 
 function AdminLayout() {
   const { role, setRole } = useDemoMode();
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(!isSupabaseConfigured);
+
   useEffect(() => {
     if (role !== "admin" && role !== "operador") setRole("admin");
   }, [role, setRole]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      if (data.session) setAuthChecked(true);
+      else navigate({ to: "/" });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      if (session) setAuthChecked(true);
+      else navigate({ to: "/" });
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  if (!authChecked) return <RouteSkeleton />;
+
   return (
     <PortalShell nav={nav} title="Backoffice Molly">
       <Outlet />

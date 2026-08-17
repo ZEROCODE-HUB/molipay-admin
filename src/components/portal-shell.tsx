@@ -11,6 +11,7 @@ import {
 import { useMemo, useState, type ReactNode } from "react";
 import { MollyLogo } from "./molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
+import { supabase } from "@/lib/supabase";
 
 export type NavLeaf = { to: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; icon: LucideIcon; items: NavLeaf[] };
@@ -52,7 +53,8 @@ export function PortalShell({
   const mainNav = leaves.slice(0, 4);
   const more = leaves.slice(4);
 
-  const onLogout = () => {
+  const onLogout = async () => {
+    if (supabase) await supabase.auth.signOut();
     setRole(null);
     navigate({ to: "/" });
   };
