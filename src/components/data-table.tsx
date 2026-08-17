@@ -338,7 +338,7 @@ export function DataTable<T>({
                   <label className="text-xs font-medium text-muted-foreground">
                     {col.label} (desde – hasta)
                   </label>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
                     <input
                       type="date"
                       value={dateRanges[col.key]?.from ?? ""}
@@ -351,9 +351,11 @@ export function DataTable<T>({
                           },
                         }))
                       }
-                      className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                      className="w-full sm:w-auto sm:flex-1 h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
-                    <span className="text-xs text-muted-foreground shrink-0">→</span>
+                    <span className="text-xs text-muted-foreground shrink-0 self-center sm:self-auto">
+                      →
+                    </span>
                     <input
                       type="date"
                       value={dateRanges[col.key]?.to ?? ""}
@@ -366,7 +368,7 @@ export function DataTable<T>({
                           },
                         }))
                       }
-                      className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+                      className="w-full sm:w-auto sm:flex-1 h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
                   </div>
                 </div>
@@ -383,7 +385,7 @@ export function DataTable<T>({
                         return next;
                       })
                     }
-                    className="h-8 min-w-[130px] px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                    className="w-full sm:w-auto sm:min-w-[130px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
                   >
                     {showEnumAllOption && <option value="">Todos</option>}
                     {(col.filterOptions ?? []).map((opt) => (
