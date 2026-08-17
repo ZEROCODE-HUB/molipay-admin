@@ -30,11 +30,9 @@ function AdminLogin() {
     e.preventDefault();
     setError(null);
     if (!supabase) {
-      setLoading(true);
-      setTimeout(() => {
-        setRole("admin");
-        navigate({ to: "/admin" });
-      }, 600);
+      setError(
+        "Supabase no está configurado. Verificá VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env.local y reiniciá el servidor.",
+      );
       return;
     }
     setLoading(true);
@@ -171,7 +169,7 @@ function AdminLogin() {
 
             {!isSupabaseConfigured && (
               <p className="text-center text-[11px] text-muted-foreground">
-                Modo demo: el login es simulado porque Supabase no está configurado.
+                Login deshabilitado: Supabase no está configurado en este entorno.
               </p>
             )}
 
