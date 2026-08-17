@@ -30,7 +30,7 @@ const mock: Bloqueo[] = [
     usuario: "jperez",
     nombre: "Juan Pérez",
     tipo: "Volumen anormal",
-    estado: "Activo",
+    estado: "Aceptado",
     compliance: "M. Rodríguez",
     fecha: "2026-07-15",
     fechaAceptacion: "2026-07-15",
@@ -42,7 +42,7 @@ const mock: Bloqueo[] = [
     usuario: "mgarcia",
     nombre: "María García",
     tipo: "Múltiples intentos fallidos",
-    estado: "Activo",
+    estado: "Aceptado",
     compliance: "L. Fernández",
     fecha: "2026-07-14",
     fechaAceptacion: "2026-07-14",
@@ -54,7 +54,7 @@ const mock: Bloqueo[] = [
     usuario: "carlosm",
     nombre: "Carlos Martínez",
     tipo: "Límite de depósito excedido",
-    estado: "Resuelto",
+    estado: "Desbloqueado",
     compliance: "M. Rodríguez",
     fecha: "2026-07-10",
     fechaAceptacion: "2026-07-10",
@@ -68,7 +68,7 @@ const mock: Bloqueo[] = [
     usuario: "analopez",
     nombre: "Ana López",
     tipo: "Frecuencia anómala",
-    estado: "Activo",
+    estado: "Aceptado",
     compliance: "P. Sánchez",
     fecha: "2026-07-13",
     fechaAceptacion: "2026-07-13",
@@ -80,7 +80,7 @@ const mock: Bloqueo[] = [
     usuario: "robertod",
     nombre: "Roberto Díaz",
     tipo: "Afinidad entre cuentas",
-    estado: "Resuelto",
+    estado: "Desbloqueado",
     compliance: "L. Fernández",
     fecha: "2026-07-08",
     fechaAceptacion: "2026-07-08",
@@ -94,7 +94,7 @@ const mock: Bloqueo[] = [
     usuario: "sofiar",
     nombre: "Sofía Romero",
     tipo: "CUIT en lista de control",
-    estado: "Activo",
+    estado: "Aceptado",
     compliance: "M. Rodríguez",
     fecha: "2026-07-16",
     fechaAceptacion: "2026-07-16",
@@ -106,7 +106,7 @@ const mock: Bloqueo[] = [
     usuario: "diegoh",
     nombre: "Diego Hernández",
     tipo: "Movimiento en horario inusual",
-    estado: "Pendiente",
+    estado: "Bloqueado",
     compliance: "—",
     fecha: "2026-07-16",
     idCoelsa: "COE-8832",
@@ -117,7 +117,7 @@ const mock: Bloqueo[] = [
     usuario: "laura v",
     nombre: "Laura Vargas",
     tipo: "Volumen anormal",
-    estado: "Resuelto",
+    estado: "Desbloqueado",
     compliance: "P. Sánchez",
     fecha: "2026-07-05",
     fechaAceptacion: "2026-07-05",
@@ -170,7 +170,11 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
             <dd>
               <Badge
                 tone={
-                  b.estado === "Resuelto" ? "success" : b.estado === "Activo" ? "danger" : "warn"
+                  b.estado === "Desbloqueado"
+                    ? "success"
+                    : b.estado === "Bloqueado"
+                      ? "danger"
+                      : "warn"
                 }
               >
                 {b.estado}
@@ -322,7 +326,7 @@ function Page() {
       { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
       { label: "Gestionar", icon: Edit3, onClick: () => setGestionar({ ...r }) },
     ];
-    if (r.estado === "Pendiente") {
+    if (r.estado === "Bloqueado") {
       actions.push({
         label: "Aceptar bloqueo",
         icon: CheckCircle,
@@ -336,28 +340,28 @@ function Page() {
               setData((prev) =>
                 prev.map((bl) =>
                   bl.legajo === r.legajo
-                    ? { ...bl, estado: "Activo", fechaAceptacion: todayISO }
+                    ? { ...bl, estado: "Aceptado", fechaAceptacion: todayISO }
                     : bl,
                 ),
               ),
           }),
       });
     }
-    if (r.estado === "Activo") {
+    if (r.estado === "Aceptado") {
       actions.push({
         label: "Desbloquear usuario",
         icon: Unlock,
         onClick: () =>
           setConfirmAction({
             title: "Desbloquear usuario",
-            message: `¿Estás seguro de desbloquear a ${r.nombre}? El bloqueo pasará a estado Resuelto.`,
+            message: `¿Estás seguro de desbloquear a ${r.nombre}? El bloqueo pasará a estado Desbloqueado.`,
             confirmLabel: "Desbloquear usuario",
             variant: "default",
             onConfirm: () =>
               setData((prev) =>
                 prev.map((bl) =>
                   bl.legajo === r.legajo
-                    ? { ...bl, estado: "Resuelto", fechaResolucion: todayISO }
+                    ? { ...bl, estado: "Desbloqueado", fechaResolucion: todayISO }
                     : bl,
                 ),
               ),
@@ -389,10 +393,12 @@ function Page() {
       label: "Estado",
       sortable: true,
       filterable: "enum",
-      filterOptions: ["Activo", "Pendiente", "Resuelto"],
+      filterOptions: ["Bloqueado", "Aceptado", "Desbloqueado"],
       render: (r) => (
         <Badge
-          tone={r.estado === "Resuelto" ? "success" : r.estado === "Activo" ? "danger" : "warn"}
+          tone={
+            r.estado === "Desbloqueado" ? "success" : r.estado === "Bloqueado" ? "danger" : "warn"
+          }
         >
           {r.estado}
         </Badge>
