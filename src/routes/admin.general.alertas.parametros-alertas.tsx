@@ -234,7 +234,14 @@ function Page() {
       <div className="bg-card border rounded-lg p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map((g, gIdx) => (
-            <div key={g.title} className="break-inside-avoid">
+            <div
+              key={g.title}
+              className={
+                g.schedule
+                  ? "break-inside-avoid md:col-span-2 lg:col-span-full"
+                  : "break-inside-avoid"
+              }
+            >
               <h4 className="font-display text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
                 {g.title}
               </h4>
@@ -277,36 +284,36 @@ function Page() {
                   </div>
                 ))}
                 {g.schedule?.map((sch, sIdx) => (
-                  <div key={sch.key} className="rounded-md border border-border p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium text-foreground">{sch.name}</span>
+                  <div
+                    key={sch.key}
+                    className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-foreground w-24">{sch.name}</span>
                       <Toggle enabled={sch.enabled} onClick={() => toggleSchedule(gIdx, sIdx)} />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">
-                          Inicio
-                        </label>
-                        <input
-                          type="time"
-                          value={sch.inicio}
-                          disabled={!sch.enabled}
-                          onChange={(e) => updateSchedule(gIdx, sIdx, "inicio", e.target.value)}
-                          className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">
-                          Fin
-                        </label>
-                        <input
-                          type="time"
-                          value={sch.fin}
-                          disabled={!sch.enabled}
-                          onChange={(e) => updateSchedule(gIdx, sIdx, "fin", e.target.value)}
-                          className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                        />
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-semibold text-muted-foreground">
+                        Inicio
+                      </label>
+                      <input
+                        type="time"
+                        value={sch.inicio}
+                        disabled={!sch.enabled}
+                        onChange={(e) => updateSchedule(gIdx, sIdx, "inicio", e.target.value)}
+                        className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-semibold text-muted-foreground">Fin</label>
+                      <input
+                        type="time"
+                        value={sch.fin}
+                        disabled={!sch.enabled}
+                        onChange={(e) => updateSchedule(gIdx, sIdx, "fin", e.target.value)}
+                        className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                      />
                     </div>
                   </div>
                 ))}

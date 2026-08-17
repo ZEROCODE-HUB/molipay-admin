@@ -30,6 +30,7 @@ type DataTableProps<T> = {
   downloadExcel?: (rows: T[]) => void;
   showEnumAllOption?: boolean;
   showDownloadButton?: boolean;
+  dateFilterColumns?: string[];
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -63,6 +64,7 @@ export function DataTable<T>({
   downloadExcel,
   showEnumAllOption = true,
   showDownloadButton = true,
+  dateFilterColumns,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -70,7 +72,7 @@ export function DataTable<T>({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [globalQuery, setGlobalQuery] = useState("");
   const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
-  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
+  const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
 
   const textSearchableCols = useMemo(() => columns.filter((c) => isTextFilterable(c)), [columns]);
 
@@ -84,8 +86,22 @@ export function DataTable<T>({
 
   const enumCols = useMemo(() => columns.filter((c) => c.filterable === "enum"), [columns]);
 
-  const specificFilterCount =
-    Object.values(enumFilters).filter((v) => v).length + (dateRange.from || dateRange.to ? 1 : 0);
+  const filterCols = useMemo(() => {
+    if (dateFilterColumns && dateFilterColumns.length > 0) {
+      return dateFilterColumns
+        .map((k) => columns.find((c) => c.key === k))
+        .filter((c): c is Column<T> => !!c);
+    }
+    const first = dateCols[0];
+    return first ? [first] : [];
+  }, [dateFilterColumns, dateCols, columns]);
+
+  const activeDateGroups = filterCols.filter((col) => {
+    const range = dateRanges[col.key];
+    return !!(range && (range.from || range.to));
+  }).length;
+
+  const specificFilterCount = Object.values(enumFilters).filter((v) => v).length + activeDateGroups;
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -114,7 +130,7 @@ export function DataTable<T>({
     setGlobalQuery("");
     setDebouncedQuery("");
     setEnumFilters({});
-    setDateRange({ from: "", to: "" });
+    setDateRanges({});
     setPage(1);
   };
 
@@ -180,28 +196,31 @@ export function DataTable<T>({
           typeof raw === "string" || typeof raw === "number" ? String(raw) : renderedText;
         if (text !== value && renderedText !== value) return false;
       }
-      if (dateRange.from || dateRange.to) {
-        const key = dateCols[0]?.key;
-        const col = key ? columns.find((c) => c.key === key) : undefined;
-        if (col) {
-          const text = String(col.render(row) ?? "");
-          const date = parseDateCell(text);
-          if (date) {
-            if (dateRange.from) {
-              const fromDate = new Date(dateRange.from);
-              if (date < fromDate) return false;
-            }
-            if (dateRange.to) {
-              const toDate = new Date(dateRange.to);
-              toDate.setDate(toDate.getDate() + 1);
-              if (date >= toDate) return false;
-            }
-          }
+      const dateFilterOk = filterCols.every((col) => {
+        const range = dateRanges[col.key] ?? { from: "", to: "" };
+        if (!range.from && !range.to) return true;
+        const raw = (row as Record<string, unknown>)[col.key];
+        const text =
+          typeof raw === "string" || typeof raw === "number"
+            ? String(raw)
+            : String(col.render(row) ?? "");
+        const date = parseDateCell(text);
+        if (!date) return true;
+        if (range.from) {
+          const fromDate = new Date(range.from);
+          if (date < fromDate) return false;
         }
-      }
+        if (range.to) {
+          const toDate = new Date(range.to);
+          toDate.setDate(toDate.getDate() + 1);
+          if (date >= toDate) return false;
+        }
+        return true;
+      });
+      if (!dateFilterOk) return false;
       return true;
     });
-  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRange, dateCols, columns]);
+  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRanges, filterCols, columns]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
@@ -216,7 +235,7 @@ export function DataTable<T>({
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, enumFilters, dateRange, pageSize]);
+  }, [debouncedQuery, enumFilters, dateRanges, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -250,7 +269,7 @@ export function DataTable<T>({
   }
 
   const colspan = columns.length + (selection ? 1 : 0) + (actions ? 1 : 0);
-  const showSpecificFilters = dateCols.length > 0 || enumCols.length > 0;
+  const showSpecificFilters = filterCols.length > 0 || enumCols.length > 0;
 
   return (
     <div className="space-y-3">
@@ -314,28 +333,44 @@ export function DataTable<T>({
 
           {showSpecificFilters && (
             <div className="flex flex-wrap items-end gap-3">
-              {dateCols.length > 0 && (
-                <div className="space-y-1 min-w-0">
+              {filterCols.map((col) => (
+                <div key={col.key} className="space-y-1 min-w-0">
                   <label className="text-xs font-medium text-muted-foreground">
-                    {dateCols[0].label} (desde – hasta)
+                    {col.label} (desde – hasta)
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
                       type="date"
-                      value={dateRange.from}
-                      onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
+                      value={dateRanges[col.key]?.from ?? ""}
+                      onChange={(e) =>
+                        setDateRanges((prev) => ({
+                          ...prev,
+                          [col.key]: {
+                            ...(prev[col.key] ?? { from: "", to: "" }),
+                            from: e.target.value,
+                          },
+                        }))
+                      }
                       className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
                     <span className="text-xs text-muted-foreground shrink-0">→</span>
                     <input
                       type="date"
-                      value={dateRange.to}
-                      onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
+                      value={dateRanges[col.key]?.to ?? ""}
+                      onChange={(e) =>
+                        setDateRanges((prev) => ({
+                          ...prev,
+                          [col.key]: {
+                            ...(prev[col.key] ?? { from: "", to: "" }),
+                            to: e.target.value,
+                          },
+                        }))
+                      }
                       className="h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
                   </div>
                 </div>
-              )}
+              ))}
               {enumCols.map((col) => (
                 <div key={col.key} className="space-y-1 min-w-0">
                   <label className="text-xs font-medium text-muted-foreground">{col.label}</label>

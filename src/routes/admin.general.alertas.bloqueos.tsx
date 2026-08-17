@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, Edit3, X } from "lucide-react";
+import { Eye, Edit3, X, CheckCircle, Unlock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Bloqueo = {
   legajo: string;
@@ -14,11 +15,14 @@ type Bloqueo = {
   estado: string;
   compliance: string;
   fecha: string;
+  fechaAceptacion?: string;
   idCoelsa: string;
   monto: string;
   resolucion?: string;
   fechaResolucion?: string;
 };
+
+const todayISO = new Date().toISOString().slice(0, 10);
 
 const mock: Bloqueo[] = [
   {
@@ -29,6 +33,7 @@ const mock: Bloqueo[] = [
     estado: "Activo",
     compliance: "M. Rodríguez",
     fecha: "2026-07-15",
+    fechaAceptacion: "2026-07-15",
     idCoelsa: "COE-8823",
     monto: "$ 12,450.00",
   },
@@ -40,6 +45,7 @@ const mock: Bloqueo[] = [
     estado: "Activo",
     compliance: "L. Fernández",
     fecha: "2026-07-14",
+    fechaAceptacion: "2026-07-14",
     idCoelsa: "COE-8824",
     monto: "$ 0.00",
   },
@@ -51,6 +57,7 @@ const mock: Bloqueo[] = [
     estado: "Resuelto",
     compliance: "M. Rodríguez",
     fecha: "2026-07-10",
+    fechaAceptacion: "2026-07-10",
     idCoelsa: "COE-8810",
     monto: "$ 450,000.00",
     resolucion: "Cliente justificó origen de fondos",
@@ -64,6 +71,7 @@ const mock: Bloqueo[] = [
     estado: "Activo",
     compliance: "P. Sánchez",
     fecha: "2026-07-13",
+    fechaAceptacion: "2026-07-13",
     idCoelsa: "COE-8815",
     monto: "$ 89,200.00",
   },
@@ -75,6 +83,7 @@ const mock: Bloqueo[] = [
     estado: "Resuelto",
     compliance: "L. Fernández",
     fecha: "2026-07-08",
+    fechaAceptacion: "2026-07-08",
     idCoelsa: "COE-8790",
     monto: "$ 23,100.00",
     resolucion: "Cuentas validadas como grupo económico",
@@ -88,6 +97,7 @@ const mock: Bloqueo[] = [
     estado: "Activo",
     compliance: "M. Rodríguez",
     fecha: "2026-07-16",
+    fechaAceptacion: "2026-07-16",
     idCoelsa: "COE-8830",
     monto: "$ 567,800.00",
   },
@@ -110,6 +120,7 @@ const mock: Bloqueo[] = [
     estado: "Resuelto",
     compliance: "P. Sánchez",
     fecha: "2026-07-05",
+    fechaAceptacion: "2026-07-05",
     idCoelsa: "COE-8760",
     monto: "$ 1,200,000.00",
     resolucion: "Cliente presentó documentación respaldatoria",
@@ -167,9 +178,15 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
             </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Fecha</dt>
+            <dt className="text-muted-foreground">Fecha del bloqueo</dt>
             <dd>
               <span className="font-mono tabular-nums">{b.fecha}</span>
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Fecha de aceptación del bloqueo</dt>
+            <dd>
+              <span className="font-mono tabular-nums">{b.fechaAceptacion ?? "—"}</span>
             </dd>
           </div>
           {b.resolucion && (
@@ -178,15 +195,30 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
               <dd className="text-right max-w-[200px]">{b.resolucion}</dd>
             </div>
           )}
+          {b.fechaResolucion && (
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Fecha de resolución</dt>
+              <dd>
+                <span className="font-mono tabular-nums">{b.fechaResolucion}</span>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
     </div>
   );
 }
 
-function GestionarBloqueo({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
-  const [resolucion, setResolucion] = useState(b.resolucion ?? "");
-  const [fecha, setFecha] = useState(b.fechaResolucion ?? new Date().toISOString().slice(0, 10));
+function GestionarBloqueo({
+  b,
+  onClose,
+  onSave,
+}: {
+  b: Bloqueo;
+  onClose: () => void;
+  onSave: (updated: Bloqueo) => void;
+}) {
+  const [form, setForm] = useState<Bloqueo>({ ...b });
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -205,11 +237,33 @@ function GestionarBloqueo({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Fecha del bloqueo
+            </label>
+            <input
+              type="date"
+              value={form.fecha}
+              onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+              className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Fecha de aceptación del bloqueo
+            </label>
+            <input
+              type="date"
+              value={form.fechaAceptacion ?? ""}
+              onChange={(e) => setForm({ ...form, fechaAceptacion: e.target.value || undefined })}
+              className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
               Comentario de resolución
             </label>
             <textarea
-              value={resolucion}
-              onChange={(e) => setResolucion(e.target.value)}
+              value={form.resolucion ?? ""}
+              onChange={(e) => setForm({ ...form, resolucion: e.target.value })}
               rows={3}
               className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
               placeholder="Agregar comentario..."
@@ -221,13 +275,16 @@ function GestionarBloqueo({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
             </label>
             <input
               type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              value={form.fechaResolucion ?? ""}
+              onChange={(e) => setForm({ ...form, fechaResolucion: e.target.value || undefined })}
               className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90">
+            <button
+              onClick={() => onSave(form)}
+              className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
+            >
               Guardar
             </button>
             <button
@@ -249,13 +306,66 @@ export const Route = createFileRoute("/admin/general/alertas/bloqueos")({
 });
 
 function Page() {
+  const [data, setData] = useState(mock);
   const [detail, setDetail] = useState<Bloqueo | null>(null);
   const [gestionar, setGestionar] = useState<Bloqueo | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    variant: "default" | "danger";
+    onConfirm: () => void;
+  } | null>(null);
 
-  const getActions = (r: Bloqueo): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
-    { label: "Gestionar", icon: Edit3, onClick: () => setGestionar(r) },
-  ];
+  const getActions = (r: Bloqueo): ActionItem[] => {
+    const actions: ActionItem[] = [
+      { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
+      { label: "Gestionar", icon: Edit3, onClick: () => setGestionar({ ...r }) },
+    ];
+    if (r.estado === "Pendiente") {
+      actions.push({
+        label: "Aceptar bloqueo",
+        icon: CheckCircle,
+        onClick: () =>
+          setConfirmAction({
+            title: "Aceptar bloqueo",
+            message: `¿Estás seguro de aceptar el bloqueo de ${r.nombre}? Se registrará la fecha de aceptación del bloqueo.`,
+            confirmLabel: "Aceptar bloqueo",
+            variant: "default",
+            onConfirm: () =>
+              setData((prev) =>
+                prev.map((bl) =>
+                  bl.legajo === r.legajo
+                    ? { ...bl, estado: "Activo", fechaAceptacion: todayISO }
+                    : bl,
+                ),
+              ),
+          }),
+      });
+    }
+    if (r.estado === "Activo") {
+      actions.push({
+        label: "Desbloquear usuario",
+        icon: Unlock,
+        onClick: () =>
+          setConfirmAction({
+            title: "Desbloquear usuario",
+            message: `¿Estás seguro de desbloquear a ${r.nombre}? El bloqueo pasará a estado Resuelto.`,
+            confirmLabel: "Desbloquear usuario",
+            variant: "default",
+            onConfirm: () =>
+              setData((prev) =>
+                prev.map((bl) =>
+                  bl.legajo === r.legajo
+                    ? { ...bl, estado: "Resuelto", fechaResolucion: todayISO }
+                    : bl,
+                ),
+              ),
+          }),
+      });
+    }
+    return actions;
+  };
 
   const columns: Column<Bloqueo>[] = [
     {
@@ -289,7 +399,20 @@ function Page() {
       ),
     },
     { key: "compliance", label: "Compliance", filterable: true, render: (r) => r.compliance },
-    { key: "fecha", label: "Fecha", sortable: true, filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+    {
+      key: "fecha",
+      label: "Fecha del bloqueo",
+      sortable: true,
+      filterable: "date",
+      render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+    },
+    {
+      key: "fechaAceptacion",
+      label: "Fecha de aceptación del bloqueo",
+      sortable: true,
+      filterable: "date",
+      render: (r) => <span className="font-mono tabular-nums">{r.fechaAceptacion ?? "—"}</span>,
+    },
   ];
 
   return (
@@ -300,13 +423,34 @@ function Page() {
       />
       <DataTable
         columns={columns}
-        data={mock}
+        data={data}
         keyExtractor={(r) => r.legajo}
         pageSize={10}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+        dateFilterColumns={["fecha", "fechaAceptacion"]}
       />
       {detail && <BloqueoDetail b={detail} onClose={() => setDetail(null)} />}
-      {gestionar && <GestionarBloqueo b={gestionar} onClose={() => setGestionar(null)} />}
+      {gestionar && (
+        <GestionarBloqueo
+          b={gestionar}
+          onClose={() => setGestionar(null)}
+          onSave={(updated) => {
+            setData((prev) => prev.map((bl) => (bl.legajo === updated.legajo ? updated : bl)));
+            setGestionar(null);
+          }}
+        />
+      )}
+      {confirmAction && (
+        <ConfirmDialog
+          open={!!confirmAction}
+          onClose={() => setConfirmAction(null)}
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmLabel={confirmAction.confirmLabel}
+          variant={confirmAction.variant}
+          onConfirm={confirmAction.onConfirm}
+        />
+      )}
     </>
   );
 }
