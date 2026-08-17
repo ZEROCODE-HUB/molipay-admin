@@ -27,33 +27,52 @@ const FULL_KB = [
 ];
 
 const DEFAULT_RESPONSE =
-  "Lo siento, no tengo información sobre esa consulta. Puedes contactar al equipo de soporte interno para más ayuda. Las áreas que puedo explicar son: transacciones, impuestos, alertas vs bloqueos, y navegación del panel.";
+  "No encontré una respuesta exacta, pero puedo ayudarte con cualquiera de estas áreas del panel: transacciones y estados, impuestos (propios y retenciones), alertas vs. bloqueos, comercios (gestión, PCT, link de pago, impuestos, APIs externas), reportes, registros y fondos, soporte (consultas por ID de Coelsa y bloqueo de funciones), usuarios y roles, movimientos, configuración e integraciones, módulos, notificaciones e incidentes. Escribime tu duda con más detalle y la busco.";
 
 const SUGGESTED = [
   "¿Qué tipos de impuestos existen?",
   "¿Cuál es la diferencia entre alerta y bloqueo?",
   "¿Cómo navego en el panel?",
   "¿Qué estados tiene una transacción?",
+  "¿Cómo consulto un ID de Coelsa?",
+  "¿Qué es el total de fondos?",
 ];
 
+const normalize = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 function findResponse(input: string): string {
-  const lower = input.toLowerCase();
+  const lower = normalize(input);
   let best: string | null = null;
   let bestCount = 0;
+  let bestLen = 0;
   for (const entry of FULL_KB) {
-    const count = entry.keywords.filter((kw) => lower.includes(kw)).length;
-    if (count > bestCount) {
+    let count = 0;
+    let len = 0;
+    for (const kw of entry.keywords) {
+      const nkw = normalize(kw);
+      if (lower.includes(nkw)) {
+        count++;
+        len += nkw.length;
+      }
+    }
+    if (count > bestCount || (count === bestCount && count > 0 && len > bestLen)) {
       bestCount = count;
+      bestLen = len;
       best = entry.response;
     }
   }
   if (best) return best;
 
+  const clean = lower.replace(/[^a-z0-9/]/g, "");
   const routeHit = KB_ROUTES.find(
     (r) =>
-      lower.includes(r.title.toLowerCase()) ||
-      lower.includes(r.path.toLowerCase()) ||
-      r.path.toLowerCase().includes(lower.replace(/[^a-z0-9/]/g, "")),
+      lower.includes(normalize(r.title)) ||
+      lower.includes(normalize(r.path)) ||
+      normalize(r.path).includes(clean),
   );
   if (routeHit) {
     return `Podés encontrarlo en: ${routeHit.title} (${routeHit.path}).`;
