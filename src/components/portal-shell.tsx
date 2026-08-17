@@ -21,10 +21,15 @@ const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !=
 const flattenLeaves = (nav: NavItem[]): NavLeaf[] =>
   nav.flatMap((i) => (isGroup(i) ? i.items : [i]));
 
-const isActive = (to: string, path: string): boolean => {
+const isActive = (to: string, path: string, leaves: NavLeaf[]): boolean => {
   if (path === to) return true;
   if (path === `${to}/`) return true;
-  if (to !== "/admin" && path.startsWith(`${to}/`)) return true;
+  if (to !== "/admin" && path.startsWith(`${to}/`)) {
+    const overridden = leaves.some(
+      (other) => other.to !== to && other.to.startsWith(`${to}/`) && path.startsWith(other.to),
+    );
+    return !overridden;
+  }
   return false;
 };
 
@@ -135,22 +140,24 @@ export function PortalShell({
 
         {/* Main */}
         <main className="flex-1 min-w-0 overflow-y-auto pb-20 lg:pb-6">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:pt-5 lg:pb-8">{children}</div>
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:px-10 lg:pt-5 lg:pb-8">
+            {children}
+          </div>
         </main>
       </div>
 
       {/* Bottom nav mobile */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white border-t border-black-100 flex items-stretch z-30">
         {mainNav.map((item) => {
-          const active = isActive(item.to, path);
+          const active = isActive(item.to, path, leaves);
           const Icon = item.icon;
           return (
             <Link
               key={item.to}
               to={item.to}
-className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
-          active ? "text-moli-orange font-semibold" : "text-black-400"
-        }`}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
+                active ? "text-moli-orange font-semibold" : "text-black-400"
+              }`}
             >
               <Icon size={20} strokeWidth={1.75} />
               <span className="truncate px-1">{item.label}</span>
@@ -182,6 +189,7 @@ function SidebarNav({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
+  const leaves = useMemo(() => flattenLeaves(nav), [nav]);
   if (collapsed) {
     return (
       <>
@@ -191,7 +199,7 @@ function SidebarNav({
               <SidebarLink
                 key={leaf.to}
                 item={leaf}
-                active={isActive(leaf.to, path)}
+                active={isActive(leaf.to, path, leaves)}
                 onNavigate={onNavigate}
                 collapsed
               />
@@ -200,7 +208,7 @@ function SidebarNav({
             <SidebarLink
               key={item.to}
               item={item}
-              active={isActive(item.to, path)}
+              active={isActive(item.to, path, leaves)}
               onNavigate={onNavigate}
               collapsed
             />
@@ -214,9 +222,20 @@ function SidebarNav({
     <>
       {nav.map((item, idx) =>
         isGroup(item) ? (
-          <SidebarGroup key={`g-${idx}-${item.label}`} group={item} path={path} onNavigate={onNavigate} />
+          <SidebarGroup
+            key={`g-${idx}-${item.label}`}
+            group={item}
+            path={path}
+            leaves={leaves}
+            onNavigate={onNavigate}
+          />
         ) : (
-          <SidebarLink key={item.to} item={item} active={isActive(item.to, path)} onNavigate={onNavigate} />
+          <SidebarLink
+            key={item.to}
+            item={item}
+            active={isActive(item.to, path, leaves)}
+            onNavigate={onNavigate}
+          />
         ),
       )}
     </>
@@ -282,13 +301,15 @@ function SidebarLink({
 function SidebarGroup({
   group,
   path,
+  leaves,
   onNavigate,
 }: {
   group: NavGroup;
   path: string;
+  leaves: NavLeaf[];
   onNavigate?: () => void;
 }) {
-  const containsActive = group.items.some((i) => isActive(i.to, path));
+  const containsActive = group.items.some((i) => isActive(i.to, path, leaves));
   const [open, setOpen] = useState(containsActive);
   const Icon = group.icon;
   const expanded = open || containsActive;
@@ -306,10 +327,7 @@ function SidebarGroup({
       >
         <Icon size={18} strokeWidth={1.75} />
         <span className="flex-1 text-left">{group.label}</span>
-        <ChevronDown
-          size={14}
-          className={`transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
+        <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
       {expanded && (
         <div className="mt-0.5">
@@ -317,7 +335,7 @@ function SidebarGroup({
             <SidebarLink
               key={it.to}
               item={it}
-              active={isActive(it.to, path)}
+              active={isActive(it.to, path, leaves)}
               onNavigate={onNavigate}
               nested
             />
@@ -342,7 +360,9 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
       <div>
-        <h1 className="font-display text-xl md:text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className="font-display text-xl md:text-2xl font-semibold tracking-tight text-foreground">
+          {title}
+        </h1>
         {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
       </div>
       {action}
@@ -351,14 +371,18 @@ export function PageHeader({
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-card border border-border rounded-xl p-5 ${className}`}>{children}</div>;
+  return (
+    <div className={`bg-card border border-border rounded-xl p-5 ${className}`}>{children}</div>
+  );
 }
 
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <Card>
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="font-display text-xl md:text-2xl font-semibold text-foreground mt-1 tabular-nums">{value}</div>
+      <div className="font-display text-xl md:text-2xl font-semibold text-foreground mt-1 tabular-nums">
+        {value}
+      </div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
     </Card>
   );
