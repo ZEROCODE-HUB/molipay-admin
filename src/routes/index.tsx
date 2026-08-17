@@ -3,7 +3,7 @@ import { useState } from "react";
 import { LogIn, Eye, EyeOff, Mail, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getAuthErrorMessage } from "@/lib/supabase";
 import loginBackground from "@/assets/17.png";
 
 export const Route = createFileRoute("/")({
@@ -38,7 +38,7 @@ function AdminLogin() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      setError(getAuthErrorMessage(error.message));
       setLoading(false);
       return;
     }

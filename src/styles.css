@@ -186,41 +186,41 @@
 
   /* ── MOLI extended palette (mirrors MollyPay-Enterprises / IDENTIDAD) ── */
   --black-900: #000000;
-  --black-800: #1A1A1A;
-  --black-700: #2E2E2E;
+  --black-800: #1a1a1a;
+  --black-700: #2e2e2e;
   --black-600: #474747;
-  --black-500: #5E5E5E;
+  --black-500: #5e5e5e;
   --black-400: #767676;
   --black-300: #909090;
-  --black-200: #B3B3B3;
-  --black-100: #D4D4D4;
-  --black-50: #F0F0F0;
+  --black-200: #b3b3b3;
+  --black-100: #d4d4d4;
+  --black-50: #f0f0f0;
 
-  --red-700: #8B0014;
-  --red-600: #AD0019;
-  --red-500: #D3001F;
-  --red-400: #E6394F;
-  --red-300: #F06A7A;
-  --red-200: #F5A0AA;
-  --red-100: #FCD3D8;
-  --red-50: #FFF0F1;
+  --red-700: #8b0014;
+  --red-600: #ad0019;
+  --red-500: #d3001f;
+  --red-400: #e6394f;
+  --red-300: #f06a7a;
+  --red-200: #f5a0aa;
+  --red-100: #fcd3d8;
+  --red-50: #fff0f1;
 
-  --navy-700: #141B47;
-  --navy-600: #26327A;
+  --navy-700: #141b47;
+  --navy-600: #26327a;
   --navy-500: #324595;
-  --navy-400: #5066B5;
-  --navy-300: #7B8ECC;
-  --navy-200: #A9B6E1;
-  --navy-100: #D4DBF3;
-  --navy-50: #EDF0FA;
+  --navy-400: #5066b5;
+  --navy-300: #7b8ecc;
+  --navy-200: #a9b6e1;
+  --navy-100: #d4dbf3;
+  --navy-50: #edf0fa;
 
-  --plata-600: #8A8A8A;
-  --plata-500: #A8A8A8;
-  --plata-400: #CECECE;
-  --plata-300: #DEDEDE;
-  --plata-200: #EBEBEB;
-  --plata-100: #F5F5F5;
-  --plata-50: #FAFAFA;
+  --plata-600: #8a8a8a;
+  --plata-500: #a8a8a8;
+  --plata-400: #cecece;
+  --plata-300: #dedede;
+  --plata-200: #ebebeb;
+  --plata-100: #f5f5f5;
+  --plata-50: #fafafa;
 }
 
 .dark {
@@ -261,41 +261,41 @@
 
   /* ── MOLI extended palette (mirrors MollyPay-Enterprises / IDENTIDAD) ── */
   --black-900: #000000;
-  --black-800: #1A1A1A;
-  --black-700: #2E2E2E;
+  --black-800: #1a1a1a;
+  --black-700: #2e2e2e;
   --black-600: #474747;
-  --black-500: #5E5E5E;
+  --black-500: #5e5e5e;
   --black-400: #767676;
   --black-300: #909090;
-  --black-200: #B3B3B3;
-  --black-100: #D4D4D4;
-  --black-50: #F0F0F0;
+  --black-200: #b3b3b3;
+  --black-100: #d4d4d4;
+  --black-50: #f0f0f0;
 
-  --red-700: #8B0014;
-  --red-600: #AD0019;
-  --red-500: #D3001F;
-  --red-400: #E6394F;
-  --red-300: #F06A7A;
-  --red-200: #F5A0AA;
-  --red-100: #FCD3D8;
-  --red-50: #FFF0F1;
+  --red-700: #8b0014;
+  --red-600: #ad0019;
+  --red-500: #d3001f;
+  --red-400: #e6394f;
+  --red-300: #f06a7a;
+  --red-200: #f5a0aa;
+  --red-100: #fcd3d8;
+  --red-50: #fff0f1;
 
-  --navy-700: #141B47;
-  --navy-600: #26327A;
+  --navy-700: #141b47;
+  --navy-600: #26327a;
   --navy-500: #324595;
-  --navy-400: #5066B5;
-  --navy-300: #7B8ECC;
-  --navy-200: #A9B6E1;
-  --navy-100: #D4DBF3;
-  --navy-50: #EDF0FA;
+  --navy-400: #5066b5;
+  --navy-300: #7b8ecc;
+  --navy-200: #a9b6e1;
+  --navy-100: #d4dbf3;
+  --navy-50: #edf0fa;
 
-  --plata-600: #8A8A8A;
-  --plata-500: #A8A8A8;
-  --plata-400: #CECECE;
-  --plata-300: #DEDEDE;
-  --plata-200: #EBEBEB;
-  --plata-100: #F5F5F5;
-  --plata-50: #FAFAFA;
+  --plata-600: #8a8a8a;
+  --plata-500: #a8a8a8;
+  --plata-400: #cecece;
+  --plata-300: #dedede;
+  --plata-200: #ebebeb;
+  --plata-100: #f5f5f5;
+  --plata-50: #fafafa;
 }
 
 @layer base {
@@ -307,17 +307,6 @@
     /* Escala tipográfica base ≥16px en móvil evita que iOS haga zoom al
        enfocar inputs con font-size reducido (text-xs/text-sm). */
     font-size: 1rem;
-  }
-
-  /* Evita el auto-zoom de iOS en inputs/selects cuyo font-size declarado
-     es menor a 16px (ej. text-xs / h-8). No altera diseño desktop. */
-  @media (max-width: 767.98px) {
-    input,
-    select,
-    textarea,
-    button {
-      font-size: 16px;
-    }
   }
 
   body {
@@ -348,6 +337,16 @@
   ::selection {
     background-color: var(--moli-red-light);
     color: var(--moli-red-dark);
+  }
+}
+
+/* Fuera de cualquier @layer para ganar a las utilidades de Tailwind (text-xs/text-sm):
+   iOS hace zoom al enfocar un campo con font-size < 16px. */
+@media (max-width: 767.98px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 
