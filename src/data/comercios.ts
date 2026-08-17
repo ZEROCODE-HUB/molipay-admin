@@ -1,18 +1,10 @@
+import { metodosPagoIniciales, type MetodoPago } from "./metodos-pago";
+
 export type EstadoGeneral =
-  | "Activado"
-  | "Desactivado"
-  | "Pendiente de aprobación"
-  | "Rechazado"
-  | "Suspendido";
+  "Activado" | "Desactivado" | "Pendiente de aprobación" | "Rechazado" | "Suspendido";
 
 export type NivelComercio =
-  | "Pequeño"
-  | "Mediano"
-  | "Grande"
-  | "Premium"
-  | "Estándar"
-  | "Básico"
-  | "Enterprise";
+  "Pequeño" | "Mediano" | "Grande" | "Premium" | "Estándar" | "Básico" | "Enterprise";
 
 export type PuntoVenta = {
   nombre: string;
@@ -37,7 +29,13 @@ export type Comercio = {
   pctPuntosDeVenta: PuntoVenta[];
   linkPagoHabilitado: boolean;
   linkPagoEstado: LinkPagoEstado;
+  linkPagoMetodos: MetodoPago[];
 };
+
+const metodosPorId = (ids: number[]): MetodoPago[] =>
+  ids
+    .map((id) => metodosPagoIniciales.find((m) => m.id === id))
+    .filter((m): m is MetodoPago => Boolean(m));
 
 export const comerciosIniciales: Comercio[] = [
   {
@@ -60,6 +58,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Activado",
+    linkPagoMetodos: metodosPorId([1, 4, 7]),
   },
   {
     id: 2,
@@ -78,6 +77,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Pendiente de aprobación",
+    linkPagoMetodos: metodosPorId([2, 5]),
   },
   {
     id: 3,
@@ -100,6 +100,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Activado",
+    linkPagoMetodos: metodosPorId([1, 2, 4, 5, 7, 8]),
   },
   {
     id: 4,
@@ -120,6 +121,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Activado",
+    linkPagoMetodos: metodosPorId([4, 5]),
   },
   {
     id: 5,
@@ -136,6 +138,7 @@ export const comerciosIniciales: Comercio[] = [
     pctPuntosDeVenta: [],
     linkPagoHabilitado: true,
     linkPagoEstado: "Pendiente de aprobación",
+    linkPagoMetodos: metodosPorId([1, 4]),
   },
   {
     id: 6,
@@ -154,6 +157,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Activado",
+    linkPagoMetodos: metodosPorId([1, 7]),
   },
   {
     id: 7,
@@ -176,6 +180,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Pendiente de aprobación",
+    linkPagoMetodos: metodosPorId([2, 3, 6]),
   },
   {
     id: 8,
@@ -199,6 +204,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: true,
     linkPagoEstado: "Activado",
+    linkPagoMetodos: metodosPorId([1, 2, 4, 5, 7]),
   },
   {
     id: 9,
@@ -217,6 +223,7 @@ export const comerciosIniciales: Comercio[] = [
     ],
     linkPagoHabilitado: false,
     linkPagoEstado: "No asociado",
+    linkPagoMetodos: [],
   },
   {
     id: 10,
@@ -233,5 +240,6 @@ export const comerciosIniciales: Comercio[] = [
     pctPuntosDeVenta: [],
     linkPagoHabilitado: false,
     linkPagoEstado: "No asociado",
+    linkPagoMetodos: [],
   },
 ];

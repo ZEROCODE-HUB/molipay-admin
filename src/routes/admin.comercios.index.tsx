@@ -279,6 +279,7 @@ function ComercioFormModal({
           linkPagoEstado:
             comercio?.linkPagoEstado ??
             (form.linkPagoHabilitado ? "Pendiente de aprobación" : "No asociado"),
+          linkPagoMetodos: comercio?.linkPagoMetodos ?? [],
         })
       }
       submitLabel={comercio ? "Guardar cambios" : "Crear comercio"}
