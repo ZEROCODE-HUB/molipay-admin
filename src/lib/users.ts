@@ -59,7 +59,7 @@ const statusMap: Record<string, UserStatus> = {
 // --- Fixtures ---
 const FISICA_DATA: UsuarioFisica[] = [
   {
-    legajo: "USR-001",
+    legajo: "LPF-0001",
     correo: "juan.perez@email.com",
     nombres: "Juan Carlos",
     apellidos: "Pérez González",
@@ -67,7 +67,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "12/01/2024",
   },
   {
-    legajo: "USR-002",
+    legajo: "LPF-0002",
     correo: "maria.lopez@email.com",
     nombres: "María Elena",
     apellidos: "López Fernández",
@@ -75,7 +75,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "23/02/2024",
   },
   {
-    legajo: "USR-003",
+    legajo: "LPF-0021",
     correo: "carlos.martinez@email.com",
     nombres: "Carlos Alberto",
     apellidos: "Martínez Ruiz",
@@ -83,7 +83,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "05/03/2024",
   },
   {
-    legajo: "USR-004",
+    legajo: "LPF-0022",
     correo: "ana.garcia@email.com",
     nombres: "Ana Sofía",
     apellidos: "García Díaz",
@@ -91,7 +91,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "18/04/2024",
   },
   {
-    legajo: "USR-005",
+    legajo: "LPF-0023",
     correo: "pedro.rodriguez@email.com",
     nombres: "Pedro Antonio",
     apellidos: "Rodríguez Silva",
@@ -99,7 +99,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "09/05/2024",
   },
   {
-    legajo: "USR-006",
+    legajo: "LPF-0033",
     correo: "laura.gomez@email.com",
     nombres: "Laura Fernanda",
     apellidos: "Gómez Torres",
@@ -107,7 +107,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "17/06/2024",
   },
   {
-    legajo: "USR-007",
+    legajo: "LPF-0034",
     correo: "martin.lopez@email.com",
     nombres: "Martín",
     apellidos: "Lopez Moreno",
@@ -115,7 +115,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "03/07/2024",
   },
   {
-    legajo: "USR-008",
+    legajo: "LPF-0035",
     correo: "silvia.ramos@email.com",
     nombres: "Silvia",
     apellidos: "Ramos Ortiz",
@@ -123,7 +123,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "22/07/2024",
   },
   {
-    legajo: "USR-009",
+    legajo: "LPF-0036",
     correo: "oscar.diaz@email.com",
     nombres: "Óscar",
     apellidos: "Díaz Lara",
@@ -131,7 +131,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "11/08/2024",
   },
   {
-    legajo: "USR-010",
+    legajo: "LPF-0037",
     correo: "catalina.vargas@email.com",
     nombres: "Catalina",
     apellidos: "Vargas Ruiz",
@@ -139,7 +139,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "01/09/2024",
   },
   {
-    legajo: "USR-011",
+    legajo: "LPF-0038",
     correo: "andres.molina@email.com",
     nombres: "Andrés Sebastián",
     apellidos: "Molina Rivas",
@@ -147,7 +147,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "07/11/2024",
   },
   {
-    legajo: "USR-012",
+    legajo: "LPF-0039",
     correo: "camila.sosa@email.com",
     nombres: "Camila Andrea",
     apellidos: "Sosa Guzmán",
@@ -158,7 +158,7 @@ const FISICA_DATA: UsuarioFisica[] = [
 
 const JURIDICA_DATA: UsuarioJuridica[] = [
   {
-    legajo: "JUR-001",
+    legajo: "LPJ-0101",
     correo: "info@constructoraalpha.com",
     razonSocial: "Constructora Alpha SA",
     tipo: "SA",
@@ -167,7 +167,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 5,
   },
   {
-    legajo: "JUR-002",
+    legajo: "LPJ-0102",
     correo: "admin@comercializadorabeta.com",
     razonSocial: "Comercializadora Beta SRL",
     tipo: "SRL",
@@ -176,7 +176,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 2,
   },
   {
-    legajo: "JUR-003",
+    legajo: "LPJ-0103",
     correo: "contacto@serviciosgamma.com",
     razonSocial: "Servicios Gamma SA",
     tipo: "SA",
@@ -185,7 +185,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 3,
   },
   {
-    legajo: "JUR-004",
+    legajo: "LPJ-0104",
     correo: "ventas@distribuidoradelta.com",
     razonSocial: "Distribuidora Delta SRL",
     tipo: "SRL",
@@ -194,7 +194,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "JUR-005",
+    legajo: "LPJ-0105",
     correo: "info@logisticaepsilon.com",
     razonSocial: "Logística Epsilon SA",
     tipo: "SA",
@@ -203,7 +203,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "JUR-006",
+    legajo: "LPJ-0106",
     correo: "admin@techzeta.com",
     razonSocial: "Tech Zeta SRL",
     tipo: "SRL",
@@ -212,7 +212,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 7,
   },
   {
-    legajo: "JUR-007",
+    legajo: "LPJ-0107",
     correo: "contacto@alimentoseta.com",
     razonSocial: "Alimentos Eta SA",
     tipo: "SA",
@@ -221,7 +221,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "JUR-008",
+    legajo: "LPJ-0108",
     correo: "info@industriatheta.com",
     razonSocial: "Industria Theta SRL",
     tipo: "SRL",
@@ -230,7 +230,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 4,
   },
   {
-    legajo: "JUR-009",
+    legajo: "LPJ-0109",
     correo: "gerencia@comercioiota.com",
     razonSocial: "Comercio Iota SA",
     tipo: "SA",
@@ -239,7 +239,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "JUR-010",
+    legajo: "LPJ-0110",
     correo: "admin@transporteskappa.com",
     razonSocial: "Transportes Kappa SRL",
     tipo: "SRL",

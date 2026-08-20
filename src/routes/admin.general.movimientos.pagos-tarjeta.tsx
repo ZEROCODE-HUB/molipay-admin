@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
+import { getClientePorUsuario } from "@/data/clientes";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")({
   head: () => ({
@@ -31,9 +33,8 @@ type PagoTarjeta = {
   fecha: string;
 };
 
-const data: PagoTarjeta[] = [
+const RAW: Omit<PagoTarjeta, "legajo">[] = [
   {
-    legajo: "MOV-007",
     usuario: "gabriel.rios@email.com",
     monto: "$ 22.400,00",
     medioPago: "Visa",
@@ -42,7 +43,6 @@ const data: PagoTarjeta[] = [
     fecha: "13/01/2025 10:00",
   },
   {
-    legajo: "MOV-013",
     usuario: "ana.garcia@email.com",
     monto: "$ 12.499,00",
     medioPago: "Mastercard",
@@ -51,7 +51,6 @@ const data: PagoTarjeta[] = [
     fecha: "10/01/2025 20:15",
   },
   {
-    legajo: "MOV-022",
     usuario: "lucas.rivas@email.com",
     monto: "$ 8.900,00",
     medioPago: "Visa",
@@ -60,7 +59,6 @@ const data: PagoTarjeta[] = [
     fecha: "10/01/2025 11:30",
   },
   {
-    legajo: "MOV-023",
     usuario: "sofia.moreno@email.com",
     monto: "$ 31.250,00",
     medioPago: "American Express",
@@ -69,7 +67,6 @@ const data: PagoTarjeta[] = [
     fecha: "09/01/2025 16:45",
   },
   {
-    legajo: "MOV-024",
     usuario: "marcos.peralta@email.com",
     monto: "$ 5.600,00",
     medioPago: "Mastercard",
@@ -78,7 +75,6 @@ const data: PagoTarjeta[] = [
     fecha: "08/01/2025 19:00",
   },
   {
-    legajo: "MOV-025",
     usuario: "clara.molina@email.com",
     monto: "$ 14.300,00",
     medioPago: "Visa",
@@ -87,6 +83,11 @@ const data: PagoTarjeta[] = [
     fecha: "07/01/2025 13:10",
   },
 ];
+
+const data: PagoTarjeta[] = RAW.map((m) => ({
+  ...m,
+  legajo: getClientePorUsuario(m.usuario)?.legajo ?? "SIN-LEGAJO",
+}));
 
 function PagosTarjetaPage() {
   const [detail, setDetail] = useState<PagoTarjeta | null>(null);
@@ -112,13 +113,19 @@ function PagosTarjetaPage() {
           title="Detalle de pago con tarjeta"
           onClose={() => setDetail(null)}
           rows={[
-            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
+            { label: "Legajo", value: <LegajoCell legajo={detail.legajo} /> },
             { label: "Usuario", value: detail.usuario },
-            { label: "Monto", value: <span className="font-mono tabular-nums">{detail.monto}</span> },
+            {
+              label: "Monto",
+              value: <span className="font-mono tabular-nums">{detail.monto}</span>,
+            },
             { label: "Medio de pago", value: detail.medioPago },
             { label: "Cuotas", value: detail.cuotas },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
+            {
+              label: "Fecha",
+              value: <span className="font-mono tabular-nums">{detail.fecha}</span>,
+            },
           ]}
         />
       )}
@@ -127,9 +134,19 @@ function PagosTarjetaPage() {
 }
 
 const columns: Column<PagoTarjeta>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
-  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
+  {
+    key: "monto",
+    label: "Monto",
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
   { key: "medioPago", label: "Medio de pago", filterable: true, render: (r) => r.medioPago },
   { key: "cuotas", label: "Cuotas", filterable: true, render: (r) => r.cuotas },
   {
@@ -139,5 +156,10 @@ const columns: Column<PagoTarjeta>[] = [
     filterOptions: estados,
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+  {
+    key: "fecha",
+    label: "Fecha",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+  },
 ];

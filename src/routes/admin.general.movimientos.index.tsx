@@ -1,12 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Eye } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Eye, FilterX, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
+import { FormDialog } from "@/components/form-dialog";
+import { Badge } from "@/components/portal-shell";
+import {
+  auditarLegajos,
+  fuentesLegajoDesdeMovimientos,
+  type InconsistenciaLegajo,
+} from "@/data/clientes";
+import { desgloseDemo, type Desglose } from "@/lib/aranceles";
+import { z } from "zod";
 
 export const Route = createFileRoute("/admin/general/movimientos/")({
+  validateSearch: z.object({ legajo: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Todos los movimientos — Movimientos — Admin Molly" },
@@ -16,9 +27,29 @@ export const Route = createFileRoute("/admin/general/movimientos/")({
   component: TodosPage,
 });
 
-const allTransactions: Movimiento[] = [
+// Cada movimiento está vinculado al cliente (empresa/persona que contrató MoliPay)
+// por su `clienteId` (FK) y muestra el `legajo` del cliente (LPF-#### / LPJ-####).
+const CLIENTE_POR_USUARIO: Record<string, { clienteId: string; legajo: string }> = {
+  "juan.perez@email.com": { clienteId: "c-0001", legajo: "LPF-0001" },
+  "maria.lopez@email.com": { clienteId: "c-0002", legajo: "LPF-0002" },
+  "carlos.martinez@email.com": { clienteId: "c-0021", legajo: "LPF-0021" },
+  "ana.garcia@email.com": { clienteId: "c-0022", legajo: "LPF-0022" },
+  "pedro.rodriguez@email.com": { clienteId: "c-0023", legajo: "LPF-0023" },
+  "lucia.mendoza@email.com": { clienteId: "c-0024", legajo: "LPF-0024" },
+  "gabriel.rios@email.com": { clienteId: "c-0025", legajo: "LPF-0025" },
+  "valentina.castro@email.com": { clienteId: "c-0026", legajo: "LPF-0026" },
+  "diego.fernandez@email.com": { clienteId: "c-0027", legajo: "LPF-0027" },
+  "lucas.rivas@email.com": { clienteId: "c-0028", legajo: "LPF-0028" },
+  "marcos.peralta@email.com": { clienteId: "c-0029", legajo: "LPF-0029" },
+  "agustin.vila@email.com": { clienteId: "c-0030", legajo: "LPF-0030" },
+  "matias.luna@email.com": { clienteId: "c-0031", legajo: "LPF-0031" },
+  "carolina.ibanez@email.com": { clienteId: "c-0032", legajo: "LPF-0032" },
+};
+
+type MovBase = Omit<Movimiento, "clienteId" | "legajo" | "desglose">;
+
+const base: MovBase[] = [
   {
-    legajo: "MOV-001",
     id: "TXN-001",
     tipo: "Depósito",
     cvu: "0000003100087654321012",
@@ -31,7 +62,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-002",
     id: "TXN-002",
     tipo: "Retiro",
     cvu: "0000003100087654321023",
@@ -44,7 +74,6 @@ const allTransactions: Movimiento[] = [
     estado: "EN PROGRESO",
   },
   {
-    legajo: "MOV-003",
     id: "TXN-003",
     tipo: "Comisión",
     cvu: "0000003100087654321034",
@@ -57,7 +86,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-004",
     id: "TXN-004",
     tipo: "Depósito",
     cvu: "0000003100087654321045",
@@ -70,7 +98,6 @@ const allTransactions: Movimiento[] = [
     estado: "EN PROGRESO",
   },
   {
-    legajo: "MOV-005",
     id: "TXN-005",
     tipo: "Retiro",
     cvu: "0000003100087654321056",
@@ -83,7 +110,6 @@ const allTransactions: Movimiento[] = [
     estado: "RECHAZADO",
   },
   {
-    legajo: "MOV-006",
     id: "TXN-006",
     tipo: "Impuesto",
     cvu: "0000003100087654321067",
@@ -96,7 +122,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-007",
     id: "TXN-007",
     tipo: "Pago con tarjeta",
     cvu: "0000003100087654321078",
@@ -109,7 +134,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-008",
     id: "TXN-008",
     tipo: "Pago PCT",
     cvu: "0000003100087654321089",
@@ -122,7 +146,6 @@ const allTransactions: Movimiento[] = [
     estado: "EN PROGRESO",
   },
   {
-    legajo: "MOV-009",
     id: "TXN-009",
     tipo: "Cobro PCT",
     cvu: "0000003100087654321090",
@@ -135,7 +158,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-010",
     id: "TXN-010",
     tipo: "Depósito",
     cvu: "0000003100087654321012",
@@ -148,7 +170,6 @@ const allTransactions: Movimiento[] = [
     estado: "BLOQUEADO",
   },
   {
-    legajo: "MOV-011",
     id: "TXN-011",
     tipo: "Retiro",
     cvu: "0000003100087654321056",
@@ -161,7 +182,6 @@ const allTransactions: Movimiento[] = [
     estado: "BLOQUEADO",
   },
   {
-    legajo: "MOV-012",
     id: "TXN-012",
     tipo: "Comisión",
     cvu: "0000003100087654321034",
@@ -174,7 +194,6 @@ const allTransactions: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-013",
     id: "TXN-013",
     tipo: "Pago con tarjeta",
     cvu: "0000003100087654321045",
@@ -187,7 +206,6 @@ const allTransactions: Movimiento[] = [
     estado: "CREADO",
   },
   {
-    legajo: "MOV-014",
     id: "TXN-014",
     tipo: "Impuesto",
     cvu: "0000003100087654321056",
@@ -200,7 +218,6 @@ const allTransactions: Movimiento[] = [
     estado: "EN PROGRESO",
   },
   {
-    legajo: "MOV-015",
     id: "TXN-015",
     tipo: "Cobro PCT",
     cvu: "0000003100087654321090",
@@ -213,7 +230,6 @@ const allTransactions: Movimiento[] = [
     estado: "REEMBOLSADO",
   },
   {
-    legajo: "MOV-016",
     id: "TXN-016",
     tipo: "Pago con tarjeta",
     cvu: "0000003100087654321081",
@@ -226,7 +242,6 @@ const allTransactions: Movimiento[] = [
     estado: "ABIERTO",
   },
   {
-    legajo: "MOV-017",
     id: "TXN-017",
     tipo: "Pago con tarjeta",
     cvu: "0000003100087654321082",
@@ -239,7 +254,6 @@ const allTransactions: Movimiento[] = [
     estado: "EXPIRADO",
   },
   {
-    legajo: "MOV-018",
     id: "TXN-018",
     tipo: "Pago PCT",
     cvu: "0000003100087654321083",
@@ -252,7 +266,6 @@ const allTransactions: Movimiento[] = [
     estado: "RECHAZADO",
   },
   {
-    legajo: "MOV-028",
     id: "TXN-028",
     tipo: "Pago PCT",
     cvu: "0000003100087654321089",
@@ -265,7 +278,6 @@ const allTransactions: Movimiento[] = [
     estado: "REEMBOLSADO",
   },
   {
-    legajo: "MOV-031",
     id: "TXN-031",
     tipo: "Pago de servicio",
     cvu: "0000003100087654321044",
@@ -279,33 +291,180 @@ const allTransactions: Movimiento[] = [
   },
 ];
 
+// Legajos históricos cargados con el esquema anterior (identificador genérico).
+// Deben aparecer en la auditoría de datos existentes como inconsistencias.
+const legajosHistoricos: Movimiento[] = [
+  {
+    clienteId: "legacy-1",
+    legajo: "MOV-041",
+    id: "TXN-041",
+    tipo: "Pago PCT",
+    cvu: "0000003100087654321091",
+    usuario: "operador.historico@email.com",
+    nombreOrigen: "Operador Histórico",
+    nombreDestino: "Comercio Legacy",
+    cuit: "30-00000000-0",
+    monto: "$ 1.900,00",
+    fecha: "08/01/2025 12:00",
+    estado: "APROBADO",
+  },
+  {
+    clienteId: "legacy-2",
+    legajo: "COM-0999",
+    id: "TXN-042",
+    tipo: "Depósito",
+    cvu: "0000003100087654321092",
+    usuario: "comercio.legacy@email.com",
+    nombreOrigen: "Comercio Legacy",
+    nombreDestino: "Moli SA",
+    cuit: "30-11111111-1",
+    monto: "$ 900.000,00",
+    fecha: "07/01/2025 09:30",
+    estado: "APROBADO",
+  },
+];
+
+const parseMonto = (s: string): number =>
+  Number(
+    s
+      .replace(/[^\d,]/g, "")
+      .replace(/\./g, "")
+      .replace(",", "."),
+  ) || 0;
+
+const movimientos: Movimiento[] = base.map((m) => {
+  const cli = CLIENTE_POR_USUARIO[m.usuario];
+  const clienteId = cli?.clienteId ?? m.id;
+  const legajo = cli?.legajo ?? "SIN-LEGAJO";
+  const desglose: Desglose | undefined =
+    m.tipo === "Comisión" ? desgloseDemo(parseMonto(m.monto)) : undefined;
+  return { ...m, clienteId, legajo, desglose };
+});
+
+const allTransactions: Movimiento[] = [...movimientos, ...legajosHistoricos];
+
+const toneInconsistencia: Record<InconsistenciaLegajo["tipo"], "danger" | "warn" | "neutral"> = {
+  formato: "danger",
+  prefijo_inconsistente: "danger",
+  duplicado: "warn",
+  sin_cliente: "warn",
+};
+
 function TodosPage() {
+  const { legajo } = Route.useSearch();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<Movimiento | null>(null);
+  const [auditOpen, setAuditOpen] = useState(false);
+
+  const inconsistencias = useMemo(
+    () => auditarLegajos(fuentesLegajoDesdeMovimientos(allTransactions)),
+    [],
+  );
 
   const getActions = (row: Movimiento): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
+    {
+      label: "Ver movimientos del cliente",
+      icon: FilterX,
+      onClick: () => navigate({ to: "/admin/general/movimientos", search: { legajo: row.legajo } }),
+    },
   ];
 
   return (
     <>
       <PageHeader
         title="Todos los movimientos"
-        description="Historial completo de transacciones de la plataforma."
+        description="Historial completo de transacciones de la plataforma. Filtrá por legajo para ver el histórico completo del cliente."
       />
+
+      {inconsistencias.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 text-amber-800">
+            <ShieldAlert size={16} />
+            <span>
+              <strong>Auditoría de legajos:</strong> se detectaron {inconsistencias.length}{" "}
+              registro(s) con inconsistencias en los legajos cargados.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAuditOpen(true)}
+            className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+          >
+            Ver detalle
+          </button>
+        </div>
+      )}
+
+      {legajo && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          Mostrando movimientos del cliente con legajo{" "}
+          <span className="font-mono font-semibold tabular-nums">{legajo}</span> (identificador
+          interno del cliente).{" "}
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/admin/general/movimientos", search: {} })}
+            className="ml-1 text-xs font-semibold text-primary underline underline-offset-2"
+          >
+            Limpiar filtro
+          </button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         data={allTransactions}
-        keyExtractor={(r) => r.legajo}
+        keyExtractor={(r) => r.id}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+        initialQuery={legajo}
       />
       {detail && <MovimientoDetail m={detail} onClose={() => setDetail(null)} />}
+
+      <FormDialog
+        open={auditOpen}
+        onClose={() => setAuditOpen(false)}
+        title="Auditoría de legajos"
+        description="Inconsistencias detectadas en los legajos cargados en la base de datos actual."
+        onSubmit={() => setAuditOpen(false)}
+        submitLabel="Cerrar"
+        size="lg"
+      >
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+          {inconsistencias.map((inc, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
+            >
+              <Badge tone={toneInconsistencia[inc.tipo]}>
+                {inc.tipo.replace("_", " ").toUpperCase()}
+              </Badge>
+              <div className="min-w-0">
+                <div className="font-mono font-semibold tabular-nums">{inc.legajo}</div>
+                <div className="text-xs text-muted-foreground">{inc.entidad}</div>
+                <div className="text-xs mt-1">{inc.detalle}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </FormDialog>
     </>
   );
 }
 
 const columns: Column<Movimiento>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
-  { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.id}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
+  {
+    key: "id",
+    label: "ID",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.id}</span>,
+  },
   {
     key: "tipo",
     label: "Tipo de movimiento",
@@ -322,7 +481,12 @@ const columns: Column<Movimiento>[] = [
     ],
     render: (r) => r.tipo,
   },
-  { key: "cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span> },
+  {
+    key: "cvu",
+    label: "CVU",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span>,
+  },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {
     key: "nombreOrigen",
@@ -336,9 +500,23 @@ const columns: Column<Movimiento>[] = [
     filterable: true,
     render: (r) => r.nombreDestino,
   },
-  { key: "cuit", label: "CUIT", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span> },
-  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+  {
+    key: "cuit",
+    label: "CUIT",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span>,
+  },
+  {
+    key: "monto",
+    label: "Monto",
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+  },
   {
     key: "estado",
     label: "Estado",

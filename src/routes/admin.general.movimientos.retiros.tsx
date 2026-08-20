@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
+import { getClientePorUsuario } from "@/data/clientes";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 
 export const Route = createFileRoute("/admin/general/movimientos/retiros")({
   head: () => ({
@@ -16,9 +18,8 @@ export const Route = createFileRoute("/admin/general/movimientos/retiros")({
   component: RetirosPage,
 });
 
-const data: Movimiento[] = [
+const RAW: Omit<Movimiento, "clienteId" | "legajo">[] = [
   {
-    legajo: "MOV-002",
     id: "TXN-002",
     tipo: "Retiro",
     cvu: "0000003100087654321023",
@@ -31,7 +32,6 @@ const data: Movimiento[] = [
     estado: "EN PROGRESO",
   },
   {
-    legajo: "MOV-005",
     id: "TXN-005",
     tipo: "Retiro",
     cvu: "0000003100087654321056",
@@ -44,7 +44,6 @@ const data: Movimiento[] = [
     estado: "RECHAZADO",
   },
   {
-    legajo: "MOV-011",
     id: "TXN-011",
     tipo: "Retiro",
     cvu: "0000003100087654321023",
@@ -57,7 +56,6 @@ const data: Movimiento[] = [
     estado: "APROBADO",
   },
   {
-    legajo: "MOV-019",
     id: "TXN-019",
     tipo: "Retiro",
     cvu: "0000003100087654321077",
@@ -70,7 +68,6 @@ const data: Movimiento[] = [
     estado: "BLOQUEADO",
   },
   {
-    legajo: "MOV-020",
     id: "TXN-020",
     tipo: "Retiro",
     cvu: "0000003100087654321023",
@@ -83,6 +80,11 @@ const data: Movimiento[] = [
     estado: "APROBADO",
   },
 ];
+
+const data: Movimiento[] = RAW.map((m) => {
+  const c = getClientePorUsuario(m.usuario);
+  return { ...m, legajo: c?.legajo ?? "SIN-LEGAJO", clienteId: c?.id ?? "c-0000" };
+});
 
 function RetirosPage() {
   const [detail, setDetail] = useState<Movimiento | null>(null);
@@ -100,7 +102,7 @@ function RetirosPage() {
       <DataTable
         columns={columns}
         data={data}
-        keyExtractor={(r) => r.legajo}
+        keyExtractor={(r) => r.id}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detail && <MovimientoDetail m={detail} onClose={() => setDetail(null)} />}
@@ -109,9 +111,25 @@ function RetirosPage() {
 }
 
 const columns: Column<Movimiento>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
-  { key: "id", label: "ID", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.id}</span> },
-  { key: "cvu", label: "CVU/CBU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
+  {
+    key: "id",
+    label: "ID",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.id}</span>,
+  },
+  {
+    key: "cvu",
+    label: "CVU/CBU",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span>,
+  },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {
     key: "nombreOrigen",
@@ -120,9 +138,23 @@ const columns: Column<Movimiento>[] = [
     render: (r) => r.nombreOrigen,
   },
   { key: "nombreDestino", label: "Destino", filterable: true, render: (r) => r.nombreDestino },
-  { key: "cuit", label: "CUIT destino", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span> },
-  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+  {
+    key: "cuit",
+    label: "CUIT destino",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span>,
+  },
+  {
+    key: "monto",
+    label: "Monto",
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "fecha",
+    label: "Fecha",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+  },
   {
     key: "estado",
     label: "Estado",

@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 
 export const Route = createFileRoute("/admin/general/usuarios/")({
   head: () => ({
@@ -39,7 +40,7 @@ type Usuario = {
 
 const initialData: Usuario[] = [
   {
-    legajo: "USR-001",
+    legajo: "LPF-0001",
     correo: "juan.perez@email.com",
     nombres: "Juan Carlos",
     apellidos: "Pérez González",
@@ -47,7 +48,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "12/01/2024",
   },
   {
-    legajo: "USR-002",
+    legajo: "LPF-0002",
     correo: "maria.lopez@email.com",
     nombres: "María Elena",
     apellidos: "López Fernández",
@@ -55,7 +56,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "23/02/2024",
   },
   {
-    legajo: "USR-003",
+    legajo: "LPF-0021",
     correo: "carlos.martinez@email.com",
     nombres: "Carlos Alberto",
     apellidos: "Martínez Ruiz",
@@ -63,7 +64,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "05/03/2024",
   },
   {
-    legajo: "USR-004",
+    legajo: "LPF-0022",
     correo: "ana.garcia@email.com",
     nombres: "Ana Sofía",
     apellidos: "García Díaz",
@@ -71,7 +72,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "18/04/2024",
   },
   {
-    legajo: "USR-005",
+    legajo: "LPF-0023",
     correo: "pedro.rodriguez@email.com",
     nombres: "Pedro Antonio",
     apellidos: "Rodríguez Silva",
@@ -79,7 +80,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "30/05/2024",
   },
   {
-    legajo: "USR-006",
+    legajo: "LPF-0033",
     correo: "lucia.mendoza@email.com",
     nombres: "Lucía Belén",
     apellidos: "Mendoza Torres",
@@ -87,7 +88,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "14/06/2024",
   },
   {
-    legajo: "USR-007",
+    legajo: "LPF-0034",
     correo: "gabriel.rios@email.com",
     nombres: "Gabriel Esteban",
     apellidos: "Ríos Morales",
@@ -95,7 +96,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "02/07/2024",
   },
   {
-    legajo: "USR-008",
+    legajo: "LPF-0035",
     correo: "valentina.castro@email.com",
     nombres: "Valentina Alejandra",
     apellidos: "Castro Vega",
@@ -103,7 +104,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "19/08/2024",
   },
   {
-    legajo: "USR-009",
+    legajo: "LPF-0036",
     correo: "diego.fernandez@email.com",
     nombres: "Diego Martín",
     apellidos: "Fernández Acosta",
@@ -111,7 +112,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "11/09/2024",
   },
   {
-    legajo: "USR-010",
+    legajo: "LPF-0037",
     correo: "florencia.dominguez@email.com",
     nombres: "Florencia Beatriz",
     apellidos: "Domínguez Páez",
@@ -119,7 +120,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "25/10/2024",
   },
   {
-    legajo: "USR-011",
+    legajo: "LPF-0038",
     correo: "andres.molina@email.com",
     nombres: "Andrés Sebastián",
     apellidos: "Molina Rivas",
@@ -127,7 +128,7 @@ const initialData: Usuario[] = [
     fechaRegistro: "07/11/2024",
   },
   {
-    legajo: "USR-012",
+    legajo: "LPF-0039",
     correo: "camila.sosa@email.com",
     nombres: "Camila Andrea",
     apellidos: "Sosa Guzmán",
@@ -255,8 +256,9 @@ const columns: Column<Usuario>[] = [
   {
     key: "legajo",
     label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
     filterable: true,
-    render: (row) => <span className="font-mono tabular-nums">{row.legajo}</span>,
+    render: (row) => <LegajoCell legajo={row.legajo} />,
   },
   { key: "correo", label: "Usuario", filterable: true, render: (row) => row.correo },
   { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },

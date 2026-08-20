@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
+import { getClientePorUsuario } from "@/data/clientes";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/admin/general/movimientos/cobros-qr")({
@@ -36,10 +38,9 @@ type CobroQr = {
   fecha: string;
 };
 
-const initialData: CobroQr[] = [
+const RAW: Omit<CobroQr, "legajo">[] = [
   {
     usuario: "diego.fernandez@email.com",
-    legajo: "MOV-009",
     tipoQr: "Estático",
     estadoQr: "Usado",
     montoTotal: "$ 1.200,00",
@@ -50,7 +51,6 @@ const initialData: CobroQr[] = [
   },
   {
     usuario: "valentina.castro@email.com",
-    legajo: "MOV-015",
     tipoQr: "Dinámico",
     estadoQr: "Activo",
     montoTotal: "$ 4.500,00",
@@ -61,7 +61,6 @@ const initialData: CobroQr[] = [
   },
   {
     usuario: "nicolas.aguirre@email.com",
-    legajo: "MOV-029",
     tipoQr: "Dinámico",
     estadoQr: "Usado",
     montoTotal: "$ 6.300,00",
@@ -72,7 +71,6 @@ const initialData: CobroQr[] = [
   },
   {
     usuario: "martina.diaz@email.com",
-    legajo: "MOV-030",
     tipoQr: "Estático",
     estadoQr: "Expirado",
     montoTotal: "$ 980,00",
@@ -82,6 +80,11 @@ const initialData: CobroQr[] = [
     fecha: "10/01/2025 11:35",
   },
 ];
+
+const initialData: CobroQr[] = RAW.map((m) => ({
+  ...m,
+  legajo: getClientePorUsuario(m.usuario)?.legajo ?? "SIN-LEGAJO",
+}));
 
 function CobrosQrPage() {
   const [data, setData] = useState<CobroQr[]>(initialData);
@@ -115,14 +118,26 @@ function CobrosQrPage() {
           onClose={() => setDetail(null)}
           rows={[
             { label: "Usuario", value: detail.usuario },
-            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
+            { label: "Legajo", value: <LegajoCell legajo={detail.legajo} /> },
             { label: "Tipo QR", value: detail.tipoQr },
             { label: "Estado QR", value: estadoBadge(detail.estadoQr) },
-            { label: "Monto total", value: <span className="font-mono tabular-nums">{detail.montoTotal}</span> },
-            { label: "Comisión", value: <span className="font-mono tabular-nums">{detail.comision}</span> },
-            { label: "Monto neto", value: <span className="font-mono tabular-nums">{detail.montoNeto}</span> },
+            {
+              label: "Monto total",
+              value: <span className="font-mono tabular-nums">{detail.montoTotal}</span>,
+            },
+            {
+              label: "Comisión",
+              value: <span className="font-mono tabular-nums">{detail.comision}</span>,
+            },
+            {
+              label: "Monto neto",
+              value: <span className="font-mono tabular-nums">{detail.montoNeto}</span>,
+            },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
+            {
+              label: "Fecha",
+              value: <span className="font-mono tabular-nums">{detail.fecha}</span>,
+            },
           ]}
         />
       )}
@@ -148,7 +163,13 @@ function CobrosQrPage() {
 
 const columns: Column<CobroQr>[] = [
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
   {
     key: "tipoQr",
     label: "Tipo QR",
@@ -163,9 +184,21 @@ const columns: Column<CobroQr>[] = [
     filterOptions: estadosQr,
     render: (r) => estadoBadge(r.estadoQr),
   },
-  { key: "montoTotal", label: "Monto Total", render: (r) => <span className="font-mono tabular-nums">{r.montoTotal}</span> },
-  { key: "comision", label: "Comisión", render: (r) => <span className="font-mono tabular-nums">{r.comision}</span> },
-  { key: "montoNeto", label: "Monto Neto", render: (r) => <span className="font-mono tabular-nums">{r.montoNeto}</span> },
+  {
+    key: "montoTotal",
+    label: "Monto Total",
+    render: (r) => <span className="font-mono tabular-nums">{r.montoTotal}</span>,
+  },
+  {
+    key: "comision",
+    label: "Comisión",
+    render: (r) => <span className="font-mono tabular-nums">{r.comision}</span>,
+  },
+  {
+    key: "montoNeto",
+    label: "Monto Neto",
+    render: (r) => <span className="font-mono tabular-nums">{r.montoNeto}</span>,
+  },
   {
     key: "estado",
     label: "Estado",
@@ -173,5 +206,10 @@ const columns: Column<CobroQr>[] = [
     filterOptions: estados,
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+  {
+    key: "fecha",
+    label: "Fecha",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+  },
 ];

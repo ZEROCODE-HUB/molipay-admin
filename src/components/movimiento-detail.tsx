@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/portal-shell";
+import { LegajoCell } from "@/components/legajo-label";
+import { fmtARS, type Desglose } from "@/lib/aranceles";
 
 export type Movimiento = {
+  clienteId: string;
   legajo: string;
   id: string;
   tipo: string;
@@ -21,6 +24,7 @@ export type Movimiento = {
     | "ABIERTO"
     | "EXPIRADO"
     | "REEMBOLSADO";
+  desglose?: Desglose;
 };
 
 const lifecycleTooltip =
@@ -101,7 +105,10 @@ export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () =>
       title="Detalle de movimiento"
       onClose={onClose}
       rows={[
-        { label: "Legajo", value: <span className="font-mono tabular-nums">{m.legajo}</span> },
+        {
+          label: "Legajo",
+          value: <LegajoCell legajo={m.legajo} />,
+        },
         { label: "ID Transacción", value: <span className="font-mono text-xs">{m.id}</span> },
         { label: "Tipo", value: m.tipo },
         { label: "Usuario", value: m.usuario },
@@ -109,7 +116,34 @@ export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () =>
         { label: "Destino", value: m.nombreDestino },
         { label: "CUIT destino", value: <span className="font-mono tabular-nums">{m.cuit}</span> },
         { label: "CVU/CBU", value: <span className="font-mono text-xs">{m.cvu}</span> },
-        { label: "Monto", value: <span className="font-mono font-semibold tabular-nums">{m.monto}</span> },
+        {
+          label: "Monto",
+          value: <span className="font-mono font-semibold tabular-nums">{m.monto}</span>,
+        },
+        ...(m.desglose
+          ? [
+              {
+                label: `Comisión (${m.desglose.porcentajeImpuesto}% imp. no incluido)`,
+                value: (
+                  <span className="font-mono tabular-nums">{fmtARS(m.desglose.comision)}</span>
+                ),
+              },
+              {
+                label: "Impuesto (IVA)",
+                value: (
+                  <span className="font-mono tabular-nums">{fmtARS(m.desglose.impuesto)}</span>
+                ),
+              },
+              {
+                label: "Monto cobrado al cliente",
+                value: (
+                  <span className="font-mono font-semibold tabular-nums">
+                    {fmtARS(m.desglose.total)}
+                  </span>
+                ),
+              },
+            ]
+          : []),
         { label: "Fecha", value: <span className="font-mono">{m.fecha}</span> },
         { label: "Estado", value: estadoBadge(m.estado) },
       ]}

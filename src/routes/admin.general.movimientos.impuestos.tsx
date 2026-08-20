@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Info } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { impuestosIniciales } from "@/data/impuestos";
 
 export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
@@ -33,7 +34,7 @@ type ImpuestoCobrado = {
 
 const data: ImpuestoCobrado[] = [
   {
-    legajo: "MOV-006",
+    legajo: "LPF-0024",
     usuario: "lucia.mendoza@email.com",
     nombreCompleto: "Lucía Belén Mendoza",
     idTransaccion: "TXN-006",
@@ -44,7 +45,7 @@ const data: ImpuestoCobrado[] = [
     fechaCobro: "13/01/2025 08:30",
   },
   {
-    legajo: "MOV-014",
+    legajo: "LPF-0023",
     usuario: "pedro.rodriguez@email.com",
     nombreCompleto: "Pedro Antonio Rodríguez",
     idTransaccion: "TXN-014",
@@ -55,7 +56,7 @@ const data: ImpuestoCobrado[] = [
     fechaCobro: "10/01/2025 08:00",
   },
   {
-    legajo: "MOV-034",
+    legajo: "LPF-0023",
     usuario: "pedro.rodriguez@email.com",
     nombreCompleto: "Pedro Antonio Rodríguez",
     idTransaccion: "TXN-034",
@@ -66,7 +67,7 @@ const data: ImpuestoCobrado[] = [
     fechaCobro: "09/01/2025 09:05",
   },
   {
-    legajo: "MOV-035",
+    legajo: "LPF-0024",
     usuario: "lucia.mendoza@email.com",
     nombreCompleto: "Lucía Belén Mendoza",
     idTransaccion: "TXN-035",
@@ -89,12 +90,21 @@ function ImpuestosPage() {
     <>
       <PageHeader
         title="Impuestos cobrados"
-        description="Percepciones e impuestos debitados a los usuarios."
+        description="Percepciones e impuestos retenidos al cliente."
       />
+      <div className="flex items-start gap-2 rounded-lg border border-muted bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        <Info size={16} className="shrink-0 mt-0.5" />
+        <p>
+          Estas son <strong>retenciones impositivas al cliente</strong> (Ingresos Brutos, débito/
+          crédito, percepciones). Son distintas del <strong>impuesto sobre la comisión</strong> (IVA
+          que MoliPay retiene por el servicio, hoy 21%), que se muestra desglosado en{" "}
+          <span className="font-medium">Cobro de comisiones</span>.
+        </p>
+      </div>
       <DataTable
         columns={columns}
         data={data}
-        keyExtractor={(r) => r.legajo}
+        keyExtractor={(r) => r.idTransaccion}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
       {detail && (
@@ -102,15 +112,27 @@ function ImpuestosPage() {
           title="Detalle de impuesto cobrado"
           onClose={() => setDetail(null)}
           rows={[
-            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
+            { label: "Legajo", value: <LegajoCell legajo={detail.legajo} /> },
             { label: "Usuario", value: detail.usuario },
             { label: "Nombre completo", value: detail.nombreCompleto },
-            { label: "ID de transacción", value: <span className="font-mono tabular-nums">{detail.idTransaccion}</span> },
+            {
+              label: "ID de transacción",
+              value: <span className="font-mono tabular-nums">{detail.idTransaccion}</span>,
+            },
             { label: "Impuesto", value: detail.impuesto },
-            { label: "Monto original", value: <span className="font-mono tabular-nums">{detail.montoOriginal}</span> },
-            { label: "Monto impuesto", value: <span className="font-mono tabular-nums">{detail.montoImpuesto}</span> },
+            {
+              label: "Monto original",
+              value: <span className="font-mono tabular-nums">{detail.montoOriginal}</span>,
+            },
+            {
+              label: "Monto impuesto",
+              value: <span className="font-mono tabular-nums">{detail.montoImpuesto}</span>,
+            },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha de cobro", value: <span className="font-mono tabular-nums">{detail.fechaCobro}</span> },
+            {
+              label: "Fecha de cobro",
+              value: <span className="font-mono tabular-nums">{detail.fechaCobro}</span>,
+            },
           ]}
         />
       )}
@@ -119,7 +141,13 @@ function ImpuestosPage() {
 }
 
 const columns: Column<ImpuestoCobrado>[] = [
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
   {
     key: "nombreCompleto",
@@ -140,8 +168,16 @@ const columns: Column<ImpuestoCobrado>[] = [
     filterOptions: impuestos,
     render: (r) => r.impuesto,
   },
-  { key: "montoOriginal", label: "Monto original", render: (r) => <span className="font-mono tabular-nums">{r.montoOriginal}</span> },
-  { key: "montoImpuesto", label: "Monto impuesto", render: (r) => <span className="font-mono tabular-nums">{r.montoImpuesto}</span> },
+  {
+    key: "montoOriginal",
+    label: "Monto original",
+    render: (r) => <span className="font-mono tabular-nums">{r.montoOriginal}</span>,
+  },
+  {
+    key: "montoImpuesto",
+    label: "Monto impuesto",
+    render: (r) => <span className="font-mono tabular-nums">{r.montoImpuesto}</span>,
+  },
   {
     key: "estado",
     label: "Estado",
@@ -149,5 +185,10 @@ const columns: Column<ImpuestoCobrado>[] = [
     filterOptions: ["APROBADO", "EN PROGRESO", "RECHAZADO", "BLOQUEADO"],
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fechaCobro", label: "Fecha de cobro", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fechaCobro}</span> },
+  {
+    key: "fechaCobro",
+    label: "Fecha de cobro",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fechaCobro}</span>,
+  },
 ];

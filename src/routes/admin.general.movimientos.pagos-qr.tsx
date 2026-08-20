@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { DetailModal, estadoBadge } from "@/components/movimiento-detail";
+import { getClientePorUsuario } from "@/data/clientes";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-qr")({
   head: () => ({
@@ -31,10 +33,9 @@ type PagoQr = {
   fecha: string;
 };
 
-const data: PagoQr[] = [
+const RAW: Omit<PagoQr, "legajo">[] = [
   {
     usuario: "valentina.castro@email.com",
-    legajo: "MOV-008",
     qrIdTx: "QR-TX-008",
     monto: "$ 3.750,00",
     cuitMerchant: "30-89012345-6",
@@ -43,7 +44,6 @@ const data: PagoQr[] = [
   },
   {
     usuario: "agustin.vila@email.com",
-    legajo: "MOV-026",
     qrIdTx: "QR-TX-026",
     monto: "$ 2.100,00",
     cuitMerchant: "30-11223344-7",
@@ -52,7 +52,6 @@ const data: PagoQr[] = [
   },
   {
     usuario: "florencia.sosa@email.com",
-    legajo: "MOV-027",
     qrIdTx: "QR-TX-027",
     monto: "$ 7.890,00",
     cuitMerchant: "30-55667788-9",
@@ -61,7 +60,6 @@ const data: PagoQr[] = [
   },
   {
     usuario: "matias.luna@email.com",
-    legajo: "MOV-028",
     qrIdTx: "QR-TX-028",
     monto: "$ 1.450,00",
     cuitMerchant: "30-22334455-6",
@@ -69,6 +67,11 @@ const data: PagoQr[] = [
     fecha: "10/01/2025 10:05",
   },
 ];
+
+const data: PagoQr[] = RAW.map((m) => ({
+  ...m,
+  legajo: getClientePorUsuario(m.usuario)?.legajo ?? "SIN-LEGAJO",
+}));
 
 function PagosQrPage() {
   const [detail, setDetail] = useState<PagoQr | null>(null);
@@ -95,12 +98,24 @@ function PagosQrPage() {
           onClose={() => setDetail(null)}
           rows={[
             { label: "Usuario", value: detail.usuario },
-            { label: "Legajo", value: <span className="font-mono tabular-nums">{detail.legajo}</span> },
-            { label: "QR ID TX", value: <span className="font-mono tabular-nums">{detail.qrIdTx}</span> },
-            { label: "Monto", value: <span className="font-mono tabular-nums">{detail.monto}</span> },
-            { label: "CUIT Merchant", value: <span className="font-mono tabular-nums">{detail.cuitMerchant}</span> },
+            { label: "Legajo", value: <LegajoCell legajo={detail.legajo} /> },
+            {
+              label: "QR ID TX",
+              value: <span className="font-mono tabular-nums">{detail.qrIdTx}</span>,
+            },
+            {
+              label: "Monto",
+              value: <span className="font-mono tabular-nums">{detail.monto}</span>,
+            },
+            {
+              label: "CUIT Merchant",
+              value: <span className="font-mono tabular-nums">{detail.cuitMerchant}</span>,
+            },
             { label: "Estado", value: estadoBadge(detail.estado) },
-            { label: "Fecha", value: <span className="font-mono tabular-nums">{detail.fecha}</span> },
+            {
+              label: "Fecha",
+              value: <span className="font-mono tabular-nums">{detail.fecha}</span>,
+            },
           ]}
         />
       )}
@@ -110,10 +125,30 @@ function PagosQrPage() {
 
 const columns: Column<PagoQr>[] = [
   { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
-  { key: "legajo", label: "Legajo", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span> },
-  { key: "qrIdTx", label: "QR ID TX", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.qrIdTx}</span> },
-  { key: "monto", label: "Monto", render: (r) => <span className="font-mono tabular-nums">{r.monto}</span> },
-  { key: "cuitMerchant", label: "CUIT Merchant", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r.cuitMerchant}</span> },
+  {
+    key: "legajo",
+    label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
+    filterable: true,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
+  },
+  {
+    key: "qrIdTx",
+    label: "QR ID TX",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.qrIdTx}</span>,
+  },
+  {
+    key: "monto",
+    label: "Monto",
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "cuitMerchant",
+    label: "CUIT Merchant",
+    filterable: true,
+    render: (r) => <span className="font-mono tabular-nums">{r.cuitMerchant}</span>,
+  },
   {
     key: "estado",
     label: "Estado",
@@ -121,5 +156,10 @@ const columns: Column<PagoQr>[] = [
     filterOptions: estados,
     render: (r) => estadoBadge(r.estado),
   },
-  { key: "fecha", label: "Fecha", filterable: "date", render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span> },
+  {
+    key: "fecha",
+    label: "Fecha",
+    filterable: "date",
+    render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
+  },
 ];

@@ -1,5 +1,13 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Download, X, Search } from "lucide-react";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Download,
+  X,
+  Search,
+  HelpCircle,
+} from "lucide-react";
 import { BtnOutline } from "./portal-shell";
 
 export type FilterType = "text" | "date" | "enum";
@@ -10,6 +18,7 @@ export type Column<T> = {
   sortable?: boolean;
   filterable?: boolean | FilterType;
   filterOptions?: string[];
+  hint?: string;
   render: (row: T) => ReactNode;
 };
 
@@ -31,6 +40,7 @@ type DataTableProps<T> = {
   showEnumAllOption?: boolean;
   showDownloadButton?: boolean;
   dateFilterColumns?: string[];
+  initialQuery?: string;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -65,14 +75,21 @@ export function DataTable<T>({
   showEnumAllOption = true,
   showDownloadButton = true,
   dateFilterColumns,
+  initialQuery,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [globalQuery, setGlobalQuery] = useState("");
+  const [globalQuery, setGlobalQuery] = useState(initialQuery ?? "");
   const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
+
+  useEffect(() => {
+    if (initialQuery === undefined) return;
+    setGlobalQuery(initialQuery);
+    setDebouncedQuery(initialQuery);
+  }, [initialQuery]);
 
   const textSearchableCols = useMemo(() => columns.filter((c) => isTextFilterable(c)), [columns]);
 
@@ -429,6 +446,11 @@ export function DataTable<T>({
                     disabled={!col.sortable}
                   >
                     {col.label}
+                    {col.hint && (
+                      <span title={col.hint} className="cursor-help text-muted-foreground">
+                        <HelpCircle size={12} />
+                      </span>
+                    )}
                     {col.sortable && <SortIcon columnKey={col.key} />}
                   </button>
                 </th>

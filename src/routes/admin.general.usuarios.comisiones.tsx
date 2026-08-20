@@ -5,8 +5,11 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { BtnPrimary, BtnOutline, Badge, Input } from "@/components/portal-shell";
+import { BtnPrimary, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
+import { desgloseDesdeConfig, fmtARS, fmtPct, type Desglose } from "@/lib/aranceles";
+import type { ModalidadComision } from "@/data/clientes";
 
 export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   head: () => ({
@@ -26,90 +29,291 @@ type Comision = {
   correo: string;
   operacion: string;
   tipo: string;
-  modalidad: "Fijo" | "Porcentaje";
+  modalidad: ModalidadComision;
   estado: "Habilitado" | "Deshabilitado";
-  monto: string;
+  porcentaje: number | null;
+  montoFijo: number | null;
+  porcentajeImpuesto: number;
   descripcion: string;
 };
 
+// Monto de referencia usado para previsualizar el desglose de cobro.
+const MONTO_OPERACION_REF = 100000;
+
+const montoBase = (c: Pick<Comision, "modalidad" | "porcentaje" | "montoFijo">) =>
+  c.modalidad === "Fijo" ? (c.montoFijo ?? 0) : null;
+
+const desgloseDe = (
+  c: Pick<Comision, "modalidad" | "porcentaje" | "montoFijo" | "porcentajeImpuesto">,
+): Desglose =>
+  desgloseDesdeConfig(
+    {
+      operacion: "",
+      modalidad: c.modalidad,
+      porcentaje: c.porcentaje,
+      montoFijo: c.montoFijo,
+      porcentajeImpuesto: c.porcentajeImpuesto,
+    },
+    MONTO_OPERACION_REF,
+  );
+
+const configLabel = (c: Comision) =>
+  c.modalidad === "Fijo" ? fmtARS(c.montoFijo ?? 0) : fmtPct(c.porcentaje ?? 0);
+
 const initialData: Comision[] = [
   {
-    legajo: "COM-001",
+    legajo: "LPF-0001",
     correo: "juan.perez@email.com",
     operacion: "DEP-2024-001",
     tipo: "Depósito",
     modalidad: "Fijo",
     estado: "Habilitado",
-    monto: "$ 150,00",
+    porcentaje: null,
+    montoFijo: 150,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por depósito estándar",
   },
   {
-    legajo: "COM-002",
+    legajo: "LPF-0002",
     correo: "maria.lopez@email.com",
     operacion: "RET-2024-015",
     tipo: "Retiro",
     modalidad: "Porcentaje",
     estado: "Habilitado",
-    monto: "$ 220,50",
+    porcentaje: 0.5,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por retiro express",
   },
   {
-    legajo: "COM-003",
-    correo: "carlos.m@email.com",
+    legajo: "LPF-0021",
+    correo: "carlos.martinez@email.com",
     operacion: "LNK-2024-032",
     tipo: "Link de pago",
-    modalidad: "Fijo",
+    modalidad: "Porcentaje",
     estado: "Deshabilitado",
-    monto: "$ 75,00",
+    porcentaje: 1.9,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por link de pago",
   },
   {
-    legajo: "COM-004",
+    legajo: "LPF-0022",
     correo: "ana.garcia@email.com",
     operacion: "ECO-2024-008",
     tipo: "E-commerce",
     modalidad: "Porcentaje",
     estado: "Habilitado",
-    monto: "$ 340,00",
+    porcentaje: 1,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por transacción e-commerce",
   },
   {
-    legajo: "COM-005",
+    legajo: "LPF-0023",
     correo: "pedro.rodriguez@email.com",
     operacion: "DEP-2024-056",
     tipo: "Depósito",
     modalidad: "Fijo",
     estado: "Habilitado",
-    monto: "$ 95,00",
+    porcentaje: null,
+    montoFijo: 95,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por depósito prioritario",
   },
   {
-    legajo: "COM-006",
+    legajo: "LPF-0024",
     correo: "lucia.mendoza@email.com",
     operacion: "RET-2024-089",
     tipo: "Retiro",
     modalidad: "Porcentaje",
     estado: "Deshabilitado",
-    monto: "$ 180,00",
+    porcentaje: 0.75,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por retiro programado",
   },
   {
-    legajo: "COM-007",
+    legajo: "LPF-0025",
     correo: "gabriel.rios@email.com",
     operacion: "LNK-2024-112",
     tipo: "Link de pago",
     modalidad: "Fijo",
     estado: "Habilitado",
-    monto: "$ 60,00",
+    porcentaje: null,
+    montoFijo: 60,
+    porcentajeImpuesto: 21,
     descripcion: "Comisión por link recurrente",
   },
 ];
+
+type ComisionDraft = Pick<
+  Comision,
+  | "correo"
+  | "tipo"
+  | "modalidad"
+  | "porcentaje"
+  | "montoFijo"
+  | "porcentajeImpuesto"
+  | "descripcion"
+>;
+
+function ComisionFormFields({
+  draft,
+  onChange,
+}: {
+  draft: ComisionDraft;
+  onChange: (d: ComisionDraft) => void;
+}) {
+  return (
+    <>
+      <div>
+        <Label htmlFor="com-correo">Email</Label>
+        <Input
+          id="com-correo"
+          value={draft.correo}
+          onChange={(e) => onChange({ ...draft, correo: e.target.value })}
+          placeholder="usuario@email.com"
+        />
+      </div>
+      <div>
+        <Label htmlFor="com-tipo">Operación</Label>
+        <select
+          id="com-tipo"
+          className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          value={draft.tipo}
+          onChange={(e) => onChange({ ...draft, tipo: e.target.value })}
+        >
+          <option>Depósito</option>
+          <option>Retiro</option>
+          <option>Link de pago</option>
+          <option>E-commerce</option>
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="com-modalidad">Modalidad</Label>
+        <select
+          id="com-modalidad"
+          className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          value={draft.modalidad}
+          onChange={(e) => onChange({ ...draft, modalidad: e.target.value as ModalidadComision })}
+        >
+          <option>Porcentaje</option>
+          <option>Fijo</option>
+        </select>
+      </div>
+      {draft.modalidad === "Porcentaje" ? (
+        <div>
+          <Label htmlFor="com-pct">% Comisión</Label>
+          <Input
+            id="com-pct"
+            type="number"
+            step="0.01"
+            min={0}
+            value={draft.porcentaje ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...draft,
+                porcentaje: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+            placeholder="Ej: 1"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Porcentaje aplicado sobre el monto de la operación.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <Label htmlFor="com-fijo">Monto fijo por transacción</Label>
+          <Input
+            id="com-fijo"
+            type="number"
+            step="0.01"
+            min={0}
+            value={draft.montoFijo ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...draft,
+                montoFijo: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+            placeholder="Ej: 100"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Modalidad alternativa (monto fijo) preparada en el modelo de datos.
+          </p>
+        </div>
+      )}
+      <div>
+        <Label htmlFor="com-imp">% Impuesto (IVA sobre la comisión)</Label>
+        <Input
+          id="com-imp"
+          type="number"
+          step="0.01"
+          min={0}
+          value={draft.porcentajeImpuesto}
+          onChange={(e) => onChange({ ...draft, porcentajeImpuesto: Number(e.target.value) || 0 })}
+          placeholder="Ej: 21"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Impuesto que retiene y paga MoliPay por el servicio (hoy 21% IVA). Es distinto de las
+          retenciones al cliente (Ingresos Brutos, débito/crédito).
+        </p>
+      </div>
+      <div className="sm:col-span-2">
+        <Label htmlFor="com-desc">Descripción</Label>
+        <textarea
+          id="com-desc"
+          className="w-full h-24 px-3 py-2 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring resize-none"
+          value={draft.descripcion}
+          onChange={(e) => onChange({ ...draft, descripcion: e.target.value })}
+          placeholder="Detalle de la comisión..."
+        />
+      </div>
+    </>
+  );
+}
+
+function DesglosePreview({ desglose }: { desglose: Desglose }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-sm">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Desglose del cobro (sobre $ 100.000 de operación)
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Comisión</span>
+        <span className="font-mono tabular-nums">{fmtARS(desglose.comision)}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Impuesto ({desglose.porcentajeImpuesto}%)</span>
+        <span className="font-mono tabular-nums">{fmtARS(desglose.impuesto)}</span>
+      </div>
+      <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
+        <span>Monto cobrado al cliente</span>
+        <span className="font-mono tabular-nums">{fmtARS(desglose.total)}</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Fórmula: monto cobrado = comisión × (1 + {desglose.porcentajeImpuesto}%).
+      </p>
+    </div>
+  );
+}
 
 function ComisionesPage() {
   const [data, setData] = useState<Comision[]>(initialData);
   const [showNueva, setShowNueva] = useState(false);
   const [viewing, setViewing] = useState<Comision | null>(null);
   const [editTarget, setEditTarget] = useState<Comision | null>(null);
+  const [draft, setDraft] = useState<ComisionDraft>({
+    correo: "",
+    tipo: "Depósito",
+    modalidad: "Porcentaje",
+    porcentaje: 1,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
+    descripcion: "",
+  });
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -120,7 +324,7 @@ function ComisionesPage() {
 
   const getActions = (row: Comision): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
-    { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
+    { label: "Editar", icon: Edit3, onClick: () => setEditTarget(row) },
     ...(row.estado === "Habilitado"
       ? [
           {
@@ -161,13 +365,72 @@ function ComisionesPage() {
         ]),
   ];
 
+  const abrirNueva = () => {
+    setDraft({
+      correo: "",
+      tipo: "Depósito",
+      modalidad: "Porcentaje",
+      porcentaje: 1,
+      montoFijo: null,
+      porcentajeImpuesto: 21,
+      descripcion: "",
+    });
+    setShowNueva(true);
+  };
+
+  const abrirEdicion = (c: Comision) => {
+    setDraft({
+      correo: c.correo,
+      tipo: c.tipo,
+      modalidad: c.modalidad,
+      porcentaje: c.porcentaje,
+      montoFijo: c.montoFijo,
+      porcentajeImpuesto: c.porcentajeImpuesto,
+      descripcion: c.descripcion,
+    });
+    setEditTarget(c);
+  };
+
+  const guardarDraft = () => {
+    if (editTarget) {
+      setData((prev) => prev.map((c) => (c.legajo === editTarget.legajo ? { ...c, ...draft } : c)));
+      setEditTarget(null);
+    } else {
+      const nueva: Comision = {
+        legajo: `LPF-${String(99 + data.length)}`,
+        correo: draft.correo,
+        operacion: `OP-${String(data.length + 1).padStart(4, "0")}`,
+        tipo: draft.tipo,
+        modalidad: draft.modalidad,
+        estado: "Habilitado",
+        porcentaje: draft.modalidad === "Porcentaje" ? draft.porcentaje : null,
+        montoFijo: draft.modalidad === "Fijo" ? draft.montoFijo : null,
+        porcentajeImpuesto: draft.porcentajeImpuesto,
+        descripcion: draft.descripcion,
+      };
+      setData((prev) => [...prev, nueva]);
+      setShowNueva(false);
+    }
+  };
+
+  const draftDesglose = desgloseDesdeConfig(
+    {
+      operacion: draft.tipo,
+      modalidad: draft.modalidad,
+      porcentaje: draft.porcentaje,
+      montoFijo: draft.montoFijo,
+      porcentajeImpuesto: draft.porcentajeImpuesto,
+    },
+    MONTO_OPERACION_REF,
+  );
+
   return (
     <>
       <PageHeader
         title="Carga de comisiones"
-        description="Administración de comisiones aplicadas a usuarios."
+        description="Comisión y % Impuesto (IVA sobre la comisión) parametrizables por cliente y tipo de operación."
         action={
-          <BtnPrimary onClick={() => setShowNueva(true)}>
+          <BtnPrimary onClick={abrirNueva}>
             <Plus size={16} />
             Nueva comisión
           </BtnPrimary>
@@ -177,7 +440,7 @@ function ComisionesPage() {
       <DataTable
         columns={columns}
         data={data}
-        keyExtractor={(r) => r.legajo}
+        keyExtractor={(r) => r.legajo + r.operacion}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
       />
 
@@ -186,7 +449,7 @@ function ComisionesPage() {
           open={!!viewing}
           onClose={() => setViewing(null)}
           title="Detalle de comisión"
-          description={`Comisión ${viewing.legajo}`}
+          description={`Comisión ${viewing.legajo} — ${viewing.operacion}`}
           onSubmit={() => setViewing(null)}
           submitLabel="Cerrar"
           size="lg"
@@ -194,7 +457,7 @@ function ComisionesPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Legajo:</span>{" "}
-              <span className="font-medium font-mono tabular-nums">{viewing.legajo}</span>
+              <LegajoCell legajo={viewing.legajo} />
             </div>
             <div>
               <span className="text-muted-foreground">Correo:</span>{" "}
@@ -209,126 +472,61 @@ function ComisionesPage() {
               <span className="font-medium">{viewing.tipo}</span>
             </div>
             <div>
+              <span className="text-muted-foreground">Modalidad:</span>{" "}
+              <span className="font-medium">{viewing.modalidad}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Configuración:</span>{" "}
+              <span className="font-medium font-mono tabular-nums">{configLabel(viewing)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">% Impuesto (IVA):</span>{" "}
+              <span className="font-medium font-mono tabular-nums">
+                {fmtPct(viewing.porcentajeImpuesto)}
+              </span>
+            </div>
+            <div>
               <span className="text-muted-foreground">Estado:</span>{" "}
               <span className="font-medium">
                 {viewing.estado === "Habilitado" ? "Activa" : "Inactiva"}
               </span>
             </div>
-            <div>
-              <span className="text-muted-foreground">Monto:</span>{" "}
-              <span className="font-medium font-mono tabular-nums">{viewing.monto}</span>
-            </div>
             <div className="col-span-2">
               <span className="text-muted-foreground">Descripción:</span>{" "}
               <span className="font-medium">{viewing.descripcion}</span>
             </div>
+            <div className="col-span-2">
+              <DesglosePreview desglose={desgloseDe(viewing)} />
+            </div>
           </div>
         </FormDialog>
       )}
 
-      {editTarget && (
+      {(editTarget || showNueva) && (
         <FormDialog
-          open={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          title="Editar comisión"
-          description={`Editando comisión ${editTarget.legajo}`}
-          onSubmit={() => {
-            setData((prev) => prev.map((c) => (c.legajo === editTarget.legajo ? editTarget : c)));
+          open
+          onClose={() => {
             setEditTarget(null);
+            setShowNueva(false);
           }}
-          submitLabel="Guardar cambios"
+          title={editTarget ? "Editar comisión" : "Nueva comisión"}
+          description={
+            editTarget
+              ? `Editando comisión ${editTarget.legajo}`
+              : "Asignar una nueva comisión a un cliente."
+          }
+          onSubmit={guardarDraft}
+          submitLabel="Guardar"
           size="lg"
         >
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Operación</label>
-            <select
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
-              value={editTarget.tipo}
-              onChange={(e) => setEditTarget({ ...editTarget, tipo: e.target.value })}
-            >
-              <option>Depósito</option>
-              <option>Retiro</option>
-              <option>Link de pago</option>
-              <option>E-commerce</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
-            <select
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
-              value={editTarget.modalidad}
-              onChange={(e) =>
-                setEditTarget({
-                  ...editTarget,
-                  modalidad: e.target.value as "Fijo" | "Porcentaje",
-                })
-              }
-            >
-              <option>Fijo</option>
-              <option>Porcentaje</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Monto</label>
-            <Input
-              value={editTarget.monto}
-              onChange={(e) => setEditTarget({ ...editTarget, monto: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">
-              Descripción
-            </label>
-            <textarea
-              className="w-full h-24 px-3 py-2 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring resize-none"
-              value={editTarget.descripcion}
-              onChange={(e) => setEditTarget({ ...editTarget, descripcion: e.target.value })}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ComisionFormFields draft={draft} onChange={setDraft} />
+            <div className="sm:col-span-2">
+              <DesglosePreview desglose={draftDesglose} />
+            </div>
           </div>
         </FormDialog>
       )}
-
-      <FormDialog
-        open={showNueva}
-        onClose={() => setShowNueva(false)}
-        title="Nueva comisión"
-        description="Asignar una nueva comisión a un usuario."
-        onSubmit={() => setShowNueva(false)}
-        submitLabel="Guardar"
-        size="lg"
-      >
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Email</label>
-          <Input placeholder="usuario@email.com" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Operación</label>
-          <select className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring">
-            <option>Depósito</option>
-            <option>Retiro</option>
-            <option>Link de pago</option>
-            <option>E-commerce</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo</label>
-          <select className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring">
-            <option>Fijo</option>
-            <option>Porcentaje</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Monto</label>
-          <Input type="number" step="0.01" placeholder="250.00" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">Descripción</label>
-          <textarea
-            className="w-full h-24 px-3 py-2 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring resize-none"
-            placeholder="Detalle de la comisión..."
-          />
-        </div>
-      </FormDialog>
 
       {confirmAction && (
         <ConfirmDialog
@@ -349,8 +547,9 @@ const columns: Column<Comision>[] = [
   {
     key: "legajo",
     label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
     filterable: true,
-    render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
   },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   {
@@ -368,10 +567,33 @@ const columns: Column<Comision>[] = [
   },
   {
     key: "modalidad",
-    label: "Tipo",
+    label: "Modalidad",
     filterable: "enum",
     filterOptions: ["Fijo", "Porcentaje"],
     render: (r) => r.modalidad,
+  },
+  {
+    key: "porcentaje",
+    label: "% Comisión",
+    render: (r) => (
+      <span className="font-mono tabular-nums">
+        {r.modalidad === "Porcentaje" ? fmtPct(r.porcentaje ?? 0) : "—"}
+      </span>
+    ),
+  },
+  {
+    key: "montoFijo",
+    label: "Monto fijo",
+    render: (r) => (
+      <span className="font-mono tabular-nums">
+        {r.modalidad === "Fijo" ? fmtARS(r.montoFijo ?? 0) : "—"}
+      </span>
+    ),
+  },
+  {
+    key: "porcentajeImpuesto",
+    label: "% Impuesto (IVA)",
+    render: (r) => <span className="font-mono tabular-nums">{fmtPct(r.porcentajeImpuesto)}</span>,
   },
   {
     key: "estado",
@@ -383,11 +605,6 @@ const columns: Column<Comision>[] = [
         {row.estado === "Habilitado" ? "Habilitado" : "Deshabilitado"}
       </Badge>
     ),
-  },
-  {
-    key: "monto",
-    label: "Monto",
-    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
   },
   { key: "descripcion", label: "Descripción", filterable: true, render: (r) => r.descripcion },
 ];

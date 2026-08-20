@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, CreditCard, Link2, X } from "lucide-react";
+import {
+  Eye,
+  Edit3,
+  CheckCircle,
+  XCircle,
+  Trash2,
+  Plus,
+  CreditCard,
+  Link2,
+  X,
+  HelpCircle,
+} from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import {
@@ -14,7 +25,9 @@ import {
 } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { useComercios } from "@/contexts/comercios";
+import { generarLegajo, legajoEsConsistente, type TipoPersona } from "@/data/clientes";
 import {
   type Comercio,
   type EstadoGeneral,
@@ -98,9 +111,10 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
               <Field label="Usuario" value={comercio.usuario} />
+              <Field label="Legajo" value={<LegajoCell legajo={comercio.legajo} />} />
               <Field
-                label="Legajo"
-                value={<span className="font-mono tabular-nums">{comercio.legajo}</span>}
+                label="Tipo de persona"
+                value={comercio.tipoPersona === "fisica" ? "Persona Física" : "Persona Jurídica"}
               />
               <Field label="Nombre" value={comercio.nombre} />
               <Field
@@ -215,6 +229,7 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
 
 type ComercioForm = {
   legajo: string;
+  tipoPersona: TipoPersona;
   usuario: string;
   nombre: string;
   categoria: string;
@@ -227,24 +242,69 @@ type ComercioForm = {
 
 function ComercioFormModal({
   comercio,
+  existingLegajos,
   onClose,
   onSave,
 }: {
   comercio: Comercio | null;
+  existingLegajos: string[];
   onClose: () => void;
   onSave: (comercio: Comercio) => void;
 }) {
-  const [form, setForm] = useState<ComercioForm>({
-    legajo: comercio?.legajo ?? "",
-    usuario: comercio?.usuario ?? "",
-    nombre: comercio?.nombre ?? "",
-    categoria: comercio?.categoria ?? "",
-    descripcionCategoria: comercio?.descripcionCategoria ?? "",
-    nivel: comercio?.nivel ?? "Pequeño",
-    estado: comercio?.estado ?? "Pendiente de aprobación",
-    pctHabilitado: comercio?.pctHabilitado ?? false,
-    linkPagoHabilitado: comercio?.linkPagoHabilitado ?? false,
+  const [form, setForm] = useState<ComercioForm>(() => {
+    const tipoPersona: TipoPersona = comercio?.tipoPersona ?? "fisica";
+    return {
+      legajo: comercio?.legajo ?? generarLegajo(tipoPersona, existingLegajos),
+      tipoPersona,
+      usuario: comercio?.usuario ?? "",
+      nombre: comercio?.nombre ?? "",
+      categoria: comercio?.categoria ?? "",
+      descripcionCategoria: comercio?.descripcionCategoria ?? "",
+      nivel: comercio?.nivel ?? "Pequeño",
+      estado: comercio?.estado ?? "Pendiente de aprobación",
+      pctHabilitado: comercio?.pctHabilitado ?? false,
+      linkPagoHabilitado: comercio?.linkPagoHabilitado ?? false,
+    };
   });
+
+  // Validación cruzada: el tipo de persona determina el prefijo del legajo.
+  // El legajo nunca se carga a mano: al cambiar el tipo se regenera automáticamente.
+  const cambiarTipoPersona = (tipoPersona: TipoPersona) => {
+    const legajoActual = form.legajo;
+    const legajo =
+      comercio && legajoEsConsistente(tipoPersona, legajoActual)
+        ? legajoActual
+        : generarLegajo(tipoPersona, existingLegajos);
+    setForm((f) => ({ ...f, tipoPersona, legajo }));
+  };
+
+  const guardar = () => {
+    onSave({
+      id: comercio?.id ?? 0,
+      legajo: form.legajo.trim(),
+      tipoPersona: form.tipoPersona,
+      usuario: form.usuario.trim(),
+      nombre: form.nombre.trim(),
+      categoria: form.categoria.trim(),
+      descripcionCategoria: form.descripcionCategoria.trim(),
+      nivel: form.nivel,
+      estado: form.estado,
+      fechaRegistro: comercio?.fechaRegistro ?? new Date().toLocaleDateString("es-AR"),
+      horaRegistro:
+        comercio?.horaRegistro ??
+        new Date().toLocaleTimeString("es-AR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      pctHabilitado: form.pctHabilitado,
+      pctPuntosDeVenta: comercio?.pctPuntosDeVenta ?? [],
+      linkPagoHabilitado: form.linkPagoHabilitado,
+      linkPagoEstado:
+        comercio?.linkPagoEstado ??
+        (form.linkPagoHabilitado ? "Pendiente de aprobación" : "No asociado"),
+      linkPagoMetodos: comercio?.linkPagoMetodos ?? [],
+    });
+  };
 
   return (
     <FormDialog
@@ -256,44 +316,39 @@ function ComercioFormModal({
           ? `Modificá los datos del comercio ${comercio.nombre}.`
           : "Definí los datos del comercio y a qué canales lo asociás."
       }
-      onSubmit={() =>
-        onSave({
-          id: comercio?.id ?? 0,
-          legajo: form.legajo.trim(),
-          usuario: form.usuario.trim(),
-          nombre: form.nombre.trim(),
-          categoria: form.categoria.trim(),
-          descripcionCategoria: form.descripcionCategoria.trim(),
-          nivel: form.nivel,
-          estado: form.estado,
-          fechaRegistro: comercio?.fechaRegistro ?? new Date().toLocaleDateString("es-AR"),
-          horaRegistro:
-            comercio?.horaRegistro ??
-            new Date().toLocaleTimeString("es-AR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          pctHabilitado: form.pctHabilitado,
-          pctPuntosDeVenta: comercio?.pctPuntosDeVenta ?? [],
-          linkPagoHabilitado: form.linkPagoHabilitado,
-          linkPagoEstado:
-            comercio?.linkPagoEstado ??
-            (form.linkPagoHabilitado ? "Pendiente de aprobación" : "No asociado"),
-          linkPagoMetodos: comercio?.linkPagoMetodos ?? [],
-        })
-      }
+      onSubmit={guardar}
       submitLabel={comercio ? "Guardar cambios" : "Crear comercio"}
       size="lg"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
+          <Label htmlFor="gc-tipo">Tipo de persona</Label>
+          <select
+            id="gc-tipo"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={form.tipoPersona}
+            onChange={(e) => cambiarTipoPersona(e.target.value as TipoPersona)}
+          >
+            <option value="fisica">Persona Física</option>
+            <option value="juridica">Persona Jurídica</option>
+          </select>
+        </div>
+        <div>
           <Label htmlFor="gc-legajo">Legajo</Label>
-          <Input
-            id="gc-legajo"
-            value={form.legajo}
-            onChange={(e) => setForm((f) => ({ ...f, legajo: e.target.value }))}
-            placeholder="COM-1001"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              id="gc-legajo"
+              value={form.legajo}
+              readOnly
+              className="bg-muted/40 font-mono tabular-nums"
+            />
+            <span title={LEGAJO_TOOLTIP} className="cursor-help text-muted-foreground shrink-0">
+              <HelpCircle size={14} />
+            </span>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Generado automáticamente según el tipo de persona. No se carga manualmente.
+          </p>
         </div>
         <div>
           <Label htmlFor="gc-usuario">Usuario</Label>
@@ -465,7 +520,7 @@ function Page() {
       render: (r) => (
         <div>
           <div className="font-semibold">{r.usuario}</div>
-          <div className="text-xs text-muted-foreground font-mono">{r.legajo}</div>
+          <LegajoCell legajo={r.legajo} className="text-xs" />
         </div>
       ),
     },
@@ -546,6 +601,7 @@ function Page() {
       {(showNew || editTarget) && (
         <ComercioFormModal
           comercio={editTarget}
+          existingLegajos={comercios.map((c) => c.legajo)}
           onClose={() => {
             setShowNew(false);
             setEditTarget(null);

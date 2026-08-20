@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
+import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 
 export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
   head: () => ({
@@ -44,7 +45,7 @@ const toneMap: Record<string, "success" | "warn" | "danger" | "neutral"> = {
 
 const initialData: Juridica[] = [
   {
-    legajo: "JUR-001",
+    legajo: "LPJ-0101",
     correo: "info@constructoraalpha.com",
     razonSocial: "Constructora Alpha SA",
     tipo: "SA",
@@ -53,7 +54,7 @@ const initialData: Juridica[] = [
     subcuentas: 5,
   },
   {
-    legajo: "JUR-002",
+    legajo: "LPJ-0102",
     correo: "admin@comercializadorabeta.com",
     razonSocial: "Comercializadora Beta SRL",
     tipo: "SRL",
@@ -62,7 +63,7 @@ const initialData: Juridica[] = [
     subcuentas: 2,
   },
   {
-    legajo: "JUR-003",
+    legajo: "LPJ-0103",
     correo: "contacto@serviciosgamma.com",
     razonSocial: "Servicios Gamma SA",
     tipo: "SA",
@@ -71,7 +72,7 @@ const initialData: Juridica[] = [
     subcuentas: 3,
   },
   {
-    legajo: "JUR-004",
+    legajo: "LPJ-0104",
     correo: "ventas@distribuidoradelta.com",
     razonSocial: "Distribuidora Delta SRL",
     tipo: "SRL",
@@ -80,7 +81,7 @@ const initialData: Juridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "JUR-005",
+    legajo: "LPJ-0105",
     correo: "info@logisticaepsilon.com",
     razonSocial: "Logística Epsilon SA",
     tipo: "SA",
@@ -89,7 +90,7 @@ const initialData: Juridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "JUR-006",
+    legajo: "LPJ-0106",
     correo: "admin@techzeta.com",
     razonSocial: "Tech Zeta SRL",
     tipo: "SRL",
@@ -98,7 +99,7 @@ const initialData: Juridica[] = [
     subcuentas: 7,
   },
   {
-    legajo: "JUR-007",
+    legajo: "LPJ-0107",
     correo: "contacto@alimentoseta.com",
     razonSocial: "Alimentos Eta SA",
     tipo: "SA",
@@ -107,7 +108,7 @@ const initialData: Juridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "JUR-008",
+    legajo: "LPJ-0108",
     correo: "info@industriatheta.com",
     razonSocial: "Industria Theta SRL",
     tipo: "SRL",
@@ -116,7 +117,7 @@ const initialData: Juridica[] = [
     subcuentas: 4,
   },
   {
-    legajo: "JUR-009",
+    legajo: "LPJ-0109",
     correo: "gerencia@comercioiota.com",
     razonSocial: "Comercio Iota SA",
     tipo: "SA",
@@ -125,7 +126,7 @@ const initialData: Juridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "JUR-010",
+    legajo: "LPJ-0110",
     correo: "admin@transporteskappa.com",
     razonSocial: "Transportes Kappa SRL",
     tipo: "SRL",
@@ -235,8 +236,9 @@ const columns: Column<Juridica>[] = [
   {
     key: "legajo",
     label: "Legajo",
+    hint: LEGAJO_TOOLTIP,
     filterable: true,
-    render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
+    render: (r) => <LegajoCell legajo={r.legajo} />,
   },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
