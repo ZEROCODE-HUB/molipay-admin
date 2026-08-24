@@ -5,6 +5,7 @@ import type {
   Subcuenta,
   MovimientoSub,
 } from "@/components/user-modal";
+import { legajoDesdeCuit } from "@/data/clientes";
 
 export type {
   UserData,
@@ -23,7 +24,7 @@ export type {
 } from "@/components/user-modal";
 
 type UsuarioFisica = {
-  legajo: string;
+  cuit: string;
   correo: string;
   nombres: string;
   apellidos: string;
@@ -32,7 +33,7 @@ type UsuarioFisica = {
 };
 
 type UsuarioJuridica = {
-  legajo: string;
+  cuit: string;
   correo: string;
   razonSocial: string;
   tipo: "SA" | "SRL";
@@ -59,7 +60,7 @@ const statusMap: Record<string, UserStatus> = {
 // --- Fixtures ---
 const FISICA_DATA: UsuarioFisica[] = [
   {
-    legajo: "LPF-0001",
+    cuit: "20-12345678-9",
     correo: "juan.perez@email.com",
     nombres: "Juan Carlos",
     apellidos: "Pérez González",
@@ -67,7 +68,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "12/01/2024",
   },
   {
-    legajo: "LPF-0002",
+    cuit: "27-23456789-0",
     correo: "maria.lopez@email.com",
     nombres: "María Elena",
     apellidos: "López Fernández",
@@ -75,7 +76,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "23/02/2024",
   },
   {
-    legajo: "LPF-0021",
+    cuit: "20-34567890-1",
     correo: "carlos.martinez@email.com",
     nombres: "Carlos Alberto",
     apellidos: "Martínez Ruiz",
@@ -83,7 +84,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "05/03/2024",
   },
   {
-    legajo: "LPF-0022",
+    cuit: "27-45678901-2",
     correo: "ana.garcia@email.com",
     nombres: "Ana Sofía",
     apellidos: "García Díaz",
@@ -91,7 +92,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "18/04/2024",
   },
   {
-    legajo: "LPF-0023",
+    cuit: "20-56789012-3",
     correo: "pedro.rodriguez@email.com",
     nombres: "Pedro Antonio",
     apellidos: "Rodríguez Silva",
@@ -99,7 +100,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "09/05/2024",
   },
   {
-    legajo: "LPF-0033",
+    cuit: "27-44332211-0",
     correo: "laura.gomez@email.com",
     nombres: "Laura Fernanda",
     apellidos: "Gómez Torres",
@@ -107,7 +108,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "17/06/2024",
   },
   {
-    legajo: "LPF-0034",
+    cuit: "20-33221100-9",
     correo: "martin.lopez@email.com",
     nombres: "Martín",
     apellidos: "Lopez Moreno",
@@ -115,7 +116,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "03/07/2024",
   },
   {
-    legajo: "LPF-0035",
+    cuit: "27-22110099-8",
     correo: "silvia.ramos@email.com",
     nombres: "Silvia",
     apellidos: "Ramos Ortiz",
@@ -123,7 +124,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "22/07/2024",
   },
   {
-    legajo: "LPF-0036",
+    cuit: "20-11009988-7",
     correo: "oscar.diaz@email.com",
     nombres: "Óscar",
     apellidos: "Díaz Lara",
@@ -131,7 +132,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "11/08/2024",
   },
   {
-    legajo: "LPF-0037",
+    cuit: "27-00998877-6",
     correo: "catalina.vargas@email.com",
     nombres: "Catalina",
     apellidos: "Vargas Ruiz",
@@ -139,7 +140,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "01/09/2024",
   },
   {
-    legajo: "LPF-0038",
+    cuit: "20-98989898-9",
     correo: "andres.molina@email.com",
     nombres: "Andrés Sebastián",
     apellidos: "Molina Rivas",
@@ -147,7 +148,7 @@ const FISICA_DATA: UsuarioFisica[] = [
     fechaRegistro: "07/11/2024",
   },
   {
-    legajo: "LPF-0039",
+    cuit: "27-87878787-8",
     correo: "camila.sosa@email.com",
     nombres: "Camila Andrea",
     apellidos: "Sosa Guzmán",
@@ -158,7 +159,7 @@ const FISICA_DATA: UsuarioFisica[] = [
 
 const JURIDICA_DATA: UsuarioJuridica[] = [
   {
-    legajo: "LPJ-0101",
+    cuit: "30-11223344-5",
     correo: "info@constructoraalpha.com",
     razonSocial: "Constructora Alpha SA",
     tipo: "SA",
@@ -167,7 +168,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 5,
   },
   {
-    legajo: "LPJ-0102",
+    cuit: "30-22334455-6",
     correo: "admin@comercializadorabeta.com",
     razonSocial: "Comercializadora Beta SRL",
     tipo: "SRL",
@@ -176,7 +177,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 2,
   },
   {
-    legajo: "LPJ-0103",
+    cuit: "30-33445566-7",
     correo: "contacto@serviciosgamma.com",
     razonSocial: "Servicios Gamma SA",
     tipo: "SA",
@@ -185,7 +186,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 3,
   },
   {
-    legajo: "LPJ-0104",
+    cuit: "30-44556677-8",
     correo: "ventas@distribuidoradelta.com",
     razonSocial: "Distribuidora Delta SRL",
     tipo: "SRL",
@@ -194,7 +195,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "LPJ-0105",
+    cuit: "30-55667788-9",
     correo: "info@logisticaepsilon.com",
     razonSocial: "Logística Epsilon SA",
     tipo: "SA",
@@ -203,7 +204,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "LPJ-0106",
+    cuit: "30-66778899-0",
     correo: "admin@techzeta.com",
     razonSocial: "Tech Zeta SRL",
     tipo: "SRL",
@@ -212,7 +213,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 7,
   },
   {
-    legajo: "LPJ-0107",
+    cuit: "30-77889900-1",
     correo: "contacto@alimentoseta.com",
     razonSocial: "Alimentos Eta SA",
     tipo: "SA",
@@ -221,7 +222,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "LPJ-0108",
+    cuit: "30-88990011-2",
     correo: "info@industriatheta.com",
     razonSocial: "Industria Theta SRL",
     tipo: "SRL",
@@ -230,7 +231,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 4,
   },
   {
-    legajo: "LPJ-0109",
+    cuit: "30-99001122-3",
     correo: "gerencia@comercioiota.com",
     razonSocial: "Comercio Iota SA",
     tipo: "SA",
@@ -239,7 +240,7 @@ const JURIDICA_DATA: UsuarioJuridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "LPJ-0110",
+    cuit: "30-00112233-4",
     correo: "admin@transporteskappa.com",
     razonSocial: "Transportes Kappa SRL",
     tipo: "SRL",
@@ -358,11 +359,12 @@ const MOV_SUBCUENTA_MOCK: MovimientoSub[] = [
 ];
 
 export function toUserDataFisica(u: UsuarioFisica): UserData {
+  const legajo = legajoDesdeCuit("fisica", u.cuit);
   return {
-    id: u.legajo,
+    id: legajo,
     status: statusMap[u.estado] ?? "pending",
     tipoPersona: "fisica",
-    legajo: u.legajo,
+    legajo,
     email: u.correo,
     fechaRegistro: u.fechaRegistro,
     tipoCuenta: "Individual",
@@ -370,7 +372,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
     cantidadCuentasVirtuales: 1,
     nombre: u.nombres,
     apellido: u.apellidos,
-    cuit: "20-12345678-9",
+    cuit: u.cuit,
     genero: "Masculino",
     ocupacion: "Empleado",
     origenFondos: "Salario",
@@ -426,7 +428,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
     ],
     documentos: docsFisica(),
     validacionesAutomaticas:
-      u.legajo.endsWith("3") || u.legajo.endsWith("7")
+      legajo.endsWith("3") || legajo.endsWith("7")
         ? []
         : [
             { id: "val-1", proveedor: "AFIP", estado: "Ok", fecha: "04/08/2026" },
@@ -483,7 +485,7 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
       {
         clave: "pct",
         titulo: "PCT",
-        cantidad: u.legajo.endsWith("3") ? 0 : 3,
+        cantidad: legajo.endsWith("3") ? 0 : 3,
         verLabel: "Ver comercios PCT",
         vacioMsg: "No se encontró comercio PCT asociado",
         ruta: "/admin/comercios/transferencia",
@@ -510,11 +512,12 @@ export function toUserDataFisica(u: UsuarioFisica): UserData {
 }
 
 export function toUserDataJuridica(j: UsuarioJuridica): UserData {
+  const legajo = legajoDesdeCuit("juridica", j.cuit);
   return {
-    id: j.legajo,
+    id: legajo,
     status: statusMap[j.estado] ?? "pending",
     tipoPersona: "juridica",
-    legajo: j.legajo,
+    legajo,
     email: j.correo,
     fechaRegistro: j.fechaRegistro,
     tipoCuenta: "Empresarial",
@@ -522,7 +525,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
     cantidadCuentasVirtuales: 2,
     nombre: j.razonSocial,
     apellido: "-",
-    cuit: "30-12345678-9",
+    cuit: j.cuit,
     genero: "-",
     ocupacion: "Empresa",
     origenFondos: "Actividad comercial",
@@ -532,7 +535,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
     estadoProvincia: "Buenos Aires",
     codigoPostal: "C1104",
     fechaNacimiento: "-",
-    cuitEmpresa: j.razonSocial.includes("SA") ? "30-87654321-0" : "30-87654321-1",
+    cuitEmpresa: j.cuit,
     tipoEmpresa: j.tipo,
     nombreLegal: j.razonSocial,
     nombreComercial: j.razonSocial,
@@ -541,7 +544,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
     subcuentas: Array.from({ length: j.subcuentas }, (_, i) => {
       const primera = j.razonSocial.split(" ")[0] ?? "empresa";
       return {
-        id: `SUB-${j.legajo}-${i + 1}`,
+        id: `SUB-${legajo}-${i + 1}`,
         nombre: `${primera} ${i + 1}`,
         apellido: primera,
         email: j.correo,
@@ -561,7 +564,7 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
     }),
     documentos: docsJuridica(j.razonSocial),
     validacionesAutomaticas:
-      j.legajo.endsWith("3") || j.legajo.endsWith("7")
+      legajo.endsWith("3") || legajo.endsWith("7")
         ? []
         : [
             { id: "val-1", proveedor: "AFIP", estado: "Ok", fecha: "04/08/2026" },
@@ -648,8 +651,8 @@ export function toUserDataJuridica(j: UsuarioJuridica): UserData {
 let _registry: Record<string, UserData> | null = null;
 function buildRegistry(): Record<string, UserData> {
   const r: Record<string, UserData> = {};
-  for (const u of FISICA_DATA) r[u.legajo] = toUserDataFisica(u);
-  for (const j of JURIDICA_DATA) r[j.legajo] = toUserDataJuridica(j);
+  for (const u of FISICA_DATA) r[legajoDesdeCuit("fisica", u.cuit)] = toUserDataFisica(u);
+  for (const j of JURIDICA_DATA) r[legajoDesdeCuit("juridica", j.cuit)] = toUserDataJuridica(j);
   return r;
 }
 function registry() {

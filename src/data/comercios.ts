@@ -17,8 +17,10 @@ export type LinkPagoEstado = "Activado" | "Pendiente de aprobación" | "Suspendi
 
 export type Comercio = {
   id: number;
+  /** Identificador interno del cliente dueño del comercio (LPF/LPJ + CUIT, sin guiones). */
   legajo: string;
   tipoPersona: TipoPersona;
+  cuit: string;
   usuario: string;
   nombre: string;
   categoria: string;
@@ -42,8 +44,9 @@ const metodosPorId = (ids: number[]): MetodoPago[] =>
 export const comerciosIniciales: Comercio[] = [
   {
     id: 1,
-    legajo: "LPF-0002",
+    legajo: "LPF-27234567890",
     tipoPersona: "fisica",
+    cuit: "27-23456789-0",
     usuario: "maria.lopez@email.com",
     nombre: "Vivero Centro",
     categoria: "780",
@@ -65,8 +68,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 2,
-    legajo: "LPF-0001",
+    legajo: "LPF-20123456789",
     tipoPersona: "fisica",
+    cuit: "20-12345678-9",
     usuario: "juan.perez@email.com",
     nombre: "Limpiezas Sur",
     categoria: "763",
@@ -85,8 +89,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 3,
-    legajo: "LPJ-0001",
+    legajo: "LPJ-30678901234",
     tipoPersona: "juridica",
+    cuit: "30-67890123-4",
     usuario: "empresa.srl@email.com",
     nombre: "Bar Central",
     categoria: "742",
@@ -109,8 +114,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 4,
-    legajo: "LPJ-0002",
+    legajo: "LPJ-30789012345",
     tipoPersona: "juridica",
+    cuit: "30-78901234-5",
     usuario: "consorcio@email.com",
     nombre: "Mensajería Express",
     categoria: "4829",
@@ -131,8 +137,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 5,
-    legajo: "LPF-0003",
+    legajo: "LPF-20334455667",
     tipoPersona: "fisica",
+    cuit: "20-33445566-7",
     usuario: "minimarket@email.com",
     nombre: "Minimarket del barrio",
     categoria: "5411",
@@ -149,8 +156,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 6,
-    legajo: "LPF-0004",
+    legajo: "LPF-27400012345",
     tipoPersona: "fisica",
+    cuit: "27-40001234-5",
     usuario: "electro@email.com",
     nombre: "Electro Hogar",
     categoria: "5732",
@@ -169,8 +177,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 7,
-    legajo: "LPF-0005",
+    legajo: "LPF-20500056789",
     tipoPersona: "fisica",
+    cuit: "20-50005678-9",
     usuario: "gimnasio.fit@email.com",
     nombre: "Gym Fit",
     categoria: "7997",
@@ -193,8 +202,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 8,
-    legajo: "LPJ-0003",
+    legajo: "LPJ-30890123456",
     tipoPersona: "juridica",
+    cuit: "30-89012345-6",
     usuario: "clinica.sur@email.com",
     nombre: "Consultorio Central",
     categoria: "8071",
@@ -218,8 +228,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 9,
-    legajo: "LPJ-0004",
+    legajo: "LPJ-30901234567",
     tipoPersona: "juridica",
+    cuit: "30-90123456-7",
     usuario: "burgers@email.com",
     nombre: "Burgers Centro",
     categoria: "5814",
@@ -238,8 +249,9 @@ export const comerciosIniciales: Comercio[] = [
   },
   {
     id: 10,
-    legajo: "LPJ-0005",
+    legajo: "LPJ-30012345678",
     tipoPersona: "juridica",
+    cuit: "30-01234567-8",
     usuario: "software.digital@email.com",
     nombre: "Software Digital",
     categoria: "5734",

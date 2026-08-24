@@ -6,6 +6,7 @@ export type ActionItem = {
   onClick: () => void;
   icon?: LucideIcon;
   variant?: "default" | "danger";
+  disabled?: boolean;
 };
 
 type ActionsDropdownProps = {
@@ -30,7 +31,10 @@ export function ActionsDropdown({ actions }: ActionsDropdownProps) {
     <div ref={ref} className="relative inline-block">
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
         className="p-1.5 rounded-md hover:bg-muted transition-colors"
         aria-label="Acciones"
       >
@@ -44,13 +48,19 @@ export function ActionsDropdown({ actions }: ActionsDropdownProps) {
               <button
                 key={action.label}
                 type="button"
+                disabled={action.disabled}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (action.disabled) return;
                   action.onClick();
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-muted ${
-                  action.variant === "danger" ? "text-red-600" : "text-foreground"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
+                  action.disabled
+                    ? "cursor-not-allowed text-muted-foreground/50"
+                    : action.variant === "danger"
+                      ? "text-red-600 hover:bg-muted"
+                      : "text-foreground hover:bg-muted"
                 }`}
               >
                 {Icon && <Icon size={14} />}

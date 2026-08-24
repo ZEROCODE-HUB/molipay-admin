@@ -1,39 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
-import {
-  Eye,
-  Edit3,
-  CheckCircle,
-  XCircle,
-  Trash2,
-  Plus,
-  CreditCard,
-  Link2,
-  X,
-  HelpCircle,
-} from "lucide-react";
-import { DataTable, type Column } from "@/components/data-table";
-import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, AlertTriangle, Inbox } from "lucide-react";
 import {
   PageHeader,
   Badge,
-  Card,
-  BtnOutline,
-  BtnPrimary,
   Input,
   Label,
+  BtnPrimary,
+  BtnOutline,
+  Card,
 } from "@/components/portal-shell";
+import { DataTable, type Column } from "@/components/data-table";
+import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
-import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
-import { useComercios } from "@/contexts/comercios";
-import { generarLegajo, legajoEsConsistente, type TipoPersona } from "@/data/clientes";
+import { LegajoCell } from "@/components/legajo-label";
+import { useComercios, useClientesForSelect } from "@/hooks/useComercios";
+import { useCodigosCategoria } from "@/hooks/useCodigosCategoria";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
-  type Comercio,
-  type EstadoGeneral,
-  type NivelComercio,
-  type PuntoVenta,
-} from "@/data/comercios";
+  createComercio,
+  deleteComercio,
+  setComercioEstado,
+  updateComercio,
+} from "@/lib/api/comercios";
+import { DataAccessError } from "@/lib/api/errors";
+import { useCan } from "@/lib/permissions";
+import { PermissionGuard } from "@/components/permission-guard";
+import type {
+  ClienteSelect,
+  CodigoCategoria,
+  Comercio,
+  EstadoComercio,
+  NivelComercio,
+} from "@/lib/api/types";
+import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/comercios/")({
   component: Page,
@@ -49,49 +51,68 @@ export const Route = createFileRoute("/admin/comercios/")({
   }),
 });
 
-const ESTADOS: EstadoGeneral[] = [
-  "Activado",
-  "Desactivado",
-  "Pendiente de aprobación",
-  "Rechazado",
-  "Suspendido",
-];
+const PAGE_SIZE = 25;
 
-const NIVELES: NivelComercio[] = [
-  "Pequeño",
-  "Mediano",
-  "Grande",
-  "Premium",
-  "Estándar",
-  "Básico",
-  "Enterprise",
-];
-
-function estadoBadgeTone(estado: EstadoGeneral): "success" | "neutral" | "warn" | "danger" {
+function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Activado") return "success";
   if (estado === "Desactivado") return "neutral";
   if (estado === "Rechazado") return "danger";
   return "warn";
 }
 
-function canalBadge(habilitado: boolean) {
-  return habilitado ? <Badge tone="success">Sí</Badge> : <Badge tone="neutral">No</Badge>;
-}
-
-function Field({ label, value }: { label: string; value: ReactNode }) {
+function MensajeEstado({
+  tipo,
+  mensaje,
+  onRetry,
+}: {
+  tipo: "error" | "vacio" | "permiso";
+  mensaje: string;
+  onRetry?: () => void;
+}) {
+  if (tipo === "permiso") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
+        <AlertTriangle size={28} />
+        <div>
+          <p className="font-semibold">No tenés permiso para ver esto</p>
+          <p className="mt-1">{mensaje}</p>
+        </div>
+      </div>
+    );
+  }
+  if (tipo === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
+        <AlertTriangle size={28} />
+        <div>
+          <p className="font-semibold">Ocurrió un error al cargar los comercios</p>
+          <p className="mt-1">{mensaje}</p>
+        </div>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+          >
+            Reintentar
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
-    <div>
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-      <div className="font-medium mt-0.5">{value}</div>
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+      <Inbox size={28} />
+      <p>No hay comercios que coincidan con la búsqueda.</p>
     </div>
   );
 }
 
-function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
+function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
           <div>
             <h3 className="font-display text-lg font-semibold">Detalle de comercio</h3>
@@ -100,7 +121,7 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
-            <X size={18} />
+            <XCircle size={18} />
           </button>
         </div>
 
@@ -111,52 +132,48 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
               <Field label="Usuario" value={comercio.usuario} />
-              <Field label="Legajo" value={<LegajoCell legajo={comercio.legajo} />} />
               <Field
-                label="Tipo de persona"
-                value={comercio.tipoPersona === "fisica" ? "Persona Física" : "Persona Jurídica"}
+                label="Legajo"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <LegajoCell legajo={comercio.legajo} />
+                  </span>
+                }
               />
-              <Field label="Nombre" value={comercio.nombre} />
+              <Field label="Cliente" value={comercio.cliente?.nombre ?? "—"} />
               <Field
-                label="Código de categoría"
-                value={<span className="font-mono tabular-nums">{comercio.categoria}</span>}
+                label="CUIT del cliente"
+                value={
+                  <span className="font-mono tabular-nums text-xs">
+                    {comercio.cliente?.cuit ?? "—"}
+                  </span>
+                }
               />
-              <Field label="Descripción de categoría" value={comercio.descripcionCategoria} />
+              <Field
+                label="Categoría"
+                value={
+                  comercio.categoria ? (
+                    <span className="font-mono tabular-nums">
+                      {comercio.categoria.codigo} · {comercio.categoria.nombre}
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
               <Field label="Nivel" value={comercio.nivel} />
               <Field
                 label="Estado"
                 value={<Badge tone={estadoBadgeTone(comercio.estado)}>{comercio.estado}</Badge>}
               />
-              <Field label="Fecha de registro" value={comercio.fechaRegistro} />
-              <Field label="Hora de registro" value={comercio.horaRegistro} />
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-              Canales
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <div>
-                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wide">
-                  <CreditCard size={14} /> Pago con transferencia
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  {canalBadge(comercio.pctHabilitado)}
-                  {comercio.pctHabilitado && <span className="text-sm">Asociado</span>}
-                </div>
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wide">
-                  <Link2 size={14} /> Link de pago
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  {canalBadge(comercio.linkPagoHabilitado)}
-                  {comercio.linkPagoHabilitado && (
-                    <span className="text-sm text-muted-foreground">{comercio.linkPagoEstado}</span>
-                  )}
-                </div>
-              </div>
+              <Field
+                label="Fecha de registro"
+                value={
+                  <span className="font-mono text-xs tabular-nums">
+                    {new Date(comercio.createdAt).toLocaleDateString("es-AR")}
+                  </span>
+                }
+              />
             </div>
           </Card>
 
@@ -166,13 +183,7 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
                 Puntos de venta (PCT)
               </h4>
             </div>
-            {!comercio.pctHabilitado ? (
-              <div className="px-5 pb-5 pt-3">
-                <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
-                  El comercio no está asociado al canal Pago con transferencia.
-                </div>
-              </div>
-            ) : comercio.pctPuntosDeVenta.length === 0 ? (
+            {comercio.puntosVenta.length === 0 ? (
               <div className="px-5 pb-5 pt-3">
                 <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
                   Sin puntos de venta cargados para este comercio.
@@ -195,8 +206,8 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
                     </tr>
                   </thead>
                   <tbody>
-                    {comercio.pctPuntosDeVenta.map((pdv) => (
-                      <tr key={pdv.nombre} className="border-b last:border-0">
+                    {comercio.puntosVenta.map((pdv) => (
+                      <tr key={pdv.id} className="border-b last:border-0">
                         <td className="px-3 py-2.5 font-medium">{pdv.nombre}</td>
                         <td className="px-3 py-2.5">
                           <Badge tone={pdv.estado === "Activado" ? "success" : "neutral"}>
@@ -205,7 +216,7 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
                         </td>
                         <td className="px-3 py-2.5">
                           <span className="font-mono tabular-nums text-xs">
-                            {pdv.fechaCreacion}
+                            {new Date(pdv.createdAt).toLocaleDateString("es-AR")}
                           </span>
                         </td>
                       </tr>
@@ -227,82 +238,62 @@ function ComercioModal({ comercio, onClose }: { comercio: Comercio; onClose: () 
   );
 }
 
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className="font-medium mt-0.5">{value}</div>
+    </div>
+  );
+}
+
 type ComercioForm = {
-  legajo: string;
-  tipoPersona: TipoPersona;
+  clienteLegajo: string;
   usuario: string;
-  nombre: string;
-  categoria: string;
-  descripcionCategoria: string;
+  categoriaId: string;
   nivel: NivelComercio;
-  estado: EstadoGeneral;
-  pctHabilitado: boolean;
-  linkPagoHabilitado: boolean;
+  estado: EstadoComercio;
 };
 
 function ComercioFormModal({
   comercio,
-  existingLegajos,
+  clientes,
+  categorias,
   onClose,
   onSave,
 }: {
   comercio: Comercio | null;
-  existingLegajos: string[];
+  clientes: ClienteSelect[];
+  categorias: CodigoCategoria[];
   onClose: () => void;
-  onSave: (comercio: Comercio) => void;
+  onSave: (input: {
+    clienteLegajo: string;
+    usuario: string;
+    categoriaId: number | null;
+    nivel: NivelComercio;
+    estado: EstadoComercio;
+  }) => void;
 }) {
-  const [form, setForm] = useState<ComercioForm>(() => {
-    const tipoPersona: TipoPersona = comercio?.tipoPersona ?? "fisica";
-    return {
-      legajo: comercio?.legajo ?? generarLegajo(tipoPersona, existingLegajos),
-      tipoPersona,
-      usuario: comercio?.usuario ?? "",
-      nombre: comercio?.nombre ?? "",
-      categoria: comercio?.categoria ?? "",
-      descripcionCategoria: comercio?.descripcionCategoria ?? "",
-      nivel: comercio?.nivel ?? "Pequeño",
-      estado: comercio?.estado ?? "Pendiente de aprobación",
-      pctHabilitado: comercio?.pctHabilitado ?? false,
-      linkPagoHabilitado: comercio?.linkPagoHabilitado ?? false,
-    };
-  });
+  const [clienteLegajo, setClienteLegajo] = useState(comercio?.legajo ?? "");
+  const [usuario, setUsuario] = useState(comercio?.usuario ?? "");
+  const [categoriaId, setCategoriaId] = useState(
+    comercio?.categoriaId != null ? String(comercio.categoriaId) : "",
+  );
+  const [nivel, setNivel] = useState<NivelComercio>(comercio?.nivel ?? "Pequeño");
+  const [estado, setEstado] = useState<EstadoComercio>(
+    comercio?.estado ?? "Pendiente de aprobación",
+  );
 
-  // Validación cruzada: el tipo de persona determina el prefijo del legajo.
-  // El legajo nunca se carga a mano: al cambiar el tipo se regenera automáticamente.
-  const cambiarTipoPersona = (tipoPersona: TipoPersona) => {
-    const legajoActual = form.legajo;
-    const legajo =
-      comercio && legajoEsConsistente(tipoPersona, legajoActual)
-        ? legajoActual
-        : generarLegajo(tipoPersona, existingLegajos);
-    setForm((f) => ({ ...f, tipoPersona, legajo }));
-  };
+  const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
   const guardar = () => {
+    if (!clienteLegajo) return;
     onSave({
-      id: comercio?.id ?? 0,
-      legajo: form.legajo.trim(),
-      tipoPersona: form.tipoPersona,
-      usuario: form.usuario.trim(),
-      nombre: form.nombre.trim(),
-      categoria: form.categoria.trim(),
-      descripcionCategoria: form.descripcionCategoria.trim(),
-      nivel: form.nivel,
-      estado: form.estado,
-      fechaRegistro: comercio?.fechaRegistro ?? new Date().toLocaleDateString("es-AR"),
-      horaRegistro:
-        comercio?.horaRegistro ??
-        new Date().toLocaleTimeString("es-AR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      pctHabilitado: form.pctHabilitado,
-      pctPuntosDeVenta: comercio?.pctPuntosDeVenta ?? [],
-      linkPagoHabilitado: form.linkPagoHabilitado,
-      linkPagoEstado:
-        comercio?.linkPagoEstado ??
-        (form.linkPagoHabilitado ? "Pendiente de aprobación" : "No asociado"),
-      linkPagoMetodos: comercio?.linkPagoMetodos ?? [],
+      clienteLegajo,
+      usuario: usuario.trim() || (clienteSeleccionado?.correo ?? ""),
+      categoriaId: categoriaId ? Number(categoriaId) : null,
+      nivel,
+      estado,
     });
   };
 
@@ -313,132 +304,92 @@ function ComercioFormModal({
       title={comercio ? "Editar comercio" : "Nuevo comercio"}
       description={
         comercio
-          ? `Modificá los datos del comercio ${comercio.nombre}.`
-          : "Definí los datos del comercio y a qué canales lo asociás."
+          ? `Modificá los datos del comercio ${comercio.usuario}.`
+          : "Asociá un cliente existente a un nuevo comercio."
       }
       onSubmit={guardar}
       submitLabel={comercio ? "Guardar cambios" : "Crear comercio"}
       size="lg"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="gc-tipo">Tipo de persona</Label>
+        <div className="sm:col-span-2">
+          <Label htmlFor="gc-cliente">Cliente (legajo)</Label>
           <select
-            id="gc-tipo"
+            id="gc-cliente"
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.tipoPersona}
-            onChange={(e) => cambiarTipoPersona(e.target.value as TipoPersona)}
+            value={clienteLegajo}
+            disabled={!!comercio}
+            onChange={(e) => {
+              const legajo = e.target.value;
+              setClienteLegajo(legajo);
+              const cli = clientes.find((c) => c.legajo === legajo);
+              if (cli && !comercio) setUsuario(cli.correo);
+            }}
           >
-            <option value="fisica">Persona Física</option>
-            <option value="juridica">Persona Jurídica</option>
+            <option value="">Seleccioná un cliente…</option>
+            {clientes.map((c) => (
+              <option key={c.legajo} value={c.legajo}>
+                {c.nombre} · {c.legajo}
+              </option>
+            ))}
           </select>
-        </div>
-        <div>
-          <Label htmlFor="gc-legajo">Legajo</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="gc-legajo"
-              value={form.legajo}
-              readOnly
-              className="bg-muted/40 font-mono tabular-nums"
-            />
-            <span title={LEGAJO_TOOLTIP} className="cursor-help text-muted-foreground shrink-0">
-              <HelpCircle size={14} />
-            </span>
-          </div>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Generado automáticamente según el tipo de persona. No se carga manualmente.
+            El legajo es una FK real a <code>clientes.legajo</code>; no se puede cargar texto libre.
           </p>
         </div>
-        <div>
-          <Label htmlFor="gc-usuario">Usuario</Label>
+        <div className="sm:col-span-2">
+          <Label htmlFor="gc-usuario">Usuario (email)</Label>
           <Input
             id="gc-usuario"
-            value={form.usuario}
-            onChange={(e) => setForm((f) => ({ ...f, usuario: e.target.value }))}
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
             placeholder="email@dominio.com"
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="gc-nombre">Nombre</Label>
-          <Input
-            id="gc-nombre"
-            value={form.nombre}
-            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-            placeholder="Nombre del comercio"
-          />
-        </div>
-        <div>
           <Label htmlFor="gc-categoria">Código de categoría</Label>
-          <Input
+          <select
             id="gc-categoria"
-            value={form.categoria}
-            onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-            placeholder="Ej: 780"
-          />
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={categoriaId}
+            onChange={(e) => setCategoriaId(e.target.value)}
+          >
+            <option value="">Sin categoría</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.codigo} · {c.nombre}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <Label htmlFor="gc-nivel">Nivel</Label>
           <select
             id="gc-nivel"
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.nivel}
-            onChange={(e) => setForm((f) => ({ ...f, nivel: e.target.value as NivelComercio }))}
+            value={nivel}
+            onChange={(e) => setNivel(e.target.value as NivelComercio)}
           >
-            {NIVELES.map((n) => (
+            {NIVELES_COMERCIO.map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
             ))}
           </select>
         </div>
-        <div className="sm:col-span-2">
-          <Label htmlFor="gc-desc">Descripción de categoría</Label>
-          <Input
-            id="gc-desc"
-            value={form.descripcionCategoria}
-            onChange={(e) => setForm((f) => ({ ...f, descripcionCategoria: e.target.value }))}
-          />
-        </div>
         <div>
           <Label htmlFor="gc-estado">Estado</Label>
           <select
             id="gc-estado"
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.estado}
-            onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoGeneral }))}
+            value={estado}
+            onChange={(e) => setEstado(e.target.value as EstadoComercio)}
           >
-            {ESTADOS.map((e) => (
+            {ESTADOS_COMERCIO.map((e) => (
               <option key={e} value={e}>
                 {e}
               </option>
             ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="gc-pct">Pago con transferencia</Label>
-          <select
-            id="gc-pct"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.pctHabilitado ? "true" : "false"}
-            onChange={(e) => setForm((f) => ({ ...f, pctHabilitado: e.target.value === "true" }))}
-          >
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="gc-link">Link de pago</Label>
-          <select
-            id="gc-link"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.linkPagoHabilitado ? "true" : "false"}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, linkPagoHabilitado: e.target.value === "true" }))
-            }
-          >
-            <option value="true">Sí</option>
-            <option value="false">No</option>
           </select>
         </div>
       </div>
@@ -447,66 +398,144 @@ function ComercioFormModal({
 }
 
 function Page() {
-  const {
-    comercios,
-    guardarComercio,
-    eliminarComercio,
-    setEstadoGeneral,
-    togglePct,
-    toggleLinkPago,
-  } = useComercios();
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebouncedValue(searchInput, 350);
+  const [estadoFilter, setEstadoFilter] = useState<EstadoComercio | "">("");
+  const [nivelFilter, setNivelFilter] = useState<NivelComercio | "">("");
+
+  const { can } = useCan();
+  const puedeCrear = can("crear", "comercios");
+  const puedeModificar = can("modificar", "comercios");
+  const puedeBorrar = can("borrar", "comercios");
+
+  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComercios({
+    page,
+    pageSize: PAGE_SIZE,
+    search,
+    estado: estadoFilter || undefined,
+    nivel: nivelFilter || undefined,
+  });
+
+  const { rows: categorias } = useCodigosCategoria({ page: 0, pageSize: 1000 });
+  const { data: clientes } = useClientesForSelect();
+
   const [detail, setDetail] = useState<Comercio | null>(null);
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    variant: "default" | "danger";
+    onConfirm: () => void;
+  } | null>(null);
 
-  const getActions = (r: Comercio): ActionItem[] => {
+  const invalidar = () => queryClient.invalidateQueries({ queryKey: ["comercios"] });
+
+  const cambiarEstado = async (row: Comercio, nuevo: EstadoComercio) => {
+    try {
+      await setComercioEstado(row.id, nuevo);
+      invalidar();
+    } catch (e) {
+      setConfirmAction({
+        title: "No se pudo actualizar",
+        message: (e as Error).message,
+        confirmLabel: "Cerrar",
+        variant: "danger",
+        onConfirm: () => setConfirmAction(null),
+      });
+    }
+  };
+
+  const guardar = async (input: {
+    clienteLegajo: string;
+    usuario: string;
+    categoriaId: number | null;
+    nivel: NivelComercio;
+    estado: EstadoComercio;
+  }) => {
+    try {
+      if (editTarget) {
+        await updateComercio(editTarget.id, {
+          usuario: input.usuario,
+          categoriaId: input.categoriaId,
+          nivel: input.nivel,
+          estado: input.estado,
+        });
+      } else {
+        await createComercio({
+          legajo: input.clienteLegajo,
+          usuario: input.usuario,
+          categoriaId: input.categoriaId,
+          nivel: input.nivel,
+          estado: input.estado,
+        });
+      }
+      invalidar();
+      setShowNew(false);
+      setEditTarget(null);
+    } catch (e) {
+      setConfirmAction({
+        title: "No se pudo guardar",
+        message: (e as Error).message,
+        confirmLabel: "Cerrar",
+        variant: "danger",
+        onConfirm: () => setConfirmAction(null),
+      });
+    }
+  };
+
+  const eliminar = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deleteComercio(confirmDelete.id);
+      invalidar();
+    } catch (e) {
+      setConfirmAction({
+        title: "No se pudo eliminar",
+        message: (e as Error).message,
+        confirmLabel: "Cerrar",
+        variant: "danger",
+        onConfirm: () => setConfirmAction(null),
+      });
+    }
+    setConfirmDelete(null);
+  };
+
+  const getActions = (row: Comercio): ActionItem[] => {
     const items: ActionItem[] = [];
-    if (r.pctHabilitado) {
-      items.push({
-        label: "Desasociar de PCT",
-        icon: CreditCard,
-        variant: "danger",
-        onClick: () => togglePct(r.id),
-      });
-    } else {
-      items.push({ label: "Asociar a PCT", icon: CreditCard, onClick: () => togglePct(r.id) });
-    }
-    if (r.linkPagoHabilitado) {
-      items.push({
-        label: "Desasociar de Link de pago",
-        icon: Link2,
-        variant: "danger",
-        onClick: () => toggleLinkPago(r.id),
-      });
-    } else {
-      items.push({
-        label: "Asociar a Link de pago",
-        icon: Link2,
-        onClick: () => toggleLinkPago(r.id),
-      });
-    }
-    if (r.estado === "Activado") {
+    if (row.estado === "Activado") {
       items.push({
         label: "Suspender",
         icon: XCircle,
         variant: "danger",
-        onClick: () => setEstadoGeneral(r.id, "Suspendido"),
+        disabled: !puedeModificar,
+        onClick: () => cambiarEstado(row, "Suspendido"),
       });
     } else {
       items.push({
         label: "Activar",
         icon: CheckCircle,
-        onClick: () => setEstadoGeneral(r.id, "Activado"),
+        disabled: !puedeModificar,
+        onClick: () => cambiarEstado(row, "Activado"),
       });
     }
-    items.push({ label: "Editar", icon: Edit3, onClick: () => setEditTarget(r) });
-    items.push({ label: "Ver detalle", icon: Eye, onClick: () => setDetail(r) });
+    items.push({
+      label: "Editar",
+      icon: Edit3,
+      disabled: !puedeModificar,
+      onClick: () => setEditTarget(row),
+    });
+    items.push({ label: "Ver detalle", icon: Eye, onClick: () => setDetail(row) });
     items.push({
       label: "Eliminar",
       icon: Trash2,
       variant: "danger",
-      onClick: () => setConfirmDelete(r),
+      disabled: !puedeBorrar,
+      onClick: () => setConfirmDelete(row),
     });
     return items;
   };
@@ -516,7 +545,6 @@ function Page() {
       key: "usuario",
       label: "Usuario",
       sortable: true,
-      filterable: true,
       render: (r) => (
         <div>
           <div className="font-semibold">{r.usuario}</div>
@@ -525,102 +553,211 @@ function Page() {
       ),
     },
     {
-      key: "nombre",
-      label: "Nombre",
+      key: "cliente",
+      label: "Cliente",
       sortable: true,
-      filterable: true,
-      render: (r) => r.nombre,
+      render: (r) => r.cliente?.nombre ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "categoria",
       label: "Categoría",
       sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono tabular-nums">{r.categoria}</span>,
+      render: (r) =>
+        r.categoria ? (
+          <span className="font-mono tabular-nums">
+            {r.categoria.codigo} · {r.categoria.nombre}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: "nivel",
       label: "Nivel",
       sortable: true,
-      filterable: "enum",
-      filterOptions: NIVELES,
       render: (r) => r.nivel,
     },
     {
-      key: "pctHabilitado",
-      label: "PCT",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["Sí", "No"],
-      render: (r) => canalBadge(r.pctHabilitado),
-    },
-    {
-      key: "linkPagoHabilitado",
-      label: "Link de pago",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: ["Sí", "No"],
-      render: (r) => canalBadge(r.linkPagoHabilitado),
+      key: "puntosVenta",
+      label: "Puntos de venta",
+      sortable: false,
+      render: (r) => <span className="font-mono tabular-nums text-xs">{r.puntosVenta.length}</span>,
     },
     {
       key: "estado",
       label: "Estado",
       sortable: true,
-      filterable: "enum",
-      filterOptions: ESTADOS,
       render: (r) => <Badge tone={estadoBadgeTone(r.estado)}>{r.estado}</Badge>,
     },
     {
-      key: "fechaRegistro",
+      key: "createdAt",
       label: "Registro",
       sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono text-xs tabular-nums">{r.fechaRegistro}</span>,
+      render: (r) => (
+        <span className="font-mono text-xs tabular-nums">
+          {new Date(r.createdAt).toLocaleDateString("es-AR")}
+        </span>
+      ),
     },
   ];
 
+  const err = error instanceof DataAccessError ? error : null;
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   return (
-    <>
+    <PermissionGuard recurso="comercios">
       <PageHeader
         title="Gestión de comercios"
-        description="Listado centralizado de comercios de la plataforma y su asociación a los canales PCT y Link de pago."
+        description="Listado centralizado de comercios de la plataforma, recuperados desde la base de datos."
         action={
-          <BtnPrimary type="button" onClick={() => setShowNew(true)}>
+          <BtnPrimary
+            type="button"
+            onClick={() => setShowNew(true)}
+            disabled={!puedeCrear || !clientes}
+          >
             <Plus size={14} /> Nuevo comercio
           </BtnPrimary>
         }
       />
-      <DataTable
-        columns={columns}
-        data={comercios}
-        keyExtractor={(r) => r.id}
-        pageSize={10}
-        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-      />
-      {detail && <ComercioModal comercio={detail} onClose={() => setDetail(null)} />}
+
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <Label htmlFor="buscar">Buscar</Label>
+          <Input
+            id="buscar"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Usuario (email) o legajo…"
+          />
+        </div>
+        <div>
+          <Label htmlFor="f-estado">Estado</Label>
+          <select
+            id="f-estado"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={estadoFilter}
+            onChange={(e) => {
+              setEstadoFilter(e.target.value as EstadoComercio | "");
+              setPage(0);
+            }}
+          >
+            <option value="">Todos</option>
+            {ESTADOS_COMERCIO.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="f-nivel">Nivel</Label>
+          <select
+            id="f-nivel"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={nivelFilter}
+            onChange={(e) => {
+              setNivelFilter(e.target.value as NivelComercio | "");
+              setPage(0);
+            }}
+          >
+            <option value="">Todos</option>
+            {NIVELES_COMERCIO.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
+          <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
+          Cargando comercios…
+        </div>
+      ) : isError ? (
+        <MensajeEstado
+          tipo={err?.permission ? "permiso" : "error"}
+          mensaje={err?.message ?? "Error desconocido"}
+          onRetry={() => refetch()}
+        />
+      ) : isEmpty ? (
+        <MensajeEstado tipo="vacio" mensaje="" />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={rows}
+            keyExtractor={(r) => r.id}
+            pageSize={PAGE_SIZE}
+            showDownloadButton={false}
+            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <span>
+              {total} comercio(s) · página {page + 1} de {totalPaginas}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page === 0 || isFetching}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                disabled={page + 1 >= totalPaginas || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {detail && <ComercioDetalle comercio={detail} onClose={() => setDetail(null)} />}
+
       {(showNew || editTarget) && (
         <ComercioFormModal
           comercio={editTarget}
-          existingLegajos={comercios.map((c) => c.legajo)}
+          clientes={clientes ?? []}
+          categorias={categorias ?? []}
           onClose={() => {
             setShowNew(false);
             setEditTarget(null);
           }}
-          onSave={guardarComercio}
+          onSave={guardar}
         />
       )}
+
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
         title="Eliminar comercio"
-        message={`¿Estás seguro de eliminar el comercio "${confirmDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Estás seguro de eliminar el comercio "${confirmDelete?.usuario}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         variant="danger"
-        onConfirm={() => {
-          if (confirmDelete) eliminarComercio(confirmDelete.id);
-          setConfirmDelete(null);
-        }}
+        onConfirm={eliminar}
       />
-    </>
+
+      {confirmAction && (
+        <ConfirmDialog
+          open={!!confirmAction}
+          onClose={() => setConfirmAction(null)}
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmLabel={confirmAction.confirmLabel}
+          variant={confirmAction.variant}
+          onConfirm={confirmAction.onConfirm}
+        />
+      )}
+    </PermissionGuard>
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Eye, Edit3, XCircle } from "lucide-react";
+import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -9,7 +10,19 @@ import { BtnPrimary, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { desgloseDesdeConfig, fmtARS, fmtPct, type Desglose } from "@/lib/aranceles";
-import type { ModalidadComision } from "@/data/clientes";
+import { useComisiones } from "@/hooks/useComisiones";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { upsertComision, setComisionEstado } from "@/lib/api/comisiones";
+import { getClienteByCorreo } from "@/lib/api/clientes";
+import { DataAccessError } from "@/lib/api/errors";
+import {
+  TIPOS_OPERACION,
+  type TipoOperacion,
+  type ModalidadComision,
+  type EstadoComision,
+} from "@/lib/api/types";
+import { useCan } from "@/lib/permissions";
+import { PermissionGuard } from "@/components/permission-guard";
 
 export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   head: () => ({
@@ -24,31 +37,33 @@ export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   component: ComisionesPage,
 });
 
+const PAGE_SIZE = 25;
+
 type Comision = {
+  id: string;
   legajo: string;
   correo: string;
+  cuit: string;
+  tipoPersona: "fisica" | "juridica";
   operacion: string;
-  tipo: string;
+  tipo: TipoOperacion;
   modalidad: ModalidadComision;
-  estado: "Habilitado" | "Deshabilitado";
+  estado: EstadoComision;
   porcentaje: number | null;
   montoFijo: number | null;
   porcentajeImpuesto: number;
   descripcion: string;
 };
 
-// Monto de referencia usado para previsualizar el desglose de cobro.
 const MONTO_OPERACION_REF = 100000;
 
-const montoBase = (c: Pick<Comision, "modalidad" | "porcentaje" | "montoFijo">) =>
-  c.modalidad === "Fijo" ? (c.montoFijo ?? 0) : null;
-
 const desgloseDe = (
-  c: Pick<Comision, "modalidad" | "porcentaje" | "montoFijo" | "porcentajeImpuesto">,
+  c: Pick<Comision, "tipo" | "modalidad" | "porcentaje" | "montoFijo" | "porcentajeImpuesto">,
 ): Desglose =>
   desgloseDesdeConfig(
     {
-      operacion: "",
+      operacion: c.tipo,
+      tipo: c.tipo,
       modalidad: c.modalidad,
       porcentaje: c.porcentaje,
       montoFijo: c.montoFijo,
@@ -60,103 +75,18 @@ const desgloseDe = (
 const configLabel = (c: Comision) =>
   c.modalidad === "Fijo" ? fmtARS(c.montoFijo ?? 0) : fmtPct(c.porcentaje ?? 0);
 
-const initialData: Comision[] = [
-  {
-    legajo: "LPF-0001",
-    correo: "juan.perez@email.com",
-    operacion: "DEP-2024-001",
-    tipo: "Depósito",
-    modalidad: "Fijo",
-    estado: "Habilitado",
-    porcentaje: null,
-    montoFijo: 150,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por depósito estándar",
-  },
-  {
-    legajo: "LPF-0002",
-    correo: "maria.lopez@email.com",
-    operacion: "RET-2024-015",
-    tipo: "Retiro",
-    modalidad: "Porcentaje",
-    estado: "Habilitado",
-    porcentaje: 0.5,
-    montoFijo: null,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por retiro express",
-  },
-  {
-    legajo: "LPF-0021",
-    correo: "carlos.martinez@email.com",
-    operacion: "LNK-2024-032",
-    tipo: "Link de pago",
-    modalidad: "Porcentaje",
-    estado: "Deshabilitado",
-    porcentaje: 1.9,
-    montoFijo: null,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por link de pago",
-  },
-  {
-    legajo: "LPF-0022",
-    correo: "ana.garcia@email.com",
-    operacion: "ECO-2024-008",
-    tipo: "E-commerce",
-    modalidad: "Porcentaje",
-    estado: "Habilitado",
-    porcentaje: 1,
-    montoFijo: null,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por transacción e-commerce",
-  },
-  {
-    legajo: "LPF-0023",
-    correo: "pedro.rodriguez@email.com",
-    operacion: "DEP-2024-056",
-    tipo: "Depósito",
-    modalidad: "Fijo",
-    estado: "Habilitado",
-    porcentaje: null,
-    montoFijo: 95,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por depósito prioritario",
-  },
-  {
-    legajo: "LPF-0024",
-    correo: "lucia.mendoza@email.com",
-    operacion: "RET-2024-089",
-    tipo: "Retiro",
-    modalidad: "Porcentaje",
-    estado: "Deshabilitado",
-    porcentaje: 0.75,
-    montoFijo: null,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por retiro programado",
-  },
-  {
-    legajo: "LPF-0025",
-    correo: "gabriel.rios@email.com",
-    operacion: "LNK-2024-112",
-    tipo: "Link de pago",
-    modalidad: "Fijo",
-    estado: "Habilitado",
-    porcentaje: null,
-    montoFijo: 60,
-    porcentajeImpuesto: 21,
-    descripcion: "Comisión por link recurrente",
-  },
-];
-
-type ComisionDraft = Pick<
-  Comision,
-  | "correo"
-  | "tipo"
-  | "modalidad"
-  | "porcentaje"
-  | "montoFijo"
-  | "porcentajeImpuesto"
-  | "descripcion"
->;
+type ComisionDraft = {
+  id?: string;
+  correo: string;
+  cuit: string;
+  tipoPersona: "fisica" | "juridica";
+  tipo: TipoOperacion;
+  modalidad: ModalidadComision;
+  porcentaje: number | null;
+  montoFijo: number | null;
+  porcentajeImpuesto: number;
+  descripcion: string;
+};
 
 function ComisionFormFields({
   draft,
@@ -168,26 +98,39 @@ function ComisionFormFields({
   return (
     <>
       <div>
-        <Label htmlFor="com-correo">Email</Label>
+        <Label htmlFor="com-correo">Email del cliente</Label>
         <Input
           id="com-correo"
           value={draft.correo}
           onChange={(e) => onChange({ ...draft, correo: e.target.value })}
           placeholder="usuario@email.com"
         />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          El cliente debe estar dado de alta. Su legajo (LPF/LPJ-CUIT) se resuelve desde la BD.
+        </p>
       </div>
       <div>
-        <Label htmlFor="com-tipo">Operación</Label>
+        <Label htmlFor="com-cuit">CUIT</Label>
+        <Input
+          id="com-cuit"
+          value={draft.cuit}
+          onChange={(e) => onChange({ ...draft, cuit: e.target.value })}
+          placeholder="20-12345678-9"
+        />
+      </div>
+      <div>
+        <Label htmlFor="com-operacion">Tipo de operación</Label>
         <select
-          id="com-tipo"
+          id="com-operacion"
           className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           value={draft.tipo}
-          onChange={(e) => onChange({ ...draft, tipo: e.target.value })}
+          onChange={(e) => onChange({ ...draft, tipo: e.target.value as TipoOperacion })}
         >
-          <option>Depósito</option>
-          <option>Retiro</option>
-          <option>Link de pago</option>
-          <option>E-commerce</option>
+          {TIPOS_OPERACION.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
         </select>
       </div>
       <div>
@@ -219,9 +162,6 @@ function ComisionFormFields({
             }
             placeholder="Ej: 1"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Porcentaje aplicado sobre el monto de la operación.
-          </p>
         </div>
       ) : (
         <div>
@@ -240,9 +180,6 @@ function ComisionFormFields({
             }
             placeholder="Ej: 100"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Modalidad alternativa (monto fijo) preparada en el modelo de datos.
-          </p>
         </div>
       )}
       <div>
@@ -256,10 +193,6 @@ function ComisionFormFields({
           onChange={(e) => onChange({ ...draft, porcentajeImpuesto: Number(e.target.value) || 0 })}
           placeholder="Ej: 21"
         />
-        <p className="text-[11px] text-muted-foreground mt-1">
-          Impuesto que retiene y paga MoliPay por el servicio (hoy 21% IVA). Es distinto de las
-          retenciones al cliente (Ingresos Brutos, débito/crédito).
-        </p>
       </div>
       <div className="sm:col-span-2">
         <Label htmlFor="com-desc">Descripción</Label>
@@ -293,27 +226,75 @@ function DesglosePreview({ desglose }: { desglose: Desglose }) {
         <span>Monto cobrado al cliente</span>
         <span className="font-mono tabular-nums">{fmtARS(desglose.total)}</span>
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        Fórmula: monto cobrado = comisión × (1 + {desglose.porcentajeImpuesto}%).
-      </p>
+    </div>
+  );
+}
+
+function EstadoMensaje({
+  tipo,
+  mensaje,
+  onRetry,
+}: {
+  tipo: "error" | "vacio" | "permiso";
+  mensaje: string;
+  onRetry?: () => void;
+}) {
+  if (tipo === "permiso") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
+        <AlertTriangle size={28} />
+        <div>
+          <p className="font-semibold">No tenés permiso para ver esto</p>
+          <p className="mt-1">{mensaje}</p>
+        </div>
+      </div>
+    );
+  }
+  if (tipo === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
+        <AlertTriangle size={28} />
+        <div>
+          <p className="font-semibold">Ocurrió un error al cargar las comisiones</p>
+          <p className="mt-1">{mensaje}</p>
+        </div>
+        {onRetry && (
+          <BtnPrimary onClick={onRetry} className="mt-2">
+            Reintentar
+          </BtnPrimary>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+      <Inbox size={28} />
+      <p>No hay comisiones que coincidan con los filtros aplicados.</p>
     </div>
   );
 }
 
 function ComisionesPage() {
-  const [data, setData] = useState<Comision[]>(initialData);
-  const [showNueva, setShowNueva] = useState(false);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebouncedValue(searchInput, 350);
+  const [tipo, setTipo] = useState<TipoOperacion | "">("");
+  const [estado, setEstado] = useState<EstadoComision | "">("");
+
+  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComisiones({
+    page,
+    pageSize: PAGE_SIZE,
+    search,
+    tipo: tipo || undefined,
+    estado: estado || undefined,
+  });
+
   const [viewing, setViewing] = useState<Comision | null>(null);
   const [editTarget, setEditTarget] = useState<Comision | null>(null);
-  const [draft, setDraft] = useState<ComisionDraft>({
-    correo: "",
-    tipo: "Depósito",
-    modalidad: "Porcentaje",
-    porcentaje: 1,
-    montoFijo: null,
-    porcentajeImpuesto: 21,
-    descripcion: "",
-  });
+  const [showNueva, setShowNueva] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -322,27 +303,55 @@ function ComisionesPage() {
     onConfirm: () => void;
   } | null>(null);
 
+  const { can } = useCan();
+  const puedeCrear = can("crear", "usuarios");
+  const puedeModificar = can("modificar", "usuarios");
+
+  const data: Comision[] = rows.map((c) => ({
+    id: c.id,
+    legajo: c.cliente?.legajo ?? "—",
+    correo: c.cliente?.correo ?? "—",
+    cuit: c.cliente?.cuit ?? "—",
+    tipoPersona: c.cliente?.tipoPersona ?? "fisica",
+    operacion: c.operacion,
+    tipo: c.tipo,
+    modalidad: c.modalidad,
+    estado: c.estado,
+    porcentaje: c.porcentaje,
+    montoFijo: c.montoFijo,
+    porcentajeImpuesto: c.porcentajeImpuesto,
+    descripcion: c.descripcion ?? "",
+  }));
+
+  const [draft, setDraft] = useState<ComisionDraft>({
+    correo: "",
+    cuit: "",
+    tipoPersona: "fisica",
+    tipo: "Depósito",
+    modalidad: "Porcentaje",
+    porcentaje: 1,
+    montoFijo: null,
+    porcentajeImpuesto: 21,
+    descripcion: "",
+  });
+
   const getActions = (row: Comision): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
-    { label: "Editar", icon: Edit3, onClick: () => setEditTarget(row) },
+    { label: "Editar", icon: Edit3, onClick: () => abrirEdicion(row), disabled: !puedeModificar },
     ...(row.estado === "Habilitado"
       ? [
           {
             label: "Deshabilitar",
             icon: XCircle,
             variant: "danger" as const,
+            disabled: !puedeModificar,
             onClick: () =>
               setConfirmAction({
                 title: "Deshabilitar comisión",
                 message: `¿Estás seguro de deshabilitar la comisión ${row.legajo}?`,
                 confirmLabel: "Deshabilitar",
                 variant: "danger",
-                onConfirm: () =>
-                  setData((prev) =>
-                    prev.map((c) =>
-                      c.legajo === row.legajo ? { ...c, estado: "Deshabilitado" } : c,
-                    ),
-                  ),
+                onConfirm: () => cambiarEstado(row, "Deshabilitado"),
               }),
           },
         ]
@@ -350,16 +359,14 @@ function ComisionesPage() {
           {
             label: "Habilitar",
             icon: Eye,
+            disabled: !puedeModificar,
             onClick: () =>
               setConfirmAction({
                 title: "Habilitar comisión",
                 message: `¿Estás seguro de habilitar la comisión ${row.legajo}?`,
                 confirmLabel: "Habilitar",
                 variant: "default",
-                onConfirm: () =>
-                  setData((prev) =>
-                    prev.map((c) => (c.legajo === row.legajo ? { ...c, estado: "Habilitado" } : c)),
-                  ),
+                onConfirm: () => cambiarEstado(row, "Habilitado"),
               }),
           },
         ]),
@@ -368,6 +375,8 @@ function ComisionesPage() {
   const abrirNueva = () => {
     setDraft({
       correo: "",
+      cuit: "",
+      tipoPersona: "fisica",
       tipo: "Depósito",
       modalidad: "Porcentaje",
       porcentaje: 1,
@@ -375,12 +384,16 @@ function ComisionesPage() {
       porcentajeImpuesto: 21,
       descripcion: "",
     });
+    setFormError(null);
     setShowNueva(true);
   };
 
   const abrirEdicion = (c: Comision) => {
     setDraft({
+      id: c.id,
       correo: c.correo,
+      cuit: c.cuit,
+      tipoPersona: c.tipoPersona,
       tipo: c.tipo,
       modalidad: c.modalidad,
       porcentaje: c.porcentaje,
@@ -388,34 +401,66 @@ function ComisionesPage() {
       porcentajeImpuesto: c.porcentajeImpuesto,
       descripcion: c.descripcion,
     });
+    setFormError(null);
     setEditTarget(c);
   };
 
-  const guardarDraft = () => {
-    if (editTarget) {
-      setData((prev) => prev.map((c) => (c.legajo === editTarget.legajo ? { ...c, ...draft } : c)));
-      setEditTarget(null);
-    } else {
-      const nueva: Comision = {
-        legajo: `LPF-${String(99 + data.length)}`,
-        correo: draft.correo,
-        operacion: `OP-${String(data.length + 1).padStart(4, "0")}`,
+  const cambiarEstado = async (row: Comision, nuevo: EstadoComision) => {
+    try {
+      await setComisionEstado(row.id, nuevo);
+      queryClient.invalidateQueries({ queryKey: ["comisiones"] });
+    } catch (e) {
+      setConfirmAction({
+        title: "No se pudo actualizar",
+        message: (e as Error).message,
+        confirmLabel: "Cerrar",
+        variant: "danger",
+        onConfirm: () => setConfirmAction(null),
+      });
+    }
+  };
+
+  const guardarDraft = async () => {
+    setFormError(null);
+    if (!draft.correo || !draft.cuit) {
+      setFormError("Completá el correo y el CUIT del cliente.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const cliente = await getClienteByCorreo(draft.correo);
+      if (!cliente) {
+        setFormError("No existe un cliente con ese correo. Dalo de alta primero.");
+        setSaving(false);
+        return;
+      }
+      await upsertComision({
+        id: draft.id,
+        clienteId: cliente.id,
+        operacion: draft.id
+          ? (editTarget?.operacion ?? "")
+          : `OP-${Date.now().toString().slice(-6)}`,
         tipo: draft.tipo,
         modalidad: draft.modalidad,
-        estado: "Habilitado",
         porcentaje: draft.modalidad === "Porcentaje" ? draft.porcentaje : null,
         montoFijo: draft.modalidad === "Fijo" ? draft.montoFijo : null,
         porcentajeImpuesto: draft.porcentajeImpuesto,
         descripcion: draft.descripcion,
-      };
-      setData((prev) => [...prev, nueva]);
+      });
+      queryClient.invalidateQueries({ queryKey: ["comisiones"] });
       setShowNueva(false);
+      setEditTarget(null);
+    } catch (e) {
+      setFormError((e as Error).message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const draftDesglose = desgloseDesdeConfig(
     {
       operacion: draft.tipo,
+      tipo: draft.tipo,
       modalidad: draft.modalidad,
       porcentaje: draft.porcentaje,
       montoFijo: draft.montoFijo,
@@ -424,25 +469,118 @@ function ComisionesPage() {
     MONTO_OPERACION_REF,
   );
 
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const err = error instanceof DataAccessError ? error : null;
+
   return (
-    <>
+    <PermissionGuard recurso="usuarios">
       <PageHeader
         title="Carga de comisiones"
         description="Comisión y % Impuesto (IVA sobre la comisión) parametrizables por cliente y tipo de operación."
         action={
-          <BtnPrimary onClick={abrirNueva}>
+          <BtnPrimary onClick={abrirNueva} disabled={!puedeCrear}>
             <Plus size={16} />
             Nueva comisión
           </BtnPrimary>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={data}
-        keyExtractor={(r) => r.legajo + r.operacion}
-        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-      />
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div className="flex-1 min-w-[220px]">
+          <Label htmlFor="buscar">Buscar</Label>
+          <Input
+            id="buscar"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Legajo, correo, operación…"
+          />
+        </div>
+        <div>
+          <Label htmlFor="f-tipo">Tipo</Label>
+          <select
+            id="f-tipo"
+            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+            value={tipo}
+            onChange={(e) => {
+              setTipo(e.target.value as TipoOperacion | "");
+              setPage(0);
+            }}
+          >
+            <option value="">Todos</option>
+            {TIPOS_OPERACION.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="f-estado">Estado</Label>
+          <select
+            id="f-estado"
+            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+            value={estado}
+            onChange={(e) => {
+              setEstado(e.target.value as EstadoComision | "");
+              setPage(0);
+            }}
+          >
+            <option value="">Todos</option>
+            <option value="Habilitado">Habilitado</option>
+            <option value="Deshabilitado">Deshabilitado</option>
+          </select>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
+          <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
+          Cargando comisiones…
+        </div>
+      ) : isError ? (
+        <EstadoMensaje
+          tipo={err?.permission ? "permiso" : "error"}
+          mensaje={err?.message ?? "Error desconocido"}
+          onRetry={() => refetch()}
+        />
+      ) : isEmpty ? (
+        <EstadoMensaje tipo="vacio" mensaje="" />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={data}
+            keyExtractor={(r) => r.id}
+            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <span>
+              {total} comisión(es) · página {page + 1} de {totalPaginas}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page === 0 || isFetching}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                disabled={page + 1 >= totalPaginas || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {viewing && (
         <FormDialog
@@ -464,12 +602,16 @@ function ComisionesPage() {
               <span className="font-medium">{viewing.correo}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Operación:</span>{" "}
-              <span className="font-medium font-mono tabular-nums">{viewing.operacion}</span>
+              <span className="text-muted-foreground">CUIT:</span>{" "}
+              <span className="font-mono tabular-nums">{viewing.cuit}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Tipo:</span>{" "}
+              <span className="text-muted-foreground">Tipo de operación:</span>{" "}
               <span className="font-medium">{viewing.tipo}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Código de operación:</span>{" "}
+              <span className="font-medium font-mono tabular-nums">{viewing.operacion}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Modalidad:</span>{" "}
@@ -516,9 +658,15 @@ function ComisionesPage() {
               : "Asignar una nueva comisión a un cliente."
           }
           onSubmit={guardarDraft}
-          submitLabel="Guardar"
+          submitLabel={saving ? "Guardando…" : "Guardar"}
           size="lg"
         >
+          {formError && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ComisionFormFields draft={draft} onChange={setDraft} />
             <div className="sm:col-span-2">
@@ -539,7 +687,7 @@ function ComisionesPage() {
           onConfirm={confirmAction.onConfirm}
         />
       )}
-    </>
+    </PermissionGuard>
   );
 }
 
@@ -553,6 +701,11 @@ const columns: Column<Comision>[] = [
   },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   {
+    key: "cuit",
+    label: "CUIT",
+    render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span>,
+  },
+  {
     key: "operacion",
     label: "Código de operación",
     filterable: true,
@@ -562,7 +715,7 @@ const columns: Column<Comision>[] = [
     key: "tipo",
     label: "Operación",
     filterable: "enum",
-    filterOptions: ["Depósito", "Retiro", "Link de pago", "E-commerce"],
+    filterOptions: [...TIPOS_OPERACION],
     render: (r) => r.tipo,
   },
   {

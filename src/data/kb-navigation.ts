@@ -51,7 +51,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Pagos con tarjeta — Movimientos — Admin Molly  (/admin/general/movimientos/pagos-tarjeta)
    - Retiros — Movimientos — Admin Molly  (/admin/general/movimientos/retiros)
    - Usuarios — Admin Molly  (/admin/general/usuarios)
-   - Ficha de usuario — Admin Molly  (/admin/general/usuarios/$legajo)
+   - Ficha de cliente — Admin Molly  (/admin/general/usuarios/$legajo)
    - Carga de comisiones — Usuarios — Admin Molly  (/admin/general/usuarios/comisiones)
    - Usuarios con CVU — Usuarios — Admin Molly  (/admin/general/usuarios/cvu)
    - Personas jurídicas — Usuarios — Admin Molly  (/admin/general/usuarios/juridicas)
@@ -234,7 +234,7 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   },
   {
     "path": "/admin/general/usuarios/$legajo",
-    "title": "Ficha de usuario — Admin Molly"
+    "title": "Ficha de cliente — Admin Molly"
   },
   {
     "path": "/admin/general/usuarios/comisiones",

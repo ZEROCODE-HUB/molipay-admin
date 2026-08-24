@@ -15,15 +15,7 @@ export type Movimiento = {
   cuit: string;
   monto: string;
   fecha: string;
-  estado:
-    | "APROBADO"
-    | "EN PROGRESO"
-    | "RECHAZADO"
-    | "BLOQUEADO"
-    | "CREADO"
-    | "ABIERTO"
-    | "EXPIRADO"
-    | "REEMBOLSADO";
+  estado: string;
   desglose?: Desglose;
 };
 
@@ -35,7 +27,7 @@ const estadoMap: Record<
   { label: string; tone: "neutral" | "success" | "warn" | "danger" }
 > = {
   APROBADO: { label: "APROBADO", tone: "success" },
-  "EN PROGRESO": { label: "EN PROGRESO", tone: "warn" },
+  EN_PROGRESO: { label: "EN PROGRESO", tone: "warn" },
   RECHAZADO: { label: "RECHAZADO", tone: "danger" },
   BLOQUEADO: { label: "BLOQUEADO", tone: "danger" },
   CREADO: { label: "CREADO", tone: "neutral" },
@@ -51,7 +43,7 @@ const estadoMap: Record<
 export const estadoBadge = (e: string) => {
   const m = estadoMap[e] ?? { label: e, tone: "neutral" as const };
   const badge = <Badge tone={m.tone}>{m.label}</Badge>;
-  return e === "EN PROGRESO" || e === "APROBADO" || e === "RECHAZADO" ? (
+  return e === "EN_PROGRESO" || e === "APROBADO" || e === "RECHAZADO" ? (
     <span title={lifecycleTooltip} className="cursor-help">
       {badge}
     </span>

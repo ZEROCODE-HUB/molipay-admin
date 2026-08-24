@@ -45,7 +45,7 @@ const toneMap: Record<string, "success" | "warn" | "danger" | "neutral"> = {
 
 const initialData: Juridica[] = [
   {
-    legajo: "LPJ-0101",
+    legajo: "LPJ-30112233445",
     correo: "info@constructoraalpha.com",
     razonSocial: "Constructora Alpha SA",
     tipo: "SA",
@@ -54,7 +54,7 @@ const initialData: Juridica[] = [
     subcuentas: 5,
   },
   {
-    legajo: "LPJ-0102",
+    legajo: "LPJ-30223344556",
     correo: "admin@comercializadorabeta.com",
     razonSocial: "Comercializadora Beta SRL",
     tipo: "SRL",
@@ -63,7 +63,7 @@ const initialData: Juridica[] = [
     subcuentas: 2,
   },
   {
-    legajo: "LPJ-0103",
+    legajo: "LPJ-30334455667",
     correo: "contacto@serviciosgamma.com",
     razonSocial: "Servicios Gamma SA",
     tipo: "SA",
@@ -72,7 +72,7 @@ const initialData: Juridica[] = [
     subcuentas: 3,
   },
   {
-    legajo: "LPJ-0104",
+    legajo: "LPJ-30445566778",
     correo: "ventas@distribuidoradelta.com",
     razonSocial: "Distribuidora Delta SRL",
     tipo: "SRL",
@@ -81,7 +81,7 @@ const initialData: Juridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "LPJ-0105",
+    legajo: "LPJ-30556677889",
     correo: "info@logisticaepsilon.com",
     razonSocial: "Logística Epsilon SA",
     tipo: "SA",
@@ -90,7 +90,7 @@ const initialData: Juridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "LPJ-0106",
+    legajo: "LPJ-30667788990",
     correo: "admin@techzeta.com",
     razonSocial: "Tech Zeta SRL",
     tipo: "SRL",
@@ -99,7 +99,7 @@ const initialData: Juridica[] = [
     subcuentas: 7,
   },
   {
-    legajo: "LPJ-0107",
+    legajo: "LPJ-30778899001",
     correo: "contacto@alimentoseta.com",
     razonSocial: "Alimentos Eta SA",
     tipo: "SA",
@@ -108,7 +108,7 @@ const initialData: Juridica[] = [
     subcuentas: 0,
   },
   {
-    legajo: "LPJ-0108",
+    legajo: "LPJ-30889900112",
     correo: "info@industriatheta.com",
     razonSocial: "Industria Theta SRL",
     tipo: "SRL",
@@ -117,7 +117,7 @@ const initialData: Juridica[] = [
     subcuentas: 4,
   },
   {
-    legajo: "LPJ-0109",
+    legajo: "LPJ-30990011223",
     correo: "gerencia@comercioiota.com",
     razonSocial: "Comercio Iota SA",
     tipo: "SA",
@@ -126,7 +126,7 @@ const initialData: Juridica[] = [
     subcuentas: 1,
   },
   {
-    legajo: "LPJ-0110",
+    legajo: "LPJ-30001122334",
     correo: "admin@transporteskappa.com",
     razonSocial: "Transportes Kappa SRL",
     tipo: "SRL",
