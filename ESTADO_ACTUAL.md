@@ -586,7 +586,7 @@ documenta lo ya existente).
 
 | # | Hallazgo | Impacto | Estado |
 |---|---|---|---|
-| GAP-1 | La RPC `cambiar_estado_movimiento` **NO existe en producción** — **CONFIRMADO con doble evidencia dura** (ver INCIDENTE abajo) | El botón "Cambiar estado" del panel falla en prod hoy. Fix propuesto en `0006_fix_rpc_cambiar_estado.sql` (NO aplicado, pendiente aprobación) | 🔴 **INCIDENTE ABIERTO** |
+| GAP-1 | La RPC `cambiar_estado_movimiento` nunca existió en producción — **RESUELTO**: 0006 aplicada y verificada el 2026-08-23 (ver INCIDENTE + Cierre abajo) | Botón "Cambiar estado" operativo nuevamente; verificación post-aplicación incluyó exposición vía PostgREST y rechazo de autorización a llamadas sin usuario | ✅ **RESUELTO 2026-08-23** |
 | GAP-2 | `handle_new_admin_user()` inserta sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) | Rota si sigue enganchada a `auth.users`; alta de admin nuevo fallaría. Documentada verbatim en 0005; fix a decidir aparte (no mezclado) | 🟠 Pendiente decisión |
 | ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
 | ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
@@ -630,6 +630,36 @@ producción**, aunque el panel y su documentación la daban por operativa.
   (aplicada/no-aplicada) y verificarse post-aplicación contra el catálogo
   (`pg_proc`/`information_schema`), igual que los seeds (lección del
   incidente de permisos).
+
+### Cierre del incidente GAP-1 (RESUELTO el 2026-08-23)
+
+**Causa raíz real:** el primer `CREATE FUNCTION` nunca llegó completo a la base —
+al pegar el bloque en el SQL Editor se cortó a mitad del statement (no fue un
+problema de proyecto equivocado ni de caché de PostgREST). La re-aplicación
+completa de `0006_fix_rpc_cambiar_estado.sql` (v2) en el proyecto
+`doqghevvrfufsynwkzxj` resolvió el incidente.
+
+**Evidencia de cierre (4 sondas independientes):**
+
+| # | Verificación | Resultado |
+|---|---|---|
+| 1 | `SELECT proname FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'cambiar%'` (SQL Editor) | **1 fila**: `cambiar_estado_movimiento` |
+| 2 | Sondeo REST GET `/rest/v1/rpc/cambiar_estado_movimiento` | 404 PGRST202 pero con hint *"Perhaps you meant to call the function public.cambiar_estado_movimiento(p_comentario, p_movimiento_id, p_nuevo_estado_id)"* — ese hint solo existe cuando la función **está en el schema cache** de PostgREST |
+| 3 | Sondeo REST POST con JSON malformado | **HTTP 400** (parse error) — antes de existir devolvía 404 PGRST202 |
+| 4 | Sondeo REST POST con firma exacta, como anon | **HTTP 401** — la función **se ejecutó** y su guard interno rechazó al anon (`auth.uid() = null` → excepción `42501 'No autenticado'`, mapeada por PostgREST a 401): comportamiento exactamente esperado del guard admin |
+
+Control paralelo durante todo el sondeo: `GET /rest/v1/estados_movimiento` → 200 `[]`
+(canal anon sano; el `[]` es lo esperado porque su RLS es SELECT TO authenticated).
+
+**Versión aplicada (v2, diferencias vs DDL original de 0002):** A1
+`lower(r.nombre) = 'admin'` (inmune a capitalización, igual que políticas RLS);
+A2 retorno incluye `estado_anterior`; A3 guard temprano no-op cuando el nuevo
+estado es igual al actual. Detalle completo en la cabecera de `0006`.
+
+**Estado: INCIDENTE CERRADO.** El botón "Cambiar estado" vuelve a estar
+operativo end-to-end (UI → Edge Function → RPC). La lección queda reforzada:
+la verificación obligatoria post-aplicación (query de cabecera de 0006) detectó
+en minutos que la primera aplicación no había aterrizado.
 
 ### Catálogos semilla fuera de alcance de 0005
 0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar
