@@ -587,10 +587,11 @@ documenta lo ya existente).
 | # | Hallazgo | Impacto | Estado |
 |---|---|---|---|
 | GAP-1 | La RPC `cambiar_estado_movimiento` nunca existió en producción — **RESUELTO**: 0006 aplicada y verificada el 2026-08-23 (ver INCIDENTE + Cierre abajo) | Botón "Cambiar estado" operativo nuevamente; verificación post-aplicación incluyó exposición vía PostgREST y rechazo de autorización a llamadas sin usuario | ✅ **RESUELTO 2026-08-23** |
-| GAP-2 | `handle_new_admin_user()` inserta sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) | Rota si sigue enganchada a `auth.users`; alta de admin nuevo fallaría. Documentada verbatim en 0005; fix a decidir aparte (no mezclado) | 🟠 Pendiente decisión |
+| GAP-2 | `handle_new_admin_user()` insertaba sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) — **RESUELTO**: 0007 aplicada y verificada el 2026-08-23 (ver Resolución abajo) | Trigger de signup vivo y roto + conflicto descubierto con `crear-admin`; ambos caminos de alta quedaron operativos (V1/V2 verdes + Edge deployada) | ✅ **RESUELTO 2026-08-23** |
 | ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
 | ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
-| ANOM-3 | Vista `auditoria_legajos`: posible lectura owner-privilege si fue creada sin `security_invoker=true` | Potencial fuga de legajos a roles sin acceso a tablas base | 🟠 Pendiente verificación |
+| ANOM-3 | Vista `auditoria_legajos` sin `security_invoker` (reloptions = null, confirmado 2026-08-23) — **RESUELTO**: ALTER VIEW aplicado el mismo día (ver Resolución abajo) | Bypass owner-privilege cerrado; verificación discriminante: sondeo anon pasó de `200 []` a error de servidor (invoker activo) | ✅ **RESUELTO 2026-08-23** |
+| GAP-4 | Auto-recursión RLS en el patrón admin-gated: políticas de `admin_users`/`clientes`/`comisiones_cliente` con `EXISTS(SELECT ... FROM admin_users ...)` inline — la de `admin_users` se autorreferencia | Cualquier query directa por camino RLS sobre esas 3 tablas devuelve `500 42P17 infinite recursion`; invisible hasta hoy porque todas las lecturas van por Edge con SERVICE_ROLE. Bloquea también el uso limpio de la vista endurecida para admins | 🔴 **PENDIENTE** — fix propuesto: helper `is_admin()` SECURITY DEFINER + reescritura de las 6 políticas (0008, aún no escrito) |
 | CONF-1 | `movimientos.comision/impuesto`: NOT NULL **sin default** en prod | Confirmado contra `information_schema`; §15 corregido | ✅ Verificado |
 | CONF-2 | `movimientos` tiene UNA sola política (SELECT admin-gated); sin INSERT/UPDATE = diseño intencional (§5) | Confirmado contra `pg_policies` | ✅ Verificado |
 | CONF-3 | REVOKE UPDATE/DELETE sobre `movimientos_transiciones`: **VIGENTE** — sondeo REST como anon devolvió `42501 permission denied for table movimientos_transiciones` | La capa append-only por privilegios está activa además de la política RLS | ✅ Verificado |
@@ -656,10 +657,89 @@ Control paralelo durante todo el sondeo: `GET /rest/v1/estados_movimiento` → 2
 A2 retorno incluye `estado_anterior`; A3 guard temprano no-op cuando el nuevo
 estado es igual al actual. Detalle completo en la cabecera de `0006`.
 
-**Estado: INCIDENTE CERRADO.** El botón "Cambiar estado" vuelve a estar
-operativo end-to-end (UI → Edge Function → RPC). La lección queda reforzada:
-la verificación obligatoria post-aplicación (query de cabecera de 0006) detectó
-en minutos que la primera aplicación no había aterrizado.
+**Estado: INCIDENTE CERRADO.** La RPC quedó restaurada y verificada (existe,
+está expuesta en PostgREST y su guard rechaza correctamente a anónimos). La
+lección queda reforzada: la verificación obligatoria post-aplicación (query de
+cabecera de 0006) detectó en minutos que la primera aplicación no había
+aterrizado.
+
+**Corrección de honestidad sobre esta cierre:** el párrafo original decía que
+el botón "vuelve a estar operativo end-to-end". Era falso y no debí escribirlo:
+un sondeo posterior reveló que la Edge Function `cambiar-estado-movimiento`
+**nunca estuvo deployada** (el gateway devolvía `404 NOT_FOUND` para ambas
+funciones del repo). Con la RPC sola, el botón seguía roto. La cadena se
+completó el mismo 2026-08-23 con el primer deploy de la Edge (verificado:
+OPTIONS → `200 "ok"`, POST `{}` → error JSON propio del handler llegando a la
+RPC). Fin-to-end real recién ahí; la prueba definitiva será el primer uso vivo.
+
+### Resolución GAP-2 (2026-08-23): trigger de alta de admins apuntando a columna eliminada
+
+**Causa raíz:** el refactor `rol` → `rol_id` nunca migró la función del trigger.
+Con el trigger VIVO (`on_auth_admin_user_created`, confirmado con salida verbatim
+de `pg_trigger`), **ambos caminos de alta estaban muertos por la misma causa**:
+
+1. *Signup directo*: el insert en `auth.users` disparaba la función rota → error.
+2. *Edge `crear-admin`* (`supabase/functions/crear-admin/index.ts`): su paso 2
+   (`auth.admin.createUser`, L83) dispara el mismo trigger; y aunque el trigger
+   no rompiera, el insert posterior de la Edge (L101, sin manejo de conflicto)
+   chocaría contra la fila fantasma del trigger → duplicate key `23505` → el
+   rollback coordinado (L112) **borra el usuario recién creado**. Bucle de fallo
+   garantizado, no simple "pisado de rol".
+
+**Fix aplicado — `0007_fix_gap2_anom3.sql` Sección 1** (decisiones aprobadas):
+B1 default `'Reader'` cuando el meta no trae rol (el viejo `'operador'` no existe
+en el catálogo real); B2 `RAISE EXCEPTION` si ni el rol pedido ni Reader existen
+(falla ruidosa, jamás `rol_id` NULL); B3 insert con columnas explícitas y
+`v_rol_id roles.id%TYPE`; **B4 opt-out**: si `raw_user_meta_data.admin_via_edge
+= 'true'`, el trigger retorna sin insertar — la Edge escribe su fila autoritativa
+(rol resuelto exacto, legajo UPPERCASE, `activo: true`) sin colisión posible.
+Edición acompañante: L87 de la Edge agrega `admin_via_edge: true` al metadata.
+
+**Verificaciones post-aplicación (todas verdes):**
+| # | Verificación | Resultado |
+|---|---|---|
+| V1 | `pg_get_functiondef('public.handle_new_admin_user()'::regprocedure)` | Contiene `rol_id` + guard `admin_via_edge`; sin rastro de la lista vieja `(id, legajo, email, nombre, rol)` |
+| V2 | Trigger query | `on_auth_admin_user_created`, `tgenabled = 'O'` |
+| V3 | Sondeo runtime `/functions/v1/crear-admin` post-deploy | OPTIONS → `200 "ok"`; POST `{}` → `400 {"error":"Faltan email, password o nombre"}` (handler vivo) |
+
+La Edge `crear-admin` recibió su **primer deploy** el 2026-08-23. Pendiente
+behavioral definitivo: primera alta real de admin.
+
+### Resolución ANOM-3 (2026-08-23): vista auditoria_legajos endurecida
+
+Evidencia previa pegada verbatim: `reloptions = null`. Aplicado
+`ALTER VIEW public.auditoria_legajos SET (security_invoker = true);`
+(verificación discriminante: sondeo anon pasó de `HTTP 200 []` a error de
+servidor — el flip prueba que el invoker activó; el error específico destapó
+GAP-4, ver abajo). Cambio de comportamiento aceptado: no-admins obtienen
+error/denial al consultar la vista; los admins la leerán normal una vez
+reparadas las políticas de GAP-4.
+
+### GAP-4 (nuevo hallazgo, 2026-08-23): auto-recursión RLS en el patrón admin-gated
+
+Sondas como anon tras endurecer la vista:
+
+```
+admin_users        → HTTP 500 42P17 "infinite recursion detected in policy for relation admin_users"
+clientes           → HTTP 500 42P17 (misma raíz)
+comisiones_cliente → HTTP 500 42P17 (misma raíz)
+```
+
+Las políticas usan el patrón inline `EXISTS (SELECT 1 FROM admin_users au JOIN
+roles ...)`; la de `admin_users` se autorreferencia → recursión infinita en
+cualquier evaluación RLS. **Invisible desde siempre** porque todas las lecturas
+del panel van por Edge Functions con SERVICE_ROLE (bypasea RLS) y nadie había
+consultado estas tablas por camino RLS directo.
+
+- **Impacto:** cualquier futura query directa cliente→Supabase autenticada sobre
+  esas 3 tablas revienta con 500; la vista endurecida devuelve error a admins
+  hasta que esto se repare.
+- **Fix propuesto (0008, NO escrito aún):** helper `public.is_admin()` returns
+  boolean `LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'`
+  (rompe la recursión por construcción) + reescritura de las 6 políticas
+  (ALL+SELECT × 3 tablas) para usarlo. Requiere propuesta formal, revisión y
+  aplicación pieza a pieza como 0007.
+- **Estado: 🔴 PENDIENTE** — siguiente ítem de la agenda tras PEND-2.
 
 ### Catálogos semilla fuera de alcance de 0005
 0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar

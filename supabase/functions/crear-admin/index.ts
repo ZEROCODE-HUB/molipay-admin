@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     email: body.email,
     password: body.password,
     email_confirm: true,
-    user_metadata: { nombre: body.nombre, legajo: body.legajo ?? null },
+    user_metadata: { nombre: body.nombre, legajo: body.legajo ?? null, admin_via_edge: true },
   });
 
   if (error || !data.user) {
