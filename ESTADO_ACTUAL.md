@@ -591,11 +591,11 @@ documenta lo ya existente).
 | ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
 | ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
 | ANOM-3 | Vista `auditoria_legajos` sin `security_invoker` (reloptions = null, confirmado 2026-08-23) — **RESUELTO**: ALTER VIEW aplicado el mismo día (ver Resolución abajo) | Bypass owner-privilege cerrado; verificación discriminante: sondeo anon pasó de `200 []` a error de servidor (invoker activo) | ✅ **RESUELTO 2026-08-23** |
-| GAP-4 | Auto-recursión RLS en el patrón admin-gated: políticas de `admin_users`/`clientes`/`comisiones_cliente` con `EXISTS(SELECT ... FROM admin_users ...)` inline — la de `admin_users` se autorreferencia | Cualquier query directa por camino RLS sobre esas 3 tablas devuelve `500 42P17 infinite recursion`; invisible hasta hoy porque todas las lecturas van por Edge con SERVICE_ROLE. Bloquea también el uso limpio de la vista endurecida para admins | 🔴 **PENDIENTE** — fix propuesto: helper `is_admin()` SECURITY DEFINER + reescritura de las 6 políticas (0008, aún no escrito) |
+| GAP-4 | Auto-recursión RLS en el patrón admin-gated — **RESUELTO**: 0008 aplicada pieza a pieza el 2026-08-23 (ver Resolución abajo) | Recursión `42P17` eliminada; `is_admin()` como único punto de verdad del predicado admin-gated; vista endurecida plenamente utilizable | ✅ **RESUELTO 2026-08-23** (verificación con admin real: pendiente primera sesión viva) |
 | CONF-1 | `movimientos.comision/impuesto`: NOT NULL **sin default** en prod | Confirmado contra `information_schema`; §15 corregido | ✅ Verificado |
 | CONF-2 | `movimientos` tiene UNA sola política (SELECT admin-gated); sin INSERT/UPDATE = diseño intencional (§5) | Confirmado contra `pg_policies` | ✅ Verificado |
 | CONF-3 | REVOKE UPDATE/DELETE sobre `movimientos_transiciones`: **VIGENTE** — sondeo REST como anon devolvió `42501 permission denied for table movimientos_transiciones` | La capa append-only por privilegios está activa además de la política RLS | ✅ Verificado |
-| PEND-2 | `admin_users.rol_id` nullable; decisión tomada: SET NOT NULL si count=0 | Aplicación manual pendiente (`SELECT count(*) FROM admin_users WHERE rol_id IS NULL`) | ⏳ Pendiente ejecución |
+| PEND-2 | `admin_users.rol_id` nullable → **RESUELTO**: `ALTER COLUMN rol_id SET NOT NULL` aplicado y verificado el 2026-08-23 (`is_nullable = NO` vía information_schema) | Integridad de la FK lógica rol garantizada a nivel DDL | ✅ **RESUELTO 2026-08-23** |
 
 ### Incidente documentado: RPC `cambiar_estado_movimiento` nunca existió en producción (GAP-1)
 
@@ -740,6 +740,40 @@ consultado estas tablas por camino RLS directo.
   (ALL+SELECT × 3 tablas) para usarlo. Requiere propuesta formal, revisión y
   aplicación pieza a pieza como 0007.
 - **Estado: 🔴 PENDIENTE** — siguiente ítem de la agenda tras PEND-2.
+
+### Resolución GAP-4 (2026-08-23): recursión RLS eliminada con helper `is_admin()`
+
+**Causa raíz:** políticas admin-gated con el predicado inline duplicado
+(`EXISTS (SELECT 1 FROM admin_users au JOIN roles ...)`) — la de la propia
+`admin_users` se autorreferenciaba y reventaba cualquier evaluación RLS que
+la alcanzara, directa o transitivamente (clientes, comisiones_cliente y la
+vista endurecida heredaban el 500 por tocar `admin_users`).
+
+**Fix aplicado — `0008_fix_recursion_rls.sql`, pieza a pieza:**
+
+| Pieza | Contenido | Verificación |
+|---|---|---|
+| P0 | Helper `public.is_admin()` (`LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'`) + COMMENT | V0: `prosecdef=true`, `provolatile='s'`, `search_path=public` ✓; sonda intermedia: baseline intacto (nada usaba el helper aún) |
+| P1 | admin_users: drop autotargeteado (solo políticas cuya expresión referencia `admin_users`) + recreate `manage_admins`/`select_all_admins` con `is_admin()`; **`select_own` preservada intacta** | V1 real: 3 filas exactas. Doble ejecución accidental sin daño (segunda pasada no encontró qué dropear y falló limpio en CREATE existente) |
+| P2 | clientes → `clientes_admin_all` / `clientes_admin_select` | V2 real ✓ |
+| P3 | comisiones_cliente → `comisiones_cliente_admin_all` / `_select` | V3 real: 7 filas totales, cero EXISTS inline restante |
+| P4 | Sondeo final agente | Las 4 endpoints en `200 []`; control `estados_movimiento` sano |
+
+**Hallazgo durante P1 (mejor a lo previsto):** el flip fue global ya con P1 —
+defusado el nodo autorreferencial, las políticas de las otras tablas dejaron
+de recursar aunque aún tuvieran el EXISTS inline. P2/P3 se completaron igual
+por decisión del revisor: eliminar lógica duplicada, único punto de verdad.
+
+**Sobre `select_own`:** excluida del fix con fundamento documentado — expresión
+pura (`auth.uid() = id`) sin subquery, no participa de la recursión (hipótesis
+del revisor confirmada); no puede evitar el 500 sola porque SELECT evalúa en
+OR todas las políticas aplicables.
+
+**⚠️ Pendiente explícito NO probado:** todas las verificaciones son como
+anon (`[]` = políticas resueltos falso). Que `is_admin()` devuelve `true`
+para un admin real con sesión viva —y que por lo tanto admins ven datos y
+escriben— **queda pendiente de la primera sesión viva**, igual que las altas
+de admin (0007). No dar por probado lo que solo está estructuralmente verde.
 
 ### Catálogos semilla fuera de alcance de 0005
 0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar
