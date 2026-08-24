@@ -33,3 +33,6 @@ dist-ssr
 
 # Exports de trabajo de Supabase (auditoria de schema)
 /csv/
+
+# Cache local de supabase CLI (link/login)
+/supabase/.temp/
