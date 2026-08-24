@@ -147,8 +147,7 @@ export type AlicuotaFilters = Pagination & {
   estado?: "Activa" | "Inactiva";
 };
 
-const ALICUOTAS_COLUMNS =
-  "id, impuesto_id, codigo, tasa, descripcion, estado, created_at, updated_at";
+const ALICUOTAS_COLUMNS = "id, impuesto_id, codigo, tasa, descripcion, estado, created_at";
 
 export async function listAlicuotas(filters: AlicuotaFilters): Promise<Page<Alicuota>> {
   const sb = requireSupabase();
@@ -190,7 +189,7 @@ export async function createAlicuota(impuesto_id: string, input: AlicuotaInput):
       descripcion: input.descripcion?.trim() ?? null,
       estado: input.estado ?? "Activa",
     })
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at, updated_at")
+    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
     .single();
   if (error) throw new DataAccessError(error);
   return toAlicuota(data as AlicuotaRow);
@@ -208,7 +207,7 @@ export async function updateAlicuota(id: string, input: Partial<AlicuotaInput>):
     .from("impuestos_alicuotas")
     .update(payload)
     .eq("id", id)
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at, updated_at")
+    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
     .single();
   if (error) throw new DataAccessError(error);
   return toAlicuota(data as AlicuotaRow);
@@ -223,7 +222,7 @@ export async function setAlicuotaEstado(
     .from("impuestos_alicuotas")
     .update({ estado })
     .eq("id", id)
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at, updated_at")
+    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
     .single();
   if (error) throw new DataAccessError(error);
   return toAlicuota(data as AlicuotaRow);
@@ -247,7 +246,7 @@ export type ImpuestoAsignacionFilters = Pagination & {
 };
 
 const ASIGNACIONES_COLUMNS =
-  "id, cliente_legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, updated_at, impuestos(codigo, nombre, tipo, monto), clientes(legajo, nombre, cuit, tipo_persona, correo)";
+  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
 
 type AsignacionRowConEmbed = ImpuestoAsignacionRow & {
   impuestos?:
@@ -274,7 +273,7 @@ export async function listImpuestosAsignaciones(
   let query = sb.from("impuestos_asignaciones").select(ASIGNACIONES_COLUMNS, { count: "exact" });
 
   if (impuesto_id) query = query.eq("impuesto_id", impuesto_id);
-  if (cliente_legajo) query = query.eq("cliente_legajo", cliente_legajo);
+  if (cliente_legajo) query = query.eq("legajo", cliente_legajo);
   if (estado) query = query.eq("estado", estado);
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
@@ -303,7 +302,7 @@ export async function createImpuestoAsignacion(
   const { data, error } = await sb
     .from("impuestos_asignaciones")
     .insert({
-      cliente_legajo: input.cliente_legajo.trim(),
+      legajo: input.cliente_legajo.trim(),
       impuesto_id: input.impuesto_id,
       tipo: input.tipo,
       monto: input.monto,
@@ -311,7 +310,7 @@ export async function createImpuestoAsignacion(
       fecha_asignacion: input.fecha_asignacion ?? new Date().toISOString().slice(0, 10),
     })
     .select(
-      "id, cliente_legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, updated_at, impuestos(codigo, nombre, tipo, monto), clientes(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);
@@ -334,7 +333,7 @@ export async function updateImpuestoAsignacion(
     .update(payload)
     .eq("id", id)
     .select(
-      "id, cliente_legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, updated_at, impuestos(codigo, nombre, tipo, monto), clientes(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);
@@ -383,8 +382,7 @@ export type IbPadronFilters = Pagination & {
   impuesto_id?: string;
 };
 
-const PADRONES_COLUMNS =
-  "id, impuesto_id, nombre, archivo, estado, progreso, created_at, updated_at";
+const PADRONES_COLUMNS = "id, impuesto_id, nombre, archivo, estado, progreso, created_at";
 
 export async function listIbPadrones(filters: IbPadronFilters): Promise<Page<IbPadron>> {
   const sb = requireSupabase();
@@ -429,7 +427,7 @@ export async function createIbPadron(input: {
       archivo: input.archivo.trim(),
       estado: "Cargando",
     })
-    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at, updated_at")
+    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at")
     .single();
   if (error) throw new DataAccessError(error);
   return toIbPadron(data as IbPadronRow);
@@ -448,7 +446,7 @@ export async function updateIbPadron(
     .from("ib_padrones")
     .update(payload)
     .eq("id", id)
-    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at, updated_at")
+    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at")
     .single();
   if (error) throw new DataAccessError(error);
   return toIbPadron(data as IbPadronRow);

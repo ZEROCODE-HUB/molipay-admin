@@ -849,14 +849,13 @@ export type AlicuotaFilters = Pagination & {
 
 export type ImpuestoAsignacionRow = {
   id: string;
-  cliente_legajo: string;
+  legajo: string;
   impuesto_id: string;
   tipo: TipoImpuesto;
   monto: number | null;
   estado: EstadoImpuesto;
   fecha_asignacion: string | null;
   created_at: string;
-  updated_at: string;
   impuestos?: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null }[] | null;
   clientes?:
     | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
@@ -872,7 +871,6 @@ export type ImpuestoAsignacion = {
   estado: EstadoImpuesto;
   fechaAsignacion: string | null;
   createdAt: string;
-  updatedAt: string;
   impuesto: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null } | null;
   cliente: {
     legajo: string;
@@ -909,7 +907,6 @@ export type IbPadronRow = {
   estado: EstadoPadron;
   progreso: number;
   created_at: string;
-  updated_at: string;
 };
 
 export type IbPadron = {
@@ -920,7 +917,6 @@ export type IbPadron = {
   estado: EstadoPadron;
   progreso: number;
   createdAt: string;
-  updatedAt: string;
 };
 
 export type IbPadronInput = {
@@ -978,7 +974,7 @@ export type TipoDcExcepcion = "Alta manual" | "Convenio multilateral" | "Exenci√
 
 export type DcExcepcionRow = {
   id: string;
-  email: string;
+  usuario: string;
   cuit: string;
   tipo: TipoDcExcepcion;
   direccion: DireccionDcExcepcion;
@@ -987,8 +983,8 @@ export type DcExcepcionRow = {
   vigencia_hasta: string | null;
   autorizacion_codigo: string | null;
   estado: EstadoImpuesto;
-  created_at: string;
-  updated_at: string;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
 };
 
 export type DcExcepcion = {
@@ -1033,7 +1029,6 @@ export type DcSyncRetroactivoRow = {
   preview_json: Record<string, unknown> | null;
   aplicado: boolean;
   created_at: string;
-  updated_at: string;
 };
 
 export type DcSyncRetroactivo = {
@@ -1044,7 +1039,6 @@ export type DcSyncRetroactivo = {
   previewJson: Record<string, unknown> | null;
   aplicado: boolean;
   createdAt: string;
-  updatedAt: string;
 };
 
 export type DcSyncRetroactivoInput = {

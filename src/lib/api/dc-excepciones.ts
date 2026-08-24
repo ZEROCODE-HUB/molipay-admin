@@ -18,7 +18,7 @@ export type DcExcepcionFilters = {
 };
 
 const DC_EXCEPCIONES_COLUMNS =
-  "id, email, cuit, tipo, direccion, motivo, vigencia_desde, vigencia_hasta, autorizacion_codigo, estado, created_at, updated_at";
+  "id, usuario, cuit, tipo, direccion, motivo, vigencia_desde, vigencia_hasta, autorizacion_codigo, estado, fecha_creacion, fecha_actualizacion";
 
 export async function listDcExcepciones(filters: DcExcepcionFilters): Promise<Page<DcExcepcion>> {
   const sb = requireSupabase();
@@ -30,12 +30,12 @@ export async function listDcExcepciones(filters: DcExcepcionFilters): Promise<Pa
 
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`email.ilike.%${q}%,cuit.ilike.%${q}%,motivo.ilike.%${q}%`);
+    query = query.or(`usuario.ilike.%${q}%,cuit.ilike.%${q}%,motivo.ilike.%${q}%`);
   }
   if (estado) query = query.eq("estado", estado);
   if (cuit) query = query.eq("cuit", cuit);
 
-  query = query.order("created_at", { ascending: false }).range(from, to);
+  query = query.order("fecha_creacion", { ascending: false }).range(from, to);
 
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
@@ -81,7 +81,7 @@ export async function createDcExcepcion(input: DcExcepcionCreateInput): Promise<
   const { data, error } = await sb
     .from("dc_excepciones")
     .insert({
-      email: input.email.trim(),
+      usuario: input.email.trim(),
       cuit: normalizeCuit(input.cuit),
       tipo: input.tipo,
       direccion: input.direccion,
@@ -152,7 +152,7 @@ export async function createDcExcepcionAmbos(
 ): Promise<DcExcepcion[]> {
   const sb = requireSupabase();
   const baseInput = {
-    email: input.email.trim(),
+    usuario: input.email.trim(),
     cuit: normalizeCuit(input.cuit),
     tipo: input.tipo,
     motivo: input.motivo.trim(),
@@ -183,8 +183,7 @@ export type DcSyncRetroactivoFilters = {
   cuit?: string;
 };
 
-const DC_SYNC_RETROACTIVO_COLUMNS =
-  "id, cuit, desde, hasta, preview_json, aplicado, created_at, updated_at";
+const DC_SYNC_RETROACTIVO_COLUMNS = "id, cuit, desde, hasta, preview_json, aplicado, created_at";
 
 export async function listDcSyncRetroactivos(
   filters: DcSyncRetroactivoFilters,
@@ -200,7 +199,7 @@ export async function listDcSyncRetroactivos(
 
   if (cuit) query = query.eq("cuit", cuit);
 
-  query = query.order("created_at", { ascending: false }).range(from, to);
+  query = query.order("fecha_creacion", { ascending: false }).range(from, to);
 
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);

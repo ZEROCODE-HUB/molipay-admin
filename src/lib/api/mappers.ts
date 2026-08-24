@@ -418,14 +418,13 @@ export function toImpuestoAsignacion(
   const cli = firstOrNull(r.clientes);
   return {
     id: r.id,
-    clienteLegajo: r.cliente_legajo,
+    clienteLegajo: r.legajo,
     impuestoId: r.impuesto_id,
     tipo: r.tipo,
     monto: r.monto,
     estado: r.estado,
     fechaAsignacion: r.fecha_asignacion,
     createdAt: r.created_at,
-    updatedAt: r.updated_at,
     impuesto: imp
       ? {
           codigo: imp.codigo,
@@ -455,7 +454,6 @@ export function toIbPadron(r: IbPadronRow): IbPadron {
     estado: r.estado,
     progreso: r.progreso,
     createdAt: r.created_at,
-    updatedAt: r.updated_at,
   };
 }
 
@@ -475,7 +473,7 @@ export function toIbNormalizacionPreview(r: IbNormalizacionPreviewRow): IbNormal
 export function toDcExcepcion(r: DcExcepcionRow): DcExcepcion {
   return {
     id: r.id,
-    email: r.email,
+    email: r.usuario,
     cuit: r.cuit,
     tipo: r.tipo,
     direccion: r.direccion,
@@ -484,8 +482,8 @@ export function toDcExcepcion(r: DcExcepcionRow): DcExcepcion {
     vigenciaHasta: r.vigencia_hasta,
     autorizacionCodigo: r.autorizacion_codigo,
     estado: r.estado,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    createdAt: r.fecha_creacion,
+    updatedAt: r.fecha_actualizacion,
   };
 }
 
@@ -498,6 +496,5 @@ export function toDcSyncRetroactivo(r: DcSyncRetroactivoRow): DcSyncRetroactivo 
     previewJson: r.preview_json,
     aplicado: r.aplicado,
     createdAt: r.created_at,
-    updatedAt: r.updated_at,
   };
 }

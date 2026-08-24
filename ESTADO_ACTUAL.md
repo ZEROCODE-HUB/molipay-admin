@@ -588,6 +588,7 @@ documenta lo ya existente).
 |---|---|---|---|
 | GAP-1 | La RPC `cambiar_estado_movimiento` nunca existió en producción — **RESUELTO**: 0006 aplicada y verificada el 2026-08-23 (ver INCIDENTE + Cierre abajo) | Botón "Cambiar estado" operativo nuevamente; verificación post-aplicación incluyó exposición vía PostgREST y rechazo de autorización a llamadas sin usuario | ✅ **RESUELTO 2026-08-23** |
 | GAP-2 | `handle_new_admin_user()` insertaba sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) — **RESUELTO**: 0007 aplicada y verificada el 2026-08-23 (ver Resolución abajo) | Trigger de signup vivo y roto + conflicto descubierto con `crear-admin`; ambos caminos de alta quedaron operativos (V1/V2 verdes + Edge deployada) | ✅ **RESUELTO 2026-08-23** |
+| GAP-5 | **4 tablas consultadas por la capa API NO existen en producción** (PGRST205 verificado por sondeo REST): `integraciones`, `canales_notificacion`, `eventos_notificacion`, `codigos_error` | `admin.configuracion.index` y `admin.configuracion.logins` consumen `useIntegraciones` → **rotas hoy** al cargar. Las 3 de Notificaciones sin consumidor activo (módulo pausado). Fix requiere DDL nueva (0009 propuesta pendiente de diseño/aprobación) | 🔴 **PENDIENTE decisión** — crear tablas vs redirigir módulo |
 | ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
 | ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
 | ANOM-3 | Vista `auditoria_legajos` sin `security_invoker` (reloptions = null, confirmado 2026-08-23) — **RESUELTO**: ALTER VIEW aplicado el mismo día (ver Resolución abajo) | Bypass owner-privilege cerrado; verificación discriminante: sondeo anon pasó de `200 []` a error de servidor (invoker activo) | ✅ **RESUELTO 2026-08-23** |
@@ -778,5 +779,8 @@ de admin (0007). No dar por probado lo que solo está estructuralmente verde.
 ### Catálogos semilla fuera de alcance de 0005
 0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar
 además: `roles`, `recursos`, `permisos` (matriz), `estados_movimiento`,
-`estados_por_tipo`, `codigos_categoria`, `codigos_error` (10 reales),
-`integraciones` (8 reales). Decisión de formato pendiente.
+`estados_por_tipo`, `codigos_categoria`. **Corrección 2026-08-23**: `codigos_error`
+e `integraciones` fueron removidas de esta lista — el sondeo PGRST205 de GAP-5
+probó que esas tablas tampoco existen en producción (los "8 integraciones
+reales" y los "10 códigos de error reales" viven solo en fixtures/documentación,
+nunca en la base).
