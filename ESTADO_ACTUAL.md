@@ -111,6 +111,13 @@ Define qué estados aplican a cada tipo de movimiento (validación de la RPC
   como `SECURITY DEFINER` (puede UPDATE sobre la fila que acaba de insertar el trigger).
 - **Nunca** debe agregarse un botón de editar/eliminar sobre `movimientos`
   ni sobre `movimientos_transiciones`. Un movimiento no se borra.
+- **DECISIÓN DE SEGURIDAD INTENCIONAL (confirmada):** `movimientos` NO tiene
+  políticas de INSERT/UPDATE para `authenticated`, y así debe seguir:
+  *movimientos nunca debe tener INSERT/UPDATE abierto para authenticated —
+  todo cambio pasa por RPC controlada (`cambiar_estado_movimiento`,
+  SECURITY DEFINER), nunca por escritura directa del cliente.* La ausencia
+  de esas políticas NO es un gap de RLS pendiente: es el diseño correcto,
+  y cualquier auditoría futura debe tratarla como tal.
 
 ---
 
@@ -526,9 +533,15 @@ sin duplicar):
 | `…movimientos.comisiones` | **NO es un tipo**: `conComision: true` (`comision > 0`) sobre TODOS los tipos | Vista transversal de comisiones cobradas. El mock calculaba comisión/IVA/total con tasas demo (`desgloseDemo`); la tabla real ya los tiene almacenados por fila (`comision`, `impuesto`, `monto_cobrado`). Campo `modalidad` del mock: es configuración (`comisiones_cliente.modalidad`), no existe por movimiento → descartado |
 
 **Robustez de los filtros transversales (NULL / 0):**
-- `movimientos.impuesto` y `movimientos.comision` son
-  `numeric not null default 0` (`0003_schema_produccion.sql:126-127`) → una fila
-  NULL es imposible a nivel de esquema.
+- ⚠️ **Corrección (verificado contra `information_schema` en producción):**
+  `movimientos.impuesto` y `movimientos.comision` son
+  `numeric NOT NULL, SIN default` — cada INSERT debe calcular el valor
+  explícitamente. Una afirmación previa de este documento ("default 0",
+  tomada del texto hoy desalineado de `0003_schema_produccion.sql:126-127`)
+  era incorrecta respecto a producción.
+- La ausencia de default es **decisión intencional en campos fiscales**:
+  preferimos que un INSERT sin estos valores falle fuerte antes que guardar
+  silenciosamente 0.
 - Los predicados generados son `> 0`: filas con valor 0 (p.ej. cliente con
   retención/comisión en 0) quedan excluidas de las vistas correspondientes.
   (Doble cobertura: aun si NULL existiera, `NULL > 0` evalúa NULL ≠ true.)
@@ -553,3 +566,73 @@ sin duplicar):
 - Columnas numéricas condicionales: "Retención impuesto" visible solo en la
   vista de impuestos; "Comisión cobrada" + "IVA sobre comisión" + "Monto
   cobrado" visibles solo en la vista de comisiones.
+
+---
+
+## 16. Consolidación del schema — `0005_consolidacion_schema_real.sql` (FUENTE DE VERDAD)
+
+Reconstrucción verbatim del estado real de producción (2026-08-23) desde
+`information_schema.columns`, `pg_constraint`, `pg_policies`, `pg_indexes`,
+`pg_proc` y `pg_get_viewdef`, exportados por el cliente en CSV. Las migraciones
+0001-0004 quedan en el repo **con cabecera de desalineadas**; para reconstruir
+un entorno nuevo, la referencia estructural es 0005 (no aplicar sobre prod:
+documenta lo ya existente).
+
+**26 tablas + 1 vista** (`auditoria_legajos`), 104 constraints con nombres reales,
+23 políticas RLS en 3 patrones (admin-gated / authenticated ALL / SELECT-only),
+índices y funciones verbatim.
+
+### Hallazgos de la auditoría de schema real
+
+| # | Hallazgo | Impacto | Estado |
+|---|---|---|---|
+| GAP-1 | La RPC `cambiar_estado_movimiento` **NO existe en producción** — **CONFIRMADO con doble evidencia dura** (ver INCIDENTE abajo) | El botón "Cambiar estado" del panel falla en prod hoy. Fix propuesto en `0006_fix_rpc_cambiar_estado.sql` (NO aplicado, pendiente aprobación) | 🔴 **INCIDENTE ABIERTO** |
+| GAP-2 | `handle_new_admin_user()` inserta sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) | Rota si sigue enganchada a `auth.users`; alta de admin nuevo fallaría. Documentada verbatim en 0005; fix a decidir aparte (no mezclado) | 🟠 Pendiente decisión |
+| ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
+| ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
+| ANOM-3 | Vista `auditoria_legajos`: posible lectura owner-privilege si fue creada sin `security_invoker=true` | Potencial fuga de legajos a roles sin acceso a tablas base | 🟠 Pendiente verificación |
+| CONF-1 | `movimientos.comision/impuesto`: NOT NULL **sin default** en prod | Confirmado contra `information_schema`; §15 corregido | ✅ Verificado |
+| CONF-2 | `movimientos` tiene UNA sola política (SELECT admin-gated); sin INSERT/UPDATE = diseño intencional (§5) | Confirmado contra `pg_policies` | ✅ Verificado |
+| CONF-3 | REVOKE UPDATE/DELETE sobre `movimientos_transiciones`: **VIGENTE** — sondeo REST como anon devolvió `42501 permission denied for table movimientos_transiciones` | La capa append-only por privilegios está activa además de la política RLS | ✅ Verificado |
+| PEND-2 | `admin_users.rol_id` nullable; decisión tomada: SET NOT NULL si count=0 | Aplicación manual pendiente (`SELECT count(*) FROM admin_users WHERE rol_id IS NULL`) | ⏳ Pendiente ejecución |
+
+### Incidente documentado: RPC `cambiar_estado_movimiento` nunca existió en producción (GAP-1)
+
+Durante la consolidación del schema real (2026-08-23) se detectó que la RPC que
+soporta el cambio manual de estado de movimientos **nunca fue creada en
+producción**, aunque el panel y su documentación la daban por operativa.
+
+- **Qué se rompió:** el botón "Cambiar estado" de Movimientos (índice y las 7
+  sub-rutas). Cadena: UI → Edge Function `cambiar-estado-movimiento` →
+  `rpc("cambiar_estado_movimiento")` → **función inexistente** → error.
+- **Impacto real conocido:** la funcionalidad de cambio manual de estado
+  **lleva rota en producción desde que se implementó** y nadie lo detectó
+  porque nunca se probó en vivo contra prod. No es un riesgo teórico ni una
+  degradación parcial: cada uso real del botón falló/fallaría con error desde
+  el día uno. Que ya tengamos el diagnóstico y el fix propuesto no reduce el
+  impacto: estuvo roto todo ese tiempo sin saberlo.
+- **Desde cuándo:** desde la implementación de la acción de cambio de estado
+  en el panel (la DDL candidata vive en `0002_movimientos_transiciones.sql`,
+  que solo existe como archivo — nunca se aplicó esa parte a prod).
+- **Cómo se detectó:** export completo de `pg_proc` durante la auditoría de
+  schema (solo existen 6 funciones públicas; ninguna es la RPC) + sondeo
+  directo a la API REST con la firma exacta `(p_comentario,
+  p_movimiento_id, p_nuevo_estado_id)` → HTTP 404 `PGRST202 "Could not find
+  the function public.cambiar_estado_movimiento(...) in the schema cache"`.
+- **Por qué no se había notado:** el panel aún no tiene usuarios reales ni
+  uso operativo en producción; ninguna sesión anterior ejecutó el botón
+  contra prod.
+- **Fix propuesto (NO aplicado):** `0006_fix_rpc_cambiar_estado.sql` con la
+  DDL verbatim de 0002. Requiere aprobación explícita y aplicación manual.
+  Mientras esté abierto, cualquier flujo que dependa del cambio manual de
+  estado debe considerarse roto en prod.
+- **Lección:** toda DDL "candidata" debe trazarse con estado
+  (aplicada/no-aplicada) y verificarse post-aplicación contra el catálogo
+  (`pg_proc`/`information_schema`), igual que los seeds (lección del
+  incidente de permisos).
+
+### Catálogos semilla fuera de alcance de 0005
+0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar
+además: `roles`, `recursos`, `permisos` (matriz), `estados_movimiento`,
+`estados_por_tipo`, `codigos_categoria`, `codigos_error` (10 reales),
+`integraciones` (8 reales). Decisión de formato pendiente.

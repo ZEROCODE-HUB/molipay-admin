@@ -1,3 +1,10 @@
+-- ============================================================================
+-- [!] DESALINEADA CON PRODUCCION (verificado contra information_schema /
+--     pg_constraint el 2026-08-23). NO usar para reconstruir un entorno nuevo.
+--     FUENTE DE VERDAD VIGENTE DEL SCHEMA: 0005_consolidacion_schema_real.sql
+--     Este archivo se conserva por historia. Ver ESTADO_ACTUAL.md, seccion 16.
+-- ============================================================================
+
 -- 0002: RPC atómica de cambio manual de estado de movimiento.
 --
 -- IMPORTANTE: la tabla `movimientos_transiciones` YA EXISTE en producción
