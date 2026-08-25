@@ -44,10 +44,31 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
     conComision,
     countMode = "estimated",
   } = filters;
+
+  // BUG A (Opción 1, 2026-08-24): count exacto cuando hay CUALQUIER filtro
+  // aplicado (search/fecha/estado/tipo/cliente/legajo/impuesto/comisión),
+  // estimated solo en la query base sin filtros (donde sí importa performance
+  // a 120k+ filas). Los índices reales sobre legajo/estado_id/fecha mantienen
+  // el costo de exact filtrado bajo.
+  const filtrosActivos = Boolean(
+    search?.trim() ||
+      estadoCodigo ||
+      tipo ||
+      clienteId ||
+      legajo ||
+      fechaDesde ||
+      fechaHasta ||
+      conImpuesto ||
+      conComision,
+  );
+  const countModeEfectivo: "exact" | "planned" | "estimated" = filtrosActivos
+    ? "exact"
+    : countMode;
+
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("movimientos").select(COLUMNS, { count: countMode });
+  let query = sb.from("movimientos").select(COLUMNS, { count: countModeEfectivo });
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
   if (legajo) query = query.eq("legajo", legajo.trim().toUpperCase());

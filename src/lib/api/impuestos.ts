@@ -277,7 +277,9 @@ export async function listImpuestosAsignaciones(
   if (estado) query = query.eq("estado", estado);
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`impuestos.codigo.ilike.%${q}%,impuestos.nombre.ilike.%${q}%`);
+    query = query.or(
+      `impuestos.codigo.ilike.%${q}%,impuestos.nombre.ilike.%${q}%,legajo.ilike.%${q}%`,
+    );
   }
 
   query = query.order("fecha_asignacion", { ascending: false }).range(from, to);
