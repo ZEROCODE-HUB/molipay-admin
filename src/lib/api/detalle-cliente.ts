@@ -29,6 +29,7 @@ export type Bloqueo = {
   id: string;
   parametro: string;
   valor: string | null;
+  estado?: string | null;
 };
 
 export type ClienteModulo = {

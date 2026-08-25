@@ -855,7 +855,6 @@ export type ImpuestoAsignacionRow = {
   monto: number | null;
   estado: EstadoImpuesto;
   fecha_asignacion: string | null;
-  created_at: string;
   impuestos?: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null }[] | null;
   clientes?:
     | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
@@ -870,7 +869,6 @@ export type ImpuestoAsignacion = {
   monto: number | null;
   estado: EstadoImpuesto;
   fechaAsignacion: string | null;
-  createdAt: string;
   impuesto: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null } | null;
   cliente: {
     legajo: string;

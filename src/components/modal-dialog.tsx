@@ -14,10 +14,17 @@ export function ModalDialog({
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }) {
   if (!open) return null;
-  const w = size === "lg" ? "max-w-2xl" : size === "sm" ? "max-w-sm" : "max-w-md";
+  const w =
+    size === "lg"
+      ? "max-w-2xl"
+      : size === "xl"
+        ? "max-w-4xl"
+        : size === "sm"
+          ? "max-w-sm"
+          : "max-w-md";
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />

@@ -1,4 +1,4 @@
-import { requireSupabase } from "@/lib/supabase";
+﻿import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 import {
   toImpuesto,
@@ -246,7 +246,7 @@ export type ImpuestoAsignacionFilters = Pagination & {
 };
 
 const ASIGNACIONES_COLUMNS =
-  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
+  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
 
 type AsignacionRowConEmbed = ImpuestoAsignacionRow & {
   impuestos?:
@@ -312,7 +312,7 @@ export async function createImpuestoAsignacion(
       fecha_asignacion: input.fecha_asignacion ?? new Date().toISOString().slice(0, 10),
     })
     .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);
@@ -335,7 +335,7 @@ export async function updateImpuestoAsignacion(
     .update(payload)
     .eq("id", id)
     .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, created_at, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);

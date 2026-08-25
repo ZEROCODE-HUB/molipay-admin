@@ -424,7 +424,6 @@ export function toImpuestoAsignacion(
     monto: r.monto,
     estado: r.estado,
     fechaAsignacion: r.fecha_asignacion,
-    createdAt: r.created_at,
     impuesto: imp
       ? {
           codigo: imp.codigo,

@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ModalDialog } from "@/components/modal-dialog";
 import { DataTable, type Column } from "@/components/data-table";
 import { PermissionGuard } from "@/components/permission-guard";
+import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
 import { useClienteByLegajo } from "@/hooks/useClientes";
 import { useMovimientos } from "@/hooks/useMovimientos";
 import { useImpuestosAsignaciones } from "@/hooks/useImpuestos";
@@ -94,10 +95,10 @@ type TabKey =
   | "historial";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "identificacion", label: "Identificación / Datos personales" },
+  { key: "identificacion", label: "Datos personales" },
   { key: "movimientos", label: "Movimientos" },
   { key: "impuestos", label: "Impuestos" },
-  { key: "subcuentas", label: "Subcuentas" },
+  { key: "subcuentas", label: "Subcuentas y CBUs" },
   { key: "documentos", label: "Documentos" },
   { key: "validaciones", label: "Validaciones automáticas" },
   { key: "riesgo", label: "Riesgo y monitoreo" },
@@ -306,6 +307,45 @@ function SectionCard({
   );
 }
 
+function ParametrosResumen({ defs, stored }: { defs: ParamDef[]; stored: ParametroConfig[] }) {
+  if (defs.length === 0) {
+    return <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {defs.map((d) => {
+        const s = stored.find((p) => p.clave === d.clave);
+        const habilitado = s?.habilitado ?? false;
+        let valor = "No configurado";
+        if (habilitado) {
+          if (d.tipo === "switch") valor = "Habilitado";
+          else if (d.tipo === "switch_valor")
+            valor = `${s?.valor ?? d.valorDefecto ?? ""} ${d.unidad ?? ""}`.trim();
+          else if (d.tipo === "switch_porcentaje")
+            valor = `${s?.valor ?? d.valorDefecto ?? ""}${d.unidad ?? ""}`.trim();
+          else if (d.tipo === "switch_cantidad_periodo")
+            valor = `${s?.valor ?? d.valorDefecto ?? ""} cada ${
+              s?.periodo ?? d.periodoDefecto ?? ""
+            }`;
+          else valor = "Habilitado";
+        }
+        return (
+          <li key={d.clave} className="flex items-start justify-between gap-3 text-xs">
+            <span className="text-muted-foreground">{d.etiqueta}</span>
+            <span
+              className={`font-medium text-right ${
+                habilitado ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {valor}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 const historialColumns: Column<HistorialCambio>[] = [
   { key: "campo", label: "Campo", render: (r) => r.campo },
   { key: "valorAnterior", label: "Valor anterior", render: (r) => r.valorAnterior ?? "—" },
@@ -321,15 +361,46 @@ const validacionesColumns: Column<Validacion>[] = [
   { key: "fecha", label: "Fecha", render: (r) => r.fecha },
 ];
 
-const riesgoColumns: Column<Alerta>[] = [
-  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
-  { key: "fecha", label: "Fecha", render: (r) => r.fecha },
-  { key: "estado", label: "Estado", render: (r) => r.estado },
+type AlertaView = Alerta & { fechaAceptacion?: string };
+type BloqueoView = Bloqueo & { fechaAceptacion?: string };
+
+const riesgoColumns: Column<AlertaView>[] = [
+  { key: "tipo", label: "Tipo de alerta", render: (r) => r.tipo },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (r) => {
+      const tone =
+        r.estado === "Resuelto" ? "success" : r.estado === "Revisado" ? "neutral" : "warn";
+      return <Badge tone={tone}>{r.estado}</Badge>;
+    },
+  },
+  { key: "fecha", label: "Fecha de la alerta", render: (r) => r.fecha },
+  {
+    key: "fechaAceptacion",
+    label: "Fecha de aceptación",
+    render: (r) => r.fechaAceptacion ?? "—",
+  },
 ];
 
-const bloqueosColumns: Column<Bloqueo>[] = [
-  { key: "parametro", label: "Parámetro", render: (r) => r.parametro },
+const bloqueosColumns: Column<BloqueoView>[] = [
+  { key: "parametro", label: "Tipo", render: (r) => r.parametro },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (r) => {
+      if (!r.estado) return "—";
+      const tone =
+        r.estado === "Desbloqueado" ? "success" : r.estado === "Bloqueado" ? "danger" : "warn";
+      return <Badge tone={tone}>{r.estado}</Badge>;
+    },
+  },
   { key: "valor", label: "Valor", render: (r) => r.valor ?? "—" },
+  {
+    key: "fechaAceptacion",
+    label: "Fecha de aceptación",
+    render: (r) => r.fechaAceptacion ?? "—",
+  },
 ];
 
 const apiUsuariosColumns = [
@@ -557,7 +628,7 @@ function SubcuentasTab({ legajo }: { legajo: string }) {
 
   return (
     <Seccion
-      titulo="Subcuentas"
+      titulo="Subcuentas y CBUs"
       loading={query.isLoading}
       error={query.isError ? query.error : null}
       onRetry={() => query.refetch()}
@@ -948,12 +1019,21 @@ function ApiUsuariosModal({
     queryFn: () => listApiUsuarios({ page: 0, pageSize: 25 }),
     enabled: open,
   });
+  const [detalle, setDetalle] = useState<{
+    id: string;
+    codigoUsuarioApi: string;
+    usuario: string;
+    nombreCompleto: string;
+    estado: string;
+  } | null>(null);
+
   return (
     <ModalDialog
       open={open}
       onClose={onClose}
       title="Usuarios API asociados"
       description={`${cantidad} usuario(s) asociado(s) a la API externa`}
+      size="xl"
     >
       {query.isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
@@ -970,8 +1050,47 @@ function ApiUsuariosModal({
           data={query.data!.rows}
           keyExtractor={(u) => u.id}
           emptyMessage="Sin usuarios API"
+          actions={(u) => (
+            <button
+              type="button"
+              onClick={() => setDetalle(u)}
+              className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+            >
+              Ver detalle
+            </button>
+          )}
         />
       )}
+
+      <ModalDialog
+        open={!!detalle}
+        onClose={() => setDetalle(null)}
+        title="Detalle de usuario API"
+        size="md"
+      >
+        {detalle && (
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between gap-2 border-b border-border pb-2">
+              <span className="text-muted-foreground">Código</span>
+              <span className="font-medium">{detalle.codigoUsuarioApi}</span>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-2">
+              <span className="text-muted-foreground">Usuario</span>
+              <span className="font-medium">{detalle.usuario}</span>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-2">
+              <span className="text-muted-foreground">Nombre</span>
+              <span className="font-medium">{detalle.nombreCompleto}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Estado</span>
+              <Badge tone={detalle.estado === "Activo" ? "success" : "neutral"}>
+                {detalle.estado}
+              </Badge>
+            </div>
+          </div>
+        )}
+      </ModalDialog>
     </ModalDialog>
   );
 }
@@ -1060,6 +1179,9 @@ function ClienteDetailPage() {
   const [linksOpen, setLinksOpen] = useState(false);
   const [apiOpen, setApiOpen] = useState(false);
   const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
+
+  const [gestionTarget, setGestionTarget] = useState<{ id: string; resumen: string } | null>(null);
+  const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
 
   const [forzando, setForzando] = useState(false);
 
@@ -1191,6 +1313,13 @@ function ClienteDetailPage() {
 
   const { personal, compliance, empresa } = camposIdentificacion(cliente);
 
+  const tabLabel = (t: { key: TabKey; label: string }) => {
+    if (t.key === "identificacion") {
+      return cliente.tipoPersona === "juridica" ? "Datos de persona jurídica" : "Datos personales";
+    }
+    return t.label;
+  };
+
   const modulosData = modulosQuery.data ?? [];
   const moduloByClave = (clave: string) => modulosData.find((m) => m.clave === clave);
   const pstModulo = moduloByClave("pct");
@@ -1201,6 +1330,15 @@ function ClienteDetailPage() {
 
   const alertasHabilitadas = (paramAlertasQuery.data ?? []).filter((p) => p.habilitado).length;
   const bloqueosHabilitados = (paramBloqueosQuery.data ?? []).filter((p) => p.habilitado).length;
+
+  const alertasVisibles: AlertaView[] = (alertasQuery.data ?? []).map((a) => {
+    const g = gestiones[a.id];
+    return { ...a, estado: g ? "Resuelto" : a.estado, fechaAceptacion: g?.fecha };
+  });
+  const bloqueosVisibles: BloqueoView[] = (bloqueosQuery.data ?? []).map((b) => {
+    const g = gestiones[b.id];
+    return { ...b, estado: g ? "Desbloqueado" : b.estado, fechaAceptacion: g?.fecha };
+  });
 
   return (
     <PermissionGuard recurso="usuarios">
@@ -1282,7 +1420,7 @@ function ClienteDetailPage() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t.label}
+              {tabLabel(t)}
             </button>
           ))}
         </div>
@@ -1376,11 +1514,14 @@ function ClienteDetailPage() {
                       <Pencil size={12} /> Editar
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {paramAlertasQuery.isLoading
-                      ? "Cargando…"
-                      : `${alertasHabilitadas} parámetro(s) de alerta configurado(s).`}
-                  </p>
+                  {paramAlertasQuery.isLoading ? (
+                    <p className="text-xs text-muted-foreground">Cargando…</p>
+                  ) : (
+                    <ParametrosResumen
+                      defs={ALERTA_PARAM_DEF}
+                      stored={paramAlertasQuery.data ?? []}
+                    />
+                  )}
                 </div>
                 <div className="rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between gap-2 mb-3">
@@ -1395,11 +1536,14 @@ function ClienteDetailPage() {
                       <Pencil size={12} /> Editar
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {paramBloqueosQuery.isLoading
-                      ? "Cargando…"
-                      : `${bloqueosHabilitados} parámetro(s) de bloqueo configurado(s).`}
-                  </p>
+                  {paramBloqueosQuery.isLoading ? (
+                    <p className="text-xs text-muted-foreground">Cargando…</p>
+                  ) : (
+                    <ParametrosResumen
+                      defs={BLOQUEO_PARAM_DEF}
+                      stored={paramBloqueosQuery.data ?? []}
+                    />
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-1 border-b border-border mb-4">
@@ -1435,9 +1579,20 @@ function ClienteDetailPage() {
                   ) : (
                     <DataTable
                       columns={riesgoColumns}
-                      data={alertasQuery.data ?? []}
+                      data={alertasVisibles}
                       keyExtractor={(r) => r.id}
                       emptyMessage="Sin alertas para este cliente"
+                      actions={(r) => (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGestionTarget({ id: r.id, resumen: `${r.tipo} · ${cliente.nombre}` })
+                          }
+                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                        >
+                          Gestionar
+                        </button>
+                      )}
                     />
                   )}
                 </div>
@@ -1450,9 +1605,23 @@ function ClienteDetailPage() {
                   ) : (
                     <DataTable
                       columns={bloqueosColumns}
-                      data={bloqueosQuery.data ?? []}
+                      data={bloqueosVisibles}
                       keyExtractor={(r) => r.id}
                       emptyMessage="Sin bloqueos para este cliente"
+                      actions={(r) => (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGestionTarget({
+                              id: r.id,
+                              resumen: `${r.parametro} · ${cliente.nombre}`,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                        >
+                          Gestionar
+                        </button>
+                      )}
                     />
                   )}
                 </div>
@@ -1487,26 +1656,31 @@ function ClienteDetailPage() {
                       </span>
                       <div className="font-display font-semibold text-sm">PST</div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p className="font-semibold text-foreground">Sin comercio</p>
-                      <p className="mt-1">
-                        Comercio vinculado:{" "}
-                        <span className="font-semibold text-foreground tabular-nums">
+                    <dl className="space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="text-muted-foreground">Comercio vinculado</dt>
+                        <dd className="font-semibold text-foreground">
+                          {comerciosPst.length > 0 ? "Sí" : "Sin comercio vinculado"}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="text-muted-foreground">Comercios PST</dt>
+                        <dd className="font-semibold text-foreground tabular-nums">
                           {comerciosPst.length}
-                        </span>
-                      </p>
-                      <p className="mt-2">
+                        </dd>
+                      </div>
+                      <p className="pt-1 text-muted-foreground">
                         {comerciosPst.length === 0
-                          ? "No se encontró comercio PST asociado por email o por legajo."
-                          : "Comercios PST vinculados a este cliente."}
+                          ? "Sin comercio PST asociado a PYME por legajo/email."
+                          : "Comercio PST asociado a PYME por legajo/email."}
                       </p>
-                    </div>
+                    </dl>
                     <button
                       type="button"
                       onClick={() => setPstOpen(true)}
                       className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
                     >
-                      <Landmark size={13} /> Ver
+                      <Landmark size={13} /> Ver PST
                     </button>
                   </div>
 
@@ -1591,34 +1765,22 @@ function ClienteDetailPage() {
           )}
 
           {activeTab === "historial" && (
-            <>
-              <Seccion
-                titulo="Historial de cambios"
-                loading={historialCambiosQuery.isLoading}
-                error={historialCambiosQuery.isError ? historialCambiosQuery.error : null}
-                onRetry={historialCambiosQuery.refetch}
-                vacio={
-                  !historialCambiosQuery.isLoading &&
-                  (historialCambiosQuery.data?.length ?? 0) === 0
-                }
-              >
-                <DataTable
-                  columns={historialColumns}
-                  data={historialCambiosQuery.data ?? []}
-                  keyExtractor={(r) => r.id}
-                  emptyMessage="Sin cambios registrados para este cliente"
-                />
-              </Seccion>
-              <Seccion
-                titulo="Historial de movimientos"
-                loading={movimientosQuery.isLoading}
-                error={movimientosQuery.isError ? movimientosQuery.error : null}
-                onRetry={movimientosQuery.refetch}
-                vacio={movimientosQuery.rows.length === 0}
-              >
-                <TablaMovimientos rows={movimientosQuery.rows} />
-              </Seccion>
-            </>
+            <Seccion
+              titulo="Historial de cambios"
+              loading={historialCambiosQuery.isLoading}
+              error={historialCambiosQuery.isError ? historialCambiosQuery.error : null}
+              onRetry={historialCambiosQuery.refetch}
+              vacio={
+                !historialCambiosQuery.isLoading && (historialCambiosQuery.data?.length ?? 0) === 0
+              }
+            >
+              <DataTable
+                columns={historialColumns}
+                data={historialCambiosQuery.data ?? []}
+                keyExtractor={(r) => r.id}
+                emptyMessage="Sin cambios registrados para este cliente"
+              />
+            </Seccion>
           )}
         </div>
 
@@ -1749,6 +1911,17 @@ function ClienteDetailPage() {
           defs={BLOQUEO_PARAM_DEF}
           stored={paramBloqueosQuery.data ?? []}
           kind="bloqueo"
+        />
+
+        <AlertaGestionModal
+          open={!!gestionTarget}
+          onClose={() => setGestionTarget(null)}
+          resumen={gestionTarget?.resumen ?? ""}
+          onGuardar={(g) => {
+            if (gestionTarget) {
+              setGestiones((prev) => ({ ...prev, [gestionTarget.id]: g }));
+            }
+          }}
         />
 
         {confirmAction && (

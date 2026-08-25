@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Eye, Edit3, XCircle, CheckCircle, ChevronDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
 import { FormDialog } from "@/components/form-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, PageHeader } from "@/components/portal-shell";
@@ -586,6 +587,8 @@ function ListadoAlertas() {
   const [data, setData] = useState(initialData);
   const [viewing, setViewing] = useState<Alerta | null>(null);
   const [editTarget, setEditTarget] = useState<Alerta | null>(null);
+  const [gestionTarget, setGestionTarget] = useState<Alerta | null>(null);
+  const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -597,6 +600,11 @@ function ListadoAlertas() {
   const getActions = (row: Alerta): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing({ ...row }) },
     { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
+    {
+      label: "Gestionar",
+      icon: Edit3,
+      onClick: () => setGestionTarget(row),
+    },
     ...(!row.fechaAceptacion
       ? [
           {
@@ -753,6 +761,24 @@ function ListadoAlertas() {
           onConfirm={confirmAction.onConfirm}
         />
       )}
+
+      <AlertaGestionModal
+        open={!!gestionTarget}
+        onClose={() => setGestionTarget(null)}
+        resumen={gestionTarget ? `${gestionTarget.tipo} · ${gestionTarget.nombre}` : ""}
+        onGuardar={(g) => {
+          if (gestionTarget) {
+            setGestiones((prev) => ({ ...prev, [gestionTarget.legajo]: g }));
+            setData((prev) =>
+              prev.map((a) =>
+                a.legajo === gestionTarget.legajo
+                  ? { ...a, estado: "Resuelto", fechaAceptacion: g.fecha }
+                  : a,
+              ),
+            );
+          }
+        }}
+      />
     </div>
   );
 }
