@@ -1,10 +1,23 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, AlertTriangle, Inbox, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  AlertTriangle,
+  Inbox,
+  Plus,
+  Pencil,
+  ShieldAlert,
+  RefreshCw,
+  ExternalLink,
+  Landmark,
+  Link2,
+  Globe,
+} from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DataTable, type Column } from "@/components/data-table";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useClienteByLegajo } from "@/hooks/useClientes";
 import { useComisiones } from "@/hooks/useComisiones";
@@ -179,6 +192,39 @@ function SectionCard({
   );
 }
 
+type HistorialRegistro = {
+  id: string;
+  campo: string;
+  valorAnterior: string;
+  valorNuevo: string;
+  fecha: string;
+  hora: string;
+  usuario: string;
+};
+
+const historialColumns: Column<HistorialRegistro>[] = [
+  { key: "campo", label: "Campo", render: (r) => r.campo },
+  { key: "valorAnterior", label: "Valor anterior", render: (r) => r.valorAnterior },
+  { key: "valorNuevo", label: "Valor nuevo", render: (r) => r.valorNuevo },
+  { key: "fecha", label: "Fecha", render: (r) => r.fecha },
+  { key: "hora", label: "Hora", render: (r) => r.hora },
+  { key: "usuario", label: "Usuario", render: (r) => r.usuario },
+];
+
+type ValidacionRegistro = { id: string; proveedor: string; estado: string; fecha: string };
+const validacionesColumns: Column<ValidacionRegistro>[] = [
+  { key: "proveedor", label: "Proveedor", render: (r) => r.proveedor },
+  { key: "estado", label: "Estado", render: (r) => r.estado },
+  { key: "fecha", label: "Fecha", render: (r) => r.fecha },
+];
+
+type RiesgoRegistro = { id: string; tipo: string; fecha: string; estado: string };
+const riesgoColumns: Column<RiesgoRegistro>[] = [
+  { key: "tipo", label: "Tipo", render: (r) => r.tipo },
+  { key: "fecha", label: "Fecha", render: (r) => r.fecha },
+  { key: "estado", label: "Estado", render: (r) => r.estado },
+];
+
 function TablaComisiones({ rows }: { rows: ComisionCliente[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -323,34 +369,6 @@ function TablaSubcuentas({ rows }: { rows: Subcuenta[] }) {
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function EmptyTable({ columnas }: { columnas: string[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            {columnas.map((c) => (
-              <th key={c} className="px-4 py-3 font-medium">
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td
-              colSpan={columnas.length}
-              className="px-4 py-10 text-center text-sm text-muted-foreground"
-            >
-              Sin registros.
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
@@ -947,53 +965,145 @@ function ClienteDetailPage() {
           {activeTab === "documentos" && <DocumentosTab legajo={cliente.legajo} />}
 
           {activeTab === "validaciones" && (
-            <Seccion titulo="Validaciones automáticas" loading={false} error={null} vacio={true}>
-              <EmptyTable columnas={["Proveedor", "Estado", "Fecha"]} />
+            <Seccion titulo="Validaciones automáticas" loading={false} error={null} vacio={false}>
+              <DataTable
+                columns={validacionesColumns}
+                data={[]}
+                keyExtractor={(v) => v.id}
+                emptyMessage="Sin validaciones para este cliente"
+              />
             </Seccion>
           )}
 
           {activeTab === "riesgo" && (
-            <>
-              <div className="flex gap-1 mt-4">
+            <SectionCard title="Riesgo y monitoreo">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                <div className="rounded-lg border border-border p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Parámetros de alertas
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: "/admin/general/alertas/parametros-alertas" })}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      <Pencil size={12} /> Editar
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>
+                </div>
+                <div className="rounded-lg border border-border p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ShieldAlert size={13} /> Parámetros de bloqueo
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: "/admin/general/alertas/parametros-bloqueos" })}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      <Pencil size={12} /> Editar
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 border-b border-border mb-4">
                 <button
                   type="button"
                   onClick={() => setRiesgoSub("alertas")}
-                  className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px ${riesgoSub === "alertas" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
+                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${riesgoSub === "alertas" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
                 >
-                  Alertas
+                  Ver alertas
                 </button>
                 <button
                   type="button"
                   onClick={() => setRiesgoSub("bloqueos")}
-                  className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px ${riesgoSub === "bloqueos" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
+                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${riesgoSub === "bloqueos" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
                 >
-                  Bloqueos
+                  Ver bloqueos
                 </button>
               </div>
-              <Seccion
-                titulo={riesgoSub === "alertas" ? "Alertas" : "Bloqueos"}
-                loading={false}
-                error={null}
-                vacio={true}
-              >
-                <EmptyTable
-                  columnas={
-                    riesgoSub === "alertas" ? ["Tipo", "Fecha", "Estado"] : ["Parámetro", "Valor"]
-                  }
-                />
-              </Seccion>
-            </>
+              {riesgoSub === "alertas" ? (
+                <div className="space-y-3">
+                  <DataTable
+                    columns={riesgoColumns}
+                    data={[]}
+                    keyExtractor={(r) => r.id}
+                    emptyMessage="Sin alertas para este cliente"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/admin/general/alertas" })}
+                    className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    <ExternalLink size={13} /> Ir a alertas
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <DataTable
+                    columns={riesgoColumns}
+                    data={[]}
+                    keyExtractor={(r) => r.id}
+                    emptyMessage="Sin bloqueos para este cliente"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/admin/general/alertas/bloqueos" })}
+                    className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    <ExternalLink size={13} /> Ir a bloqueos
+                  </button>
+                </div>
+              )}
+            </SectionCard>
           )}
 
           {activeTab === "modulos" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              {["PCT", "BLP", "API Externa"].map((m) => (
-                <div key={m} className="rounded-xl border border-border bg-card p-5">
-                  <p className="text-sm font-semibold">{m}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">Sin módulos vinculados.</p>
-                </div>
-              ))}
-            </div>
+            <SectionCard
+              title="Módulos y productos"
+              actions={
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  <RefreshCw size={13} /> Recargar
+                </button>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { clave: "pct", titulo: "PCT", Icon: Landmark, ruta: "/admin/modulos" },
+                  { clave: "blp", titulo: "BLP", Icon: Link2, ruta: "/admin/modulos" },
+                  { clave: "api", titulo: "API Externa", Icon: Globe, ruta: "/admin/modulos" },
+                ].map((m) => (
+                  <div
+                    key={m.clave}
+                    className="rounded-lg border border-border p-4 flex flex-col gap-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                        <m.Icon size={16} />
+                      </span>
+                      <div className="font-display font-semibold text-sm">{m.titulo}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Sin vínculos para este cliente.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: m.ruta })}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
+                    >
+                      <ExternalLink size={13} /> Ver
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
           )}
 
           {activeTab === "financiero" && (
@@ -1009,11 +1119,25 @@ function ClienteDetailPage() {
           )}
 
           {activeTab === "historial" && (
-            <Seccion titulo="Historial de cambios" loading={false} error={null} vacio={true}>
-              <EmptyTable
-                columnas={["Campo", "Valor anterior", "Valor nuevo", "Fecha", "Hora", "Usuario"]}
-              />
-            </Seccion>
+            <>
+              <Seccion titulo="Historial de cambios" loading={false} error={null} vacio={false}>
+                <DataTable
+                  columns={historialColumns}
+                  data={[]}
+                  keyExtractor={(r) => r.id}
+                  emptyMessage="Sin cambios registrados para este cliente"
+                />
+              </Seccion>
+              <Seccion
+                titulo="Historial de movimientos"
+                loading={movimientosQuery.isLoading}
+                error={movimientosQuery.isError ? movimientosQuery.error : null}
+                onRetry={movimientosQuery.refetch}
+                vacio={movimientosQuery.rows.length === 0}
+              >
+                <TablaMovimientos rows={movimientosQuery.rows} />
+              </Seccion>
+            </>
           )}
         </div>
 

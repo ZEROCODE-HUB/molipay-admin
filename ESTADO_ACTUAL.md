@@ -937,7 +937,19 @@ no hay datos de alguna parte, salir vacío, pero **no modificar la estructura de
 - Migración `0010` ejecutada en prod sin errores (es `if not exists`, idempotente).
 
 ### Pendiente / nota
-- Las tabs `validaciones`, `riesgo`, `modulos`, `historial` muestran estructura vacía
-  porque no tienen tabla de respaldo en prod. Si el usuario quiere datos ahí, hay que
-  crear esas tablas (fuera de alcance de este arreglo).
+- Las tabs `validaciones`, `riesgo`, `modulos`, `historial` **no tienen tabla de
+  respaldo real en prod** (auditoría: la única vista parecida, `auditoria_legajos`,
+  es "tabla vacía, sin PK ni lógica: no conectar" según `0003:25`/`0005:577` y sirve
+  para detectar legajos inválidos, no es log de cambios). En la v1 eran 100% mock
+  (`getHistorial`→`MOCK_HISTORIAL`, `user.validacionesAutomaticas`, `DEFAULT_MODULOS`
+  + random). Por eso se renderizan **estructuradas pero vacías**, fiel a la v1
+  (DataTable con columnas, sub-tabs, botones Editar/Recargar/Ir a alertas con
+  navegación real a `/admin/general/alertas`, `/admin/general/alertas/bloqueos`,
+  `/admin/general/alertas/parametros-*`, `/admin/modulos`).
+- **Historial de movimientos** SÍ está cableado a datos reales: reusa
+  `movimientosQuery` (tabla `movimientos` real). **Historial de cambios** queda vacío
+  (no existe log de cambios de cliente en prod).
+- Si el usuario quiere datos no vacíos en `validaciones`/`riesgo`/`modulos`/`historial
+  de cambios`, hay que crear las tablas de respaldo correspondientes (fuera de
+  alcance de este arreglo; requeriría nueva migración + seed).
 
