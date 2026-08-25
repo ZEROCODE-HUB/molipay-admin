@@ -588,7 +588,7 @@ documenta lo ya existente).
 |---|---|---|---|
 | GAP-1 | La RPC `cambiar_estado_movimiento` nunca existió en producción — **RESUELTO**: 0006 aplicada y verificada el 2026-08-23 (ver INCIDENTE + Cierre abajo) | Botón "Cambiar estado" operativo nuevamente; verificación post-aplicación incluyó exposición vía PostgREST y rechazo de autorización a llamadas sin usuario | ✅ **RESUELTO 2026-08-23** |
 | GAP-2 | `handle_new_admin_user()` insertaba sobre `admin_users.rol` (columna eliminada; hoy `rol_id`) — **RESUELTO**: 0007 aplicada y verificada el 2026-08-23 (ver Resolución abajo) | Trigger de signup vivo y roto + conflicto descubierto con `crear-admin`; ambos caminos de alta quedaron operativos (V1/V2 verdes + Edge deployada) | ✅ **RESUELTO 2026-08-23** |
-| GAP-5 | **4 tablas consultadas por la capa API NO existen en producción** (PGRST205 verificado por sondeo REST): `integraciones`, `canales_notificacion`, `eventos_notificacion`, `codigos_error` | `admin.configuracion.index` y `admin.configuracion.logins` consumen `useIntegraciones` → **rotas hoy** al cargar. Las 3 de Notificaciones sin consumidor activo (módulo pausado). Fix requiere DDL nueva (0009 propuesta pendiente de diseño/aprobación) | 🔴 **PENDIENTE decisión** — crear tablas vs redirigir módulo |
+| GAP-5 | **4 tablas consultadas por la capa API NO existían en producción** (PGRST205 verificado por sondeo REST): `integraciones`, `canales_notificacion`, `eventos_notificacion`, `codigos_error` | `admin.configuracion.index` y `admin.configuracion.logins` consumen `useIntegraciones` → **rotas** al cargar. Las 3 de Notificaciones sin consumidor activo (módulo pausado) | ✅ **RESUELTO 2026-08-24** (0009 aplicada pieza a pieza, P0-P3 verdes; V5 pendiente de sesión viva) |
 | ANOM-1 | Índice duplicado real: `movimientos_legajo_idx` ≡ `idx_movimientos_legajo` | Solo costo de escritura | 🟡 Cosmético |
 | ANOM-2 | `conciliaciones.monto_diferencia` es **nullable** en prod (migraciones decían `not null default 0`) | Corregido documental; sin acción DDL decidida | ✅ Documentado |
 | ANOM-3 | Vista `auditoria_legajos` sin `security_invoker` (reloptions = null, confirmado 2026-08-23) — **RESUELTO**: ALTER VIEW aplicado el mismo día (ver Resolución abajo) | Bypass owner-privilege cerrado; verificación discriminante: sondeo anon pasó de `200 []` a error de servidor (invoker activo) | ✅ **RESUELTO 2026-08-23** |
@@ -779,8 +779,61 @@ de admin (0007). No dar por probado lo que solo está estructuralmente verde.
 ### Catálogos semilla fuera de alcance de 0005
 0005 documenta estructura únicamente. Para un clone fresco habrá que sembrar
 además: `roles`, `recursos`, `permisos` (matriz), `estados_movimiento`,
-`estados_por_tipo`, `codigos_categoria`. **Corrección 2026-08-23**: `codigos_error`
-e `integraciones` fueron removidas de esta lista — el sondeo PGRST205 de GAP-5
-probó que esas tablas tampoco existen en producción (los "8 integraciones
-reales" y los "10 códigos de error reales" viven solo en fixtures/documentación,
-nunca en la base).
+ `estados_por_tipo`, `codigos_categoria`. **Corrección 2026-08-24**: `codigos_error`
+e `integraciones` SÍ se crearon en producción mediante `0009` (GAP-5 resuelto);
+junto con `canales_notificacion` y `eventos_notificacion`. El sondeo PGRST205 de
+GAP-5 había probado que ninguna existía; hoy las 4 existen (con seeds reales de
+6 integraciones y 10 códigos de error). Los "8 integraciones reales" del
+ párrafo original se recortaron a 6 confirmadas por el revisor (las 2 restantes
+ no tenían evidencia de captura); los "10 códigos de error reales" son los de
+ `CODIGOS_ERROR_SEED` (sin inventar los ~400 restantes).
+
+### Cierre del incidente GAP-5 (2026-08-24): 4 tablas fantasma creadas en producción
+
+**Causa raíz:** las 4 tablas (`integraciones`, `codigos_error`,
+`canales_notificacion`, `eventos_notificacion`) fueron documentadas como creadas
+en sesiones anteriores pero **jamás se versionaron ni aplicaron** a este proyecto
+Supabase. Root cause idéntico al de GAP-1: DDL "candidata" que vivía solo como
+archivo/snippet y nunca aterrizó en la base (patrón de proyecto/pestaña
+equivocada). El sondeo REST lo confirmó de forma determinante: `404 PGRST205`
+("Could not find the table") para las 4, y `information_schema.columns` devolvía
+cero filas. No hubo pérdida de datos de negocio reales — los contenidos vivían
+solo en fixtures de código (`CODIGOS_ERROR_SEED`, `CANALES_NOTIFICACION_SEED`,
+`INTEGRACIONES`).
+
+**Impacto real conocido:**
+- `admin.configuracion.index` y `admin.configuracion.logins` consumen
+  `useIntegraciones` → **rotas al cargar** (PGRST205) hasta hoy.
+- Las 3 tablas de Notificaciones (`codigos_error`, `canales_notificacion`,
+  `eventos_notificacion`) tenían capa de datos + hooks construidos (§11) pero
+  **sin consumidor activo** (módulo pausado); el PGRST205 las habría roto igual
+  si se conectaban.
+
+**Fix aplicado — `0009_crear_tablas_faltantes_gap5.sql`, pieza a pieza:**
+
+| Pieza | Tabla | Semilla | Verificación |
+|---|---|---|---|
+| P0 | `integraciones` | 6 integraciones reales (Wondersoft, Pago Mis Cuentas, BDC Conecta, COELSA CPF/CVU/DEBIN) | V0: `SELECT count(*) = 6` ✓ |
+| P1 | `codigos_error` | 10 códigos reales (de `CODIGOS_ERROR_SEED`) | V1: `SELECT count(*) = 10` ✓ |
+| P2 | `canales_notificacion` | sin seed (config runtime) | V2: 7 columnas exactas ✓ |
+| P3 | `eventos_notificacion` (+FK `codigos_error.id`, índices) | sin seed | V3: 12 columnas + 1 FK resuelta sin ambigüedad ✓ |
+
+- RLS: patrón B del proyecto (`authenticated ALL true`) en las 4.
+- Trigger `set_updated_at()` (ya existente en prod) en las 4.
+- `codigos_error`: CHECK `audiencia` (tecnico/admin/cliente) y `canal_defecto`
+  (Email/Telegram/WhatsApp); dominios calzados 1:1 con `types.ts`.
+- `eventos_notificacion`: única FK `codigo_error_id → codigos_error(id)` (nullable)
+  → el embed `codigos_error(codigo, mensaje)` resuelve sin ambigüedad.
+- Seeds acotados a lo **confirmado en código/capturas**: 6 integraciones (no las
+  8 del borrador, sin evidencia) y 10 códigos (NO los ~400 inventados).
+
+**Sondeos V4 (flip anon 404→200) por pieza:** `GET /rest/v1/{tabla}?limit=1`
+pasó de `404 PGRST205` a `200 []` para las 4 (verificación estructural de
+PostgREST cache tras cada pieza).
+
+**⚠️ Pendiente explícito NO probado (V5):** la verificación end-to-end de que
+`admin.configuracion.index` y `admin.configuracion.logins` cargan su listado
+real sin error (antes PGRST205) **queda pendiente de la primera sesión viva de
+admin** en el navegador. La estructura está verde (V0-V4), pero no se da por
+probado lo que solo está estructuralmente verde — igual que GAP-4/0007.
+

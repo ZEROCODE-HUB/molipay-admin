@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 0009_crear_tablas_faltantes_gap5.sql
--- FECHA: 2026-08-23 | ESTADO: PROPUESTA - NO APLICADA - REQUIERE APROBACION
+-- FECHA: 2026-08-23 | ESTADO: APLICADA Y VERIFICADA EN PRODUCCIÓN (2026-08-24) - P0/P1/P2/P3 verdes (V0-V3)
 -- ============================================================================
 --
 -- ⚠️ NOTA EXPLÍCITA (GAP-5): estas 4 tablas nunca existieron en este
