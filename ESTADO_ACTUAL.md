@@ -885,3 +885,59 @@ Alineación `"Activa" → "Activo"` y `"Inactiva" → "Inactivo"` en los 4 archi
 - Confirmación de negocio: el seed de `impuestos_alicuotas` (bloque B) corre con
   `estado='Activo'`/`'Inactivo'` y devuelve `count = 4` en producción.
 
+---
+
+## §18 — Restauración de tabs del detalle de cliente (persona física/jurídica)
+
+### Reporte
+El usuario reportó que en el detalle de usuario ("persona física y jurídica") existía
+una "estructura tabular muy completa" en la primera versión (con tabs: datos
+personales, subcuentas, documentos, etc.) y que "ahora mismo eso no existe". Alcance
+acordado: **UI + crear las tablas de respaldo que faltaban**. Regla del usuario: si
+no hay datos de alguna parte, salir vacío, pero **no modificar la estructura de la v1**.
+
+### Hallazgo de auditoría
+- La v1 (`src/components/user-modal.tsx`, `UserModal`) usaba **datos mock**
+  (`MOCK_HISTORIAL`, `user.subcuentas`/`user.documentos` eran arrays hardcodeados).
+  Por eso la ficha conectada actual decía "los datos del mock anterior no tienen
+  tablas asociadas". O sea: las tablas `subcuentas`/`documentos` **nunca existieron
+  en el schema real** (no aparecen en ninguna migración previa; verificado en prod
+  vía `information_schema`: 0 filas).
+- La v1 tenía 9 tabs: `identificacion, contexto, validaciones, riesgo, modulos,
+  financiero, documentos, subcuentas, historial`.
+
+### Fix aplicado
+- **Migración `0010_crear_subcuentas_documentos.sql`** (aplicada en prod, sin errores):
+  - `subcuentas` (hijo de `clientes.legajo` FK ON DELETE CASCADE) con columnas
+    alineadas al tipo `Subcuenta` de la v1 (saldo_disponible/retenido/conciliado,
+    tipo enum `Operativa/Recaudacion/Garantias/Sueldos`, estado `Activa/Pausada`).
+  - `documentos` (hijo de `clientes.legajo`) con `tipo` enum
+    `id_frente/id_dorso/servicio/selfie`, `url`, `label`.
+  - RLS **admin-gated**, idéntico al patrón de `clientes` (0005:793-809):
+    `select` + `all` policies con `EXISTS (admin_users JOIN roles WHERE lower(r.nombre)='admin')`.
+- **Capa de datos nueva:**
+  - `src/lib/api/subcuentas.ts` (`listSubcuentas`, `createSubcuenta`).
+  - `src/lib/api/documentos.ts` (`listDocumentos`, `createDocumento`, `DOCUMENTO_LABELS`).
+- **`src/routes/admin.general.usuarios.$legajo.tsx`** reescrita con las 9 tabs de la v1:
+  - `identificacion`: grupos Datos personales / Empresa (solo jurídica) / Compliance,
+    mapeando campos reales de `clientes`; el resto (`dirección`, `género`, `PEP`,
+    empresa, etc.) muestra `—` (sin fuente real todavía).
+  - `contexto`: sub-tabs Movimientos / Impuestos (reusa queries existentes).
+  - `subcuentas` / `documentos`: tablas con alta (form inline) contra las nuevas tablas.
+  - `validaciones` / `riesgo` (sub-tabs Alertas/Bloqueos) / `modulos` / `historial`:
+    estructura preservada de la v1, con `—`/vacío (sin tabla de respaldo aún).
+  - `financiero`: Comisiones (reusa sección existente).
+  - Se preserva toda la funcionalidad previa: cambio de estado (suspender/reactivar),
+    manejo de loading/error/not-found, y las tabs Movimientos/Impuestos/Comisiones.
+
+### Verificación
+- `npx tsc --noEmit`: exit 0.
+- `npx eslint` sobre los 3 archivos ts/tsx: exit 0 (32 errores de formato prettier
+  corregidos con `--fix`).
+- Migración `0010` ejecutada en prod sin errores (es `if not exists`, idempotente).
+
+### Pendiente / nota
+- Las tabs `validaciones`, `riesgo`, `modulos`, `historial` muestran estructura vacía
+  porque no tienen tabla de respaldo en prod. Si el usuario quiere datos ahí, hay que
+  crear esas tablas (fuera de alcance de este arreglo).
+
