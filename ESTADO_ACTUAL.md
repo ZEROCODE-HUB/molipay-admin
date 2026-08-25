@@ -837,3 +837,51 @@ real sin error (antes PGRST205) **queda pendiente de la primera sesión viva de
 admin** en el navegador. La estructura está verde (V0-V4), pero no se da por
 probado lo que solo está estructuralmente verde — igual que GAP-4/0007.
 
+---
+
+## 17. Incidente: módulo Alícuotas roto en lectura y escritura (typo de estado)
+
+**Fecha:** 2026-08-24 | **Estado:** ✅ RESUELTO (código alineado a prod, tsc/lint verdes)
+
+### Causa raíz
+El código que consulta y escribe `impuestos_alicuotas.estado` usaba el valor
+`"Activa"` / `"Inactiva"` (con la `a` final), pero el `CHECK` real de producción
+es `Activo` / `Inactivo` (fuente de verdad `0005_consolidacion_schema_real.sql:391-392`,
+`impuestos_alicuotas_estado_check CHECK (estado = ANY (ARRAY['Activo'::text,
+'Inactivo'::text]))`). El `CHECK` `"Activa"/"Inactiva"` venía de `0004_impuestos_completo.sql`
+(línea 69), que está **marcado como DESALINEADO con producción desde su cabecera**
+(0004:1-6) y no debe usarse como referencia. El código de la app se escribió
+contra ese `0004` equivocado → desalineado con prod. Es el mismo patrón de
+desalineación ya documentado en §16.
+
+### Impacto (lectura Y escritura rotas en Alícuotas)
+- **Escritura:** `createAlicuota` (default `estado: input.estado ?? "Activa"`) y
+  `setAlicuotaEstado(estado: "Activa" | "Inactiva")` mandan `"Activa"/"Inactiva"`
+  → violan el `CHECK` → error `23514` al guardar en producción.
+- **Lectura:** el filtro `listAlicuotas` hace `eq("estado", estado)` con el tipo
+  `"Activa"/"Inactiva"`; si la UI envía `"Activa"`, no matchea las filas `Activo`
+  de prod → grilla de alícuotas vacía.
+- El catálogo `impuestos` (no alícuotas) ya usaba `Activo/Inactivo` correcto en
+  todo el código; solo `impuestos_alicuotas` tenía el typo.
+
+### Detección
+Sondeo manual al sembrar `impuestos_alicuotas`: `INSERT ... estado='Activa'`
+falló por `CHECK`, y al auditar si el mismo typo existía en el código se
+encontró que **toda la capa Alícuotas** (tipos, API y UI) usaba `"Activa"/"Inactiva"`.
+`tsc` lo confirmó: `admin.comercios.impuestos.index.tsx` (archivo `.tsx`, no
+`.ts`, por eso escapó al primer grep) tipaba el form contra `"Activa" | "Inactiva"`
+incompatible con el tipo ya corregido de la API.
+
+### Fix aplicado (commit posterior a este documento)
+Alineación `"Activa" → "Activo"` y `"Inactiva" → "Inactivo"` en los 4 archivos:
+- `src/lib/api/types.ts` (tipos `AlicuotaRow`, `Alicuota`, `AlicuotaInput`, `AlicuotaFilters`)
+- `src/lib/api/impuestos.ts` (filtro, default de `createAlicuota`, param de `setAlicuotaEstado`)
+- `src/data/impuestos.ts` (mock `Alicuota` + datos de ejemplo)
+- `src/routes/admin.comercios.impuestos.index.tsx` (form, badge, toggle, `<option>`)
+
+### Verificación
+- `npx tsc --noEmit`: exit 0 (antes fallaba con TS2322/TS2367 en la ruta UI).
+- `npx eslint` sobre los 4 archivos: exit 0.
+- Confirmación de negocio: el seed de `impuestos_alicuotas` (bloque B) corre con
+  `estado='Activo'`/`'Inactivo'` y devuelve `count = 4` en producción.
+

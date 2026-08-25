@@ -817,7 +817,7 @@ export type AlicuotaRow = {
   codigo: string;
   tasa: number;
   descripcion: string | null;
-  estado: "Activa" | "Inactiva";
+  estado: "Activo" | "Inactivo";
   created_at: string;
   updated_at: string;
 };
@@ -828,7 +828,7 @@ export type Alicuota = {
   codigo: string;
   tasa: number;
   descripcion: string | null;
-  estado: "Activa" | "Inactiva";
+  estado: "Activo" | "Inactivo";
   createdAt: string;
   updatedAt: string;
 };
@@ -838,13 +838,13 @@ export type AlicuotaInput = {
   codigo: string;
   tasa: number;
   descripcion?: string | null;
-  estado: "Activa" | "Inactiva";
+  estado: "Activo" | "Inactivo";
 };
 
 export type AlicuotaFilters = Pagination & {
   impuesto_id?: string;
   search?: string;
-  estado?: "Activa" | "Inactiva";
+  estado?: "Activo" | "Inactivo";
 };
 
 export type ImpuestoAsignacionRow = {

@@ -144,7 +144,7 @@ export async function deleteImpuesto(id: string): Promise<void> {
 export type AlicuotaFilters = Pagination & {
   impuesto_id?: string;
   search?: string;
-  estado?: "Activa" | "Inactiva";
+  estado?: "Activo" | "Inactivo";
 };
 
 const ALICUOTAS_COLUMNS = "id, impuesto_id, codigo, tasa, descripcion, estado, created_at";
@@ -187,7 +187,7 @@ export async function createAlicuota(impuesto_id: string, input: AlicuotaInput):
       codigo: input.codigo.trim(),
       tasa: input.tasa,
       descripcion: input.descripcion?.trim() ?? null,
-      estado: input.estado ?? "Activa",
+      estado: input.estado ?? "Activo",
     })
     .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
     .single();
@@ -215,7 +215,7 @@ export async function updateAlicuota(id: string, input: Partial<AlicuotaInput>):
 
 export async function setAlicuotaEstado(
   id: string,
-  estado: "Activa" | "Inactiva",
+  estado: "Activo" | "Inactivo",
 ): Promise<Alicuota> {
   const sb = requireSupabase();
   const { data, error } = await sb

@@ -139,7 +139,7 @@ function AlicuotasSection({ impuesto }: { impuesto: Impuesto }) {
     codigo: string;
     tasa: string;
     descripcion: string;
-    estado: "Activa" | "Inactiva";
+    estado: "Activo" | "Inactivo";
   }) => {
     try {
       if (editTarget) {
@@ -230,7 +230,7 @@ function AlicuotasSection({ impuesto }: { impuesto: Impuesto }) {
                 <td className="px-4 py-2.5 font-mono tabular-nums">{formatTasa(a.tasa)}</td>
                 <td className="px-4 py-2.5">{a.descripcion ?? "—"}</td>
                 <td className="px-4 py-2.5">
-                  <Badge tone={a.estado === "Activa" ? "success" : "neutral"}>{a.estado}</Badge>
+                  <Badge tone={a.estado === "Activo" ? "success" : "neutral"}>{a.estado}</Badge>
                 </td>
                 <td className="px-4 py-2.5 text-right whitespace-nowrap">
                   <button
@@ -246,13 +246,13 @@ function AlicuotasSection({ impuesto }: { impuesto: Impuesto }) {
                   </button>
                   <button
                     type="button"
-                    title={a.estado === "Activa" ? "Desactivar" : "Activar"}
+                    title={a.estado === "Activo" ? "Desactivar" : "Activar"}
                     className="p-1.5 hover:bg-muted rounded-md mr-1"
                     onClick={async () => {
                       try {
                         await setAlicuotaEstado(
                           a.id,
-                          a.estado === "Activa" ? "Inactiva" : "Activa",
+                          a.estado === "Activo" ? "Inactivo" : "Activo",
                         );
                         recargar();
                       } catch (e) {
@@ -264,7 +264,7 @@ function AlicuotasSection({ impuesto }: { impuesto: Impuesto }) {
                       }
                     }}
                   >
-                    {a.estado === "Activa" ? <PowerOff size={14} /> : <Power size={14} />}
+                    {a.estado === "Activo" ? <PowerOff size={14} /> : <Power size={14} />}
                   </button>
                   <button
                     type="button"
@@ -351,7 +351,7 @@ type AlicuotaForm = {
   codigo: string;
   tasa: string;
   descripcion: string;
-  estado: "Activa" | "Inactiva";
+  estado: "Activo" | "Inactivo";
 };
 
 function AlicuotaFormModal({
@@ -367,7 +367,7 @@ function AlicuotaFormModal({
     codigo: alicuota?.codigo ?? "",
     tasa: alicuota ? String(alicuota.tasa) : "",
     descripcion: alicuota?.descripcion ?? "",
-    estado: alicuota?.estado ?? "Activa",
+    estado: alicuota?.estado ?? "Activo",
   }));
   const valido = form.codigo.trim() !== "" && form.tasa.trim() !== "" && Number(form.tasa) >= 0;
 
@@ -412,10 +412,10 @@ function AlicuotaFormModal({
           <select
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
             value={form.estado}
-            onChange={(e) => setForm({ ...form, estado: e.target.value as "Activa" | "Inactiva" })}
+            onChange={(e) => setForm({ ...form, estado: e.target.value as "Activo" | "Inactivo" })}
           >
-            <option value="Activa">Activa</option>
-            <option value="Inactiva">Inactiva</option>
+            <option value="Activo">Activa</option>
+            <option value="Inactivo">Inactiva</option>
           </select>
         </div>
       </div>

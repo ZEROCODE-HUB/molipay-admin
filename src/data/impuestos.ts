@@ -4,7 +4,7 @@ export type Alicuota = {
   codigo: string;
   tasa: number;
   descripcion: string;
-  estado: "Activa" | "Inactiva";
+  estado: "Activo" | "Inactivo";
 };
 
 export type Impuesto = {
@@ -36,19 +36,19 @@ export const impuestosIniciales: Impuesto[] = [
         codigo: "GAN_35",
         tasa: 35,
         descripcion: "Alícuota 35% sobre el impuesto a las ganancias",
-        estado: "Activa",
+        estado: "Activo",
       },
       {
         codigo: "GAN_RET",
         tasa: 6,
         descripcion: "Retención 6% sobre acreditaciones",
-        estado: "Activa",
+        estado: "Activo",
       },
       {
         codigo: "GAN_PH",
         tasa: 35,
         descripcion: "Alícuota 35% para personas humanas",
-        estado: "Inactiva",
+        estado: "Inactivo",
       },
     ],
   },
@@ -67,13 +67,13 @@ export const impuestosIniciales: Impuesto[] = [
         codigo: "IIBB_4",
         tasa: 4,
         descripcion: "Alícuota 4% sobre la comisión de la plataforma",
-        estado: "Activa",
+        estado: "Activo",
       },
       {
         codigo: "IIBB_CM",
         tasa: 3.5,
         descripcion: "Alícuota 3,5% por convenio multilateral",
-        estado: "Inactiva",
+        estado: "Inactivo",
       },
     ],
   },
@@ -92,19 +92,19 @@ export const impuestosIniciales: Impuesto[] = [
         codigo: "IN_06",
         tasa: 0.6,
         descripcion: "Alícuota 0,60% para transferencias entrantes",
-        estado: "Activa",
+        estado: "Activo",
       },
       {
         codigo: "OUT_06",
         tasa: 0.6,
         descripcion: "Alícuota 0,60% para transferencias salientes",
-        estado: "Activa",
+        estado: "Activo",
       },
       {
         codigo: "CHEQUE_018",
         tasa: 0.18,
         descripcion: "Alícuota 0,18% para cheques",
-        estado: "Inactiva",
+        estado: "Inactivo",
       },
     ],
   },
