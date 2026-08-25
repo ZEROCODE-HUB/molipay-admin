@@ -39,6 +39,32 @@ export type ClienteModulo = {
   detalle: string | null;
 };
 
+export type ParametroConfig = {
+  id: string;
+  cliente_legajo: string;
+  clave: string;
+  habilitado: boolean;
+  valor: string | null;
+  periodo: string | null;
+};
+
+export type ComercioPst = {
+  id: string;
+  cliente_legajo: string;
+  nombre: string;
+  email: string | null;
+  legajo_comercio: string | null;
+};
+
+export type LinkPago = {
+  id: string;
+  cliente_legajo: string;
+  comercio_nombre: string;
+  url: string | null;
+  monto: number | null;
+  estado: string | null;
+};
+
 type HistorialCambioRow = {
   id: string;
   cliente_legajo: string;
@@ -82,12 +108,42 @@ type ClienteModuloRow = {
   detalle: string | null;
 };
 
+type ParametroConfigRow = {
+  id: string;
+  cliente_legajo: string;
+  clave: string;
+  habilitado: boolean;
+  valor: string | null;
+  periodo: string | null;
+};
+
+type ComercioPstRow = {
+  id: string;
+  cliente_legajo: string;
+  nombre: string;
+  email: string | null;
+  legajo_comercio: string | null;
+};
+
+type LinkPagoRow = {
+  id: string;
+  cliente_legajo: string;
+  comercio_nombre: string;
+  url: string | null;
+  monto: number | null;
+  estado: string | null;
+};
+
 const HISTORIAL_COLUMNS =
   "id, cliente_legajo, campo, valor_anterior, valor_nuevo, fecha, hora, usuario";
 const VALIDACIONES_COLUMNS = "id, cliente_legajo, proveedor, estado, fecha";
 const ALERTAS_COLUMNS = "id, cliente_legajo, tipo, fecha, estado";
 const BLOQUEOS_COLUMNS = "id, cliente_legajo, parametro, valor";
 const MODULOS_COLUMNS = "id, cliente_legajo, clave, titulo, cantidad, detalle";
+const PARAM_ALERTAS_COLUMNS = "id, cliente_legajo, clave, habilitado, valor, periodo";
+const PARAM_BLOQUEOS_COLUMNS = "id, cliente_legajo, clave, habilitado, valor, periodo";
+const COMERCIOS_PST_COLUMNS = "id, cliente_legajo, nombre, email, legajo_comercio";
+const LINKS_PAGO_COLUMNS = "id, cliente_legajo, comercio_nombre, url, monto, estado";
 
 export async function listHistorialCambios(clienteLegajo: string): Promise<HistorialCambio[]> {
   const sb = requireSupabase();
@@ -175,4 +231,128 @@ export async function listClienteModulos(clienteLegajo: string): Promise<Cliente
     cantidad: Number(r.cantidad),
     detalle: r.detalle,
   }));
+}
+
+export async function listParametrosAlertas(clienteLegajo: string): Promise<ParametroConfig[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("cliente_parametros_alertas")
+    .select(PARAM_ALERTAS_COLUMNS)
+    .eq("cliente_legajo", clienteLegajo)
+    .order("clave", { ascending: true });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ParametroConfigRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    cliente_legajo: r.cliente_legajo,
+    clave: r.clave,
+    habilitado: r.habilitado,
+    valor: r.valor,
+    periodo: r.periodo,
+  }));
+}
+
+export async function upsertParametroAlerta(
+  clienteLegajo: string,
+  clave: string,
+  input: { habilitado: boolean; valor?: string | null; periodo?: string | null },
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from("cliente_parametros_alertas").upsert(
+    {
+      cliente_legajo: clienteLegajo,
+      clave,
+      habilitado: input.habilitado,
+      valor: input.valor ?? null,
+      periodo: input.periodo ?? null,
+    },
+    { onConflict: "cliente_legajo,clave" },
+  );
+  if (error) throw new DataAccessError(error);
+}
+
+export async function listParametrosBloqueos(clienteLegajo: string): Promise<ParametroConfig[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("cliente_parametros_bloqueos")
+    .select(PARAM_BLOQUEOS_COLUMNS)
+    .eq("cliente_legajo", clienteLegajo)
+    .order("clave", { ascending: true });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ParametroConfigRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    cliente_legajo: r.cliente_legajo,
+    clave: r.clave,
+    habilitado: r.habilitado,
+    valor: r.valor,
+    periodo: r.periodo,
+  }));
+}
+
+export async function upsertParametroBloqueo(
+  clienteLegajo: string,
+  clave: string,
+  input: { habilitado: boolean; valor?: string | null; periodo?: string | null },
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from("cliente_parametros_bloqueos").upsert(
+    {
+      cliente_legajo: clienteLegajo,
+      clave,
+      habilitado: input.habilitado,
+      valor: input.valor ?? null,
+      periodo: input.periodo ?? null,
+    },
+    { onConflict: "cliente_legajo,clave" },
+  );
+  if (error) throw new DataAccessError(error);
+}
+
+export async function listComerciosPst(clienteLegajo: string): Promise<ComercioPst[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("cliente_comercios_pst")
+    .select(COMERCIOS_PST_COLUMNS)
+    .eq("cliente_legajo", clienteLegajo)
+    .order("nombre", { ascending: true });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ComercioPstRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    cliente_legajo: r.cliente_legajo,
+    nombre: r.nombre,
+    email: r.email,
+    legajo_comercio: r.legajo_comercio,
+  }));
+}
+
+export async function listLinksPago(clienteLegajo: string): Promise<LinkPago[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("cliente_links_pago")
+    .select(LINKS_PAGO_COLUMNS)
+    .eq("cliente_legajo", clienteLegajo)
+    .order("comercio_nombre", { ascending: true });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as LinkPagoRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    cliente_legajo: r.cliente_legajo,
+    comercio_nombre: r.comercio_nombre,
+    url: r.url,
+    monto: r.monto === null ? null : Number(r.monto),
+    estado: r.estado,
+  }));
+}
+
+export async function forzarValidacion(clienteLegajo: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from("validaciones").insert({
+    cliente_legajo: clienteLegajo,
+    proveedor: "Manual",
+    estado: "En proceso",
+    fecha: new Date().toISOString().slice(0, 10),
+  });
+  if (error) throw new DataAccessError(error);
 }

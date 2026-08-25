@@ -6,10 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { Badge, Input, Label } from "@/components/portal-shell";
+import { Badge } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { useClientes } from "@/hooks/useClientes";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { updateClienteEstado } from "@/lib/api/clientes";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
@@ -98,13 +97,10 @@ function UsuariosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useClientes({
     page,
     pageSize: PAGE_SIZE,
-    search,
   });
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -192,19 +188,6 @@ function UsuariosPage() {
         title="Usuarios de la plataforma"
         description="Clientes dados de alta (personas físicas y jurídicas) recuperados desde la base de datos."
       />
-
-      <div className="mb-4">
-        <Label htmlFor="buscar">Buscar</Label>
-        <Input
-          id="buscar"
-          value={searchInput}
-          onChange={(e) => {
-            setSearchInput(e.target.value);
-            setPage(0);
-          }}
-          placeholder="Legajo, correo o nombre…"
-        />
-      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">

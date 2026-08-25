@@ -9,18 +9,18 @@ import {
   Pencil,
   ShieldAlert,
   RefreshCw,
-  ExternalLink,
   Landmark,
   Link2,
   Globe,
+  Check,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ModalDialog } from "@/components/modal-dialog";
 import { DataTable, type Column } from "@/components/data-table";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useClienteByLegajo } from "@/hooks/useClientes";
-import { useComisiones } from "@/hooks/useComisiones";
 import { useMovimientos } from "@/hooks/useMovimientos";
 import { useImpuestosAsignaciones } from "@/hooks/useImpuestos";
 import { updateClienteEstado } from "@/lib/api/clientes";
@@ -43,20 +43,25 @@ import {
   listAlertas,
   listBloqueos,
   listClienteModulos,
+  listParametrosAlertas,
+  upsertParametroAlerta,
+  listParametrosBloqueos,
+  upsertParametroBloqueo,
+  listComerciosPst,
+  listLinksPago,
+  forzarValidacion,
   type HistorialCambio,
   type Validacion,
   type Alerta,
   type Bloqueo,
+  type ParametroConfig,
+  type ComercioPst,
+  type LinkPago,
 } from "@/lib/api/detalle-cliente";
+import { listApiUsuarios } from "@/lib/api/api-usuarios";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
-import type {
-  Cliente,
-  ComisionCliente,
-  EstadoCliente,
-  ImpuestoAsignacion,
-  Movimiento,
-} from "@/lib/api/types";
+import type { Cliente, EstadoCliente, ImpuestoAsignacion, Movimiento } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
   head: () => ({
@@ -79,32 +84,106 @@ const estadoTone: Record<EstadoCliente, "success" | "danger" | "warn"> = {
 
 type TabKey =
   | "identificacion"
-  | "contexto"
+  | "movimientos"
+  | "impuestos"
   | "subcuentas"
   | "documentos"
   | "validaciones"
   | "riesgo"
   | "modulos"
-  | "financiero"
   | "historial";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "identificacion", label: "Identificación" },
-  { key: "contexto", label: "Contexto" },
+  { key: "identificacion", label: "Identificación / Datos personales" },
+  { key: "movimientos", label: "Movimientos" },
+  { key: "impuestos", label: "Impuestos" },
   { key: "subcuentas", label: "Subcuentas" },
   { key: "documentos", label: "Documentos" },
-  { key: "validaciones", label: "Validaciones" },
-  { key: "riesgo", label: "Riesgo" },
-  { key: "modulos", label: "Módulos" },
-  { key: "financiero", label: "Financiero" },
+  { key: "validaciones", label: "Validaciones automáticas" },
+  { key: "riesgo", label: "Riesgo y monitoreo" },
+  { key: "modulos", label: "Módulos y productos" },
   { key: "historial", label: "Historial" },
 ];
 
-const MODULO_ICON: Record<"pct" | "blp" | "api", React.ComponentType<{ size?: number }>> = {
-  pct: Landmark,
-  blp: Link2,
-  api: Globe,
+type ParamTipo = "switch" | "switch_valor" | "switch_porcentaje" | "switch_cantidad_periodo";
+
+type ParamDef = {
+  clave: string;
+  etiqueta: string;
+  tipo: ParamTipo;
+  valorDefecto?: string;
+  periodoDefecto?: string;
+  unidad?: string;
 };
+
+const ALERTA_PARAM_DEF: ParamDef[] = [
+  {
+    clave: "exceso_perfil_transaccional",
+    etiqueta: "Exceso de perfil transaccional esperado",
+    tipo: "switch",
+  },
+  {
+    clave: "variacion_volumen_mes_anterior",
+    etiqueta: "Variación de volumen esperado respecto al mes anterior",
+    tipo: "switch_porcentaje",
+    valorDefecto: "10",
+    unidad: "%",
+  },
+  {
+    clave: "domicilio_jurisdiccion_alto_riesgo",
+    etiqueta: "Tiene domicilio en jurisdicción considerada de alto riesgo",
+    tipo: "switch",
+  },
+  {
+    clave: "operacion_individual_monto",
+    etiqueta: "La operación individual superó un monto determinado",
+    tipo: "switch_valor",
+    valorDefecto: "100000",
+    unidad: "$",
+  },
+  {
+    clave: "operaciones_repetidas_mismo_destinatario",
+    etiqueta:
+      "Cantidad de operaciones repetidas hacia un mismo destinatario dentro de un período determinado",
+    tipo: "switch_cantidad_periodo",
+    valorDefecto: "5",
+    periodoDefecto: "24h",
+  },
+];
+
+const BLOQUEO_PARAM_DEF: ParamDef[] = [
+  {
+    clave: "bloqueo_exceso_perfil_transaccional",
+    etiqueta: "Bloquear por exceso de perfil transaccional esperado",
+    tipo: "switch",
+  },
+  {
+    clave: "bloqueo_variacion_volumen_mes_anterior",
+    etiqueta: "Bloquear por variación de volumen respecto al mes anterior",
+    tipo: "switch_porcentaje",
+    valorDefecto: "20",
+    unidad: "%",
+  },
+  {
+    clave: "bloqueo_domicilio_jurisdiccion_alto_riesgo",
+    etiqueta: "Bloquear por domicilio en jurisdicción considerada de alto riesgo",
+    tipo: "switch",
+  },
+  {
+    clave: "bloqueo_operacion_individual_monto",
+    etiqueta: "Bloquear por operación individual que supera un monto determinado",
+    tipo: "switch_valor",
+    valorDefecto: "200000",
+    unidad: "$",
+  },
+  {
+    clave: "bloqueo_operaciones_repetidas_mismo_destinatario",
+    etiqueta: "Bloquear por operaciones repetidas hacia un mismo destinatario en un período",
+    tipo: "switch_cantidad_periodo",
+    valorDefecto: "5",
+    periodoDefecto: "24h",
+  },
+];
 
 function fmtFecha(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -119,6 +198,24 @@ function fmtFechaHora(iso: string | null | undefined) {
 function fmtMonto(n: number | null | undefined) {
   if (n === null || n === undefined) return "—";
   return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!enabled)}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
+        enabled ? "bg-primary" : "bg-muted-foreground/30"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+          enabled ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
 }
 
 function Seccion({
@@ -235,40 +332,22 @@ const bloqueosColumns: Column<Bloqueo>[] = [
   { key: "valor", label: "Valor", render: (r) => r.valor ?? "—" },
 ];
 
-function TablaComisiones({ rows }: { rows: ComisionCliente[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Operación</th>
-            <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium">Modalidad</th>
-            <th className="px-4 py-3 font-medium">Valor</th>
-            <th className="px-4 py-3 font-medium">% IVA</th>
-            <th className="px-4 py-3 font-medium">Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} className="border-b border-border last:border-b-0">
-              <td className="px-4 py-3 font-mono text-xs">{r.operacion}</td>
-              <td className="px-4 py-3">{r.tipo}</td>
-              <td className="px-4 py-3">{r.modalidad}</td>
-              <td className="px-4 py-3 tabular-nums">
-                {r.modalidad === "Porcentaje" ? `${r.porcentaje ?? 0} %` : fmtMonto(r.montoFijo)}
-              </td>
-              <td className="px-4 py-3 tabular-nums">{r.porcentajeImpuesto} %</td>
-              <td className="px-4 py-3">
-                <Badge tone={r.estado === "Habilitado" ? "success" : "neutral"}>{r.estado}</Badge>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+const apiUsuariosColumns = [
+  {
+    key: "codigo",
+    label: "Código",
+    render: (u: { codigoUsuarioApi: string }) => u.codigoUsuarioApi,
+  },
+  { key: "usuario", label: "Usuario", render: (u: { usuario: string }) => u.usuario },
+  { key: "nombre", label: "Nombre", render: (u: { nombreCompleto: string }) => u.nombreCompleto },
+  {
+    key: "estado",
+    label: "Estado",
+    render: (u: { estado: string }) => (
+      <Badge tone={u.estado === "Activo" ? "success" : "neutral"}>{u.estado}</Badge>
+    ),
+  },
+];
 
 function TablaMovimientos({ rows }: { rows: Movimiento[] }) {
   return (
@@ -679,6 +758,224 @@ function DocumentosTab({ legajo }: { legajo: string }) {
   );
 }
 
+function ParametrosEditorModal({
+  open,
+  onClose,
+  title,
+  legajo,
+  defs,
+  stored,
+  kind,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  legajo: string;
+  defs: ParamDef[];
+  stored: ParametroConfig[];
+  kind: "alerta" | "bloqueo";
+}) {
+  const queryClient = useQueryClient();
+  const [vals, setVals] = useState<
+    Record<string, { habilitado: boolean; valor: string; periodo: string }>
+  >({});
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (open && Object.keys(vals).length === 0) {
+    const init: Record<string, { habilitado: boolean; valor: string; periodo: string }> = {};
+    for (const d of defs) {
+      const s = stored.find((p) => p.clave === d.clave);
+      init[d.clave] = {
+        habilitado: s ? s.habilitado : false,
+        valor: s?.valor ?? d.valorDefecto ?? "",
+        periodo: s?.periodo ?? d.periodoDefecto ?? "",
+      };
+    }
+    setVals(init);
+  }
+
+  const guardar = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      for (const d of defs) {
+        const v = vals[d.clave];
+        if (kind === "alerta") {
+          await upsertParametroAlerta(legajo, d.clave, {
+            habilitado: v.habilitado,
+            valor: v.valor || null,
+            periodo: v.periodo || null,
+          });
+        } else {
+          await upsertParametroBloqueo(legajo, d.clave, {
+            habilitado: v.habilitado,
+            valor: v.valor || null,
+            periodo: v.periodo || null,
+          });
+        }
+      }
+      await queryClient.invalidateQueries({
+        queryKey: [kind === "alerta" ? "param_alertas" : "param_bloqueos", legajo],
+      });
+      onClose();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalDialog open={open} onClose={onClose} title={title} size="lg">
+      <div className="space-y-4">
+        {defs.map((d) => {
+          const v = vals[d.clave] ?? { habilitado: false, valor: "", periodo: "" };
+          return (
+            <div key={d.clave} className="rounded-lg border border-border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-sm font-medium text-foreground">{d.etiqueta}</span>
+                <Toggle
+                  enabled={v.habilitado}
+                  onChange={(nv) =>
+                    setVals((prev) => ({ ...prev, [d.clave]: { ...v, habilitado: nv } }))
+                  }
+                />
+              </div>
+              {(d.tipo === "switch_valor" ||
+                d.tipo === "switch_porcentaje" ||
+                d.tipo === "switch_cantidad_periodo") && (
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {d.tipo === "switch_cantidad_periodo" ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Cantidad
+                        </label>
+                        <input
+                          type="number"
+                          disabled={!v.habilitado}
+                          value={v.valor}
+                          onChange={(e) =>
+                            setVals((prev) => ({
+                              ...prev,
+                              [d.clave]: { ...v, valor: e.target.value },
+                            }))
+                          }
+                          className="h-9 w-24 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Período
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!v.habilitado}
+                          value={v.periodo}
+                          onChange={(e) =>
+                            setVals((prev) => ({
+                              ...prev,
+                              [d.clave]: { ...v, periodo: e.target.value },
+                            }))
+                          }
+                          placeholder="ej. 24h"
+                          className="h-9 w-28 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        {d.tipo === "switch_porcentaje" ? "Porcentaje" : "Monto"}
+                      </label>
+                      <input
+                        type="number"
+                        disabled={!v.habilitado}
+                        value={v.valor}
+                        onChange={(e) =>
+                          setVals((prev) => ({
+                            ...prev,
+                            [d.clave]: { ...v, valor: e.target.value },
+                          }))
+                        }
+                        className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                      />
+                      {d.unidad && (
+                        <span className="text-xs text-muted-foreground">{d.unidad}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 rounded-md border border-input px-3 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={saving}
+            className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {saving ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </ModalDialog>
+  );
+}
+
+function ApiUsuariosModal({
+  open,
+  onClose,
+  cantidad,
+}: {
+  open: boolean;
+  onClose: () => void;
+  cantidad: number;
+}) {
+  const query = useQuery({
+    queryKey: ["api_usuarios", "popup"],
+    queryFn: () => listApiUsuarios({ page: 0, pageSize: 25 }),
+    enabled: open,
+  });
+  return (
+    <ModalDialog
+      open={open}
+      onClose={onClose}
+      title="Usuarios API asociados"
+      description={`${cantidad} usuario(s) asociado(s) a la API externa`}
+    >
+      {query.isLoading ? (
+        <p className="text-sm text-muted-foreground">Cargando…</p>
+      ) : query.isError ? (
+        <p className="text-sm text-red-600">{(query.error as Error).message}</p>
+      ) : (query.data?.rows.length ?? 0) === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+          <Inbox size={22} />
+          <p>Sin usuarios API asociados.</p>
+        </div>
+      ) : (
+        <DataTable
+          columns={apiUsuariosColumns}
+          data={query.data!.rows}
+          keyExtractor={(u) => u.id}
+          emptyMessage="Sin usuarios API"
+        />
+      )}
+    </ModalDialog>
+  );
+}
+
 function ClienteDetailPage() {
   const { legajo } = Route.useParams();
   const navigate = useNavigate();
@@ -688,11 +985,6 @@ function ClienteDetailPage() {
 
   const { cliente, isLoading, isError, error, refetch } = useClienteByLegajo(legajo ?? null);
 
-  const comisionesQuery = useComisiones({
-    page: 0,
-    pageSize: 25,
-    clienteId: cliente?.id,
-  });
   const movimientosQuery = useMovimientos({
     page: 0,
     pageSize: 10,
@@ -729,6 +1021,26 @@ function ClienteDetailPage() {
     queryFn: () => listClienteModulos(legajo),
     enabled: !!cliente,
   });
+  const paramAlertasQuery = useQuery({
+    queryKey: ["param_alertas", legajo],
+    queryFn: () => listParametrosAlertas(legajo),
+    enabled: !!cliente,
+  });
+  const paramBloqueosQuery = useQuery({
+    queryKey: ["param_bloqueos", legajo],
+    queryFn: () => listParametrosBloqueos(legajo),
+    enabled: !!cliente,
+  });
+  const comerciosPstQuery = useQuery({
+    queryKey: ["comercios_pst", legajo],
+    queryFn: () => listComerciosPst(legajo),
+    enabled: !!cliente,
+  });
+  const linksPagoQuery = useQuery({
+    queryKey: ["links_pago", legajo],
+    queryFn: () => listLinksPago(legajo),
+    enabled: !!cliente,
+  });
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -739,8 +1051,17 @@ function ClienteDetailPage() {
   } | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabKey>("identificacion");
-  const [contextoSub, setContextoSub] = useState<"movimientos" | "impuestos">("movimientos");
   const [riesgoSub, setRiesgoSub] = useState<"alertas" | "bloqueos">("alertas");
+
+  const [editAlertasOpen, setEditAlertasOpen] = useState(false);
+  const [editBloqueosOpen, setEditBloqueosOpen] = useState(false);
+
+  const [pstOpen, setPstOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
+  const [apiOpen, setApiOpen] = useState(false);
+  const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
+
+  const [forzando, setForzando] = useState(false);
 
   const cambiarEstado = async (c: Cliente, nuevo: EstadoCliente) => {
     try {
@@ -754,6 +1075,24 @@ function ClienteDetailPage() {
         variant: "danger",
         onConfirm: () => setConfirmAction(null),
       });
+    }
+  };
+
+  const forzarNuevaValidacion = async () => {
+    setForzando(true);
+    try {
+      await forzarValidacion(legajo);
+      await validacionesQuery.refetch();
+    } catch (e) {
+      setConfirmAction({
+        title: "No se pudo forzar la validación",
+        message: (e as Error).message,
+        confirmLabel: "Cerrar",
+        variant: "danger",
+        onConfirm: () => setConfirmAction(null),
+      });
+    } finally {
+      setForzando(false);
     }
   };
 
@@ -851,6 +1190,17 @@ function ClienteDetailPage() {
     });
 
   const { personal, compliance, empresa } = camposIdentificacion(cliente);
+
+  const modulosData = modulosQuery.data ?? [];
+  const moduloByClave = (clave: string) => modulosData.find((m) => m.clave === clave);
+  const pstModulo = moduloByClave("pct");
+  const blpModulo = moduloByClave("blp");
+  const apiModulo = moduloByClave("api");
+  const comerciosPst = comerciosPstQuery.data ?? [];
+  const linksPago = linksPagoQuery.data ?? [];
+
+  const alertasHabilitadas = (paramAlertasQuery.data ?? []).filter((p) => p.habilitado).length;
+  const bloqueosHabilitados = (paramBloqueosQuery.data ?? []).filter((p) => p.habilitado).length;
 
   return (
     <PermissionGuard recurso="usuarios">
@@ -954,46 +1304,28 @@ function ClienteDetailPage() {
             </>
           )}
 
-          {activeTab === "contexto" && (
-            <>
-              <div className="flex gap-1 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setContextoSub("movimientos")}
-                  className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px ${contextoSub === "movimientos" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
-                >
-                  Movimientos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContextoSub("impuestos")}
-                  className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px ${contextoSub === "impuestos" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
-                >
-                  Impuestos
-                </button>
-              </div>
-              {contextoSub === "movimientos" ? (
-                <Seccion
-                  titulo="Movimientos recientes (últimos 10)"
-                  loading={movimientosQuery.isLoading}
-                  error={movimientosQuery.isError ? movimientosQuery.error : null}
-                  onRetry={movimientosQuery.refetch}
-                  vacio={movimientosQuery.rows.length === 0}
-                >
-                  <TablaMovimientos rows={movimientosQuery.rows} />
-                </Seccion>
-              ) : (
-                <Seccion
-                  titulo="Impuestos asignados"
-                  loading={impuestosQuery.isLoading}
-                  error={impuestosQuery.isError ? impuestosQuery.error : null}
-                  onRetry={impuestosQuery.refetch}
-                  vacio={impuestosQuery.rows.length === 0}
-                >
-                  <TablaImpuestos rows={impuestosQuery.rows} />
-                </Seccion>
-              )}
-            </>
+          {activeTab === "movimientos" && (
+            <Seccion
+              titulo="Movimientos recientes (últimos 10)"
+              loading={movimientosQuery.isLoading}
+              error={movimientosQuery.isError ? movimientosQuery.error : null}
+              onRetry={movimientosQuery.refetch}
+              vacio={movimientosQuery.rows.length === 0}
+            >
+              <TablaMovimientos rows={movimientosQuery.rows} />
+            </Seccion>
+          )}
+
+          {activeTab === "impuestos" && (
+            <Seccion
+              titulo="Impuestos asignados"
+              loading={impuestosQuery.isLoading}
+              error={impuestosQuery.isError ? impuestosQuery.error : null}
+              onRetry={impuestosQuery.refetch}
+              vacio={impuestosQuery.rows.length === 0}
+            >
+              <TablaImpuestos rows={impuestosQuery.rows} />
+            </Seccion>
           )}
 
           {activeTab === "subcuentas" && <SubcuentasTab legajo={cliente.legajo} />}
@@ -1008,6 +1340,17 @@ function ClienteDetailPage() {
               onRetry={validacionesQuery.refetch}
               vacio={!validacionesQuery.isLoading && (validacionesQuery.data?.length ?? 0) === 0}
             >
+              <div className="flex justify-end mb-3">
+                <button
+                  type="button"
+                  onClick={forzarNuevaValidacion}
+                  disabled={forzando}
+                  className="inline-flex items-center gap-1.5 h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={forzando ? "animate-spin" : ""} /> Forzar nueva
+                  validación
+                </button>
+              </div>
               <DataTable
                 columns={validacionesColumns}
                 data={validacionesQuery.data ?? []}
@@ -1027,13 +1370,17 @@ function ClienteDetailPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => navigate({ to: "/admin/general/alertas/parametros-alertas" })}
+                      onClick={() => setEditAlertasOpen(true)}
                       className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                     >
                       <Pencil size={12} /> Editar
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {paramAlertasQuery.isLoading
+                      ? "Cargando…"
+                      : `${alertasHabilitadas} parámetro(s) de alerta configurado(s).`}
+                  </p>
                 </div>
                 <div className="rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between gap-2 mb-3">
@@ -1042,27 +1389,39 @@ function ClienteDetailPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => navigate({ to: "/admin/general/alertas/parametros-bloqueos" })}
+                      onClick={() => setEditBloqueosOpen(true)}
                       className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                     >
                       <Pencil size={12} /> Editar
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {paramBloqueosQuery.isLoading
+                      ? "Cargando…"
+                      : `${bloqueosHabilitados} parámetro(s) de bloqueo configurado(s).`}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1 border-b border-border mb-4">
                 <button
                   type="button"
                   onClick={() => setRiesgoSub("alertas")}
-                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${riesgoSub === "alertas" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
+                    riesgoSub === "alertas"
+                      ? "bg-primary/10 text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
                 >
                   Ver alertas
                 </button>
                 <button
                   type="button"
                   onClick={() => setRiesgoSub("bloqueos")}
-                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${riesgoSub === "bloqueos" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
+                    riesgoSub === "bloqueos"
+                      ? "bg-primary/10 text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
                 >
                   Ver bloqueos
                 </button>
@@ -1081,13 +1440,6 @@ function ClienteDetailPage() {
                       emptyMessage="Sin alertas para este cliente"
                     />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => navigate({ to: "/admin/general/alertas" })}
-                    className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                  >
-                    <ExternalLink size={13} /> Ir a alertas
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1103,13 +1455,6 @@ function ClienteDetailPage() {
                       emptyMessage="Sin bloqueos para este cliente"
                     />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => navigate({ to: "/admin/general/alertas/bloqueos" })}
-                    className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                  >
-                    <ExternalLink size={13} /> Ir a bloqueos
-                  </button>
                 </div>
               )}
             </SectionCard>
@@ -1134,56 +1479,115 @@ function ClienteDetailPage() {
                 <p className="text-sm text-red-600">{(modulosQuery.error as Error).message}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(modulosQuery.data ?? []).map((m) => {
-                    const Icon = MODULO_ICON[m.clave];
-                    return (
-                      <div
-                        key={m.id}
-                        className="rounded-lg border border-border p-4 flex flex-col gap-3"
+                  {/* PST */}
+                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                        <Landmark size={16} />
+                      </span>
+                      <div className="font-display font-semibold text-sm">PST</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p className="font-semibold text-foreground">Sin comercio</p>
+                      <p className="mt-1">
+                        Comercio vinculado:{" "}
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {comerciosPst.length}
+                        </span>
+                      </p>
+                      <p className="mt-2">
+                        {comerciosPst.length === 0
+                          ? "No se encontró comercio PST asociado por email o por legajo."
+                          : "Comercios PST vinculados a este cliente."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPstOpen(true)}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
+                    >
+                      <Landmark size={13} /> Ver
+                    </button>
+                  </div>
+
+                  {/* Links de pago */}
+                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                        <Link2 size={16} />
+                      </span>
+                      <div className="font-display font-semibold text-sm">Links de pago</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {blpModulo ? (
+                        <>
+                          <p className="font-semibold text-foreground">{blpModulo.titulo}</p>
+                          <p className="mt-1">
+                            Comercios vinculados:{" "}
+                            <span className="font-semibold text-foreground tabular-nums">
+                              {linksPago.length}
+                            </span>
+                          </p>
+                          <p className="mt-2">
+                            {blpModulo.detalle ?? "Sin vínculos para este cliente."}
+                          </p>
+                        </>
+                      ) : (
+                        <p>Sin información de links de pago para este cliente.</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLinksOpen(true)}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
+                    >
+                      <Link2 size={13} /> Ver links de pago
+                    </button>
+                  </div>
+
+                  {/* API externa */}
+                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                        <Globe size={16} />
+                      </span>
+                      <div className="font-display font-semibold text-sm">API externa</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p className="font-semibold text-foreground">API externa</p>
+                      <p className="mt-1">
+                        Cantidad de usuarios asociados:{" "}
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {apiModulo?.cantidad ?? 0}
+                        </span>
+                      </p>
+                      <p className="mt-1">
+                        Estado:{" "}
+                        <span className="font-semibold text-foreground">
+                          {apiModulo?.detalle ?? "Sin vínculos para este cliente."}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-auto self-start">
+                      <button
+                        type="button"
+                        onClick={() => setApiOpen(true)}
+                        className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                            <Icon size={16} />
-                          </span>
-                          <div className="font-display font-semibold text-sm">{m.titulo}</div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {m.cantidad > 0 ? (
-                            <>
-                              Vinculados:{" "}
-                              <span className="font-semibold text-foreground tabular-nums">
-                                {m.cantidad}
-                              </span>
-                            </>
-                          ) : (
-                            (m.detalle ?? "Sin vínculos para este cliente.")
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => navigate({ to: "/admin/modulos" })}
-                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
-                        >
-                          <ExternalLink size={13} /> Ver
-                        </button>
-                      </div>
-                    );
-                  })}
+                        <Globe size={13} /> Ver usuarios API
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setApiDetalleOpen(true)}
+                        className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                      >
+                        <Check size={13} /> Ver detalle
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </SectionCard>
-          )}
-
-          {activeTab === "financiero" && (
-            <Seccion
-              titulo="Comisiones (configuración arancelaria)"
-              loading={comisionesQuery.isLoading}
-              error={comisionesQuery.isError ? comisionesQuery.error : null}
-              onRetry={comisionesQuery.refetch}
-              vacio={comisionesQuery.rows.length === 0}
-            >
-              <TablaComisiones rows={comisionesQuery.rows} />
-            </Seccion>
           )}
 
           {activeTab === "historial" && (
@@ -1217,6 +1621,135 @@ function ClienteDetailPage() {
             </>
           )}
         </div>
+
+        {/* Pop-ups módulos */}
+        <ModalDialog
+          open={pstOpen}
+          onClose={() => setPstOpen(false)}
+          title="Comercios PST vinculados"
+          description="Comercios vinculados al cliente vía PST."
+        >
+          {comerciosPstQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando…</p>
+          ) : comerciosPst.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+              <Inbox size={22} />
+              <p>No se encontró comercio PST asociado por email o por legajo.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">Comercio</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Legajo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comerciosPst.map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3">{c.nombre}</td>
+                      <td className="px-4 py-3">{c.email ?? "—"}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{c.legajo_comercio ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ModalDialog>
+
+        <ModalDialog
+          open={linksOpen}
+          onClose={() => setLinksOpen(false)}
+          title="Links de pago"
+          description="Comercios vinculados y sus links de pago."
+        >
+          {linksPagoQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando…</p>
+          ) : linksPago.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+              <Inbox size={22} />
+              <p>Sin links de pago vinculados.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {linksPago.map((l) => (
+                <div key={l.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">{l.comercio_nombre}</span>
+                    {l.estado && (
+                      <Badge tone={l.estado === "Activo" ? "success" : "neutral"}>{l.estado}</Badge>
+                    )}
+                  </div>
+                  {l.url && (
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block text-xs font-medium text-primary break-all"
+                    >
+                      {l.url}
+                    </a>
+                  )}
+                  {l.monto != null && (
+                    <p className="mt-1 text-xs text-muted-foreground">Monto: {fmtMonto(l.monto)}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </ModalDialog>
+
+        <ApiUsuariosModal
+          open={apiOpen}
+          onClose={() => setApiOpen(false)}
+          cantidad={apiModulo?.cantidad ?? 0}
+        />
+
+        <ModalDialog
+          open={apiDetalleOpen}
+          onClose={() => setApiDetalleOpen(false)}
+          title="Detalle de API externa"
+        >
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between gap-2 border-b border-border pb-2">
+              <span className="text-muted-foreground">Módulo</span>
+              <span className="font-medium">API externa</span>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-2">
+              <span className="text-muted-foreground">Cantidad de usuarios asociados</span>
+              <span className="font-medium tabular-nums">{apiModulo?.cantidad ?? 0}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Estado</span>
+              <span className="font-medium">
+                {apiModulo?.detalle ?? "Sin vínculos para este cliente."}
+              </span>
+            </div>
+          </div>
+        </ModalDialog>
+
+        {/* Edición de parámetros dentro del contexto del usuario */}
+        <ParametrosEditorModal
+          open={editAlertasOpen}
+          onClose={() => setEditAlertasOpen(false)}
+          title="Parámetros de alertas automáticas"
+          legajo={legajo}
+          defs={ALERTA_PARAM_DEF}
+          stored={paramAlertasQuery.data ?? []}
+          kind="alerta"
+        />
+        <ParametrosEditorModal
+          open={editBloqueosOpen}
+          onClose={() => setEditBloqueosOpen(false)}
+          title="Parámetros de bloqueos"
+          legajo={legajo}
+          defs={BLOQUEO_PARAM_DEF}
+          stored={paramBloqueosQuery.data ?? []}
+          kind="bloqueo"
+        />
 
         {confirmAction && (
           <ConfirmDialog
