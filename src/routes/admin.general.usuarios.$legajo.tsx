@@ -37,6 +37,17 @@ import {
   DOCUMENTO_LABELS,
   type DocumentoTipo,
 } from "@/lib/api/documentos";
+import {
+  listHistorialCambios,
+  listValidaciones,
+  listAlertas,
+  listBloqueos,
+  listClienteModulos,
+  type HistorialCambio,
+  type Validacion,
+  type Alerta,
+  type Bloqueo,
+} from "@/lib/api/detalle-cliente";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import type {
@@ -88,6 +99,12 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "financiero", label: "Financiero" },
   { key: "historial", label: "Historial" },
 ];
+
+const MODULO_ICON: Record<"pct" | "blp" | "api", React.ComponentType<{ size?: number }>> = {
+  pct: Landmark,
+  blp: Link2,
+  api: Globe,
+};
 
 function fmtFecha(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -192,37 +209,30 @@ function SectionCard({
   );
 }
 
-type HistorialRegistro = {
-  id: string;
-  campo: string;
-  valorAnterior: string;
-  valorNuevo: string;
-  fecha: string;
-  hora: string;
-  usuario: string;
-};
-
-const historialColumns: Column<HistorialRegistro>[] = [
+const historialColumns: Column<HistorialCambio>[] = [
   { key: "campo", label: "Campo", render: (r) => r.campo },
-  { key: "valorAnterior", label: "Valor anterior", render: (r) => r.valorAnterior },
-  { key: "valorNuevo", label: "Valor nuevo", render: (r) => r.valorNuevo },
+  { key: "valorAnterior", label: "Valor anterior", render: (r) => r.valorAnterior ?? "—" },
+  { key: "valorNuevo", label: "Valor nuevo", render: (r) => r.valorNuevo ?? "—" },
   { key: "fecha", label: "Fecha", render: (r) => r.fecha },
-  { key: "hora", label: "Hora", render: (r) => r.hora },
-  { key: "usuario", label: "Usuario", render: (r) => r.usuario },
+  { key: "hora", label: "Hora", render: (r) => r.hora ?? "—" },
+  { key: "usuario", label: "Usuario", render: (r) => r.usuario ?? "—" },
 ];
 
-type ValidacionRegistro = { id: string; proveedor: string; estado: string; fecha: string };
-const validacionesColumns: Column<ValidacionRegistro>[] = [
+const validacionesColumns: Column<Validacion>[] = [
   { key: "proveedor", label: "Proveedor", render: (r) => r.proveedor },
   { key: "estado", label: "Estado", render: (r) => r.estado },
   { key: "fecha", label: "Fecha", render: (r) => r.fecha },
 ];
 
-type RiesgoRegistro = { id: string; tipo: string; fecha: string; estado: string };
-const riesgoColumns: Column<RiesgoRegistro>[] = [
+const riesgoColumns: Column<Alerta>[] = [
   { key: "tipo", label: "Tipo", render: (r) => r.tipo },
   { key: "fecha", label: "Fecha", render: (r) => r.fecha },
   { key: "estado", label: "Estado", render: (r) => r.estado },
+];
+
+const bloqueosColumns: Column<Bloqueo>[] = [
+  { key: "parametro", label: "Parámetro", render: (r) => r.parametro },
+  { key: "valor", label: "Valor", render: (r) => r.valor ?? "—" },
 ];
 
 function TablaComisiones({ rows }: { rows: ComisionCliente[] }) {
@@ -694,6 +704,32 @@ function ClienteDetailPage() {
     cliente_legajo: legajo ?? undefined,
   });
 
+  const historialCambiosQuery = useQuery({
+    queryKey: ["historial_cambios", legajo],
+    queryFn: () => listHistorialCambios(legajo),
+    enabled: !!cliente,
+  });
+  const validacionesQuery = useQuery({
+    queryKey: ["validaciones", legajo],
+    queryFn: () => listValidaciones(legajo),
+    enabled: !!cliente,
+  });
+  const alertasQuery = useQuery({
+    queryKey: ["alertas", legajo],
+    queryFn: () => listAlertas(legajo),
+    enabled: !!cliente,
+  });
+  const bloqueosQuery = useQuery({
+    queryKey: ["bloqueos", legajo],
+    queryFn: () => listBloqueos(legajo),
+    enabled: !!cliente,
+  });
+  const modulosQuery = useQuery({
+    queryKey: ["cliente_modulos", legajo],
+    queryFn: () => listClienteModulos(legajo),
+    enabled: !!cliente,
+  });
+
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -965,10 +1001,16 @@ function ClienteDetailPage() {
           {activeTab === "documentos" && <DocumentosTab legajo={cliente.legajo} />}
 
           {activeTab === "validaciones" && (
-            <Seccion titulo="Validaciones automáticas" loading={false} error={null} vacio={false}>
+            <Seccion
+              titulo="Validaciones automáticas"
+              loading={validacionesQuery.isLoading}
+              error={validacionesQuery.isError ? validacionesQuery.error : null}
+              onRetry={validacionesQuery.refetch}
+              vacio={!validacionesQuery.isLoading && (validacionesQuery.data?.length ?? 0) === 0}
+            >
               <DataTable
                 columns={validacionesColumns}
-                data={[]}
+                data={validacionesQuery.data ?? []}
                 keyExtractor={(v) => v.id}
                 emptyMessage="Sin validaciones para este cliente"
               />
@@ -1027,12 +1069,18 @@ function ClienteDetailPage() {
               </div>
               {riesgoSub === "alertas" ? (
                 <div className="space-y-3">
-                  <DataTable
-                    columns={riesgoColumns}
-                    data={[]}
-                    keyExtractor={(r) => r.id}
-                    emptyMessage="Sin alertas para este cliente"
-                  />
+                  {alertasQuery.isLoading ? (
+                    <p className="text-sm text-muted-foreground">Cargando…</p>
+                  ) : alertasQuery.isError ? (
+                    <p className="text-sm text-red-600">{(alertasQuery.error as Error).message}</p>
+                  ) : (
+                    <DataTable
+                      columns={riesgoColumns}
+                      data={alertasQuery.data ?? []}
+                      keyExtractor={(r) => r.id}
+                      emptyMessage="Sin alertas para este cliente"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => navigate({ to: "/admin/general/alertas" })}
@@ -1043,12 +1091,18 @@ function ClienteDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <DataTable
-                    columns={riesgoColumns}
-                    data={[]}
-                    keyExtractor={(r) => r.id}
-                    emptyMessage="Sin bloqueos para este cliente"
-                  />
+                  {bloqueosQuery.isLoading ? (
+                    <p className="text-sm text-muted-foreground">Cargando…</p>
+                  ) : bloqueosQuery.isError ? (
+                    <p className="text-sm text-red-600">{(bloqueosQuery.error as Error).message}</p>
+                  ) : (
+                    <DataTable
+                      columns={bloqueosColumns}
+                      data={bloqueosQuery.data ?? []}
+                      keyExtractor={(r) => r.id}
+                      emptyMessage="Sin bloqueos para este cliente"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => navigate({ to: "/admin/general/alertas/bloqueos" })}
@@ -1067,42 +1121,56 @@ function ClienteDetailPage() {
               actions={
                 <button
                   type="button"
-                  onClick={() => refetch()}
+                  onClick={() => modulosQuery.refetch()}
                   className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                 >
                   <RefreshCw size={13} /> Recargar
                 </button>
               }
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { clave: "pct", titulo: "PCT", Icon: Landmark, ruta: "/admin/modulos" },
-                  { clave: "blp", titulo: "BLP", Icon: Link2, ruta: "/admin/modulos" },
-                  { clave: "api", titulo: "API Externa", Icon: Globe, ruta: "/admin/modulos" },
-                ].map((m) => (
-                  <div
-                    key={m.clave}
-                    className="rounded-lg border border-border p-4 flex flex-col gap-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                        <m.Icon size={16} />
-                      </span>
-                      <div className="font-display font-semibold text-sm">{m.titulo}</div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Sin vínculos para este cliente.
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate({ to: m.ruta })}
-                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
-                    >
-                      <ExternalLink size={13} /> Ver
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {modulosQuery.isLoading ? (
+                <p className="text-sm text-muted-foreground">Cargando…</p>
+              ) : modulosQuery.isError ? (
+                <p className="text-sm text-red-600">{(modulosQuery.error as Error).message}</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(modulosQuery.data ?? []).map((m) => {
+                    const Icon = MODULO_ICON[m.clave];
+                    return (
+                      <div
+                        key={m.id}
+                        className="rounded-lg border border-border p-4 flex flex-col gap-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
+                            <Icon size={16} />
+                          </span>
+                          <div className="font-display font-semibold text-sm">{m.titulo}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {m.cantidad > 0 ? (
+                            <>
+                              Vinculados:{" "}
+                              <span className="font-semibold text-foreground tabular-nums">
+                                {m.cantidad}
+                              </span>
+                            </>
+                          ) : (
+                            (m.detalle ?? "Sin vínculos para este cliente.")
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate({ to: "/admin/modulos" })}
+                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
+                        >
+                          <ExternalLink size={13} /> Ver
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </SectionCard>
           )}
 
@@ -1120,10 +1188,19 @@ function ClienteDetailPage() {
 
           {activeTab === "historial" && (
             <>
-              <Seccion titulo="Historial de cambios" loading={false} error={null} vacio={false}>
+              <Seccion
+                titulo="Historial de cambios"
+                loading={historialCambiosQuery.isLoading}
+                error={historialCambiosQuery.isError ? historialCambiosQuery.error : null}
+                onRetry={historialCambiosQuery.refetch}
+                vacio={
+                  !historialCambiosQuery.isLoading &&
+                  (historialCambiosQuery.data?.length ?? 0) === 0
+                }
+              >
                 <DataTable
                   columns={historialColumns}
-                  data={[]}
+                  data={historialCambiosQuery.data ?? []}
                   keyExtractor={(r) => r.id}
                   emptyMessage="Sin cambios registrados para este cliente"
                 />

@@ -953,3 +953,22 @@ no hay datos de alguna parte, salir vacío, pero **no modificar la estructura de
   de cambios`, hay que crear las tablas de respaldo correspondientes (fuera de
   alcance de este arreglo; requeriría nueva migración + seed).
 
+### Segunda iteración: tablas de respaldo para ver datos (0011) — PENDIENTE APLICAR
+- El usuario pidió "creemos esas tablas para ver los datos" en `validaciones`/
+  `riesgo`/`modulos`/`historial`. Se crearon:
+  - `supabase/migrations/0011_crear_tablas_detalle_cliente.sql`: 5 tablas hijas de
+    `clientes.legajo` (FK ON DELETE CASCADE, RLS admin-gated idempotente vía DO block):
+    `historial_cambios` (campo, valor_anterior, valor_nuevo, fecha, hora, usuario),
+    `validaciones` (proveedor, estado, fecha), `alertas` (tipo, fecha, estado),
+    `bloqueos` (parametro, valor), `cliente_modulos` (clave enum pct/blp/api, titulo,
+    cantidad, detalle).
+  - `supabase/seed/0011_detalle_cliente.sql`: 1 fila por cliente real existente
+    (sin inventar legajos) en cada tabla, para que las tabs muestren datos de ejemplo.
+  - `src/lib/api/detalle-cliente.ts`: `listHistorialCambios`, `listValidaciones`,
+    `listAlertas`, `listBloqueos`, `listClienteModulos` (tipos + mappers tipados).
+- La ruta `admin.general.usuarios.$legajo.tsx` quedó cableada a las 5 queries reales
+  (loading/error/vacío por tab). Las 4 tabs ahora muestran datos al aplicar 0011+seed.
+- **Pendiente:** el usuario debe ejecutar `0011_crear_tablas_detalle_cliente.sql` y
+  luego `supabase/seed/0011_detalle_cliente.sql` en Supabase SQL Editor (agente sin
+  credenciales de BD). Tras aplicar, verificar en pantalla.
+
