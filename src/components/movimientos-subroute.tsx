@@ -256,6 +256,7 @@ export function MovimientosSubRoute({
             data={data}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            showGlobalFilter={false}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>

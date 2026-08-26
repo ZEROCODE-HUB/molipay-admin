@@ -41,6 +41,7 @@ type DataTableProps<T> = {
   showDownloadButton?: boolean;
   dateFilterColumns?: string[];
   initialQuery?: string;
+  showGlobalFilter?: boolean;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -76,6 +77,7 @@ export function DataTable<T>({
   showDownloadButton = true,
   dateFilterColumns,
   initialQuery,
+  showGlobalFilter = true,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -306,10 +308,10 @@ export function DataTable<T>({
         )}
       </div>
 
-      {(textSearchableCols.length > 0 || showSpecificFilters) && (
+      {((showGlobalFilter && textSearchableCols.length > 0) || showSpecificFilters) && (
         <div className="bg-card border rounded-lg p-3 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {textSearchableCols.length > 0 && (
+            {showGlobalFilter && textSearchableCols.length > 0 && (
               <div className="relative flex-1 max-w-md">
                 <Search
                   size={14}

@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
 
 type Bloqueo = {
   legajo: string;
@@ -213,97 +214,6 @@ function BloqueoDetail({ b, onClose }: { b: Bloqueo; onClose: () => void }) {
   );
 }
 
-function GestionarBloqueo({
-  b,
-  onClose,
-  onSave,
-}: {
-  b: Bloqueo;
-  onClose: () => void;
-  onSave: (updated: Bloqueo) => void;
-}) {
-  const [form, setForm] = useState<Bloqueo>({ ...b });
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card border rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display font-semibold">Gestionar bloqueo — {b.legajo}</h3>
-          <button onClick={onClose} className="p-1 hover:opacity-70">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Fecha del bloqueo
-            </label>
-            <input
-              type="date"
-              value={form.fecha}
-              onChange={(e) => setForm({ ...form, fecha: e.target.value })}
-              className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Fecha de aceptación del bloqueo
-            </label>
-            <input
-              type="date"
-              value={form.fechaAceptacion ?? ""}
-              onChange={(e) => setForm({ ...form, fechaAceptacion: e.target.value || undefined })}
-              className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Comentario de resolución
-            </label>
-            <textarea
-              value={form.resolucion ?? ""}
-              onChange={(e) => setForm({ ...form, resolucion: e.target.value })}
-              rows={3}
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-              placeholder="Agregar comentario..."
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Fecha de resolución
-            </label>
-            <input
-              type="date"
-              value={form.fechaResolucion ?? ""}
-              onChange={(e) => setForm({ ...form, fechaResolucion: e.target.value || undefined })}
-              className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => onSave(form)}
-              className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 h-10 rounded-md border border-input text-sm font-semibold hover:bg-muted"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export const Route = createFileRoute("/admin/general/alertas/bloqueos")({
   head: () => ({ meta: [{ title: "Listado de bloqueos — Admin Panel" }] }),
   component: Page,
@@ -312,7 +222,8 @@ export const Route = createFileRoute("/admin/general/alertas/bloqueos")({
 function Page() {
   const [data, setData] = useState(mock);
   const [detail, setDetail] = useState<Bloqueo | null>(null);
-  const [gestionar, setGestionar] = useState<Bloqueo | null>(null);
+  const [gestionTarget, setGestionTarget] = useState<Bloqueo | null>(null);
+  const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -324,7 +235,7 @@ function Page() {
   const getActions = (r: Bloqueo): ActionItem[] => {
     const actions: ActionItem[] = [
       { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
-      { label: "Gestionar", icon: Edit3, onClick: () => setGestionar({ ...r }) },
+      { label: "Gestionar", icon: Edit3, onClick: () => setGestionTarget({ ...r }) },
     ];
     if (r.estado === "Bloqueado") {
       actions.push({
@@ -436,16 +347,24 @@ function Page() {
         dateFilterColumns={["fecha", "fechaAceptacion"]}
       />
       {detail && <BloqueoDetail b={detail} onClose={() => setDetail(null)} />}
-      {gestionar && (
-        <GestionarBloqueo
-          b={gestionar}
-          onClose={() => setGestionar(null)}
-          onSave={(updated) => {
-            setData((prev) => prev.map((bl) => (bl.legajo === updated.legajo ? updated : bl)));
-            setGestionar(null);
-          }}
-        />
-      )}
+      <AlertaGestionModal
+        open={!!gestionTarget}
+        onClose={() => setGestionTarget(null)}
+        title="Gestión de bloqueo"
+        resumen={gestionTarget ? `${gestionTarget.tipo} · ${gestionTarget.nombre}` : ""}
+        onGuardar={(g) => {
+          if (gestionTarget) {
+            setGestiones((prev) => ({ ...prev, [gestionTarget.legajo]: g }));
+            setData((prev) =>
+              prev.map((bl) =>
+                bl.legajo === gestionTarget.legajo
+                  ? { ...bl, estado: "Aceptado", fechaAceptacion: g.fecha }
+                  : bl,
+              ),
+            );
+          }
+        }}
+      />
       {confirmAction && (
         <ConfirmDialog
           open={!!confirmAction}

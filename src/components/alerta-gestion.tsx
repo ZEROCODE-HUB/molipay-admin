@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Upload, X, FileText } from "lucide-react";
 import { ModalDialog } from "./modal-dialog";
 import { BtnOutline } from "./portal-shell";
+import { useAuth } from "@/lib/auth";
 
 export type GestionResultado = "Falso positivo" | "Operación justificada" | "ROS";
 
@@ -18,38 +19,36 @@ export function AlertaGestionModal({
   open,
   onClose,
   resumen,
+  title = "Gestión de alerta",
   onGuardar,
 }: {
   open: boolean;
   onClose: () => void;
   resumen: string;
+  title?: string;
   onGuardar: (g: GestionAlerta) => void;
 }) {
+  const { admin } = useAuth();
   const [motivo, setMotivo] = useState("");
-  const [analista, setAnalista] = useState("");
   const [comentarios, setComentarios] = useState("");
   const [documentos, setDocumentos] = useState<string[]>([]);
-  const [docInput, setDocInput] = useState("");
   const [resultado, setResultado] = useState<GestionResultado | "">("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setMotivo("");
-      setAnalista("");
       setComentarios("");
       setDocumentos([]);
-      setDocInput("");
       setResultado("");
       setError(null);
     }
   }, [open]);
 
-  const agregarDocumento = () => {
-    const v = docInput.trim();
-    if (!v) return;
-    if (!documentos.includes(v)) setDocumentos((p) => [...p, v]);
-    setDocInput("");
+  const agregarDocumentos = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const nombres = Array.from(fileList).map((f) => f.name);
+    setDocumentos((p) => [...p, ...nombres.filter((n) => !p.includes(n))]);
   };
 
   const guardar = () => {
@@ -59,7 +58,7 @@ export function AlertaGestionModal({
     }
     onGuardar({
       motivo: motivo.trim(),
-      analista: analista.trim(),
+      analista: admin?.nombre ?? "",
       comentarios: comentarios.trim(),
       documentos,
       resultado,
@@ -71,13 +70,7 @@ export function AlertaGestionModal({
   const resultadoOptions: GestionResultado[] = ["Falso positivo", "Operación justificada", "ROS"];
 
   return (
-    <ModalDialog
-      open={open}
-      onClose={onClose}
-      title="Gestión de alerta"
-      description={resumen}
-      size="lg"
-    >
+    <ModalDialog open={open} onClose={onClose} title={title} description={resumen} size="lg">
       <div className="space-y-4">
         <div>
           <label className="text-xs font-semibold text-foreground mb-1.5 block">Motivo</label>
@@ -90,35 +83,22 @@ export function AlertaGestionModal({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">
-              Analista que gestiona
-            </label>
-            <input
-              value={analista}
-              onChange={(e) => setAnalista(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-              placeholder="Nombre del analista"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">
-              Resultado de la gestión
-            </label>
-            <select
-              value={resultado}
-              onChange={(e) => setResultado(e.target.value as GestionResultado | "")}
-              className="w-full h-9 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            >
-              <option value="">Seleccionar…</option>
-              {resultadoOptions.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">
+            Resultado de la gestión
+          </label>
+          <select
+            value={resultado}
+            onChange={(e) => setResultado(e.target.value as GestionResultado | "")}
+            className="w-full h-9 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            <option value="">Seleccionar…</option>
+            {resultadoOptions.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -136,27 +116,18 @@ export function AlertaGestionModal({
           <label className="text-xs font-semibold text-foreground mb-1.5 block">
             Documentos adjuntos
           </label>
-          <div className="flex items-center gap-2">
+          <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 text-sm font-medium hover:bg-accent">
+            <Upload size={14} /> Adjuntar documento
             <input
-              value={docInput}
-              onChange={(e) => setDocInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  agregarDocumento();
-                }
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                agregarDocumentos(e.target.files);
+                e.target.value = "";
               }}
-              className="h-9 flex-1 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-              placeholder="URL o referencia del documento"
             />
-            <button
-              type="button"
-              onClick={agregarDocumento}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
-            >
-              <Upload size={14} /> Adjuntar
-            </button>
-          </div>
+          </label>
           {documentos.length > 0 && (
             <ul className="mt-2 space-y-1.5">
               {documentos.map((d, i) => (
@@ -190,7 +161,7 @@ export function AlertaGestionModal({
             onClick={guardar}
             className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
-            Guardar gestión
+            Guardar
           </button>
         </div>
       </div>
