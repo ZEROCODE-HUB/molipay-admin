@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 import {
   ChevronLeft,
   AlertTriangle,
@@ -8,6 +8,7 @@ import {
   Plus,
   Pencil,
   ShieldAlert,
+  FilterX,
   RefreshCw,
   Landmark,
   Link2,
@@ -74,6 +75,7 @@ import {
   listApiUsuarios,
   listApiUsuarioEndpoints,
   listApiUsuarioLogs,
+  setApiUsuarioEstado,
   type ApiUsuarioEndpoint,
   type ApiUsuarioLog,
 } from "@/lib/api/api-usuarios";
@@ -81,7 +83,22 @@ import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { findJuridicaMock } from "@/data/juridicas-mock";
 import { imagenesParaLegajo } from "@/data/imagenes-asignadas";
-import type { Cliente, EstadoCliente, ImpuestoAsignacion, Movimiento } from "@/lib/api/types";
+import type {
+  Cliente,
+  EstadoCliente,
+  EstadoApiUsuario,
+  ImpuestoAsignacion,
+  Movimiento,
+} from "@/lib/api/types";
+import {
+  type EstadoMovimiento,
+  type Movimiento as DetailMovimiento,
+} from "@/lib/api/types";
+import { MovimientoDetail, DetailModal } from "@/components/movimiento-detail";
+import { resolverEstadoMovimiento } from "@/lib/estados";
+import { useEstadosMovimiento } from "@/hooks/useEstados";
+import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
+import { FormDialog } from "@/components/form-dialog";
 
 export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
   head: () => ({
@@ -517,7 +534,59 @@ const apiUsuariosColumns = [
   },
 ];
 
-function TablaMovimientos({ rows }: { rows: Movimiento[] }) {
+function AccionIconBtn({
+  title,
+  onClick,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-foreground"
+    >
+      {children}
+    </button>
+  );
+}
+
+function toDetalleMovimiento(
+  m: Movimiento,
+  catalogo: EstadoMovimiento[],
+): DetailMovimiento {
+  return {
+    clienteId: m.clienteId,
+    legajo: m.legajo,
+    id: m.idTxn,
+    tipo: m.tipo,
+    cvu: m.cvu ?? "—",
+    usuario: m.cliente?.correo ?? m.legajo,
+    nombreOrigen: m.cliente?.nombre ?? "—",
+    nombreDestino: "—",
+    cuit: m.cliente?.cuit ?? "—",
+    monto: fmtMonto(m.montoCobrado),
+    fecha: fmtFechaHora(m.fecha),
+    estado: resolverEstadoMovimiento(m, catalogo).codigo,
+  };
+}
+
+function TablaMovimientos({
+  rows,
+  onVerDetalles,
+  onCambiarEstado,
+  onVerCliente,
+}: {
+  rows: Movimiento[];
+  onVerDetalles?: (m: Movimiento) => void;
+  onCambiarEstado?: (m: Movimiento) => void;
+  onVerCliente?: (m: Movimiento) => void;
+}) {
+  const conAcciones = Boolean(onVerDetalles || onCambiarEstado || onVerCliente);
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
@@ -531,6 +600,7 @@ function TablaMovimientos({ rows }: { rows: Movimiento[] }) {
             <th className="px-4 py-3 font-medium text-right">Cobrado</th>
             <th className="px-4 py-3 font-medium">Fecha</th>
             <th className="px-4 py-3 font-medium">Estado</th>
+            {conAcciones && <th className="px-4 py-3 font-medium text-right">Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -550,6 +620,30 @@ function TablaMovimientos({ rows }: { rows: Movimiento[] }) {
                   {m.estadoNombre ?? m.estadoCodigo ?? "—"}
                 </Badge>
               </td>
+              {conAcciones && (
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-1.5">
+                    {onVerDetalles && (
+                      <AccionIconBtn title="Ver detalles" onClick={() => onVerDetalles(m)}>
+                        <Eye size={15} />
+                      </AccionIconBtn>
+                    )}
+                    {onCambiarEstado && (
+                      <AccionIconBtn title="Cambiar estado" onClick={() => onCambiarEstado(m)}>
+                        <ShieldAlert size={15} />
+                      </AccionIconBtn>
+                    )}
+                    {onVerCliente && (
+                      <AccionIconBtn
+                        title="Ver movimientos del cliente"
+                        onClick={() => onVerCliente(m)}
+                      >
+                        <FilterX size={15} />
+                      </AccionIconBtn>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -558,7 +652,16 @@ function TablaMovimientos({ rows }: { rows: Movimiento[] }) {
   );
 }
 
-function TablaImpuestos({ rows }: { rows: ImpuestoAsignacion[] }) {
+function TablaImpuestos({
+  rows,
+  onVerDetalles,
+  onVerCliente,
+}: {
+  rows: ImpuestoAsignacion[];
+  onVerDetalles?: (a: ImpuestoAsignacion) => void;
+  onVerCliente?: (a: ImpuestoAsignacion) => void;
+}) {
+  const conAcciones = Boolean(onVerDetalles || onVerCliente);
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
@@ -570,6 +673,7 @@ function TablaImpuestos({ rows }: { rows: ImpuestoAsignacion[] }) {
             <th className="px-4 py-3 font-medium text-right">Monto / Tasa</th>
             <th className="px-4 py-3 font-medium">Fecha asignación</th>
             <th className="px-4 py-3 font-medium">Estado</th>
+            {conAcciones && <th className="px-4 py-3 font-medium text-right">Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -587,6 +691,25 @@ function TablaImpuestos({ rows }: { rows: ImpuestoAsignacion[] }) {
               <td className="px-4 py-3">
                 <Badge tone={a.estado === "Activo" ? "success" : "neutral"}>{a.estado}</Badge>
               </td>
+              {conAcciones && (
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-1.5">
+                    {onVerDetalles && (
+                      <AccionIconBtn title="Ver detalles" onClick={() => onVerDetalles(a)}>
+                        <Eye size={15} />
+                      </AccionIconBtn>
+                    )}
+                    {onVerCliente && (
+                      <AccionIconBtn
+                        title="Ver movimientos del cliente"
+                        onClick={() => onVerCliente(a)}
+                      >
+                        <FilterX size={15} />
+                      </AccionIconBtn>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -758,7 +881,7 @@ function SubcuentasTab({
         </button>
         <button
           type="button"
-          onClick={() => setMasivaOpen((v) => !v)}
+          onClick={() => setMasivaOpen(true)}
           className="inline-flex items-center gap-1.5 h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent"
         >
           <FileUp size={16} /> Carga masiva de subcuentas
@@ -772,16 +895,15 @@ function SubcuentasTab({
         </button>
       </div>
 
-      {masivaOpen && (
-        <CargaMasivaSubcuentas
-          legajo={legajo}
-          onClose={() => setMasivaOpen(false)}
-          onDone={() => {
-            setMasivaOpen(false);
-            queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
-          }}
-        />
-      )}
+      <CargaMasivaSubcuentas
+        open={masivaOpen}
+        legajo={legajo}
+        onClose={() => setMasivaOpen(false)}
+        onDone={() => {
+          setMasivaOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
+        }}
+      />
       {open && (
         <div className="mb-4 rounded-xl border border-border bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
           <input
@@ -866,8 +988,8 @@ function DocumentosTab({ legajo }: { legajo: string }) {
   });
 
   const docs = query.data ?? [];
-  const porTipo = (t: DocumentoTipo) => docs.find((d) => d.tipo === t);
   const imagenes = imagenesParaLegajo(legajo);
+  const tipos: DocumentoTipo[] = ["id_frente", "id_dorso", "servicio", "selfie"];
 
   const guardar = async () => {
     setSaving(true);
@@ -884,46 +1006,47 @@ function DocumentosTab({ legajo }: { legajo: string }) {
     }
   };
 
-  const tipos: DocumentoTipo[] = ["id_frente", "id_dorso", "servicio", "selfie"];
-
   return (
     <Seccion
       titulo="Documentos"
       loading={query.isLoading}
       error={query.isError ? query.error : null}
       onRetry={() => query.refetch()}
-      vacio={!query.isLoading && docs.length === 0}
+      vacio={!query.isLoading && docs.length === 0 && imagenes.length === 0}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tipos.map((t) => {
-          const d = porTipo(t);
-          return (
-            <div key={t} className="rounded-xl border border-border bg-card p-4">
-              <p className="text-sm font-semibold">{DOCUMENTO_LABELS[t]}</p>
-              <p className="mt-2 text-xs text-muted-foreground line-clamp-2 break-all">
-                {d?.url ? d.url : "Falta cargar."}
-              </p>
-              {d?.url && (
-                <a
-                  href={d.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-block text-xs font-medium text-primary"
-                >
-                  Ver documento
-                </a>
-              )}
-            </div>
-          );
-        })}
         {imagenes.map((img) => (
-          <div key={img.url} className="overflow-hidden rounded-xl border border-border bg-card p-0">
+          <div
+            key={img.url}
+            className="overflow-hidden rounded-xl border border-border bg-card p-0"
+          >
             <div className="h-32 w-full bg-muted">
               <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
             </div>
             <p className="px-4 py-2 text-sm font-semibold">{img.label}</p>
           </div>
         ))}
+        {docs.map((d) => (
+          <div key={d.id} className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-semibold">{DOCUMENTO_LABELS[d.tipo] ?? d.tipo}</p>
+            <p className="mt-2 text-xs text-muted-foreground line-clamp-2 break-all">{d.url}</p>
+            {d.url && (
+              <a
+                href={d.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs font-medium text-primary"
+              >
+                Ver documento
+              </a>
+            )}
+          </div>
+        ))}
+        {imagenes.length === 0 && docs.length === 0 && (
+          <div className="col-span-full rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            Fotos no agregadas
+          </div>
+        )}
       </div>
       <div className="flex justify-end mt-3">
         <button
@@ -1221,10 +1344,12 @@ function ApiUsuariosModal({
 }
 
 function CargaMasivaSubcuentas({
+  open,
   legajo,
   onClose,
   onDone,
 }: {
+  open: boolean;
   legajo: string;
   onClose: () => void;
   onDone: () => void;
@@ -1292,42 +1417,48 @@ function CargaMasivaSubcuentas({
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-border bg-muted/30 p-4">
-      <p className="mb-2 text-sm font-medium">Carga masiva de subcuentas (CSV)</p>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Columnas esperadas: <code>nombre, apellido, email, cbu, tipo</code>. La primera fila
-        puede ser el encabezado.
-      </p>
-      <input
-        type="file"
-        accept=".csv,text/csv"
-        onChange={onFile}
-        className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
-      />
-      {vista.length > 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          {vista.length} fila(s) detectada(s).
+    <ModalDialog
+      open={open}
+      onClose={onClose}
+      title="Carga masiva de subcuentas"
+      size="lg"
+    >
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Columnas esperadas: <code>nombre, apellido, email, cbu, tipo</code>. La primera fila
+          puede ser el encabezado.
         </p>
-      )}
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-9 rounded-md border border-input px-3 text-sm"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={saving || vista.length === 0}
-          className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
-          {saving ? "Importando…" : "Importar"}
-        </button>
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          onChange={onFile}
+          className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
+        />
+        {vista.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {vista.length} fila(s) detectada(s).
+          </p>
+        )}
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 rounded-md border border-input px-3 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={saving || vista.length === 0}
+            className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {saving ? "Importando…" : "Importar"}
+          </button>
+        </div>
       </div>
-    </div>
+    </ModalDialog>
   );
 }
 
@@ -1494,6 +1625,16 @@ function ApiDetalleModal({
     enabled: open && !!effectiveId,
   });
   const [logDetalle, setLogDetalle] = useState<ApiUsuarioLog | null>(null);
+  const queryClient = useQueryClient();
+  const credencialActiva =
+    usuario?.estado === "Producción" || usuario?.estado === "Homologación";
+  const cambiarCredencial = useMutation({
+    mutationFn: (estado: EstadoApiUsuario) =>
+      setApiUsuarioEstado(effectiveId!, estado),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["api_usuarios"] });
+    },
+  });
 
   return (
     <ModalDialog open={open} onClose={onClose} title="Detalle de API externa" size="xl">
@@ -1559,6 +1700,64 @@ function ApiDetalleModal({
 
         <section>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Credenciales del usuario
+          </h4>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 text-sm">
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Nombre</dt>
+              <dd className="font-medium">{usuario?.nombreCompleto ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Clave pública</dt>
+              <dd className="font-medium font-mono break-all">{usuario?.codigoUsuarioApi ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Descripción</dt>
+              <dd className="font-medium text-right">
+                Creado a través de solicitud de registro de usuario.
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Fecha de creación</dt>
+              <dd className="font-medium">{fmtFechaHora(usuario?.createdAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Estado</dt>
+              <dd>
+                <Badge tone={credencialActiva ? "success" : "danger"}>
+                  {credencialActiva ? "Activa" : "Inactiva"}
+                </Badge>
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Acciones</dt>
+              <dd className="flex flex-wrap gap-1">
+                {credencialActiva ? (
+                  <button
+                    type="button"
+                    disabled={cambiarCredencial.isPending || !effectiveId}
+                    onClick={() => cambiarCredencial.mutate("Suspendido")}
+                    className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  >
+                    Desactivar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={cambiarCredencial.isPending || !effectiveId}
+                    onClick={() => cambiarCredencial.mutate("Producción")}
+                    className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  >
+                    Activar
+                  </button>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Endpoints del usuario
           </h4>
           {endpointsQuery.isLoading ? (
@@ -1599,7 +1798,7 @@ function ApiDetalleModal({
 
         <section>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Logs de actividad de su endpoint
+            Logs de actividad
           </h4>
           {logsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Cargando…</p>
@@ -1862,6 +2061,17 @@ function ClienteDetailPage() {
   const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
   const [exencionOpen, setExencionOpen] = useState(false);
 
+  const [movDetail, setMovDetail] = useState<DetailMovimiento | null>(null);
+  const [impuestoDetail, setImpuestoDetail] = useState<ImpuestoAsignacion | null>(null);
+  const [estadoTarget, setEstadoTarget] = useState<{
+    dbId: string;
+    estadoActual: string;
+    nuevoId: number;
+  } | null>(null);
+
+  const { data: catalogoEstados = [] } = useEstadosMovimiento();
+  const cambiarMovimientoEstado = useCambiarEstadoMovimiento();
+
   const [gestionTarget, setGestionTarget] = useState<{ id: string; resumen: string } | null>(null);
   const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
 
@@ -2112,6 +2322,51 @@ function ClienteDetailPage() {
         <div className="mt-2">
           {activeTab === "identificacion" && (
             <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <SectionCard title="Resumen de productos">
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Cuentas bancarias</span>
+                      <span className="font-semibold tabular-nums">
+                        {subcuentasQuery.data ? subcuentasQuery.data.length : "—"}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">CVUs</span>
+                      <span className="font-semibold tabular-nums">
+                        {subcuentasQuery.data?.length ?? "—"}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Comisiones</span>
+                      <span className="font-semibold tabular-nums">
+                        {comisionesQuery.data ? comisionesQuery.data.length : "—"}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Impuestos</span>
+                      <span className="font-semibold tabular-nums">
+                        {impuestosQuery.rows.length}
+                      </span>
+                    </li>
+                  </ul>
+                </SectionCard>
+
+                <KpiCard
+                  label="Documentos cargados"
+                  value={String(documentosResumenQuery.data?.length ?? 0)}
+                />
+                <KpiCard
+                  label="Validaciones auto KYC"
+                  value={String(validacionesQuery.data?.length ?? 0)}
+                />
+                <KpiCard
+                  label="PEP"
+                  value={compliance.find((c) => c.label === "PEP")?.valor ?? "No"}
+                  tone="muted"
+                />
+              </div>
+
               <SectionCard
                 title="Identificación"
                 actions={
@@ -2126,51 +2381,6 @@ function ClienteDetailPage() {
               >
                 <FieldGrid campos={personal} />
               </SectionCard>
-
-              <SectionCard title="Resumen de productos">
-                <ul className="divide-y divide-border">
-                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="text-muted-foreground">Cuentas bancarias</span>
-                    <span className="font-semibold tabular-nums">
-                      {subcuentasQuery.data ? subcuentasQuery.data.length : "—"}
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="text-muted-foreground">CVUs</span>
-                    <span className="font-semibold tabular-nums">
-                      {subcuentasQuery.data?.length ?? "—"}
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="text-muted-foreground">Comisiones</span>
-                    <span className="font-semibold tabular-nums">
-                      {comisionesQuery.data ? comisionesQuery.data.length : "—"}
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="text-muted-foreground">Impuestos</span>
-                    <span className="font-semibold tabular-nums">{impuestosQuery.rows.length}</span>
-                  </li>
-                </ul>
-              </SectionCard>
-
-              <SectionCard title="Operativa">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <KpiCard
-                    label="Documentos cargados"
-                    value={String(documentosResumenQuery.data?.length ?? 0)}
-                  />
-                  <KpiCard
-                    label="Validaciones auto KYC"
-                    value={String(validacionesQuery.data?.length ?? 0)}
-                  />
-                  <KpiCard
-                    label="PEP"
-                    value={compliance.find((c) => c.label === "PEP")?.valor ?? "No"}
-                    tone="muted"
-                  />
-                </div>
-              </SectionCard>
             </>
           )}
 
@@ -2182,7 +2392,23 @@ function ClienteDetailPage() {
               onRetry={movimientosQuery.refetch}
               vacio={movimientosQuery.rows.length === 0}
             >
-              <TablaMovimientos rows={movimientosQuery.rows} />
+              <TablaMovimientos
+                rows={movimientosQuery.rows}
+                onVerDetalles={(m) => setMovDetail(toDetalleMovimiento(m, catalogoEstados))}
+                onCambiarEstado={(m) =>
+                  setEstadoTarget({
+                    dbId: m.id,
+                    estadoActual: resolverEstadoMovimiento(m, catalogoEstados).codigo,
+                    nuevoId: m.estadoId ?? 0,
+                  })
+                }
+                onVerCliente={(m) =>
+                  navigate({
+                    to: "/admin/general/movimientos",
+                    search: { legajo: m.legajo },
+                  })
+                }
+              />
             </Seccion>
           )}
 
@@ -2194,7 +2420,16 @@ function ClienteDetailPage() {
               onRetry={impuestosQuery.refetch}
               vacio={impuestosQuery.rows.length === 0}
             >
-              <TablaImpuestos rows={impuestosQuery.rows} />
+              <TablaImpuestos
+                rows={impuestosQuery.rows}
+                onVerDetalles={(a) => setImpuestoDetail(a)}
+                onVerCliente={(a) =>
+                  navigate({
+                    to: "/admin/general/movimientos",
+                    search: { legajo: a.clienteLegajo },
+                  })
+                }
+              />
             </Seccion>
           )}
 
@@ -2215,6 +2450,15 @@ function ClienteDetailPage() {
               <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
                 <button
                   type="button"
+                  onClick={forzarNuevaValidacion}
+                  disabled={forzando}
+                  className="inline-flex items-center gap-1.5 h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={forzando ? "animate-spin" : ""} /> Forzar nueva
+                  validación
+                </button>
+                <button
+                  type="button"
                   onClick={() =>
                     downloadCSV("validaciones.csv", [
                       ["Proveedor", "Estado", "Fecha"],
@@ -2224,15 +2468,6 @@ function ClienteDetailPage() {
                   className="inline-flex items-center gap-1.5 h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent"
                 >
                   <Download size={16} /> Descargar CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={forzarNuevaValidacion}
-                  disabled={forzando}
-                  className="inline-flex items-center gap-1.5 h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                >
-                  <RefreshCw size={16} className={forzando ? "animate-spin" : ""} /> Forzar nueva
-                  validación
                 </button>
               </div>
               <DataTable
@@ -2765,6 +3000,78 @@ function ClienteDetailPage() {
           legajo={cliente.legajo}
           cuitDefault={cliente.cuit}
         />
+
+        {movDetail && <MovimientoDetail m={movDetail} onClose={() => setMovDetail(null)} />}
+
+        {impuestoDetail && (
+          <DetailModal
+            title="Detalle de impuesto asignado"
+            onClose={() => setImpuestoDetail(null)}
+            rows={[
+              {
+                label: "Impuesto",
+                value: impuestoDetail.impuesto?.nombre ?? impuestoDetail.impuestoId,
+              },
+              { label: "Código", value: impuestoDetail.impuesto?.codigo ?? "—" },
+              { label: "Tipo", value: impuestoDetail.impuesto?.tipo ?? impuestoDetail.tipo },
+              {
+                label: "Monto / Tasa",
+                value:
+                  (impuestoDetail.impuesto?.tipo ?? impuestoDetail.tipo) === "Porcentaje"
+                    ? `${impuestoDetail.impuesto?.monto ?? impuestoDetail.monto ?? 0} %`
+                    : fmtMonto(impuestoDetail.impuesto?.monto ?? impuestoDetail.monto),
+              },
+              { label: "Fecha asignación", value: fmtFecha(impuestoDetail.fechaAsignacion) },
+              { label: "Estado", value: impuestoDetail.estado },
+              { label: "Legajo", value: impuestoDetail.clienteLegajo },
+            ]}
+          />
+        )}
+
+        {estadoTarget && (
+          <FormDialog
+            open
+            onClose={() => setEstadoTarget(null)}
+            title="Cambiar estado del movimiento"
+            description={`Transición atómica registrada en el historial (origen = manual). Estado actual: ${estadoTarget.estadoActual}.`}
+            onSubmit={async () => {
+              await cambiarMovimientoEstado.mutateAsync({
+                movimientoId: estadoTarget.dbId,
+                nuevoEstadoId: estadoTarget.nuevoId,
+                observaciones: "Cambio manual desde ficha de cliente",
+              });
+              setEstadoTarget(null);
+            }}
+            submitLabel={cambiarMovimientoEstado.isPending ? "Guardando…" : "Confirmar cambio"}
+            size="md"
+          >
+            {cambiarMovimientoEstado.isError && (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                <span>{(cambiarMovimientoEstado.error as Error).message}</span>
+              </div>
+            )}
+            <div>
+              <label htmlFor="nuevo-estado-cli" className="text-sm font-medium">
+                Nuevo estado
+              </label>
+              <select
+                id="nuevo-estado-cli"
+                className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+                value={estadoTarget.nuevoId}
+                onChange={(e) =>
+                  setEstadoTarget((s) => (s ? { ...s, nuevoId: Number(e.target.value) } : s))
+                }
+              >
+                {catalogoEstados.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.codigo} — {s.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </FormDialog>
+        )}
 
         {confirmAction && (
           <ConfirmDialog
