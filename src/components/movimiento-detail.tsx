@@ -41,7 +41,11 @@ const estadoMap: Record<
 };
 
 export const estadoBadge = (e: string) => {
-  const m = estadoMap[e] ?? { label: e, tone: "neutral" as const };
+  // Guarda defensiva: nunca debe mostrarse un id numérico suelto en la UI.
+  // El estado siempre llega como código legible (ver resolverEstadoMovimiento).
+  const esNumerico = /^\d+$/.test(e.trim());
+  const clave = esNumerico ? "DESCONOCIDO" : e;
+  const m = estadoMap[clave] ?? { label: esNumerico ? "Desconocido" : e, tone: "neutral" as const };
   const badge = <Badge tone={m.tone}>{m.label}</Badge>;
   return e === "EN_PROGRESO" || e === "APROBADO" || e === "RECHAZADO" ? (
     <span title={lifecycleTooltip} className="cursor-help">

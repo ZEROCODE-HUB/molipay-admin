@@ -20,6 +20,7 @@ import {
   type EstadoMovimiento,
   type Movimiento as MovimientoDB,
 } from "@/lib/api/types";
+import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useCan } from "@/lib/permissions";
 
 const PAGE_SIZE = 25;
@@ -39,8 +40,9 @@ function fmtFecha(iso: string): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function toViewMovimiento(m: MovimientoDB): Movimiento {
+export function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]): Movimiento {
   const pctImpuesto = m.comision > 0 ? (m.impuesto / m.comision) * 100 : 0;
+  const estado = resolverEstadoMovimiento(m, catalogo).codigo;
   return {
     clienteId: m.clienteId,
     legajo: m.legajo,
@@ -53,7 +55,7 @@ export function toViewMovimiento(m: MovimientoDB): Movimiento {
     cuit: m.cliente?.cuit ?? "—",
     monto: fmtARS(m.montoOperacion),
     fecha: fmtFecha(m.fecha),
-    estado: m.estadoCodigo ?? String(m.estadoId),
+    estado,
     desglose: calcularDesglose(m.comision, pctImpuesto),
   };
 }
@@ -143,7 +145,7 @@ export function MovimientosSubRoute({
 
   const byTxn = new Map(rows.map((r) => [r.idTxn, r]));
   const data: FilaSubRuta[] = rows.map((m) => ({
-    ...toViewMovimiento(m),
+    ...toViewMovimiento(m, catalogoEstados),
     _comision: m.comision,
     _iva: m.impuesto,
     _cobrado: m.montoCobrado,

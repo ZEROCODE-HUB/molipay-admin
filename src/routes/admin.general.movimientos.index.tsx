@@ -14,7 +14,12 @@ import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
 import { DataAccessError } from "@/lib/api/errors";
-import { ESTADOS_MOVIMIENTO, type Movimiento as MovimientoDB } from "@/lib/api/types";
+import {
+  ESTADOS_MOVIMIENTO,
+  type EstadoMovimiento,
+  type Movimiento as MovimientoDB,
+} from "@/lib/api/types";
+import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import { z } from "zod";
@@ -52,8 +57,9 @@ function fmtFecha(iso: string): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function toViewMovimiento(m: MovimientoDB): Movimiento {
+function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]): Movimiento {
   const pctImpuesto = m.comision > 0 ? (m.impuesto / m.comision) * 100 : 0;
+  const estado = resolverEstadoMovimiento(m, catalogo).codigo;
   return {
     clienteId: m.clienteId,
     legajo: m.legajo,
@@ -66,7 +72,7 @@ function toViewMovimiento(m: MovimientoDB): Movimiento {
     cuit: m.cliente?.cuit ?? "—",
     monto: fmtARS(m.montoOperacion),
     fecha: fmtFecha(m.fecha),
-    estado: m.estadoCodigo ?? String(m.estadoId),
+    estado,
     desglose: calcularDesglose(m.comision, pctImpuesto),
   };
 }
@@ -92,6 +98,7 @@ function TodosPage() {
   });
 
   const { data: estados = [] } = useEstadosMovimiento();
+  const catalogoEstados = estados;
   const [detail, setDetail] = useState<Movimiento | null>(null);
   const [estadoTarget, setEstadoTarget] = useState<{
     dbId: string;
@@ -104,7 +111,7 @@ function TodosPage() {
   const puedeModificar = can("modificar", "movimientos");
 
   const byTxn = new Map(rows.map((r) => [r.idTxn, r]));
-  const data: Movimiento[] = rows.map(toViewMovimiento);
+  const data: Movimiento[] = rows.map((m) => toViewMovimiento(m, catalogoEstados));
 
   const getActions = (row: Movimiento): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
