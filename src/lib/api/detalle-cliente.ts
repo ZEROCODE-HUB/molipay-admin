@@ -357,3 +357,64 @@ export async function forzarValidacion(clienteLegajo: string): Promise<void> {
   });
   if (error) throw new DataAccessError(error);
 }
+
+export type ExencionDireccion = "Entrantes" | "Salientes" | "Ambos";
+
+export type ExencionInput = {
+  cuit: string;
+  direccion: ExencionDireccion;
+  motivo: string;
+  vigenciaDesde: string | null;
+  vigenciaHasta: string | null;
+};
+
+export async function crearExencion(
+  clienteLegajo: string,
+  input: ExencionInput,
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from("exenciones_debito_credito").insert({
+    cliente_legajo: clienteLegajo,
+    cuit: input.cuit,
+    direccion: input.direccion,
+    motivo: input.motivo,
+    vigencia_desde: input.vigenciaDesde || null,
+    vigencia_hasta: input.vigenciaHasta || null,
+  });
+  if (error) throw new DataAccessError(error);
+}
+
+export type ComisionCliente = {
+  id: string;
+  concepto: string;
+  monto: number;
+  fecha: string;
+  estado: string;
+};
+
+type ComisionClienteRow = {
+  id: string;
+  concepto: string | null;
+  monto: number | null;
+  fecha: string | null;
+  estado: string | null;
+};
+
+export async function listComisionesCliente(clienteLegajo: string): Promise<ComisionCliente[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("comisiones_cliente")
+    .select("id, concepto, monto, fecha, estado")
+    .eq("cliente_legajo", clienteLegajo)
+    .order("fecha", { ascending: false })
+    .limit(10);
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ComisionClienteRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    concepto: r.concepto ?? "Comisión",
+    monto: r.monto === null ? 0 : Number(r.monto),
+    fecha: r.fecha ?? "—",
+    estado: r.estado ?? "—",
+  }));
+}

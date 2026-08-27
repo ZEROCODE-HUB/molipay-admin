@@ -13,6 +13,12 @@ import {
   Link2,
   Globe,
   Check,
+  Download,
+  Eye,
+  FileUp,
+  Ban,
+  ShieldCheck,
+  Info,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/portal-shell";
@@ -29,6 +35,7 @@ import {
   listSubcuentas,
   createSubcuenta,
   type Subcuenta,
+  type SubcuentaInput,
   type SubcuentaTipo,
   type SubcuentaEstado,
 } from "@/lib/api/subcuentas";
@@ -51,6 +58,9 @@ import {
   listComerciosPst,
   listLinksPago,
   forzarValidacion,
+  crearExencion,
+  listComisionesCliente,
+  type ExencionDireccion,
   type HistorialCambio,
   type Validacion,
   type Alerta,
@@ -58,10 +68,19 @@ import {
   type ParametroConfig,
   type ComercioPst,
   type LinkPago,
+  type ComisionCliente,
 } from "@/lib/api/detalle-cliente";
-import { listApiUsuarios } from "@/lib/api/api-usuarios";
+import {
+  listApiUsuarios,
+  listApiUsuarioEndpoints,
+  listApiUsuarioLogs,
+  type ApiUsuarioEndpoint,
+  type ApiUsuarioLog,
+} from "@/lib/api/api-usuarios";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
+import { findJuridicaMock } from "@/data/juridicas-mock";
+import { imagenesParaLegajo } from "@/data/imagenes-asignadas";
 import type { Cliente, EstadoCliente, ImpuestoAsignacion, Movimiento } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
@@ -91,6 +110,7 @@ type TabKey =
   | "documentos"
   | "validaciones"
   | "riesgo"
+  | "contexto"
   | "modulos"
   | "historial";
 
@@ -98,10 +118,11 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "identificacion", label: "Datos personales" },
   { key: "movimientos", label: "Movimientos" },
   { key: "impuestos", label: "Impuestos" },
-  { key: "subcuentas", label: "Subcuentas y CBUs" },
+  { key: "subcuentas", label: "Subcuentas y CVUs" },
   { key: "documentos", label: "Documentos" },
   { key: "validaciones", label: "Validaciones automáticas" },
   { key: "riesgo", label: "Riesgo y monitoreo" },
+  { key: "contexto", label: "Contexto operativo" },
   { key: "modulos", label: "Módulos y productos" },
   { key: "historial", label: "Historial" },
 ];
@@ -305,6 +326,82 @@ function SectionCard({
       {children}
     </div>
   );
+}
+
+function KpiCard({ label, value, tone }: { label: string; value: string; tone?: "default" | "muted" }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p
+        className={`mt-2 text-2xl font-semibold tabular-nums ${
+          tone === "muted" ? "text-muted-foreground" : "text-foreground"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function MiniDashboard<T>({
+  titulo,
+  columnas,
+  datos,
+  vacio = "Sin registros.",
+}: {
+  titulo: string;
+  columnas: { label: string; render: (r: T) => React.ReactNode }[];
+  datos: T[];
+  vacio?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </h4>
+      {datos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{vacio}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-left uppercase tracking-wide text-muted-foreground">
+                {columnas.map((c, i) => (
+                  <th key={i} className="px-2 py-1.5 font-medium">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {datos.map((d, i) => (
+                <tr key={i} className="border-b border-border last:border-b-0">
+                  {columnas.map((c, j) => (
+                    <td key={j} className="px-2 py-1.5 text-foreground">
+                      {c.render(d)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function downloadCSV(filename: string, rows: (string | number)[][]) {
+  const csv = rows
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function ParametrosResumen({ defs, stored }: { defs: ParamDef[]; stored: ParametroConfig[] }) {
@@ -573,9 +670,16 @@ function camposIdentificacion(c: Cliente) {
   return { personal, compliance, empresa };
 }
 
-function SubcuentasTab({ legajo }: { legajo: string }) {
+function SubcuentasTab({
+  legajo,
+  onEximirCuit,
+}: {
+  legajo: string;
+  onEximirCuit: () => void;
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [masivaOpen, setMasivaOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -592,6 +696,9 @@ function SubcuentasTab({ legajo }: { legajo: string }) {
     queryFn: () => listSubcuentas(legajo),
     enabled: !!legajo,
   });
+
+  const subcuentas = query.data ?? [];
+  const totalSubcuentas = subcuentas.length;
 
   const guardar = async () => {
     if (!form.nombre.trim() || !form.email.trim()) {
@@ -628,13 +735,34 @@ function SubcuentasTab({ legajo }: { legajo: string }) {
 
   return (
     <Seccion
-      titulo="Subcuentas y CBUs"
+      titulo="Subcuentas y CVUs"
       loading={query.isLoading}
       error={query.isError ? query.error : null}
       onRetry={() => query.refetch()}
       vacio={!query.isLoading && (query.data?.length ?? 0) === 0}
     >
-      <div className="flex justify-end mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <KpiCard label="CVUs informadas" value={String(totalSubcuentas)} />
+        <KpiCard label="Máximo de subcuentas" value="—" />
+        <KpiCard label="Redirección automática" value="Inactiva" tone="muted" />
+        <KpiCard label="Presión operativa" value="Sin tope" tone="muted" />
+      </div>
+
+      <div className="flex flex-wrap justify-end gap-2 mb-3">
+        <button
+          type="button"
+          onClick={onEximirCuit}
+          className="inline-flex items-center gap-1.5 h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent"
+        >
+          <Ban size={16} /> Eximir CUIT principal
+        </button>
+        <button
+          type="button"
+          onClick={() => setMasivaOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent"
+        >
+          <FileUp size={16} /> Carga masiva de subcuentas
+        </button>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -643,6 +771,17 @@ function SubcuentasTab({ legajo }: { legajo: string }) {
           <Plus size={16} /> Cargar subcuenta
         </button>
       </div>
+
+      {masivaOpen && (
+        <CargaMasivaSubcuentas
+          legajo={legajo}
+          onClose={() => setMasivaOpen(false)}
+          onDone={() => {
+            setMasivaOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
+          }}
+        />
+      )}
       {open && (
         <div className="mb-4 rounded-xl border border-border bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
           <input
@@ -728,6 +867,7 @@ function DocumentosTab({ legajo }: { legajo: string }) {
 
   const docs = query.data ?? [];
   const porTipo = (t: DocumentoTipo) => docs.find((d) => d.tipo === t);
+  const imagenes = imagenesParaLegajo(legajo);
 
   const guardar = async () => {
     setSaving(true);
@@ -776,6 +916,14 @@ function DocumentosTab({ legajo }: { legajo: string }) {
             </div>
           );
         })}
+        {imagenes.map((img) => (
+          <div key={img.url} className="overflow-hidden rounded-xl border border-border bg-card p-0">
+            <div className="h-32 w-full bg-muted">
+              <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+            </div>
+            <p className="px-4 py-2 text-sm font-semibold">{img.label}</p>
+          </div>
+        ))}
       </div>
       <div className="flex justify-end mt-3">
         <button
@@ -1062,36 +1210,526 @@ function ApiUsuariosModal({
         />
       )}
 
-      <ModalDialog
+      <ApiDetalleModal
         open={!!detalle}
         onClose={() => setDetalle(null)}
-        title="Detalle de usuario API"
-        size="md"
+        apiUsuarioId={detalle?.id ?? null}
+        cantidad={cantidad}
+      />
+    </ModalDialog>
+  );
+}
+
+function CargaMasivaSubcuentas({
+  legajo,
+  onClose,
+  onDone,
+}: {
+  legajo: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [vista, setVista] = useState<SubcuentaInput[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const parseCSV = (text: string): SubcuentaInput[] => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const header = lines[0].toLowerCase();
+    const hasHeader = /nombre|email/.test(header);
+    const data = hasHeader ? lines.slice(1) : lines;
+    return data.map((l) => {
+      const cols = l.split(/[,;]/).map((c) => c.trim().replace(/^"|"$/g, ""));
+      const [nombre, apellido = "", email, cbu = "", tipo = "Operativa"] = cols;
+      return {
+        nombre,
+        apellido,
+        email,
+        cbu: cbu || undefined,
+        tipo: (tipo as SubcuentaTipo) || "Operativa",
+      };
+    });
+  };
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setArchivo(f);
+    setErr(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        setVista(parseCSV(String(reader.result)));
+      } catch {
+        setErr("No se pudo leer el archivo CSV.");
+      }
+    };
+    reader.readAsText(f);
+  };
+
+  const guardar = async () => {
+    if (vista.length === 0) {
+      setErr("El CSV no contiene filas válidas (se espera nombre, email, ...).");
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    try {
+      for (const row of vista) {
+        if (!row.nombre.trim() || !row.email.trim()) continue;
+        await createSubcuenta(legajo, row);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-muted/30 p-4">
+      <p className="mb-2 text-sm font-medium">Carga masiva de subcuentas (CSV)</p>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Columnas esperadas: <code>nombre, apellido, email, cbu, tipo</code>. La primera fila
+        puede ser el encabezado.
+      </p>
+      <input
+        type="file"
+        accept=".csv,text/csv"
+        onChange={onFile}
+        className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
+      />
+      {vista.length > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {vista.length} fila(s) detectada(s).
+        </p>
+      )}
+      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-9 rounded-md border border-input px-3 text-sm"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={guardar}
+          disabled={saving || vista.length === 0}
+          className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {saving ? "Importando…" : "Importar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExencionModal({
+  open,
+  onClose,
+  legajo,
+  cuitDefault,
+}: {
+  open: boolean;
+  onClose: () => void;
+  legajo: string;
+  cuitDefault: string;
+}) {
+  const queryClient = useQueryClient();
+  const [cuit, setCuit] = useState(cuitDefault);
+  const [direccion, setDireccion] = useState<ExencionDireccion>("Ambos");
+  const [motivo, setMotivo] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const guardar = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await crearExencion(legajo, {
+        cuit: cuit || cuitDefault,
+        direccion,
+        motivo,
+        vigenciaDesde: desde || null,
+        vigenciaHasta: hasta || null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["exenciones", legajo] });
+      onClose();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalDialog
+      open={open}
+      onClose={onClose}
+      title="Nueva excención de Débitos y Créditos"
+      size="lg"
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">CUIT</label>
+          <input
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={cuit}
+            onChange={(e) => setCuit(e.target.value)}
+            placeholder="CUIT"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+            Dirección
+          </label>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value as ExencionDireccion)}
+          >
+            <option value="Entrantes">Entrantes</option>
+            <option value="Salientes">Salientes</option>
+            <option value="Ambos">Ambos</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">Motivo</label>
+          <textarea
+            className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Motivo de la exención"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+            Vigencia desde
+          </label>
+          <input
+            type="date"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+            Vigencia hasta
+          </label>
+          <textarea
+            className="min-h-[56px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={hasta}
+            onChange={(e) => setHasta(e.target.value)}
+            placeholder="Vigencia hasta"
+          />
+        </div>
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Info size={14} className="mt-0.5 shrink-0" />
+          <span>
+            Si no completás la fecha desde, el backend toma la fecha actual. Si no completás la
+            fecha hasta, la exención queda abierta.
+          </span>
+        </div>
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 rounded-md border border-input px-3 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={saving}
+            className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {saving ? "Creando…" : "Crear exención"}
+          </button>
+        </div>
+      </div>
+    </ModalDialog>
+  );
+}
+
+function ApiDetalleModal({
+  open,
+  onClose,
+  apiUsuarioId,
+  cantidad,
+}: {
+  open: boolean;
+  onClose: () => void;
+  apiUsuarioId: string | null;
+  cantidad: number;
+}) {
+  const usuarioQuery = useQuery({
+    queryKey: ["api_usuarios", "detalle", apiUsuarioId],
+    queryFn: () => listApiUsuarios({ page: 0, pageSize: 25 }),
+    enabled: open,
+  });
+  const usuario = apiUsuarioId
+    ? (usuarioQuery.data?.rows ?? []).find((u) => u.id === apiUsuarioId)
+    : (usuarioQuery.data?.rows ?? [])[0];
+  const effectiveId = apiUsuarioId ?? usuario?.id ?? null;
+  const endpointsQuery = useQuery({
+    queryKey: ["api_endpoints", effectiveId],
+    queryFn: () => listApiUsuarioEndpoints(effectiveId ?? ""),
+    enabled: open && !!effectiveId,
+  });
+  const logsQuery = useQuery({
+    queryKey: ["api_logs", effectiveId],
+    queryFn: () => listApiUsuarioLogs(effectiveId ?? ""),
+    enabled: open && !!effectiveId,
+  });
+  const [logDetalle, setLogDetalle] = useState<ApiUsuarioLog | null>(null);
+
+  return (
+    <ModalDialog open={open} onClose={onClose} title="Detalle de API externa" size="xl">
+      <div className="space-y-5">
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Información del Usuario
+          </h4>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 text-sm">
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">ID</dt>
+              <dd className="font-medium">{usuario?.id ?? apiUsuarioId ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Nombre</dt>
+              <dd className="font-medium">{usuario?.nombreCompleto ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="font-medium">{usuario?.usuario ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Estado</dt>
+              <dd>
+                <Badge tone={usuario?.estado === "Producción" ? "success" : "warn"}>
+                  {usuario?.estado ?? "—"}
+                </Badge>
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Descripción</dt>
+              <dd className="font-medium text-right">
+                Creado a través de solicitud de registro de usuario.
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Creado</dt>
+              <dd className="font-medium">{fmtFechaHora(usuario?.createdAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Actualizado</dt>
+              <dd className="font-medium">{fmtFechaHora(usuario?.updatedAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Acciones</dt>
+              <dd className="flex flex-wrap gap-1">
+                {["Homologación", "Producción", "Suspender", "Eliminar"].map((a) => (
+                  <span
+                    key={a}
+                    className="rounded-md border border-input px-2 py-0.5 text-xs font-medium"
+                  >
+                    {a}
+                  </span>
+                ))}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-border pb-1">
+              <dt className="text-muted-foreground">Usuarios asociados</dt>
+              <dd className="font-medium tabular-nums">{cantidad}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Endpoints del usuario
+          </h4>
+          {endpointsQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando…</p>
+          ) : endpointsQuery.isError ? (
+            <p className="text-sm text-muted-foreground">Sin endpoints configurados.</p>
+          ) : (endpointsQuery.data?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin endpoints configurados.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-left uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-1.5 font-medium">Grupo</th>
+                    <th className="px-2 py-1.5 font-medium">Método</th>
+                    <th className="px-2 py-1.5 font-medium">Endpoint</th>
+                    <th className="px-2 py-1.5 font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {endpointsQuery.data!.map((ep) => (
+                    <tr key={ep.id} className="border-b border-border last:border-b-0">
+                      <td className="px-2 py-1.5">{ep.grupo}</td>
+                      <td className="px-2 py-1.5 font-mono">{ep.metodo}</td>
+                      <td className="px-2 py-1.5 font-mono break-all">{ep.path}</td>
+                      <td className="px-2 py-1.5">
+                        <Badge tone={ep.estado === "Habilitado" ? "success" : "neutral"}>
+                          {ep.estado}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Logs de actividad de su endpoint
+          </h4>
+          {logsQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando…</p>
+          ) : logsQuery.isError ? (
+            <p className="text-sm text-muted-foreground">Sin logs registrados.</p>
+          ) : (logsQuery.data?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin logs registrados.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-left uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-1.5 font-medium">Fecha y hora</th>
+                    <th className="px-2 py-1.5 font-medium">IP</th>
+                    <th className="px-2 py-1.5 font-medium">ID de cliente</th>
+                    <th className="px-2 py-1.5 font-medium">Método</th>
+                    <th className="px-2 py-1.5 font-medium">Endpoint</th>
+                    <th className="px-2 py-1.5 font-medium">Status</th>
+                    <th className="px-2 py-1.5 font-medium">Tiempo</th>
+                    <th className="px-2 py-1.5 font-medium">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logsQuery.data!.map((log) => (
+                    <tr key={log.id} className="border-b border-border last:border-b-0">
+                      <td className="px-2 py-1.5 whitespace-nowrap">{log.fechaHora}</td>
+                      <td className="px-2 py-1.5 font-mono">{log.ip}</td>
+                      <td className="px-2 py-1.5 font-mono">{log.clienteId}</td>
+                      <td className="px-2 py-1.5 font-mono">{log.metodo}</td>
+                      <td className="px-2 py-1.5 font-mono break-all">{log.endpoint}</td>
+                      <td className="px-2 py-1.5">
+                        <Badge tone={log.status >= 400 ? "danger" : "success"}>
+                          {log.status === 0 ? "—" : log.status}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-1.5 tabular-nums">{log.tiempoRespuestaMs}ms</td>
+                      <td className="px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setLogDetalle(log)}
+                          className="inline-flex items-center gap-1 h-7 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                        >
+                          <Eye size={12} /> Ver
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <ModalDialog
+        open={!!logDetalle}
+        onClose={() => setLogDetalle(null)}
+        title="Detalle de log"
+        size="lg"
       >
-        {detalle && (
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between gap-2 border-b border-border pb-2">
-              <span className="text-muted-foreground">Código</span>
-              <span className="font-medium">{detalle.codigoUsuarioApi}</span>
+        {logDetalle && (
+          <div className="space-y-3 text-sm">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Información General
+            </h4>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">ID</span>
+                <span className="font-medium">{logDetalle.id}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Usuario ID</span>
+                <span className="font-medium">{logDetalle.detalle.usuarioId}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Client ID</span>
+                <span className="font-medium">{logDetalle.detalle.clientId ?? "—"}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">IP Address</span>
+                <span className="font-medium font-mono">{logDetalle.detalle.ip}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Método HTTP</span>
+                <span className="font-medium">{logDetalle.detalle.metodoHttp}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Estado HTTP</span>
+                <span className="font-medium">{logDetalle.detalle.estadoHttp}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Endpoint</span>
+                <span className="font-medium font-mono break-all">{logDetalle.detalle.endpoint}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Tiempo de Respuesta</span>
+                <span className="font-medium">{logDetalle.detalle.tiempoRespuesta}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">User Agent</span>
+                <span className="font-medium break-all">{logDetalle.detalle.userAgent}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border pb-1">
+                <span className="text-muted-foreground">Fecha</span>
+                <span className="font-medium">{logDetalle.detalle.fecha}</span>
+              </div>
             </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-2">
-              <span className="text-muted-foreground">Usuario</span>
-              <span className="font-medium">{detalle.usuario}</span>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-2">
-              <span className="text-muted-foreground">Nombre</span>
-              <span className="font-medium">{detalle.nombreCompleto}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Estado</span>
-              <Badge tone={detalle.estado === "Activo" ? "success" : "neutral"}>
-                {detalle.estado}
-              </Badge>
-            </div>
+            <DetalleJson titulo="Request Headers" data={logDetalle.detalle.requestHeaders} />
+            <DetalleJson titulo="Request Params" data={logDetalle.detalle.requestParams} />
+            <DetalleJson titulo="Request Query" data={logDetalle.detalle.requestQuery} />
+            <DetalleJson titulo="Request Body" data={logDetalle.detalle.requestBody} />
+            <DetalleJson titulo="Response Body" data={logDetalle.detalle.responseBody} />
           </div>
         )}
       </ModalDialog>
     </ModalDialog>
+  );
+}
+
+function DetalleJson({ titulo, data }: { titulo: string; data: unknown }) {
+  const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </p>
+      <pre className="max-h-48 overflow-auto rounded-md border border-border bg-muted/40 p-3 text-xs">
+        {text}
+      </pre>
+    </div>
   );
 }
 
@@ -1102,7 +1740,35 @@ function ClienteDetailPage() {
   const { can } = useCan();
   const puedeModificar = can("modificar", "usuarios");
 
-  const { cliente, isLoading, isError, error, refetch } = useClienteByLegajo(legajo ?? null);
+  const { cliente: clienteReal, isLoading, isError, error, refetch } = useClienteByLegajo(
+    legajo ?? null,
+  );
+
+  // Las personas jurídicas de la lista son mock; si el backend no tiene la fila
+  // pero coincide con el catálogo mock, sintetizamos un cliente para poder
+  // visualizar la ficha (evita el error "No se encontró ningún cliente").
+  const clienteMock = legajo ? findJuridicaMock(legajo) : undefined;
+  const cliente: Cliente | null =
+    clienteReal ??
+    (clienteMock
+      ? {
+          id: clienteMock.legajo,
+          legajo: clienteMock.legajo,
+          tipoPersona: "juridica",
+          correo: clienteMock.correo,
+          nombre: clienteMock.razonSocial,
+          cuit: clienteMock.cuit,
+          estado:
+            clienteMock.estado === "Suspendido"
+              ? "suspendido"
+              : clienteMock.estado === "Rechazado"
+                ? "rechazado"
+                : "activo",
+          fechaAlta: clienteMock.fechaRegistro,
+          createdAt: "",
+          updatedAt: "",
+        }
+      : null);
 
   const movimientosQuery = useMovimientos({
     page: 0,
@@ -1113,6 +1779,21 @@ function ClienteDetailPage() {
     page: 0,
     pageSize: 25,
     cliente_legajo: legajo ?? undefined,
+  });
+  const subcuentasQuery = useQuery({
+    queryKey: ["subcuentas", legajo],
+    queryFn: () => listSubcuentas(legajo),
+    enabled: !!cliente,
+  });
+  const comisionesQuery = useQuery({
+    queryKey: ["comisiones_cliente", legajo],
+    queryFn: () => listComisionesCliente(legajo),
+    enabled: !!cliente,
+  });
+  const documentosResumenQuery = useQuery({
+    queryKey: ["documentos", legajo],
+    queryFn: () => listDocumentos(legajo),
+    enabled: !!cliente,
   });
 
   const historialCambiosQuery = useQuery({
@@ -1179,6 +1860,7 @@ function ClienteDetailPage() {
   const [linksOpen, setLinksOpen] = useState(false);
   const [apiOpen, setApiOpen] = useState(false);
   const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
+  const [exencionOpen, setExencionOpen] = useState(false);
 
   const [gestionTarget, setGestionTarget] = useState<{ id: string; resumen: string } | null>(null);
   const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
@@ -1311,7 +1993,7 @@ function ClienteDetailPage() {
           : "/admin/general/usuarios",
     });
 
-  const { personal, compliance, empresa } = camposIdentificacion(cliente);
+  const { personal, compliance } = camposIdentificacion(cliente);
 
   const tabLabel = (t: { key: TabKey; label: string }) => {
     if (t.key === "identificacion") {
@@ -1362,7 +2044,9 @@ function ClienteDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge tone={estadoTone[cliente.estado]}>{estadoLabel[cliente.estado]}</Badge>
+            <Badge tone={estadoTone[cliente.estado] ?? "neutral"}>
+              {estadoLabel[cliente.estado] ?? cliente.estado}
+            </Badge>
             {cliente.estado === "activo"
               ? puedeModificar && (
                   <button
@@ -1428,16 +2112,64 @@ function ClienteDetailPage() {
         <div className="mt-2">
           {activeTab === "identificacion" && (
             <>
-              <SectionCard title="Datos personales">
+              <SectionCard
+                title="Identificación"
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setExencionOpen(true)}
+                    className="inline-flex items-center gap-1.5 h-8 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"
+                  >
+                    <Ban size={13} /> Eximir créditos
+                  </button>
+                }
+              >
                 <FieldGrid campos={personal} />
               </SectionCard>
-              {cliente.tipoPersona === "juridica" && (
-                <SectionCard title="Datos de la empresa">
-                  <FieldGrid campos={empresa} />
-                </SectionCard>
-              )}
-              <SectionCard title="Compliance / PEP">
-                <FieldGrid campos={compliance} />
+
+              <SectionCard title="Resumen de productos">
+                <ul className="divide-y divide-border">
+                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="text-muted-foreground">Cuentas bancarias</span>
+                    <span className="font-semibold tabular-nums">
+                      {subcuentasQuery.data ? subcuentasQuery.data.length : "—"}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="text-muted-foreground">CVUs</span>
+                    <span className="font-semibold tabular-nums">
+                      {subcuentasQuery.data?.length ?? "—"}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="text-muted-foreground">Comisiones</span>
+                    <span className="font-semibold tabular-nums">
+                      {comisionesQuery.data ? comisionesQuery.data.length : "—"}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="text-muted-foreground">Impuestos</span>
+                    <span className="font-semibold tabular-nums">{impuestosQuery.rows.length}</span>
+                  </li>
+                </ul>
+              </SectionCard>
+
+              <SectionCard title="Operativa">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <KpiCard
+                    label="Documentos cargados"
+                    value={String(documentosResumenQuery.data?.length ?? 0)}
+                  />
+                  <KpiCard
+                    label="Validaciones auto KYC"
+                    value={String(validacionesQuery.data?.length ?? 0)}
+                  />
+                  <KpiCard
+                    label="PEP"
+                    value={compliance.find((c) => c.label === "PEP")?.valor ?? "No"}
+                    tone="muted"
+                  />
+                </div>
               </SectionCard>
             </>
           )}
@@ -1466,7 +2198,9 @@ function ClienteDetailPage() {
             </Seccion>
           )}
 
-          {activeTab === "subcuentas" && <SubcuentasTab legajo={cliente.legajo} />}
+          {activeTab === "subcuentas" && (
+            <SubcuentasTab legajo={cliente.legajo} onEximirCuit={() => setExencionOpen(true)} />
+          )}
 
           {activeTab === "documentos" && <DocumentosTab legajo={cliente.legajo} />}
 
@@ -1478,7 +2212,19 @@ function ClienteDetailPage() {
               onRetry={validacionesQuery.refetch}
               vacio={!validacionesQuery.isLoading && (validacionesQuery.data?.length ?? 0) === 0}
             >
-              <div className="flex justify-end mb-3">
+              <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadCSV("validaciones.csv", [
+                      ["Proveedor", "Estado", "Fecha"],
+                      ...(validacionesQuery.data ?? []).map((v) => [v.proveedor, v.estado, v.fecha]),
+                    ])
+                  }
+                  className="inline-flex items-center gap-1.5 h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent"
+                >
+                  <Download size={16} /> Descargar CSV
+                </button>
                 <button
                   type="button"
                   onClick={forzarNuevaValidacion}
@@ -1496,6 +2242,113 @@ function ClienteDetailPage() {
                 emptyMessage="Sin validaciones para este cliente"
               />
             </Seccion>
+          )}
+
+          {activeTab === "contexto" && (
+            <section className="mt-6">
+              <h2 className="font-display text-base font-semibold text-foreground mb-3">
+                Contexto operativo
+              </h2>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <KpiCard
+                  label="CVUs"
+                  value={
+                    subcuentasQuery.isError
+                      ? "Por definir"
+                      : String(subcuentasQuery.data?.length ?? 0)
+                  }
+                />
+                <KpiCard
+                  label="Comisiones"
+                  value={
+                    comisionesQuery.isError
+                      ? "Por definir"
+                      : String(comisionesQuery.data?.length ?? 0)
+                  }
+                />
+                <KpiCard
+                  label="Impuestos"
+                  value={impuestosQuery.isError ? "Por definir" : String(impuestosQuery.rows.length)}
+                />
+                <KpiCard
+                  label="Alertas"
+                  value={alertasQuery.isError ? "Por definir" : String(alertasQuery.data?.length ?? 0)}
+                />
+                <KpiCard
+                  label="Bloqueos"
+                  value={bloqueosQuery.isError ? "Por definir" : String(bloqueosQuery.data?.length ?? 0)}
+                />
+                <KpiCard
+                  label="Módulos inferidos"
+                  value={modulosQuery.isError ? "Por definir" : String(modulosData.length)}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <MiniDashboard
+                  titulo="CVUs recientes"
+                  columnas={[
+                    { label: "Nombre", render: (s: Subcuenta) => `${s.nombre} ${s.apellido}`.trim() },
+                    { label: "Email", render: (s: Subcuenta) => s.email },
+                    { label: "Estado", render: (s: Subcuenta) => s.estado },
+                  ]}
+                  datos={(subcuentasQuery.data ?? []).slice(0, 10)}
+                />
+                <MiniDashboard
+                  titulo="Últimas comisiones"
+                  columnas={[
+                    { label: "Concepto", render: (c: ComisionCliente) => c.concepto },
+                    {
+                      label: "Monto",
+                      render: (c: ComisionCliente) => fmtMonto(c.monto),
+                    },
+                    { label: "Fecha", render: (c: ComisionCliente) => c.fecha },
+                  ]}
+                  datos={(comisionesQuery.data ?? []).slice(0, 10)}
+                  vacio="Sin comisiones registradas."
+                />
+                <MiniDashboard
+                  titulo="Impuestos recientes"
+                  columnas={[
+                    {
+                      label: "Impuesto",
+                      render: (a: ImpuestoAsignacion) => a.impuesto?.nombre ?? a.impuestoId,
+                    },
+                    { label: "Estado", render: (a: ImpuestoAsignacion) => a.estado },
+                    { label: "Fecha", render: () => "—" },
+                  ]}
+                  datos={impuestosQuery.rows.slice(0, 10)}
+                />
+                <MiniDashboard
+                  titulo="Alertas y bloqueos recientes"
+                  columnas={[
+                    {
+                      label: "Tipo",
+                      render: (r: { tipo: string; parametro?: string }) => r.tipo || r.parametro || "—",
+                    },
+                    {
+                      label: "Estado",
+                      render: (r: { estado: string }) => r.estado ?? "—",
+                    },
+                    { label: "Fecha", render: (r: { fecha: string }) => r.fecha },
+                  ]}
+                  datos={[
+                    ...(alertasQuery.data ?? []).map((a) => ({
+                      tipo: a.tipo,
+                      parametro: undefined as string | undefined,
+                      estado: a.estado,
+                      fecha: a.fecha,
+                    })),
+                    ...(bloqueosQuery.data ?? []).map((b) => ({
+                      tipo: b.parametro,
+                      parametro: b.parametro,
+                      estado: b.estado ?? "—",
+                      fecha: "—",
+                    })),
+                  ].slice(0, 10)}
+                />
+              </div>
+            </section>
           )}
 
           {activeTab === "riesgo" && (
@@ -1658,12 +2511,6 @@ function ClienteDetailPage() {
                     </div>
                     <dl className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <dt className="text-muted-foreground">Comercio vinculado</dt>
-                        <dd className="font-semibold text-foreground">
-                          {comerciosPst.length > 0 ? "Sí" : "Sin comercio vinculado"}
-                        </dd>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
                         <dt className="text-muted-foreground">Comercios PST</dt>
                         <dd className="font-semibold text-foreground tabular-nums">
                           {comerciosPst.length}
@@ -1671,8 +2518,8 @@ function ClienteDetailPage() {
                       </div>
                       <p className="pt-1 text-muted-foreground">
                         {comerciosPst.length === 0
-                          ? "Sin comercio PST asociado a PYME por legajo/email."
-                          : "Comercio PST asociado a PYME por legajo/email."}
+                          ? "No se encontró comercio PCT asociado por email o legajo."
+                          : "Comercio PCT asociado por email o legajo."}
                       </p>
                     </dl>
                     <button
@@ -1680,7 +2527,7 @@ function ClienteDetailPage() {
                       onClick={() => setPstOpen(true)}
                       className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
                     >
-                      <Landmark size={13} /> Ver PST
+                      <Landmark size={13} /> Ver comercios PCT
                     </button>
                   </div>
 
@@ -1695,7 +2542,6 @@ function ClienteDetailPage() {
                     <div className="text-xs text-muted-foreground">
                       {blpModulo ? (
                         <>
-                          <p className="font-semibold text-foreground">{blpModulo.titulo}</p>
                           <p className="mt-1">
                             Comercios vinculados:{" "}
                             <span className="font-semibold text-foreground tabular-nums">
@@ -1705,6 +2551,12 @@ function ClienteDetailPage() {
                           <p className="mt-2">
                             {blpModulo.detalle ?? "Sin vínculos para este cliente."}
                           </p>
+                          {linksPago.some((l) => l.estado === "Pendiente") && (
+                            <p className="mt-2 font-semibold text-amber-700">
+                              {linksPago.filter((l) => l.estado === "Pendiente").length} comercio(s)
+                              pendiente(s) de aprobación.
+                            </p>
+                          )}
                         </>
                       ) : (
                         <p>Sin información de links de pago para este cliente.</p>
@@ -1728,7 +2580,6 @@ function ClienteDetailPage() {
                       <div className="font-display font-semibold text-sm">API externa</div>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      <p className="font-semibold text-foreground">API externa</p>
                       <p className="mt-1">
                         Cantidad de usuarios asociados:{" "}
                         <span className="font-semibold text-foreground tabular-nums">
@@ -1870,28 +2721,12 @@ function ClienteDetailPage() {
           cantidad={apiModulo?.cantidad ?? 0}
         />
 
-        <ModalDialog
+        <ApiDetalleModal
           open={apiDetalleOpen}
           onClose={() => setApiDetalleOpen(false)}
-          title="Detalle de API externa"
-        >
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between gap-2 border-b border-border pb-2">
-              <span className="text-muted-foreground">Módulo</span>
-              <span className="font-medium">API externa</span>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-2">
-              <span className="text-muted-foreground">Cantidad de usuarios asociados</span>
-              <span className="font-medium tabular-nums">{apiModulo?.cantidad ?? 0}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Estado</span>
-              <span className="font-medium">
-                {apiModulo?.detalle ?? "Sin vínculos para este cliente."}
-              </span>
-            </div>
-          </div>
-        </ModalDialog>
+          apiUsuarioId={null}
+          cantidad={apiModulo?.cantidad ?? 0}
+        />
 
         {/* Edición de parámetros dentro del contexto del usuario */}
         <ParametrosEditorModal
@@ -1922,6 +2757,13 @@ function ClienteDetailPage() {
               setGestiones((prev) => ({ ...prev, [gestionTarget.id]: g }));
             }
           }}
+        />
+
+        <ExencionModal
+          open={exencionOpen}
+          onClose={() => setExencionOpen(false)}
+          legajo={cliente.legajo}
+          cuitDefault={cliente.cuit}
         />
 
         {confirmAction && (

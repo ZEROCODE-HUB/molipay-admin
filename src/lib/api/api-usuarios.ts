@@ -105,3 +105,121 @@ export async function deleteApiUsuario(id: string): Promise<void> {
   const { error } = await sb.from("api_usuarios").delete().eq("id", id);
   if (error) throw new DataAccessError(error);
 }
+
+export type ApiUsuarioEndpoint = {
+  id: string;
+  grupo: string;
+  path: string;
+  metodo: string;
+  estado: string;
+};
+
+type ApiUsuarioEndpointRow = {
+  id: string;
+  grupo: string | null;
+  path: string | null;
+  metodo: string | null;
+  estado: string | null;
+};
+
+export async function listApiUsuarioEndpoints(
+  apiUsuarioId: string,
+): Promise<ApiUsuarioEndpoint[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("api_usuario_endpoints")
+    .select("id, grupo, path, metodo, estado")
+    .eq("api_usuario_id", apiUsuarioId)
+    .order("path", { ascending: true });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ApiUsuarioEndpointRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    grupo: r.grupo ?? "General",
+    path: r.path ?? "—",
+    metodo: r.metodo ?? "GET",
+    estado: r.estado ?? "Habilitado",
+  }));
+}
+
+export type ApiUsuarioLogDetalle = {
+  usuarioId: string;
+  clientId: string | null;
+  ip: string;
+  metodoHttp: string;
+  estadoHttp: number;
+  endpoint: string;
+  tiempoRespuesta: string;
+  userAgent: string;
+  fecha: string;
+  requestHeaders: Record<string, string>;
+  requestParams: unknown;
+  requestQuery: unknown;
+  requestBody: unknown;
+  responseBody: unknown;
+};
+
+export type ApiUsuarioLog = {
+  id: string;
+  fechaHora: string;
+  ip: string;
+  clienteId: string;
+  metodo: string;
+  endpoint: string;
+  status: number;
+  tiempoRespuestaMs: number;
+  detalle: ApiUsuarioLogDetalle;
+};
+
+type ApiUsuarioLogRow = {
+  id: string;
+  fecha_hora: string | null;
+  ip: string | null;
+  cliente_id: string | null;
+  metodo: string | null;
+  endpoint: string | null;
+  status: number | null;
+  tiempo_respuesta_ms: number | null;
+  detalle: ApiUsuarioLogDetalle | null;
+};
+
+export async function listApiUsuarioLogs(apiUsuarioId: string): Promise<ApiUsuarioLog[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("api_usuario_logs")
+    .select(
+      "id, fecha_hora, ip, cliente_id, metodo, endpoint, status, tiempo_respuesta_ms, detalle",
+    )
+    .eq("api_usuario_id", apiUsuarioId)
+    .order("fecha_hora", { ascending: false })
+    .limit(50);
+  if (error) throw new DataAccessError(error);
+  const rows = (data as ApiUsuarioLogRow[] | null) ?? [];
+  return rows.map((r) => ({
+    id: r.id,
+    fechaHora: r.fecha_hora ?? "—",
+    ip: r.ip ?? "—",
+    clienteId: r.cliente_id ?? "—",
+    metodo: r.metodo ?? "GET",
+    endpoint: r.endpoint ?? "—",
+    status: r.status ?? 0,
+    tiempoRespuestaMs: r.tiempo_respuesta_ms ?? 0,
+    detalle:
+      r.detalle ?? {
+        usuarioId: apiUsuarioId,
+        clientId: null,
+        ip: r.ip ?? "—",
+        metodoHttp: r.metodo ?? "GET",
+        estadoHttp: r.status ?? 0,
+        endpoint: r.endpoint ?? "—",
+        tiempoRespuesta: `${r.tiempo_respuesta_ms ?? 0}ms`,
+        userAgent: "—",
+        fecha: r.fecha_hora ?? "—",
+        requestHeaders: {},
+        requestParams: {},
+        requestQuery: {},
+        requestBody: {},
+        responseBody: {},
+      },
+  }));
+}
