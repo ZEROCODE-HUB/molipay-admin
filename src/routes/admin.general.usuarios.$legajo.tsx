@@ -1614,58 +1614,56 @@ function ApiDetalleModal({
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Credenciales del usuario
           </h4>
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 text-sm">
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Nombre</dt>
-              <dd className="font-medium">{usuario?.nombreCompleto ?? "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Clave pública</dt>
-              <dd className="font-medium font-mono break-all">{usuario?.codigoUsuarioApi ?? "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Descripción</dt>
-              <dd className="font-medium text-right">
-                Creado a través de solicitud de registro de usuario.
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Fecha de creación</dt>
-              <dd className="font-medium">{fmtFechaHora(usuario?.createdAt)}</dd>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Estado</dt>
-              <dd>
-                <Badge tone={credencialActiva ? "success" : "danger"}>
-                  {credencialActiva ? "Activa" : "Inactiva"}
-                </Badge>
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2 border-b border-border pb-1">
-              <dt className="text-muted-foreground">Acciones</dt>
-              <dd className="flex flex-wrap gap-1">
-                {credencialActiva ? (
-                  <button
-                    type="button"
-                    disabled={cambiarCredencial.isPending || !effectiveId}
-                    onClick={() => cambiarCredencial.mutate("Suspendido")}
-                    className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                  >
-                    Desactivar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={cambiarCredencial.isPending || !effectiveId}
-                    onClick={() => cambiarCredencial.mutate("Producción")}
-                    className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                  >
-                    Activar
-                  </button>
-                )}
-              </dd>
-            </div>
-          </dl>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">Nombre</th>
+                  <th className="px-3 py-2 font-medium">Clave pública</th>
+                  <th className="px-3 py-2 font-medium">Descripción</th>
+                  <th className="px-3 py-2 font-medium">Fecha de creación</th>
+                  <th className="px-3 py-2 font-medium">Estado</th>
+                  <th className="px-3 py-2 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border last:border-0">
+                  <td className="px-3 py-2 font-medium">{usuario?.nombreCompleto ?? "—"}</td>
+                  <td className="px-3 py-2 font-medium font-mono break-all">
+                    {usuario?.codigoUsuarioApi ?? "—"}
+                  </td>
+                  <td className="px-3 py-2">Creado a través de solicitud de registro de usuario.</td>
+                  <td className="px-3 py-2">{fmtFechaHora(usuario?.createdAt)}</td>
+                  <td className="px-3 py-2">
+                    <Badge tone={credencialActiva ? "success" : "danger"}>
+                      {credencialActiva ? "Activa" : "Inactiva"}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {credencialActiva ? (
+                      <button
+                        type="button"
+                        disabled={cambiarCredencial.isPending || !effectiveId}
+                        onClick={() => cambiarCredencial.mutate("Suspendido")}
+                        className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                      >
+                        Desactivar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={cambiarCredencial.isPending || !effectiveId}
+                        onClick={() => cambiarCredencial.mutate("Producción")}
+                        className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                      >
+                        Activar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section>
@@ -2375,6 +2373,7 @@ function ClienteDetailPage() {
                 data={validacionesQuery.data ?? []}
                 keyExtractor={(v) => v.id}
                 emptyMessage="Sin validaciones para este cliente"
+                showDownloadButton={false}
               />
             </Seccion>
           )}
