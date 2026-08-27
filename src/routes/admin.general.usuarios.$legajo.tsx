@@ -8,7 +8,7 @@ import {
   Plus,
   Pencil,
   ShieldAlert,
-  FilterX,
+  MoreVertical,
   RefreshCw,
   Landmark,
   Link2,
@@ -42,9 +42,6 @@ import {
 } from "@/lib/api/subcuentas";
 import {
   listDocumentos,
-  createDocumento,
-  DOCUMENTO_LABELS,
-  type DocumentoTipo,
 } from "@/lib/api/documentos";
 import {
   listHistorialCambios,
@@ -534,24 +531,48 @@ const apiUsuariosColumns = [
   },
 ];
 
-function AccionIconBtn({
-  title,
-  onClick,
-  children,
+function AccionesMenu({
+  items,
 }: {
-  title: string;
-  onClick: () => void;
-  children: ReactNode;
+  items: { label: string; onClick: () => void; disabled?: boolean }[];
 }) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
   return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-foreground"
-    >
-      {children}
-    </button>
+    <div className="relative inline-block text-left">
+      <button
+        type="button"
+        title="Acciones"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-foreground"
+      >
+        <MoreVertical size={16} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+            {items.map((it) => (
+              <button
+                key={it.label}
+                type="button"
+                disabled={it.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  it.onClick();
+                }}
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -579,14 +600,12 @@ function TablaMovimientos({
   rows,
   onVerDetalles,
   onCambiarEstado,
-  onVerCliente,
 }: {
   rows: Movimiento[];
   onVerDetalles?: (m: Movimiento) => void;
   onCambiarEstado?: (m: Movimiento) => void;
-  onVerCliente?: (m: Movimiento) => void;
 }) {
-  const conAcciones = Boolean(onVerDetalles || onCambiarEstado || onVerCliente);
+  const conAcciones = Boolean(onVerDetalles || onCambiarEstado);
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
@@ -621,27 +640,17 @@ function TablaMovimientos({
                 </Badge>
               </td>
               {conAcciones && (
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1.5">
-                    {onVerDetalles && (
-                      <AccionIconBtn title="Ver detalles" onClick={() => onVerDetalles(m)}>
-                        <Eye size={15} />
-                      </AccionIconBtn>
-                    )}
-                    {onCambiarEstado && (
-                      <AccionIconBtn title="Cambiar estado" onClick={() => onCambiarEstado(m)}>
-                        <ShieldAlert size={15} />
-                      </AccionIconBtn>
-                    )}
-                    {onVerCliente && (
-                      <AccionIconBtn
-                        title="Ver movimientos del cliente"
-                        onClick={() => onVerCliente(m)}
-                      >
-                        <FilterX size={15} />
-                      </AccionIconBtn>
-                    )}
-                  </div>
+                <td className="px-4 py-3 text-right">
+                  <AccionesMenu
+                    items={[
+                      ...(onVerDetalles
+                        ? [{ label: "Ver detalles", onClick: () => onVerDetalles(m) }]
+                        : []),
+                      ...(onCambiarEstado
+                        ? [{ label: "Cambiar estado", onClick: () => onCambiarEstado(m) }]
+                        : []),
+                    ]}
+                  />
                 </td>
               )}
             </tr>
@@ -655,13 +664,11 @@ function TablaMovimientos({
 function TablaImpuestos({
   rows,
   onVerDetalles,
-  onVerCliente,
 }: {
   rows: ImpuestoAsignacion[];
   onVerDetalles?: (a: ImpuestoAsignacion) => void;
-  onVerCliente?: (a: ImpuestoAsignacion) => void;
 }) {
-  const conAcciones = Boolean(onVerDetalles || onVerCliente);
+  const conAcciones = Boolean(onVerDetalles);
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
@@ -692,22 +699,14 @@ function TablaImpuestos({
                 <Badge tone={a.estado === "Activo" ? "success" : "neutral"}>{a.estado}</Badge>
               </td>
               {conAcciones && (
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1.5">
-                    {onVerDetalles && (
-                      <AccionIconBtn title="Ver detalles" onClick={() => onVerDetalles(a)}>
-                        <Eye size={15} />
-                      </AccionIconBtn>
-                    )}
-                    {onVerCliente && (
-                      <AccionIconBtn
-                        title="Ver movimientos del cliente"
-                        onClick={() => onVerCliente(a)}
-                      >
-                        <FilterX size={15} />
-                      </AccionIconBtn>
-                    )}
-                  </div>
+                <td className="px-4 py-3 text-right">
+                  <AccionesMenu
+                    items={
+                      onVerDetalles
+                        ? [{ label: "Ver detalles", onClick: () => onVerDetalles(a) }]
+                        : []
+                    }
+                  />
                 </td>
               )}
             </tr>
@@ -974,37 +973,13 @@ function SubcuentasTab({
 }
 
 function DocumentosTab({ legajo }: { legajo: string }) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [tipo, setTipo] = useState<DocumentoTipo>("id_frente");
-  const [url, setUrl] = useState("");
-
   const query = useQuery({
     queryKey: ["documentos", legajo],
     queryFn: () => listDocumentos(legajo),
     enabled: !!legajo,
   });
 
-  const docs = query.data ?? [];
   const imagenes = imagenesParaLegajo(legajo);
-  const tipos: DocumentoTipo[] = ["id_frente", "id_dorso", "servicio", "selfie"];
-
-  const guardar = async () => {
-    setSaving(true);
-    setErr(null);
-    try {
-      await createDocumento(legajo, { tipo, url });
-      await queryClient.invalidateQueries({ queryKey: ["documentos", legajo] });
-      setOpen(false);
-      setUrl("");
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <Seccion
@@ -1012,88 +987,25 @@ function DocumentosTab({ legajo }: { legajo: string }) {
       loading={query.isLoading}
       error={query.isError ? query.error : null}
       onRetry={() => query.refetch()}
-      vacio={!query.isLoading && docs.length === 0 && imagenes.length === 0}
+      vacio={!query.isLoading && imagenes.length === 0}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {imagenes.map((img) => (
-          <div
-            key={img.url}
-            className="overflow-hidden rounded-xl border border-border bg-card p-0"
-          >
-            <div className="h-32 w-full bg-muted">
-              <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+      {imagenes.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          Fotos no agregadas
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {imagenes.map((img) => (
+            <div
+              key={img.url}
+              className="overflow-hidden rounded-xl border border-border bg-card p-0"
+            >
+              <div className="h-32 w-full bg-muted">
+                <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+              </div>
+              <p className="px-4 py-2 text-sm font-semibold">{img.label}</p>
             </div>
-            <p className="px-4 py-2 text-sm font-semibold">{img.label}</p>
-          </div>
-        ))}
-        {docs.map((d) => (
-          <div key={d.id} className="rounded-xl border border-border bg-card p-4">
-            <p className="text-sm font-semibold">{DOCUMENTO_LABELS[d.tipo] ?? d.tipo}</p>
-            <p className="mt-2 text-xs text-muted-foreground line-clamp-2 break-all">{d.url}</p>
-            {d.url && (
-              <a
-                href={d.url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-xs font-medium text-primary"
-              >
-                Ver documento
-              </a>
-            )}
-          </div>
-        ))}
-        {imagenes.length === 0 && docs.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            Fotos no agregadas
-          </div>
-        )}
-      </div>
-      <div className="flex justify-end mt-3">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
-        >
-          <Plus size={16} /> Subir documento
-        </button>
-      </div>
-      {open && (
-        <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select
-            className="rounded-md border border-input px-3 py-2 text-sm"
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value as DocumentoTipo)}
-          >
-            {tipos.map((t) => (
-              <option key={t} value={t}>
-                {DOCUMENTO_LABELS[t]}
-              </option>
-            ))}
-          </select>
-          <input
-            className="rounded-md border border-input px-3 py-2 text-sm"
-            placeholder="URL del documento"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-          {err && <p className="text-sm text-red-600 md:col-span-2">{err}</p>}
-          <div className="md:col-span-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="h-9 rounded-md border border-input px-3 text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={guardar}
-              disabled={saving}
-              className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
-              {saving ? "Guardando…" : "Guardar"}
-            </button>
-          </div>
+          ))}
         </div>
       )}
     </Seccion>
@@ -2402,12 +2314,6 @@ function ClienteDetailPage() {
                     nuevoId: m.estadoId ?? 0,
                   })
                 }
-                onVerCliente={(m) =>
-                  navigate({
-                    to: "/admin/general/movimientos",
-                    search: { legajo: m.legajo },
-                  })
-                }
               />
             </Seccion>
           )}
@@ -2423,12 +2329,6 @@ function ClienteDetailPage() {
               <TablaImpuestos
                 rows={impuestosQuery.rows}
                 onVerDetalles={(a) => setImpuestoDetail(a)}
-                onVerCliente={(a) =>
-                  navigate({
-                    to: "/admin/general/movimientos",
-                    search: { legajo: a.clienteLegajo },
-                  })
-                }
               />
             </Seccion>
           )}
