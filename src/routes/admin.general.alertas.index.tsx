@@ -51,7 +51,7 @@ const todayISO = new Date().toISOString().slice(0, 10);
 
 const initialData: Alerta[] = [
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     correo: "jperez@empresa.com",
     nombre: "Juan Pérez",
     tipo: "Depósito excedido",
@@ -66,7 +66,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "jperez@empresa.com",
           cvu: "0000003100012345678901",
-          legajo: "LEG-001",
+          legajo: "LPF-20123456789",
         },
         destino: {
           nombreCompleto: "Juan Pérez",
@@ -81,7 +81,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "jperez@empresa.com",
           cvu: "0000003100012345678901",
-          legajo: "LEG-001",
+          legajo: "LPF-20123456789",
         },
         destino: {
           nombreCompleto: "Juan Pérez",
@@ -92,7 +92,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-002",
+    legajo: "LPF-27234567890",
     correo: "mgarcia@corp.com",
     nombre: "María García",
     tipo: "Intento fallido",
@@ -108,7 +108,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "mgarcia@corp.com",
           cvu: "0000003100019876543210",
-          legajo: "LEG-002",
+          legajo: "LPF-27234567890",
         },
         destino: {
           nombreCompleto: "María García",
@@ -119,7 +119,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-003",
+    legajo: "LPF-20345678901",
     correo: "clopez@firm.com",
     nombre: "Carlos López",
     tipo: "Transferencia repetida",
@@ -134,7 +134,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "clopez@firm.com",
           cvu: "0000003100011122334455",
-          legajo: "LEG-003",
+          legajo: "LPF-20345678901",
         },
         destino: {
           nombreCompleto: "Inversiones López SA",
@@ -149,7 +149,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "clopez@firm.com",
           cvu: "0000003100011122334455",
-          legajo: "LEG-003",
+          legajo: "LPF-20345678901",
         },
         destino: {
           nombreCompleto: "Inversiones López SA",
@@ -160,7 +160,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-004",
+    legajo: "LPF-27456789012",
     correo: "lrodriguez@sa.com",
     nombre: "Laura Rodríguez",
     tipo: "Horario inusual",
@@ -176,7 +176,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "lrodriguez@sa.com",
           cvu: "0000003100013344556677",
-          legajo: "LEG-004",
+          legajo: "LPF-27456789012",
         },
         destino: {
           nombreCompleto: "Ricardo Gómez",
@@ -187,7 +187,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-005",
+    legajo: "LPF-20567890123",
     correo: "mfernandez@corp.com",
     nombre: "Martín Fernández",
     tipo: "Volumen anormal",
@@ -202,7 +202,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "mfernandez@corp.com",
           cvu: "0000003100017766554433",
-          legajo: "LEG-005",
+          legajo: "LPF-20567890123",
         },
         destino: {
           nombreCompleto: "Fernández Holding SA",
@@ -213,7 +213,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-006",
+    legajo: "LPF-27678901234",
     correo: "gmartinez@firm.com",
     nombre: "Gabriela Martínez",
     tipo: "Intento fallido",
@@ -229,7 +229,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "gmartinez@firm.com",
           cvu: "0000003100016655443322",
-          legajo: "LEG-006",
+          legajo: "LPF-27678901234",
         },
         destino: {
           nombreCompleto: "Gabriela Martínez",
@@ -240,7 +240,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-007",
+    legajo: "LPF-20789012345",
     correo: "dperez@sa.com",
     nombre: "Diego Pérez",
     tipo: "Transferencia repetida",
@@ -255,7 +255,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "dperez@sa.com",
           cvu: "0000003100015544332211",
-          legajo: "LEG-007",
+          legajo: "LPF-20789012345",
         },
         destino: {
           nombreCompleto: "Diego Pérez",
@@ -270,7 +270,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "dperez@sa.com",
           cvu: "0000003100015544332211",
-          legajo: "LEG-007",
+          legajo: "LPF-20789012345",
         },
         destino: {
           nombreCompleto: "Diego Pérez",
@@ -281,7 +281,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-008",
+    legajo: "LPF-27890123456",
     correo: "agonzalez@corp.com",
     nombre: "Ana González",
     tipo: "Horario inusual",
@@ -296,7 +296,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "agonzalez@corp.com",
           cvu: "0000003100010099887766",
-          legajo: "LEG-008",
+          legajo: "LPF-27890123456",
         },
         destino: {
           nombreCompleto: "Ana González",
@@ -307,7 +307,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-009",
+    legajo: "LPF-27901234567",
     correo: "rmendoza@firm.com",
     nombre: "Roberto Mendoza",
     tipo: "Intento fallido",
@@ -323,7 +323,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "rmendoza@firm.com",
           cvu: "0000003100015566778899",
-          legajo: "LEG-009",
+          legajo: "LPF-27901234567",
         },
         destino: {
           nombreCompleto: "Roberto Mendoza",
@@ -334,7 +334,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-010",
+    legajo: "LPF-20998877665",
     correo: "csuarez@empresa.com",
     nombre: "Camila Suárez",
     tipo: "Depósito excedido",
@@ -349,7 +349,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "csuarez@empresa.com",
           cvu: "0000003100011234432112",
-          legajo: "LEG-010",
+          legajo: "LPF-20998877665",
         },
         destino: {
           nombreCompleto: "Camila Suárez",
@@ -360,7 +360,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-011",
+    legajo: "LPJ-30678901234",
     correo: "fcastro@corp.com",
     nombre: "Federico Castro",
     tipo: "Transferencia repetida",
@@ -375,7 +375,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "fcastro@corp.com",
           cvu: "0000003100016677889900",
-          legajo: "LEG-011",
+          legajo: "LPJ-30678901234",
         },
         destino: {
           nombreCompleto: "Federico Castro",
@@ -390,7 +390,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "fcastro@corp.com",
           cvu: "0000003100016677889900",
-          legajo: "LEG-011",
+          legajo: "LPJ-30678901234",
         },
         destino: {
           nombreCompleto: "Federico Castro",
@@ -401,7 +401,7 @@ const initialData: Alerta[] = [
     ],
   },
   {
-    legajo: "LEG-012",
+    legajo: "LPJ-30789012345",
     correo: "vmolina@firm.com",
     nombre: "Valentina Molina",
     tipo: "Horario inusual",
@@ -417,7 +417,7 @@ const initialData: Alerta[] = [
         origen: {
           email: "vmolina@firm.com",
           cvu: "0000003100017788990011",
-          legajo: "LEG-012",
+          legajo: "LPJ-30789012345",
         },
         destino: {
           nombreCompleto: "Valentina Molina",

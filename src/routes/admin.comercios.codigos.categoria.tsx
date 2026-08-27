@@ -20,7 +20,7 @@ import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { CodigoCategoria } from "@/lib/api/types";
 
-export const Route = createFileRoute("/admin/comercios/transferencia/categorias")({
+export const Route = createFileRoute("/admin/comercios/codigos/categoria")({
   component: Page,
   head: () => ({
     meta: [
@@ -339,34 +339,36 @@ function Page() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Código, nombre o descripción…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select
-            id="f-estado"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={estadoFilter}
-            onChange={(e) => {
-              setEstadoFilter(e.target.value as "activo" | "inactivo" | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            <option value="activo">activo</option>
-            <option value="inactivo">inactivo</option>
-          </select>
+      <div className="rounded-lg border bg-card p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <Label htmlFor="buscar">Buscar</Label>
+            <Input
+              id="buscar"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Código, nombre o descripción…"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-estado">Estado</Label>
+            <select
+              id="f-estado"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              value={estadoFilter}
+              onChange={(e) => {
+                setEstadoFilter(e.target.value as "activo" | "inactivo" | "");
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              <option value="activo">activo</option>
+              <option value="inactivo">inactivo</option>
+            </select>
+          </div>
         </div>
       </div>
 

@@ -961,7 +961,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
   "30123456789": [
     {
       coelsaId: "COELSA-0001",
-      legajo: "LEG-001",
+      legajo: "LPF-20123456789",
       email: "jperez@email.com",
       cvu: "1234567890123456789012",
       dia: "2026-07-28",
@@ -974,7 +974,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
     },
     {
       coelsaId: "COELSA-0002",
-      legajo: "LEG-001",
+      legajo: "LPF-20123456789",
       email: "jperez@email.com",
       cvu: "1234567890123456789012",
       dia: "2026-07-26",
@@ -987,7 +987,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
     },
     {
       coelsaId: "COELSA-0003",
-      legajo: "LEG-001",
+      legajo: "LPF-20123456789",
       email: "jperez@email.com",
       cvu: "1234567890123456789012",
       dia: "2026-07-20",
@@ -1002,7 +1002,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
   "20123456789": [
     {
       coelsaId: "COELSA-0004",
-      legajo: "LEG-002",
+      legajo: "LPF-27234567890",
       email: "mgarcia@email.com",
       cvu: "1234567890123456789023",
       dia: "2026-07-28",
@@ -1015,7 +1015,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
     },
     {
       coelsaId: "COELSA-0005",
-      legajo: "LEG-002",
+      legajo: "LPF-27234567890",
       email: "mgarcia@email.com",
       cvu: "1234567890123456789023",
       dia: "2026-07-22",
@@ -1030,7 +1030,7 @@ const MOVIMIENTOS: Record<string, Movimiento[]> = {
   "30987654321": [
     {
       coelsaId: "COELSA-0006",
-      legajo: "LEG-003",
+      legajo: "LPF-20345678901",
       email: "clopez@email.com",
       cvu: "1234567890123456789034",
       dia: "2026-07-25",

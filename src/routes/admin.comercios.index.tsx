@@ -554,7 +554,7 @@ function Page() {
     },
     {
       key: "cliente",
-      label: "Cliente",
+      label: "Nombre comercial",
       sortable: true,
       render: (r) => r.cliente?.nombre ?? <span className="text-muted-foreground">—</span>,
     },

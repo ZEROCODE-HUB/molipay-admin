@@ -95,6 +95,7 @@ export function MovimientosSubRoute({
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
   const [estadoCodigo, setEstadoCodigo] = useState("");
+  const [legajo, setLegajo] = useState("");
 
   const filtros = useMemo(
     () => ({
@@ -103,11 +104,12 @@ export function MovimientosSubRoute({
       search: search || undefined,
       estadoCodigo: estadoCodigo || undefined,
       tipo: tipoCode,
+      legajo: legajo.trim() || undefined,
       conImpuesto: soloConImpuesto || undefined,
       conComision: soloConComision || undefined,
       countMode: "estimated" as const,
     }),
-    [page, search, estadoCodigo, tipoCode, soloConImpuesto, soloConComision],
+    [page, search, estadoCodigo, legajo, tipoCode, soloConImpuesto, soloConComision],
   );
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } =
@@ -188,37 +190,51 @@ export function MovimientosSubRoute({
     <PermissionGuard recurso="movimientos">
       <PageHeader title={titulo} description={descripcion} />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex-1 min-w-[220px]">
-          <Label htmlFor="buscar-sub">Buscar</Label>
-          <Input
-            id="buscar-sub"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="ID, legajo, correo o nombre…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="f-estado-sub">Estado</Label>
-          <select
-            id="f-estado-sub"
-            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-            value={estadoCodigo}
-            onChange={(e) => {
-              setEstadoCodigo(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {opcionesEstado.map((o) => (
-              <option key={o.code} value={o.code}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+      <div className="rounded-lg border bg-card p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <Label htmlFor="buscar-sub">Buscar</Label>
+            <Input
+              id="buscar-sub"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setPage(0);
+              }}
+              placeholder="ID, legajo, correo o nombre…"
+            />
+          </div>
+          <div className="w-[200px]">
+            <Label htmlFor="f-legajo-sub">Legajo</Label>
+            <Input
+              id="f-legajo-sub"
+              value={legajo}
+              onChange={(e) => {
+                setLegajo(e.target.value);
+                setPage(0);
+              }}
+              placeholder="LPF-… / LPJ-…"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-estado-sub">Estado</Label>
+            <select
+              id="f-estado-sub"
+              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+              value={estadoCodigo}
+              onChange={(e) => {
+                setEstadoCodigo(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              {opcionesEstado.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

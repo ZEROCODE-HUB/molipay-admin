@@ -198,7 +198,16 @@ export function DataTable<T>({
       if (debouncedQuery.trim()) {
         const q = debouncedQuery.toLowerCase();
         const matched = textSearchableCols.some((col) => {
-          const text = String(col.render(row) ?? "");
+          const raw = (row as Record<string, unknown>)[col.key];
+          const rendered = col.render(row);
+          const renderedText =
+            typeof rendered === "string" || typeof rendered === "number"
+              ? String(rendered)
+              : "";
+          const text =
+            typeof raw === "string" || typeof raw === "number"
+              ? String(raw)
+              : renderedText;
           return text.toLowerCase().includes(q);
         });
         if (!matched) return false;

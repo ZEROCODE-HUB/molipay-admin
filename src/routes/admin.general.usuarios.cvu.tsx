@@ -31,7 +31,7 @@ type CvuUser = {
 
 const initialData: CvuUser[] = [
   {
-    legajo: "CVU-001",
+    legajo: "LPF-20123456789",
     correo: "juan.perez@email.com",
     nombre: "Juan Carlos",
     apellido: "Pérez",
@@ -41,7 +41,7 @@ const initialData: CvuUser[] = [
     estado: "Habilitado",
   },
   {
-    legajo: "CVU-002",
+    legajo: "LPF-27234567890",
     correo: "maria.lopez@email.com",
     nombre: "María Elena",
     apellido: "López",
@@ -51,7 +51,7 @@ const initialData: CvuUser[] = [
     estado: "Habilitado",
   },
   {
-    legajo: "CVU-003",
+    legajo: "LPF-20345678901",
     correo: "carlos.m@email.com",
     nombre: "Carlos Alberto",
     apellido: "Martínez",
@@ -61,7 +61,7 @@ const initialData: CvuUser[] = [
     estado: "Deshabilitado",
   },
   {
-    legajo: "CVU-004",
+    legajo: "LPF-27456789012",
     correo: "ana.garcia@email.com",
     nombre: "Ana Sofía",
     apellido: "García",
@@ -71,7 +71,7 @@ const initialData: CvuUser[] = [
     estado: "Habilitado",
   },
   {
-    legajo: "CVU-005",
+    legajo: "LPF-20567890123",
     correo: "pedro.rodriguez@email.com",
     nombre: "Pedro Antonio",
     apellido: "Rodríguez",
@@ -81,7 +81,7 @@ const initialData: CvuUser[] = [
     estado: "Suspendido",
   },
   {
-    legajo: "CVU-006",
+    legajo: "LPF-27678901234",
     correo: "lucia.mendoza@email.com",
     nombre: "Lucía Belén",
     apellido: "Mendoza",
@@ -91,7 +91,7 @@ const initialData: CvuUser[] = [
     estado: "Habilitado",
   },
   {
-    legajo: "CVU-007",
+    legajo: "LPF-20789012345",
     correo: "gabriel.rios@email.com",
     nombre: "Gabriel Esteban",
     apellido: "Ríos",
@@ -101,7 +101,7 @@ const initialData: CvuUser[] = [
     estado: "Habilitado",
   },
   {
-    legajo: "CVU-008",
+    legajo: "LPF-27890123456",
     correo: "valentina.castro@email.com",
     nombre: "Valentina",
     apellido: "Castro",
@@ -111,7 +111,7 @@ const initialData: CvuUser[] = [
     estado: "Deshabilitado",
   },
   {
-    legajo: "CVU-009",
+    legajo: "LPF-27901234567",
     correo: "diego.fernandez@email.com",
     nombre: "Diego Martín",
     apellido: "Fernández",

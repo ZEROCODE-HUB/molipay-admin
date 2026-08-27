@@ -27,7 +27,7 @@ const todayISO = new Date().toISOString().slice(0, 10);
 
 const mock: Bloqueo[] = [
   {
-    legajo: "BL-001",
+    legajo: "LPJ-30890123456",
     usuario: "jperez",
     nombre: "Juan Pérez",
     tipo: "Volumen anormal",
@@ -39,7 +39,7 @@ const mock: Bloqueo[] = [
     monto: "$ 12,450.00",
   },
   {
-    legajo: "BL-002",
+    legajo: "LPJ-30901234567",
     usuario: "mgarcia",
     nombre: "María García",
     tipo: "Múltiples intentos fallidos",
@@ -51,7 +51,7 @@ const mock: Bloqueo[] = [
     monto: "$ 0.00",
   },
   {
-    legajo: "BL-003",
+    legajo: "LPJ-30012345678",
     usuario: "carlosm",
     nombre: "Carlos Martínez",
     tipo: "Límite de depósito excedido",
@@ -65,7 +65,7 @@ const mock: Bloqueo[] = [
     fechaResolucion: "2026-07-12",
   },
   {
-    legajo: "BL-004",
+    legajo: "LPF-20334455667",
     usuario: "analopez",
     nombre: "Ana López",
     tipo: "Frecuencia anómala",
@@ -77,7 +77,7 @@ const mock: Bloqueo[] = [
     monto: "$ 89,200.00",
   },
   {
-    legajo: "BL-005",
+    legajo: "LPF-27400012345",
     usuario: "robertod",
     nombre: "Roberto Díaz",
     tipo: "Afinidad entre cuentas",
@@ -91,7 +91,7 @@ const mock: Bloqueo[] = [
     fechaResolucion: "2026-07-11",
   },
   {
-    legajo: "BL-006",
+    legajo: "LPF-20500056789",
     usuario: "sofiar",
     nombre: "Sofía Romero",
     tipo: "CUIT en lista de control",
@@ -103,7 +103,7 @@ const mock: Bloqueo[] = [
     monto: "$ 567,800.00",
   },
   {
-    legajo: "BL-007",
+    legajo: "LPF-20123456789",
     usuario: "diegoh",
     nombre: "Diego Hernández",
     tipo: "Movimiento en horario inusual",
@@ -114,7 +114,7 @@ const mock: Bloqueo[] = [
     monto: "$ 3,250.00",
   },
   {
-    legajo: "BL-008",
+    legajo: "LPF-27234567890",
     usuario: "laura v",
     nombre: "Laura Vargas",
     tipo: "Volumen anormal",

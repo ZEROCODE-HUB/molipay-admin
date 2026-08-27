@@ -15,10 +15,7 @@ function TransferenciaLayout() {
   return (
     <div className="space-y-4">
       <TabLayout
-        tabs={[
-          { label: "Comercios", to: "/admin/comercios/transferencia" },
-          { label: "Códigos de categoría", to: "/admin/comercios/transferencia/categorias" },
-        ]}
+        tabs={[{ label: "Comercios", to: "/admin/comercios/transferencia" }]}
       >
         <Outlet />
       </TabLayout>

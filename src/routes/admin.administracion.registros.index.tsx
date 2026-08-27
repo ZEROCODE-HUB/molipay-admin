@@ -22,7 +22,7 @@ type Fondo = {
 
 const mock: Fondo[] = [
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     email: "jperez@empresa.com",
     nombre: "Juan Pérez",
     cvu: "1234567890123456789012",
@@ -31,7 +31,7 @@ const mock: Fondo[] = [
     estado: "Activo",
   },
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     email: "jperez@empresa.com",
     nombre: "Juan Pérez",
     cvu: "1234567890123456789013",
@@ -40,7 +40,7 @@ const mock: Fondo[] = [
     estado: "Activo",
   },
   {
-    legajo: "LEG-002",
+    legajo: "LPF-27234567890",
     email: "mgarcia@corp.com",
     nombre: "María García",
     cvu: "1234567890123456789023",
@@ -49,7 +49,7 @@ const mock: Fondo[] = [
     estado: "Activo",
   },
   {
-    legajo: "LEG-002",
+    legajo: "LPF-27234567890",
     email: "mgarcia@corp.com",
     nombre: "María García",
     cvu: "1234567890123456789024",
@@ -58,7 +58,7 @@ const mock: Fondo[] = [
     estado: "Activo",
   },
   {
-    legajo: "LEG-003",
+    legajo: "LPF-20345678901",
     email: "carlosm@firma.com",
     nombre: "Carlos Martínez",
     cvu: "1234567890123456789034",
@@ -68,7 +68,7 @@ const mock: Fondo[] = [
     alerta: "Diferencia vs banco: -$12.000",
   },
   {
-    legajo: "LEG-004",
+    legajo: "LPF-27456789012",
     email: "analopez@sa.com",
     nombre: "Ana López",
     cvu: "1234567890123456789045",
@@ -77,7 +77,7 @@ const mock: Fondo[] = [
     estado: "Activo",
   },
   {
-    legajo: "LEG-005",
+    legajo: "LPF-20567890123",
     email: "robertod@com.com",
     nombre: "Roberto Díaz",
     cvu: "1234567890123456789056",

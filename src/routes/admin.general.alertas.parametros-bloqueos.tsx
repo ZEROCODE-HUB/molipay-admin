@@ -20,9 +20,9 @@ type UsuarioParam = {
 };
 
 const initialUsuarios: UsuarioParam[] = [
-  { legajo: "LEG-100", usuario: "jperez@empresa.com", persona: "15", empresa: "50" },
-  { legajo: "LEG-101", usuario: "mgarcia@corp.com", persona: "10", empresa: "40" },
-  { legajo: "LEG-102", usuario: "clopez@firm.com", persona: "12", empresa: "45" },
+  { legajo: "LPF-27678901234", usuario: "jperez@empresa.com", persona: "15", empresa: "50" },
+  { legajo: "LPF-20789012345", usuario: "mgarcia@corp.com", persona: "10", empresa: "40" },
+  { legajo: "LPF-27890123456", usuario: "clopez@firm.com", persona: "12", empresa: "45" },
 ];
 
 function UsuarioParamFields({

@@ -27,7 +27,7 @@ type Evento = {
 
 const mock: Evento[] = [
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     email: "jperez@empresa.com",
     fecha: "2026-07-16",
     hora: "08:30:00",
@@ -42,7 +42,7 @@ const mock: Evento[] = [
     cvuBalance: "-",
   },
   {
-    legajo: "LEG-002",
+    legajo: "LPF-27234567890",
     email: "mgarcia@corp.com",
     fecha: "2026-07-16",
     hora: "09:15:00",
@@ -57,7 +57,7 @@ const mock: Evento[] = [
     cvuBalance: "-",
   },
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     email: "jperez@empresa.com",
     fecha: "2026-07-16",
     hora: "10:00:00",
@@ -72,7 +72,7 @@ const mock: Evento[] = [
     cvuBalance: "-",
   },
   {
-    legajo: "LEG-003",
+    legajo: "LPF-20345678901",
     email: "carlosm@firma.com",
     fecha: "2026-07-15",
     hora: "14:00:00",
@@ -87,7 +87,7 @@ const mock: Evento[] = [
     cvuBalance: "-",
   },
   {
-    legajo: "LEG-001",
+    legajo: "LPF-20123456789",
     email: "jperez@empresa.com",
     fecha: "2026-07-16",
     hora: "11:20:00",
@@ -102,7 +102,7 @@ const mock: Evento[] = [
     cvuBalance: "1234567890123456789012",
   },
   {
-    legajo: "LEG-002",
+    legajo: "LPF-27234567890",
     email: "mgarcia@corp.com",
     fecha: "2026-07-16",
     hora: "12:45:00",
@@ -117,7 +117,7 @@ const mock: Evento[] = [
     cvuBalance: "1234567890123456789023",
   },
   {
-    legajo: "LEG-003",
+    legajo: "LPF-20345678901",
     email: "carlosm@firma.com",
     fecha: "2026-07-15",
     hora: "15:30:00",

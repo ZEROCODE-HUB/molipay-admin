@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
@@ -86,6 +86,11 @@ function TodosPage() {
   const search = useDebouncedValue(searchInput, 350);
   const [estado, setEstado] = useState<(typeof ESTADOS_MOVIMIENTO)[number] | "">("");
   const [tipo, setTipo] = useState<string>("");
+  const [legajoInput, setLegajoInput] = useState(legajo ?? "");
+
+  useEffect(() => {
+    setLegajoInput(legajo ?? "");
+  }, [legajo]);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useMovimientos({
     page,
@@ -146,56 +151,74 @@ function TodosPage() {
         description="Historial completo de transacciones (paginación server-side sobre la base de datos)."
       />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex-1 min-w-[220px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="ID, legajo, correo o nombre…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select
-            id="f-estado"
-            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-            value={estado}
-            onChange={(e) => {
-              setEstado(e.target.value as (typeof ESTADOS_MOVIMIENTO)[number] | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {ESTADOS_MOVIMIENTO.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="f-tipo">Tipo</Label>
-          <select
-            id="f-tipo"
-            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-            value={tipo}
-            onChange={(e) => {
-              setTipo(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {TIPO_OPCIONES.map((o) => (
-              <option key={o.code} value={o.code}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+      <div className="rounded-lg border bg-card p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <Label htmlFor="buscar">Buscar</Label>
+            <Input
+              id="buscar"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setPage(0);
+              }}
+              placeholder="ID, legajo, correo o nombre…"
+            />
+          </div>
+          <div className="w-[200px]">
+            <Label htmlFor="f-legajo">Legajo</Label>
+            <Input
+              id="f-legajo"
+              value={legajoInput}
+              onChange={(e) => {
+                setLegajoInput(e.target.value);
+                setPage(0);
+                navigate({
+                  to: "/admin/general/movimientos",
+                  search: e.target.value ? { legajo: e.target.value } : {},
+                });
+              }}
+              placeholder="LPF-… / LPJ-…"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-estado">Estado</Label>
+            <select
+              id="f-estado"
+              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+              value={estado}
+              onChange={(e) => {
+                setEstado(e.target.value as (typeof ESTADOS_MOVIMIENTO)[number] | "");
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              {ESTADOS_MOVIMIENTO.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="f-tipo">Tipo</Label>
+            <select
+              id="f-tipo"
+              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+              value={tipo}
+              onChange={(e) => {
+                setTipo(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              {TIPO_OPCIONES.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
