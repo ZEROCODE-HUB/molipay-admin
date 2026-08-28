@@ -42,6 +42,8 @@ import {
 } from "@/lib/api/subcuentas";
 import {
   listDocumentos,
+  DOCUMENTO_LABELS,
+  type DocumentoTipo,
 } from "@/lib/api/documentos";
 import {
   listHistorialCambios,
@@ -972,6 +974,23 @@ function SubcuentasTab({
   );
 }
 
+function esUrlImagen(url: string | null): boolean {
+  return !!url && /\.(jpe?g|png|gif|webp|jfif|avif|bmp)(\?|$)/i.test(url);
+}
+
+function fallbackImagenLocal(tipo: DocumentoTipo): string | null {
+  switch (tipo) {
+    case "id_frente":
+      return "/imagenes/natural-frente.jfif";
+    case "id_dorso":
+      return "/imagenes/natural-dorso.jfif";
+    case "selfie":
+      return "/imagenes/natural-selfie.jfif";
+    default:
+      return null;
+  }
+}
+
 function DocumentosTab({ legajo }: { legajo: string }) {
   const query = useQuery({
     queryKey: ["documentos", legajo],
@@ -979,7 +998,10 @@ function DocumentosTab({ legajo }: { legajo: string }) {
     enabled: !!legajo,
   });
 
-  const imagenes = imagenesParaLegajo(legajo);
+  const documentos = query.data ?? [];
+  const imagenesDemo = imagenesParaLegajo(legajo);
+  const mostrarDemo = documentos.length === 0 && imagenesDemo.length > 0;
+  const hayContenido = documentos.length > 0 || imagenesDemo.length > 0;
 
   return (
     <Seccion
@@ -987,15 +1009,59 @@ function DocumentosTab({ legajo }: { legajo: string }) {
       loading={query.isLoading}
       error={query.isError ? query.error : null}
       onRetry={() => query.refetch()}
-      vacio={!query.isLoading && imagenes.length === 0}
+      vacio={!query.isLoading && !hayContenido}
     >
-      {imagenes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-          Fotos no agregadas
-        </div>
-      ) : (
+      {documentos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {imagenes.map((img) => (
+          {documentos.map((doc) => {
+            const fallback = fallbackImagenLocal(doc.tipo);
+            return (
+              <div
+                key={doc.id}
+                className="overflow-hidden rounded-xl border border-border bg-card p-0"
+              >
+                <div className="h-32 w-full bg-muted">
+                  {doc.url && esUrlImagen(doc.url) ? (
+                    <img
+                      src={doc.url}
+                      alt={doc.label}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        const fb = fallbackImagenLocal(doc.tipo);
+                        if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                      }}
+                    />
+                  ) : doc.url ? (
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex h-full w-full items-center justify-center gap-2 px-2 text-center text-sm font-medium text-primary"
+                    >
+                      <Download size={16} /> Ver / descargar
+                    </a>
+                  ) : fallback ? (
+                    <img
+                      src={fallback}
+                      alt={doc.label}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                      Sin archivo
+                    </div>
+                  )}
+                </div>
+                <p className="px-4 py-2 text-sm font-semibold">
+                  {doc.label || DOCUMENTO_LABELS[doc.tipo]}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      ) : mostrarDemo ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {imagenesDemo.map((img) => (
             <div
               key={img.url}
               className="overflow-hidden rounded-xl border border-border bg-card p-0"
@@ -1006,6 +1072,10 @@ function DocumentosTab({ legajo }: { legajo: string }) {
               <p className="px-4 py-2 text-sm font-semibold">{img.label}</p>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          Fotos no agregadas
         </div>
       )}
     </Seccion>
