@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CheckCircle, XCircle, Edit3, Plus, Trash2, AlertTriangle, Inbox } from "lucide-react";
-import { PageHeader, Badge, Input, Label, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { PageHeader, Badge, Input, Label, BtnPrimary } from "@/components/portal-shell";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -19,19 +18,6 @@ import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { CodigoCategoria } from "@/lib/api/types";
-
-export const Route = createFileRoute("/admin/comercios/codigos/categoria")({
-  component: Page,
-  head: () => ({
-    meta: [
-      { title: "Códigos de categoría — Admin — Moli" },
-      {
-        name: "description",
-        content: "Administración de códigos de categoría para comercios.",
-      },
-    ],
-  }),
-});
 
 const PAGE_SIZE = 25;
 
@@ -162,7 +148,7 @@ function CategoriaFormModal({
   );
 }
 
-function Page() {
+export function CategoriaComercioPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState("");
@@ -339,36 +325,34 @@ function Page() {
         }
       />
 
-      <div className="rounded-lg border bg-card p-4 mb-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[200px]">
-            <Label htmlFor="buscar">Buscar</Label>
-            <Input
-              id="buscar"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                setPage(0);
-              }}
-              placeholder="Código, nombre o descripción…"
-            />
-          </div>
-          <div>
-            <Label htmlFor="f-estado">Estado</Label>
-            <select
-              id="f-estado"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-              value={estadoFilter}
-              onChange={(e) => {
-                setEstadoFilter(e.target.value as "activo" | "inactivo" | "");
-                setPage(0);
-              }}
-            >
-              <option value="">Todos</option>
-              <option value="activo">activo</option>
-              <option value="inactivo">inactivo</option>
-            </select>
-          </div>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <Label htmlFor="buscar">Buscar</Label>
+          <Input
+            id="buscar"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Código, nombre o descripción…"
+          />
+        </div>
+        <div>
+          <Label htmlFor="f-estado">Estado</Label>
+          <select
+            id="f-estado"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={estadoFilter}
+            onChange={(e) => {
+              setEstadoFilter(e.target.value as "activo" | "inactivo" | "");
+              setPage(0);
+            }}
+          >
+            <option value="">Todos</option>
+            <option value="activo">activo</option>
+            <option value="inactivo">inactivo</option>
+          </select>
         </div>
       </div>
 

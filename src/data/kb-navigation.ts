@@ -30,7 +30,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Link de pago — Admin — Moli  (/admin/comercios/link-pago)
    - Métodos de pago — Link de pago — Admin — Moli  (/admin/comercios/link-pago/metodos-pago)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
-   - Códigos de categoría — Admin — Moli  (/admin/comercios/codigos/categoria)
+   - Códigos de categoría — Admin — Moli  (/admin/comercios/transferencia/categorias)
 
 • Configuración:
    - Configuración — Admin — Moli  (/admin/configuracion)
@@ -165,7 +165,11 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Pagos con transferencia — Admin — Moli"
   },
   {
-    "path": "/admin/comercios/codigos/categoria",
+    "path": "/admin/comercios/transferencia/categorias",
+    "title": "Códigos de categoría — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/categoria",
     "title": "Códigos de categoría — Admin — Moli"
   },
   {
