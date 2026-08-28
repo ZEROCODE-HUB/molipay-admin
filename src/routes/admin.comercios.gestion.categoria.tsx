@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CategoriaComercioPage } from "@/components/categoria-comercio-page";
 
-export const Route = createFileRoute("/admin/comercios/categoria")({
+export const Route = createFileRoute("/admin/comercios/gestion/categoria")({
   component: CategoriaComercioPage,
   head: () => ({
     meta: [
