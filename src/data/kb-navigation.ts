@@ -18,8 +18,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Roles y permisos — Admin Panel  (/admin/administracion/usuarios/roles)
 
 • Comercios:
-   - Gestión — Admin — Moli  (/admin/comercios/gestion)
-   - Código de categoría — Admin — Moli  (/admin/comercios/gestion/categoria)
+   - Comercios — Admin — Moli  (/admin/comercios)
    - APIs externas — Admin — Moli  (/admin/comercios/apis)
    - APIs externas — Endpoints — Admin — Moli  (/admin/comercios/apis/endpoints)
    - Resolvers — APIs externas — Admin — Moli  (/admin/comercios/apis/resolvers)
@@ -30,8 +29,8 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Usuarios con impuestos — Admin — Moli  (/admin/comercios/impuestos/usuarios)
    - Link de pago — Admin — Moli  (/admin/comercios/link-pago)
    - Métodos de pago — Link de pago — Admin — Moli  (/admin/comercios/link-pago/metodos-pago)
-   - Transferencia — Admin — Moli  (/admin/comercios/transferencia)
-
+   - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
+   - Categorias  (/admin/comercios/transferencia/categorias)
 
 • Configuración:
    - Configuración — Admin — Moli  (/admin/configuracion)
@@ -162,16 +161,12 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Métodos de pago — Link de pago — Admin — Moli"
   },
   {
-    "path": "/admin/comercios/gestion",
-    "title": "Gestión — Admin — Moli"
-  },
-  {
     "path": "/admin/comercios/transferencia",
-    "title": "Transferencia — Admin — Moli"
+    "title": "Pagos con transferencia — Admin — Moli"
   },
   {
-    "path": "/admin/comercios/gestion/categoria",
-    "title": "Códigos de categoría — Admin — Moli"
+    "path": "/admin/comercios/transferencia/categorias",
+    "title": "Categorias"
   },
   {
     "path": "/admin/configuracion",
