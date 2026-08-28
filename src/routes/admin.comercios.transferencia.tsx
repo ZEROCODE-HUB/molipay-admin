@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout } from "@/components/tab-layout";
 
 export const Route = createFileRoute("/admin/comercios/transferencia")({
   component: TransferenciaLayout,
@@ -14,14 +13,7 @@ export const Route = createFileRoute("/admin/comercios/transferencia")({
 function TransferenciaLayout() {
   return (
     <div className="space-y-4">
-      <TabLayout
-        tabs={[
-          { label: "Comercios", to: "/admin/comercios/transferencia" },
-          { label: "Códigos de categoría", to: "/admin/comercios/transferencia/categorias" },
-        ]}
-      >
-        <Outlet />
-      </TabLayout>
+      <Outlet />
     </div>
   );
 }
