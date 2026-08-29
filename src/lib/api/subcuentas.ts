@@ -4,6 +4,20 @@ import { DataAccessError } from "./errors";
 export type SubcuentaTipo = "Operativa" | "Recaudacion" | "Garantias" | "Sueldos";
 export type SubcuentaEstado = "Activa" | "Pausada";
 
+export type SubcuentaParam = { label: string; valor: string };
+export type SubcuentaComision = {
+  id: string;
+  tipo: string;
+  monto: string;
+  fecha: string;
+  origen: string;
+};
+export type SubcuentaConfiguracion = {
+  alertas: SubcuentaParam[];
+  bloqueos: SubcuentaParam[];
+  comisiones: SubcuentaComision[];
+};
+
 export type Subcuenta = {
   id: string;
   clienteLegajo: string;
@@ -21,6 +35,8 @@ export type Subcuenta = {
   responsable: string | null;
   limite: string | null;
   retirosHabilitados: boolean;
+  validada?: boolean;
+  configuracion?: SubcuentaConfiguracion;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,12 +58,14 @@ type SubcuentaRow = {
   responsable: string | null;
   limite: string | null;
   retiros_habilitados: boolean;
+  validada: boolean;
+  configuracion: unknown;
   created_at: string;
   updated_at: string;
 };
 
 const COLUMNS =
-  "id, cliente_legajo, nombre, apellido, email, cbu, tipo, estado, saldo_disponible, saldo_retenido, saldo_conciliado, ingresos, egresos, responsable, limite, retiros_habilitados, created_at, updated_at";
+  "id, cliente_legajo, nombre, apellido, email, cbu, tipo, estado, saldo_disponible, saldo_retenido, saldo_conciliado, ingresos, egresos, responsable, limite, retiros_habilitados, validada, configuracion, created_at, updated_at";
 
 function toSubcuenta(r: SubcuentaRow): Subcuenta {
   return {
@@ -67,6 +85,12 @@ function toSubcuenta(r: SubcuentaRow): Subcuenta {
     responsable: r.responsable,
     limite: r.limite,
     retirosHabilitados: r.retiros_habilitados,
+    validada: r.validada,
+    configuracion: (r.configuracion as SubcuentaConfiguracion) ?? {
+      alertas: [],
+      bloqueos: [],
+      comisiones: [],
+    },
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -124,4 +148,51 @@ export async function createSubcuenta(
     .single();
   if (error) throw new DataAccessError(error);
   return toSubcuenta(data as SubcuentaRow);
+}
+
+export type SubcuentaUpdate = {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  cbu?: string | null;
+  tipo?: SubcuentaTipo;
+  estado?: SubcuentaEstado;
+  saldoDisponible?: number;
+  saldoRetenido?: number;
+  saldoConciliado?: number;
+  responsable?: string | null;
+  limite?: string | null;
+  retirosHabilitados?: boolean;
+  validada?: boolean;
+  configuracion?: SubcuentaConfiguracion;
+};
+
+export async function updateSubcuenta(
+  clienteLegajo: string,
+  id: string,
+  input: SubcuentaUpdate,
+): Promise<Subcuenta> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("subcuentas")
+    .update({ ...input })
+    .eq("id", id)
+    .eq("cliente_legajo", clienteLegajo)
+    .select(COLUMNS)
+    .single();
+  if (error) throw new DataAccessError(error);
+  return toSubcuenta(data as SubcuentaRow);
+}
+
+export async function deleteSubcuenta(
+  clienteLegajo: string,
+  id: string,
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb
+    .from("subcuentas")
+    .delete()
+    .eq("id", id)
+    .eq("cliente_legajo", clienteLegajo);
+  if (error) throw new DataAccessError(error);
 }

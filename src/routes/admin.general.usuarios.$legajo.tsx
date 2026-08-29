@@ -26,8 +26,10 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ModalDialog } from "@/components/modal-dialog";
+
 import { DataTable, type Column } from "@/components/data-table";
 import { PermissionGuard } from "@/components/permission-guard";
+import { toast } from "sonner";
 import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
 import { useClienteByLegajo } from "@/hooks/useClientes";
 import { useMovimientos } from "@/hooks/useMovimientos";
@@ -36,11 +38,15 @@ import { updateClienteEstado } from "@/lib/api/clientes";
 import {
   listSubcuentas,
   createSubcuenta,
+  updateSubcuenta,
+  deleteSubcuenta,
   type Subcuenta,
   type SubcuentaInput,
   type SubcuentaTipo,
   type SubcuentaEstado,
+  type SubcuentaUpdate,
 } from "@/lib/api/subcuentas";
+import { TablaSubcuentas, SubcuentaDetalleModal } from "@/components/subcuentas-tab";
 import {
   listDocumentos,
   DOCUMENTO_LABELS,
@@ -722,43 +728,6 @@ function TablaImpuestos({
   );
 }
 
-function TablaSubcuentas({ rows }: { rows: Subcuenta[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Nombre</th>
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">CBU</th>
-            <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium">Estado</th>
-            <th className="px-4 py-3 font-medium text-right">Saldo disp.</th>
-            <th className="px-4 py-3 font-medium text-right">Retiros</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((s) => (
-            <tr key={s.id} className="border-b border-border last:border-b-0">
-              <td className="px-4 py-3">{`${s.nombre} ${s.apellido}`.trim()}</td>
-              <td className="px-4 py-3">{s.email}</td>
-              <td className="px-4 py-3 font-mono text-xs">{s.cbu ?? "—"}</td>
-              <td className="px-4 py-3">{s.tipo}</td>
-              <td className="px-4 py-3">
-                <Badge tone={s.estado === "Activa" ? "success" : "neutral"}>{s.estado}</Badge>
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{fmtMonto(s.saldoDisponible)}</td>
-              <td className="px-4 py-3 text-right">
-                {s.retirosHabilitados ? "Habilitados" : "Bloqueados"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function camposIdentificacion(c: Cliente) {
   const personal: { label: string; valor: string }[] = [
     { label: "Legajo", valor: c.legajo },
@@ -826,6 +795,45 @@ function SubcuentasTab({
 
   const subcuentas = query.data ?? [];
   const totalSubcuentas = subcuentas.length;
+
+  const [subDetalle, setSubDetalle] = useState<Subcuenta | null>(null);
+  const [subAEliminar, setSubAEliminar] = useState<Subcuenta | null>(null);
+
+  const aplicarCambio = async (sub: Subcuenta, patch: SubcuentaUpdate) => {
+    try {
+      await updateSubcuenta(legajo, sub.id, patch);
+      await queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const onVerDetalles = (sub: Subcuenta) => setSubDetalle(sub);
+  const onValidar = async (sub: Subcuenta) => {
+    await aplicarCambio(sub, { validada: true });
+    toast.success(`Subcuenta "${sub.nombre}" validada`);
+  };
+  const onSuspender = async (sub: Subcuenta) => {
+    await aplicarCambio(sub, { estado: "Pausada" });
+    toast.success(`Subcuenta "${sub.nombre}" suspendida`);
+  };
+  const onReactivar = async (sub: Subcuenta) => {
+    await aplicarCambio(sub, { estado: "Activa" });
+    toast.success(`Subcuenta "${sub.nombre}" reactivada`);
+  };
+  const onEliminar = (sub: Subcuenta) => setSubAEliminar(sub);
+  const confirmarEliminar = async () => {
+    if (!subAEliminar) return;
+    try {
+      await deleteSubcuenta(legajo, subAEliminar.id);
+      await queryClient.invalidateQueries({ queryKey: ["subcuentas", legajo] });
+      toast.success("Subcuenta eliminada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSubAEliminar(null);
+    }
+  };
 
   const guardar = async () => {
     if (!form.nombre.trim() || !form.email.trim()) {
@@ -972,7 +980,35 @@ function SubcuentasTab({
           </div>
         </div>
       )}
-      <TablaSubcuentas rows={query.data ?? []} />
+      <TablaSubcuentas
+        rows={query.data ?? []}
+        onVerDetalles={onVerDetalles}
+        onValidar={onValidar}
+        onSuspender={onSuspender}
+        onReactivar={onReactivar}
+        onEliminar={onEliminar}
+      />
+
+      {subDetalle && (
+        <SubcuentaDetalleModal
+          subcuenta={subDetalle}
+          legajo={legajo}
+          onClose={() => setSubDetalle(null)}
+          onValidar={onValidar}
+          onSuspender={onSuspender}
+          onReactivar={onReactivar}
+          onEliminar={onEliminar}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!subAEliminar}
+        title="Eliminar subcuenta"
+        message={`¿Estás seguro de eliminar la subcuenta "${subAEliminar?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        onConfirm={confirmarEliminar}
+        onClose={() => setSubAEliminar(null)}
+      />
     </Seccion>
   );
 }

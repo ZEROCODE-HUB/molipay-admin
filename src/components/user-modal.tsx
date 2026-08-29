@@ -303,7 +303,7 @@ const statusOptions: { value: UserStatus; label: string }[] = [
   { value: "blocked", label: "Bloqueado" },
 ];
 
-const DEFAULT_PARAMS_ALERTAS: ParametroAlerta[] = [
+export const DEFAULT_PARAMS_ALERTAS: ParametroAlerta[] = [
   { label: "Depósitos por mes", valor: "10" },
   { label: "Depósitos salario mínimo por transferencia", valor: "5" },
   { label: "Transferencias por hora", valor: "10" },
@@ -312,7 +312,7 @@ const DEFAULT_PARAMS_ALERTAS: ParametroAlerta[] = [
   { label: "Política a menores", valor: "Bloquear" },
 ];
 
-const DEFAULT_PARAMS_BLOQUEO: ParametroBloqueo[] = [
+export const DEFAULT_PARAMS_BLOQUEO: ParametroBloqueo[] = [
   { label: "Salarios mínimos por persona", valor: "15" },
   { label: "Salarios mínimos por empresa", valor: "50" },
 ];
