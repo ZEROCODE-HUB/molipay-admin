@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  let body: { path?: string; bucket?: string; expiresIn?: number };
+  let body: { path?: string; paths?: string[]; bucket?: string; expiresIn?: number };
   try {
     body = await req.json();
   } catch {
@@ -86,8 +86,13 @@ Deno.serve(async (req) => {
   }
 
   const bucket = body.bucket ?? "kyc";
-  const path = body.path;
-  if (!path || typeof path !== "string") {
+  const paths = Array.isArray(body.paths)
+    ? body.paths.filter((p): p is string => typeof p === "string" && p.length > 0)
+    : body.path && typeof body.path === "string"
+      ? [body.path]
+      : [];
+
+  if (paths.length === 0) {
     return new Response(JSON.stringify({ error: "Falta el path del documento" }), {
       status: 400,
       headers: { ...cors, "content-type": "application/json" },
@@ -99,18 +104,30 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  const { data, error } = await adminSb.storage
-    .from(bucket)
-    .createSignedUrl(path, body.expiresIn ?? 3600);
+  const signedUrls: Record<string, string> = {};
+  for (const p of paths) {
+    const { data, error } = await adminSb.storage
+      .from(bucket)
+      .createSignedUrl(p, body.expiresIn ?? 3600);
+    if (!error && data?.signedUrl) signedUrls[p] = data.signedUrl;
+  }
 
-  if (error || !data?.signedUrl) {
+  // Respuesta única: un mapa path -> signedUrl (para lotes).
+  if (Array.isArray(body.paths)) {
+    return new Response(JSON.stringify({ signedUrls }), {
+      headers: { ...cors, "content-type": "application/json" },
+    });
+  }
+
+  // Respuesta legacy: un solo path.
+  const single = body.path as string;
+  if (!signedUrls[single]) {
     return new Response(
-      JSON.stringify({ error: error?.message ?? "No se pudo firmar el archivo" }),
+      JSON.stringify({ error: "No se pudo firmar el archivo" }),
       { status: 404, headers: { ...cors, "content-type": "application/json" } },
     );
   }
-
-  return new Response(JSON.stringify({ signedUrl: data.signedUrl }), {
+  return new Response(JSON.stringify({ signedUrl: signedUrls[single] }), {
     headers: { ...cors, "content-type": "application/json" },
   });
 });

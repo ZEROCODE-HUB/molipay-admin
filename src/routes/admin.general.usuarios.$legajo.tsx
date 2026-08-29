@@ -47,7 +47,7 @@ import {
   type Documento,
   type DocumentoTipo,
 } from "@/lib/api/documentos";
-import { useDocumentoUrl } from "@/lib/api/use-documento-url";
+import { useDocumentosUrls } from "@/lib/api/use-documento-url";
 import {
   listHistorialCambios,
   listValidaciones,
@@ -981,9 +981,38 @@ function esUrlImagen(url: string | null): boolean {
   return !!url && /\.(jpe?g|png|gif|webp|jfif|avif|bmp)(\?|$)/i.test(url);
 }
 
-function DocumentoCard({ doc, legajo }: { doc: Documento; legajo: string }) {
+function DocumentoCard({
+  doc,
+  legajo,
+  resolvedUrl,
+}: {
+  doc: Documento;
+  legajo: string;
+  resolvedUrl: string | null;
+}) {
   const [error, setError] = useState(false);
-  const resolved = useDocumentoUrl(doc.url, legajo);
+  const resolved = resolvedUrl;
+
+  const descargar = async () => {
+    if (!resolved) return;
+    const nombre = `${DOCUMENTO_LABELS[doc.tipo] ?? doc.label ?? "documento"}${
+      doc.url ? "." + doc.url.split(".").pop() : ""
+    }`;
+    try {
+      const res = await fetch(resolved);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = nombre;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(resolved, "_blank", "noreferrer");
+    }
+  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card p-0">
@@ -1023,9 +1052,35 @@ function DocumentoCard({ doc, legajo }: { doc: Documento; legajo: string }) {
           </a>
         )}
       </div>
-      <p className="px-4 py-2 text-sm font-semibold">
-        {DOCUMENTO_LABELS[doc.tipo] ?? doc.label ?? "Documento"}
-      </p>
+      <div className="flex items-center justify-between gap-2 px-4 py-2">
+        <p className="text-sm font-semibold">
+          {DOCUMENTO_LABELS[doc.tipo] ?? doc.label ?? "Documento"}
+        </p>
+        <div className="flex items-center gap-1">
+          <a
+            href={resolved ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            title="Ver documento"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-40"
+            aria-disabled={!resolved}
+            onClick={(e) => {
+              if (!resolved) e.preventDefault();
+            }}
+          >
+            <Eye size={14} />
+          </a>
+          <button
+            type="button"
+            title="Descargar documento"
+            onClick={descargar}
+            disabled={!resolved}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-40"
+          >
+            <Download size={14} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1038,6 +1093,7 @@ function DocumentosTab({ legajo }: { legajo: string }) {
   });
 
   const documentos = query.data ?? [];
+  const urls = useDocumentosUrls(documentos, legajo);
   const imagenesDemo = imagenesParaLegajo(legajo);
   const mostrarDemo = documentos.length === 0 && imagenesDemo.length > 0;
   const hayContenido = documentos.length > 0 || imagenesDemo.length > 0;
@@ -1053,7 +1109,12 @@ function DocumentosTab({ legajo }: { legajo: string }) {
       {documentos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {documentos.map((doc) => (
-            <DocumentoCard key={doc.id} doc={doc} legajo={legajo} />
+            <DocumentoCard
+              key={doc.id}
+              doc={doc}
+              legajo={legajo}
+              resolvedUrl={urls[doc.id] ?? null}
+            />
           ))}
         </div>
       ) : mostrarDemo ? (

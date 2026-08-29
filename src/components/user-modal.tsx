@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   X,
@@ -45,6 +45,28 @@ function DocumentoMiniCard({
   onOpen: (url: string) => void;
 }) {
   const resolved = useDocumentoUrl(url, legajo);
+
+  const descargar = async (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    if (!resolved) return;
+    const ext = url ? "." + url.split(".").pop() : "";
+    const nombre = `${label}${ext}`;
+    try {
+      const res = await fetch(resolved);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = nombre;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(resolved, "_blank", "noreferrer");
+    }
+  };
+
   return (
     <button
       type="button"
@@ -67,6 +89,17 @@ function DocumentoMiniCard({
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
         <span className="text-[10px] text-white font-medium">{label}</span>
       </div>
+      {resolved && (
+        <span
+          role="button"
+          tabIndex={-1}
+          title="Descargar documento"
+          onClick={descargar}
+          className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white hover:bg-black/75"
+        >
+          <Download size={12} />
+        </span>
+      )}
     </button>
   );
 }
