@@ -23,6 +23,8 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - APIs externas — Endpoints — Admin — Moli  (/admin/comercios/apis/endpoints)
    - Resolvers — APIs externas — Admin — Moli  (/admin/comercios/apis/resolvers)
    - APIs externas — Restricciones — Admin — Moli  (/admin/comercios/apis/restricciones)
+   - Gestión — Admin — Moli  (/admin/comercios/gestion)
+   - Códigos de categoría — Admin — Moli  (/admin/comercios/gestion/categoria)
    - Impuestos — Admin — Moli  (/admin/comercios/impuestos)
    - Débitos y créditos — Admin — Moli  (/admin/comercios/impuestos/debitos-creditos)
    - Ingresos Brutos — Admin — Moli  (/admin/comercios/impuestos/ingresos-brutos)
@@ -30,7 +32,6 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Link de pago — Admin — Moli  (/admin/comercios/link-pago)
    - Métodos de pago — Link de pago — Admin — Moli  (/admin/comercios/link-pago/metodos-pago)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
-   - Categorias  (/admin/comercios/transferencia/categorias)
 
 • Configuración:
    - Configuración — Admin — Moli  (/admin/configuracion)
@@ -137,6 +138,14 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "APIs externas — Restricciones — Admin — Moli"
   },
   {
+    "path": "/admin/comercios/gestion",
+    "title": "Gestión — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/gestion/categoria",
+    "title": "Códigos de categoría — Admin — Moli"
+  },
+  {
     "path": "/admin/comercios/impuestos",
     "title": "Impuestos — Admin — Moli"
   },
@@ -163,10 +172,6 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   {
     "path": "/admin/comercios/transferencia",
     "title": "Pagos con transferencia — Admin — Moli"
-  },
-  {
-    "path": "/admin/comercios/transferencia/categorias",
-    "title": "Categorias"
   },
   {
     "path": "/admin/configuracion",

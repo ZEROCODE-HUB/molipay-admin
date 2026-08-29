@@ -43,11 +43,11 @@ import {
 } from "@/lib/api/subcuentas";
 import {
   listDocumentos,
-  resolveDocumentoUrl,
   DOCUMENTO_LABELS,
   type Documento,
   type DocumentoTipo,
 } from "@/lib/api/documentos";
+import { useDocumentoUrl } from "@/lib/api/use-documento-url";
 import {
   listHistorialCambios,
   listValidaciones,
@@ -983,7 +983,7 @@ function esUrlImagen(url: string | null): boolean {
 
 function DocumentoCard({ doc, legajo }: { doc: Documento; legajo: string }) {
   const [error, setError] = useState(false);
-  const resolved = resolveDocumentoUrl(doc.url, legajo);
+  const resolved = useDocumentoUrl(doc.url, legajo);
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card p-0">

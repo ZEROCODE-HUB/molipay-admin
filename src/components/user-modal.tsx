@@ -30,7 +30,45 @@ import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DataTable, type Column } from "./data-table";
-import { resolveDocumentoUrl } from "@/lib/api/documentos";
+import { useDocumentoUrl } from "@/lib/api/use-documento-url";
+
+function DocumentoMiniCard({
+  url,
+  legajo,
+  label,
+  onOpen,
+}: {
+  url: string | null;
+  legajo: string;
+  label: string;
+  onOpen: (url: string) => void;
+}) {
+  const resolved = useDocumentoUrl(url, legajo);
+  return (
+    <button
+      type="button"
+      disabled={!resolved}
+      onClick={() => resolved && onOpen(resolved)}
+      className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition disabled:cursor-default"
+    >
+      {resolved ? (
+        <img
+          src={resolved}
+          alt={label}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] text-muted-foreground">
+          {url ? "Cargando…" : "Sin archivo"}
+        </div>
+      )}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+        <span className="text-[10px] text-white font-medium">{label}</span>
+      </div>
+    </button>
+  );
+}
 
 export type UserStatus = "active" | "inactive" | "pending" | "blocked";
 
@@ -1152,27 +1190,15 @@ export function UserModal({
     documentos: () => (
       <div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {existingDocs.map((doc) => {
-            const preview = resolveDocumentoUrl(doc.url ?? null, user.legajo);
-            return (
-            <button
+          {existingDocs.map((doc) => (
+            <DocumentoMiniCard
               key={doc.id}
-              type="button"
-              onClick={() => preview && setPreviewImg(preview)}
-              className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition"
-            >
-              <img
-                src={preview ?? doc.url}
-                alt={doc.label}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                <span className="text-[10px] text-white font-medium">{doc.label}</span>
-              </div>
-            </button>
-            );
-          })}
+              url={doc.url ?? null}
+              legajo={user.legajo}
+              label={doc.label}
+              onOpen={(u) => u && setPreviewImg(u)}
+            />
+          ))}
           {missingDocTypes.map((tipo) => (
             <button
               key={tipo}
