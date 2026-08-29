@@ -31,6 +31,7 @@ import { FormDialog } from "./form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DataTable, type Column } from "./data-table";
 import { useDocumentoUrl } from "@/lib/api/use-documento-url";
+import { DOCUMENTO_LABELS } from "@/lib/api/documentos";
 
 function DocumentoMiniCard({
   url,
@@ -1195,7 +1196,7 @@ export function UserModal({
               key={doc.id}
               url={doc.url ?? null}
               legajo={user.legajo}
-              label={doc.label}
+              label={DOCUMENTO_LABELS[doc.tipo] ?? doc.label}
               onOpen={(u) => u && setPreviewImg(u)}
             />
           ))}

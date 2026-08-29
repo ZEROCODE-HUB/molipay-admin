@@ -4,10 +4,10 @@ import { DataAccessError } from "./errors";
 export type DocumentoTipo = "id_frente" | "id_dorso" | "servicio" | "selfie";
 
 export const DOCUMENTO_LABELS: Record<DocumentoTipo, string> = {
-  id_frente: "Documento frente",
-  id_dorso: "Documento dorso",
+  id_frente: "DNI anverso",
+  id_dorso: "DNI reverso",
   servicio: "Comprobante de servicio",
-  selfie: "Selfie verificatoria",
+  selfie: "Selfie de verificación",
 };
 
 export type Documento = {

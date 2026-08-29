@@ -1024,7 +1024,7 @@ function DocumentoCard({ doc, legajo }: { doc: Documento; legajo: string }) {
         )}
       </div>
       <p className="px-4 py-2 text-sm font-semibold">
-        {doc.label || DOCUMENTO_LABELS[doc.tipo]}
+        {DOCUMENTO_LABELS[doc.tipo] ?? doc.label ?? "Documento"}
       </p>
     </div>
   );
