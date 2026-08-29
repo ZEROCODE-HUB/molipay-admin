@@ -125,9 +125,11 @@ export function SubcuentaDetalleModal({
   onEliminar: (s: Subcuenta) => void;
 }) {
   const queryClient = useQueryClient();
-  const [config, setConfig] = useState<SubcuentaConfiguracion>(
-    subcuenta.configuracion ?? { alertas: [], bloqueos: [], comisiones: [] },
-  );
+  const [config, setConfig] = useState<SubcuentaConfiguracion>({
+    alertas: subcuenta.configuracion?.alertas ?? [],
+    bloqueos: subcuenta.configuracion?.bloqueos ?? [],
+    comisiones: subcuenta.configuracion?.comisiones ?? [],
+  });
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {

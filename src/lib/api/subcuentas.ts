@@ -86,10 +86,10 @@ function toSubcuenta(r: SubcuentaRow): Subcuenta {
     limite: r.limite,
     retirosHabilitados: r.retiros_habilitados,
     validada: r.validada,
-    configuracion: (r.configuracion as SubcuentaConfiguracion) ?? {
-      alertas: [],
-      bloqueos: [],
-      comisiones: [],
+    configuracion: {
+      alertas: (r.configuracion as SubcuentaConfiguracion | null)?.alertas ?? [],
+      bloqueos: (r.configuracion as SubcuentaConfiguracion | null)?.bloqueos ?? [],
+      comisiones: (r.configuracion as SubcuentaConfiguracion | null)?.comisiones ?? [],
     },
     createdAt: r.created_at,
     updatedAt: r.updated_at,
