@@ -15,6 +15,7 @@ import {
   Globe,
   Check,
   Download,
+  ImageOff,
   Eye,
   FileUp,
   Ban,
@@ -42,7 +43,9 @@ import {
 } from "@/lib/api/subcuentas";
 import {
   listDocumentos,
+  resolveDocumentoUrl,
   DOCUMENTO_LABELS,
+  type Documento,
   type DocumentoTipo,
 } from "@/lib/api/documentos";
 import {
@@ -978,17 +981,53 @@ function esUrlImagen(url: string | null): boolean {
   return !!url && /\.(jpe?g|png|gif|webp|jfif|avif|bmp)(\?|$)/i.test(url);
 }
 
-function fallbackImagenLocal(tipo: DocumentoTipo): string | null {
-  switch (tipo) {
-    case "id_frente":
-      return "/imagenes/natural-frente.jfif";
-    case "id_dorso":
-      return "/imagenes/natural-dorso.jfif";
-    case "selfie":
-      return "/imagenes/natural-selfie.jfif";
-    default:
-      return null;
-  }
+function DocumentoCard({ doc, legajo }: { doc: Documento; legajo: string }) {
+  const [error, setError] = useState(false);
+  const resolved = resolveDocumentoUrl(doc.url, legajo);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card p-0">
+      <div className="h-32 w-full bg-muted">
+        {!resolved ? (
+          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            Sin archivo
+          </div>
+        ) : error ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center text-xs text-muted-foreground">
+            <ImageOff size={18} />
+            <span>No se pudo cargar</span>
+            <a
+              href={resolved}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-primary underline"
+            >
+              Abrir enlace
+            </a>
+          </div>
+        ) : esUrlImagen(resolved) ? (
+          <img
+            src={resolved}
+            alt={doc.label}
+            className="h-full w-full object-cover"
+            onError={() => setError(true)}
+          />
+        ) : (
+          <a
+            href={resolved}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-full w-full items-center justify-center gap-2 px-2 text-center text-sm font-medium text-primary"
+          >
+            <Download size={16} /> Ver / descargar
+          </a>
+        )}
+      </div>
+      <p className="px-4 py-2 text-sm font-semibold">
+        {doc.label || DOCUMENTO_LABELS[doc.tipo]}
+      </p>
+    </div>
+  );
 }
 
 function DocumentosTab({ legajo }: { legajo: string }) {
@@ -1013,51 +1052,9 @@ function DocumentosTab({ legajo }: { legajo: string }) {
     >
       {documentos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {documentos.map((doc) => {
-            const fallback = fallbackImagenLocal(doc.tipo);
-            return (
-              <div
-                key={doc.id}
-                className="overflow-hidden rounded-xl border border-border bg-card p-0"
-              >
-                <div className="h-32 w-full bg-muted">
-                  {doc.url && esUrlImagen(doc.url) ? (
-                    <img
-                      src={doc.url}
-                      alt={doc.label}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        const fb = fallbackImagenLocal(doc.tipo);
-                        if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                      }}
-                    />
-                  ) : doc.url ? (
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex h-full w-full items-center justify-center gap-2 px-2 text-center text-sm font-medium text-primary"
-                    >
-                      <Download size={16} /> Ver / descargar
-                    </a>
-                  ) : fallback ? (
-                    <img
-                      src={fallback}
-                      alt={doc.label}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      Sin archivo
-                    </div>
-                  )}
-                </div>
-                <p className="px-4 py-2 text-sm font-semibold">
-                  {doc.label || DOCUMENTO_LABELS[doc.tipo]}
-                </p>
-              </div>
-            );
-          })}
+          {documentos.map((doc) => (
+            <DocumentoCard key={doc.id} doc={doc} legajo={legajo} />
+          ))}
         </div>
       ) : mostrarDemo ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

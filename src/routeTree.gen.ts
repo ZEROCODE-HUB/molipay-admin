@@ -32,6 +32,7 @@ import { Route as AdminConfiguracionConfiguracionesRouteImport } from './routes/
 import { Route as AdminComerciosTransferenciaRouteImport } from './routes/admin.comercios.transferencia'
 import { Route as AdminComerciosLinkPagoRouteImport } from './routes/admin.comercios.link-pago'
 import { Route as AdminComerciosImpuestosRouteImport } from './routes/admin.comercios.impuestos'
+import { Route as AdminComerciosGestionRouteImport } from './routes/admin.comercios.gestion'
 import { Route as AdminComerciosApisRouteImport } from './routes/admin.comercios.apis'
 import { Route as AdminAdministracionUsuariosRouteImport } from './routes/admin.administracion.usuarios'
 import { Route as AdminAdministracionSoporteRouteImport } from './routes/admin.administracion.soporte'
@@ -43,6 +44,7 @@ import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.gen
 import { Route as AdminComerciosTransferenciaIndexRouteImport } from './routes/admin.comercios.transferencia.index'
 import { Route as AdminComerciosLinkPagoIndexRouteImport } from './routes/admin.comercios.link-pago.index'
 import { Route as AdminComerciosImpuestosIndexRouteImport } from './routes/admin.comercios.impuestos.index'
+import { Route as AdminComerciosGestionIndexRouteImport } from './routes/admin.comercios.gestion.index'
 import { Route as AdminComerciosApisIndexRouteImport } from './routes/admin.comercios.apis.index'
 import { Route as AdminAdministracionUsuariosIndexRouteImport } from './routes/admin.administracion.usuarios.index'
 import { Route as AdminAdministracionSoporteIndexRouteImport } from './routes/admin.administracion.soporte.index'
@@ -61,11 +63,11 @@ import { Route as AdminGeneralMovimientosCobrosQrRouteImport } from './routes/ad
 import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './routes/admin.general.alertas.parametros-bloqueos'
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
-import { Route as AdminComerciosTransferenciaCategoriasRouteImport } from './routes/admin.comercios.transferencia.categorias'
 import { Route as AdminComerciosLinkPagoMetodosPagoRouteImport } from './routes/admin.comercios.link-pago.metodos-pago'
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
 import { Route as AdminComerciosImpuestosIngresosBrutosRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos'
 import { Route as AdminComerciosImpuestosDebitosCreditosRouteImport } from './routes/admin.comercios.impuestos.debitos-creditos'
+import { Route as AdminComerciosGestionCategoriaRouteImport } from './routes/admin.comercios.gestion.categoria'
 import { Route as AdminComerciosApisRestriccionesRouteImport } from './routes/admin.comercios.apis.restricciones'
 import { Route as AdminComerciosApisResolversRouteImport } from './routes/admin.comercios.apis.resolvers'
 import { Route as AdminComerciosApisEndpointsRouteImport } from './routes/admin.comercios.apis.endpoints'
@@ -194,6 +196,11 @@ const AdminComerciosImpuestosRoute = AdminComerciosImpuestosRouteImport.update({
   path: '/impuestos',
   getParentRoute: () => AdminComerciosRoute,
 } as any)
+const AdminComerciosGestionRoute = AdminComerciosGestionRouteImport.update({
+  id: '/gestion',
+  path: '/gestion',
+  getParentRoute: () => AdminComerciosRoute,
+} as any)
 const AdminComerciosApisRoute = AdminComerciosApisRouteImport.update({
   id: '/apis',
   path: '/apis',
@@ -258,6 +265,12 @@ const AdminComerciosImpuestosIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AdminComerciosImpuestosRoute,
+  } as any)
+const AdminComerciosGestionIndexRoute =
+  AdminComerciosGestionIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminComerciosGestionRoute,
   } as any)
 const AdminComerciosApisIndexRoute = AdminComerciosApisIndexRouteImport.update({
   id: '/',
@@ -365,12 +378,6 @@ const AdminGeneralAlertasBloqueosRoute =
     path: '/bloqueos',
     getParentRoute: () => AdminGeneralAlertasRoute,
   } as any)
-const AdminComerciosTransferenciaCategoriasRoute =
-  AdminComerciosTransferenciaCategoriasRouteImport.update({
-    id: '/categorias',
-    path: '/categorias',
-    getParentRoute: () => AdminComerciosTransferenciaRoute,
-  } as any)
 const AdminComerciosLinkPagoMetodosPagoRoute =
   AdminComerciosLinkPagoMetodosPagoRouteImport.update({
     id: '/metodos-pago',
@@ -394,6 +401,12 @@ const AdminComerciosImpuestosDebitosCreditosRoute =
     id: '/debitos-creditos',
     path: '/debitos-creditos',
     getParentRoute: () => AdminComerciosImpuestosRoute,
+  } as any)
+const AdminComerciosGestionCategoriaRoute =
+  AdminComerciosGestionCategoriaRouteImport.update({
+    id: '/categoria',
+    path: '/categoria',
+    getParentRoute: () => AdminComerciosGestionRoute,
   } as any)
 const AdminComerciosApisRestriccionesRoute =
   AdminComerciosApisRestriccionesRouteImport.update({
@@ -462,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
   '/admin/comercios/apis': typeof AdminComerciosApisRouteWithChildren
+  '/admin/comercios/gestion': typeof AdminComerciosGestionRouteWithChildren
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRouteWithChildren
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
@@ -480,11 +494,11 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/resolvers': typeof AdminComerciosApisResolversRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
+  '/admin/comercios/gestion/categoria': typeof AdminComerciosGestionCategoriaRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
-  '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -503,6 +517,7 @@ export interface FileRoutesByFullPath {
   '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
+  '/admin/comercios/gestion/': typeof AdminComerciosGestionIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/link-pago/': typeof AdminComerciosLinkPagoIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
@@ -533,10 +548,10 @@ export interface FileRoutesByTo {
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/resolvers': typeof AdminComerciosApisResolversRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
+  '/admin/comercios/gestion/categoria': typeof AdminComerciosGestionCategoriaRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
-  '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -555,6 +570,7 @@ export interface FileRoutesByTo {
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/comercios/apis': typeof AdminComerciosApisIndexRoute
+  '/admin/comercios/gestion': typeof AdminComerciosGestionIndexRoute
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoIndexRoute
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaIndexRoute
@@ -582,6 +598,7 @@ export interface FileRoutesById {
   '/admin/administracion/soporte': typeof AdminAdministracionSoporteRouteWithChildren
   '/admin/administracion/usuarios': typeof AdminAdministracionUsuariosRouteWithChildren
   '/admin/comercios/apis': typeof AdminComerciosApisRouteWithChildren
+  '/admin/comercios/gestion': typeof AdminComerciosGestionRouteWithChildren
   '/admin/comercios/impuestos': typeof AdminComerciosImpuestosRouteWithChildren
   '/admin/comercios/link-pago': typeof AdminComerciosLinkPagoRouteWithChildren
   '/admin/comercios/transferencia': typeof AdminComerciosTransferenciaRouteWithChildren
@@ -600,11 +617,11 @@ export interface FileRoutesById {
   '/admin/comercios/apis/endpoints': typeof AdminComerciosApisEndpointsRoute
   '/admin/comercios/apis/resolvers': typeof AdminComerciosApisResolversRoute
   '/admin/comercios/apis/restricciones': typeof AdminComerciosApisRestriccionesRoute
+  '/admin/comercios/gestion/categoria': typeof AdminComerciosGestionCategoriaRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
-  '/admin/comercios/transferencia/categorias': typeof AdminComerciosTransferenciaCategoriasRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -623,6 +640,7 @@ export interface FileRoutesById {
   '/admin/administracion/soporte/': typeof AdminAdministracionSoporteIndexRoute
   '/admin/administracion/usuarios/': typeof AdminAdministracionUsuariosIndexRoute
   '/admin/comercios/apis/': typeof AdminComerciosApisIndexRoute
+  '/admin/comercios/gestion/': typeof AdminComerciosGestionIndexRoute
   '/admin/comercios/impuestos/': typeof AdminComerciosImpuestosIndexRoute
   '/admin/comercios/link-pago/': typeof AdminComerciosLinkPagoIndexRoute
   '/admin/comercios/transferencia/': typeof AdminComerciosTransferenciaIndexRoute
@@ -651,6 +669,7 @@ export interface FileRouteTypes {
     | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/comercios/apis'
+    | '/admin/comercios/gestion'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
@@ -669,11 +688,11 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/resolvers'
     | '/admin/comercios/apis/restricciones'
+    | '/admin/comercios/gestion/categoria'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/link-pago/metodos-pago'
-    | '/admin/comercios/transferencia/categorias'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -692,6 +711,7 @@ export interface FileRouteTypes {
     | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
     | '/admin/comercios/apis/'
+    | '/admin/comercios/gestion/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/link-pago/'
     | '/admin/comercios/transferencia/'
@@ -722,10 +742,10 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/resolvers'
     | '/admin/comercios/apis/restricciones'
+    | '/admin/comercios/gestion/categoria'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/link-pago/metodos-pago'
-    | '/admin/comercios/transferencia/categorias'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -744,6 +764,7 @@ export interface FileRouteTypes {
     | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/comercios/apis'
+    | '/admin/comercios/gestion'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
@@ -770,6 +791,7 @@ export interface FileRouteTypes {
     | '/admin/administracion/soporte'
     | '/admin/administracion/usuarios'
     | '/admin/comercios/apis'
+    | '/admin/comercios/gestion'
     | '/admin/comercios/impuestos'
     | '/admin/comercios/link-pago'
     | '/admin/comercios/transferencia'
@@ -788,11 +810,11 @@ export interface FileRouteTypes {
     | '/admin/comercios/apis/endpoints'
     | '/admin/comercios/apis/resolvers'
     | '/admin/comercios/apis/restricciones'
+    | '/admin/comercios/gestion/categoria'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
     | '/admin/comercios/link-pago/metodos-pago'
-    | '/admin/comercios/transferencia/categorias'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -811,6 +833,7 @@ export interface FileRouteTypes {
     | '/admin/administracion/soporte/'
     | '/admin/administracion/usuarios/'
     | '/admin/comercios/apis/'
+    | '/admin/comercios/gestion/'
     | '/admin/comercios/impuestos/'
     | '/admin/comercios/link-pago/'
     | '/admin/comercios/transferencia/'
@@ -992,6 +1015,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosImpuestosRouteImport
       parentRoute: typeof AdminComerciosRoute
     }
+    '/admin/comercios/gestion': {
+      id: '/admin/comercios/gestion'
+      path: '/gestion'
+      fullPath: '/admin/comercios/gestion'
+      preLoaderRoute: typeof AdminComerciosGestionRouteImport
+      parentRoute: typeof AdminComerciosRoute
+    }
     '/admin/comercios/apis': {
       id: '/admin/comercios/apis'
       path: '/apis'
@@ -1068,6 +1098,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/comercios/impuestos/'
       preLoaderRoute: typeof AdminComerciosImpuestosIndexRouteImport
       parentRoute: typeof AdminComerciosImpuestosRoute
+    }
+    '/admin/comercios/gestion/': {
+      id: '/admin/comercios/gestion/'
+      path: '/'
+      fullPath: '/admin/comercios/gestion/'
+      preLoaderRoute: typeof AdminComerciosGestionIndexRouteImport
+      parentRoute: typeof AdminComerciosGestionRoute
     }
     '/admin/comercios/apis/': {
       id: '/admin/comercios/apis/'
@@ -1195,13 +1232,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGeneralAlertasBloqueosRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
     }
-    '/admin/comercios/transferencia/categorias': {
-      id: '/admin/comercios/transferencia/categorias'
-      path: '/categorias'
-      fullPath: '/admin/comercios/transferencia/categorias'
-      preLoaderRoute: typeof AdminComerciosTransferenciaCategoriasRouteImport
-      parentRoute: typeof AdminComerciosTransferenciaRoute
-    }
     '/admin/comercios/link-pago/metodos-pago': {
       id: '/admin/comercios/link-pago/metodos-pago'
       path: '/metodos-pago'
@@ -1229,6 +1259,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/comercios/impuestos/debitos-creditos'
       preLoaderRoute: typeof AdminComerciosImpuestosDebitosCreditosRouteImport
       parentRoute: typeof AdminComerciosImpuestosRoute
+    }
+    '/admin/comercios/gestion/categoria': {
+      id: '/admin/comercios/gestion/categoria'
+      path: '/categoria'
+      fullPath: '/admin/comercios/gestion/categoria'
+      preLoaderRoute: typeof AdminComerciosGestionCategoriaRouteImport
+      parentRoute: typeof AdminComerciosGestionRoute
     }
     '/admin/comercios/apis/restricciones': {
       id: '/admin/comercios/apis/restricciones'
@@ -1306,6 +1343,21 @@ const AdminComerciosApisRouteChildren: AdminComerciosApisRouteChildren = {
 const AdminComerciosApisRouteWithChildren =
   AdminComerciosApisRoute._addFileChildren(AdminComerciosApisRouteChildren)
 
+interface AdminComerciosGestionRouteChildren {
+  AdminComerciosGestionCategoriaRoute: typeof AdminComerciosGestionCategoriaRoute
+  AdminComerciosGestionIndexRoute: typeof AdminComerciosGestionIndexRoute
+}
+
+const AdminComerciosGestionRouteChildren: AdminComerciosGestionRouteChildren = {
+  AdminComerciosGestionCategoriaRoute: AdminComerciosGestionCategoriaRoute,
+  AdminComerciosGestionIndexRoute: AdminComerciosGestionIndexRoute,
+}
+
+const AdminComerciosGestionRouteWithChildren =
+  AdminComerciosGestionRoute._addFileChildren(
+    AdminComerciosGestionRouteChildren,
+  )
+
 interface AdminComerciosImpuestosIngresosBrutosRouteChildren {
   AdminComerciosImpuestosIngresosBrutosIndexRoute: typeof AdminComerciosImpuestosIngresosBrutosIndexRoute
 }
@@ -1361,14 +1413,11 @@ const AdminComerciosLinkPagoRouteWithChildren =
   )
 
 interface AdminComerciosTransferenciaRouteChildren {
-  AdminComerciosTransferenciaCategoriasRoute: typeof AdminComerciosTransferenciaCategoriasRoute
   AdminComerciosTransferenciaIndexRoute: typeof AdminComerciosTransferenciaIndexRoute
 }
 
 const AdminComerciosTransferenciaRouteChildren: AdminComerciosTransferenciaRouteChildren =
   {
-    AdminComerciosTransferenciaCategoriasRoute:
-      AdminComerciosTransferenciaCategoriasRoute,
     AdminComerciosTransferenciaIndexRoute:
       AdminComerciosTransferenciaIndexRoute,
   }
@@ -1380,6 +1429,7 @@ const AdminComerciosTransferenciaRouteWithChildren =
 
 interface AdminComerciosRouteChildren {
   AdminComerciosApisRoute: typeof AdminComerciosApisRouteWithChildren
+  AdminComerciosGestionRoute: typeof AdminComerciosGestionRouteWithChildren
   AdminComerciosImpuestosRoute: typeof AdminComerciosImpuestosRouteWithChildren
   AdminComerciosLinkPagoRoute: typeof AdminComerciosLinkPagoRouteWithChildren
   AdminComerciosTransferenciaRoute: typeof AdminComerciosTransferenciaRouteWithChildren
@@ -1388,6 +1438,7 @@ interface AdminComerciosRouteChildren {
 
 const AdminComerciosRouteChildren: AdminComerciosRouteChildren = {
   AdminComerciosApisRoute: AdminComerciosApisRouteWithChildren,
+  AdminComerciosGestionRoute: AdminComerciosGestionRouteWithChildren,
   AdminComerciosImpuestosRoute: AdminComerciosImpuestosRouteWithChildren,
   AdminComerciosLinkPagoRoute: AdminComerciosLinkPagoRouteWithChildren,
   AdminComerciosTransferenciaRoute:

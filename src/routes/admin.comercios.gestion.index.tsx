@@ -37,7 +37,7 @@ import type {
 } from "@/lib/api/types";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
 
-export const Route = createFileRoute("/admin/comercios/gestion")({
+export const Route = createFileRoute("/admin/comercios/gestion/")({
   component: Page,
   head: () => ({
     meta: [

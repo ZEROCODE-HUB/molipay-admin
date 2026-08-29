@@ -30,6 +30,7 @@ import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DataTable, type Column } from "./data-table";
+import { resolveDocumentoUrl } from "@/lib/api/documentos";
 
 export type UserStatus = "active" | "inactive" | "pending" | "blocked";
 
@@ -1151,15 +1152,17 @@ export function UserModal({
     documentos: () => (
       <div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {existingDocs.map((doc) => (
+          {existingDocs.map((doc) => {
+            const preview = resolveDocumentoUrl(doc.url ?? null, user.legajo);
+            return (
             <button
               key={doc.id}
               type="button"
-              onClick={() => setPreviewImg(doc.url!)}
+              onClick={() => preview && setPreviewImg(preview)}
               className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition"
             >
               <img
-                src={doc.url}
+                src={preview ?? doc.url}
                 alt={doc.label}
                 className="w-full h-full object-cover"
                 loading="lazy"
@@ -1168,7 +1171,8 @@ export function UserModal({
                 <span className="text-[10px] text-white font-medium">{doc.label}</span>
               </div>
             </button>
-          ))}
+            );
+          })}
           {missingDocTypes.map((tipo) => (
             <button
               key={tipo}

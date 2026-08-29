@@ -52,6 +52,24 @@ export async function listDocumentos(clienteLegajo: string): Promise<Documento[]
   return ((data as DocumentoRow[]) ?? []).map(toDocumento);
 }
 
+/**
+ * Convierte el valor de `documentos.url` en una URL absoluta y visible.
+ *
+ * En producción la columna `url` suele guardar solo el nombre del archivo
+ * (ej. "id_frente.jfif") o una ruta de Storage, no una URL completa. Si es
+ * absoluta se respeta; si no, se construye contra la base de Storage
+ * configurada (VITE_STORAGE_BASE_URL), con el legajo como carpeta.
+ */
+export function resolveDocumentoUrl(raw: string | null, legajo: string): string | null {
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("blob:")) return raw;
+  const base =
+    (import.meta.env.VITE_STORAGE_BASE_URL as string | undefined)?.replace(/\/+$/, "") ??
+    "https://storage.molipay.com/docs";
+  const file = raw.replace(/^\/+/, "");
+  return `${base}/${legajo}/${file}`;
+}
+
 export type DocumentoInput = {
   tipo: DocumentoTipo;
   url?: string;
