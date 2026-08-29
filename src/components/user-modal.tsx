@@ -30,26 +30,27 @@ import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DataTable, type Column } from "./data-table";
-import { useDocumentoUrl } from "@/lib/api/use-documento-url";
+import { useDocumentosUrls } from "@/lib/api/use-documento-url";
 import { DOCUMENTO_LABELS } from "@/lib/api/documentos";
 
 function DocumentoMiniCard({
-  url,
-  legajo,
+  resolvedUrl,
+  thumbUrl,
   label,
   onOpen,
 }: {
-  url: string | null;
-  legajo: string;
+  resolvedUrl: string | null;
+  thumbUrl: string | null;
   label: string;
   onOpen: (url: string) => void;
 }) {
-  const resolved = useDocumentoUrl(url, legajo);
+  const resolved = resolvedUrl;
+  const preview = thumbUrl ?? resolvedUrl;
 
   const descargar = async (e: ReactMouseEvent) => {
     e.stopPropagation();
     if (!resolved) return;
-    const ext = url ? "." + url.split(".").pop() : "";
+    const ext = resolved.split(".").pop() ? "." + resolved.split(".").pop() : "";
     const nombre = `${label}${ext}`;
     try {
       const res = await fetch(resolved);
@@ -74,16 +75,16 @@ function DocumentoMiniCard({
       onClick={() => resolved && onOpen(resolved)}
       className="group relative aspect-[3/4] rounded-lg border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-ring transition disabled:cursor-default"
     >
-      {resolved ? (
+      {preview ? (
         <img
-          src={resolved}
+          src={preview}
           alt={label}
           className="w-full h-full object-cover"
           loading="lazy"
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] text-muted-foreground">
-          {url ? "Cargando…" : "Sin archivo"}
+          {resolved ? "Cargando…" : "Sin archivo"}
         </div>
       )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
@@ -860,6 +861,10 @@ export function UserModal({
   if (!open || !user) return null;
 
   const existingDocs = user.documentos.filter((d) => d.url);
+  const docResueltos = useDocumentosUrls(
+    existingDocs.map((d) => ({ id: d.id, url: d.url ?? null })),
+    user.legajo,
+  );
   const missingDocTypes: UserDocument["tipo"][] = (
     ["id_frente", "id_dorso", "servicio", "selfie"] as UserDocument["tipo"][]
   ).filter((t) => !user.documentos.some((d) => d.tipo === t && d.url));
@@ -1227,8 +1232,8 @@ export function UserModal({
           {existingDocs.map((doc) => (
             <DocumentoMiniCard
               key={doc.id}
-              url={doc.url ?? null}
-              legajo={user.legajo}
+              resolvedUrl={docResueltos.urls[doc.id] ?? null}
+              thumbUrl={docResueltos.thumbs[doc.id] ?? null}
               label={DOCUMENTO_LABELS[doc.tipo] ?? doc.label}
               onOpen={(u) => u && setPreviewImg(u)}
             />

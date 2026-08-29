@@ -1,12 +1,31 @@
-// Edge Function: genera una URL firmada para un objeto privado del Storage.
+// Edge Function: genera URLs firmadas para objetos privados del Storage.
 // Usa el service role (saltea RLS de storage) pero exige que quien llama sea
-// un admin activo, validado con el JWT del usuario.
+// un admin activo. La validación de admin la hace la RLS de `admin_users`
+// (que ya exige rol admin), así que no necesitamos auth.getUser(): el sub del
+// JWT se resuelve localmente y la consulta corre con el JWT del usuario.
+//
+// Acepta `transform` para devolver además un thumbnail redimensionado
+// (más liviano para la grilla). Si el plan no tiene Image Resizing, el
+// thumbnail cae al URL del original sin romper nada.
 //
 // Deploy:
-//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
 //   supabase functions deploy get-document-url
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+
+function jwtSub(token: string): string | null {
+  try {
+    const part = token.split(".")[1];
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const json = new TextDecoder().decode(
+      Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)),
+    );
+    const payload = JSON.parse(json);
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   const cors = {
@@ -36,13 +55,13 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Cliente con el JWT del usuario para validar que es un admin activo.
+  // Cliente con el JWT del usuario: la RLS de `admin_users` ya exige rol admin.
   const userSb = createClient(url, anon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  const { data: userData, error: userErr } = await userSb.auth.getUser();
-  if (userErr || !userData.user) {
+  const uid = jwtSub(token);
+  if (!uid) {
     return new Response(JSON.stringify({ error: "Sesión inválida" }), {
       status: 401,
       headers: { ...cors, "content-type": "application/json" },
@@ -52,7 +71,7 @@ Deno.serve(async (req) => {
   const { data: admin, error: adminErr } = await userSb
     .from("admin_users")
     .select("id, activo, rol_id")
-    .eq("id", userData.user.id)
+    .eq("id", uid)
     .maybeSingle();
 
   if (adminErr || !admin || !admin.activo) {
@@ -75,7 +94,18 @@ Deno.serve(async (req) => {
     });
   }
 
-  let body: { path?: string; paths?: string[]; bucket?: string; expiresIn?: number };
+  let body: {
+    path?: string;
+    paths?: string[];
+    bucket?: string;
+    expiresIn?: number;
+    transform?: {
+      width?: number;
+      height?: number;
+      resize?: "cover" | "contain" | "fill";
+      quality?: number;
+    };
+  };
   try {
     body = await req.json();
   } catch {
@@ -99,22 +129,43 @@ Deno.serve(async (req) => {
     });
   }
 
+  const transform = body.transform &&
+    typeof body.transform === "object" &&
+    (body.transform.width || body.transform.height)
+    ? body.transform
+    : undefined;
+
   // Cliente con service role: firma sin depender de la RLS de storage.
   const adminSb = createClient(url, serviceRole, {
     auth: { persistSession: false },
   });
 
   const signedUrls: Record<string, string> = {};
+  const thumbUrls: Record<string, string> = {};
+  const exp = body.expiresIn ?? 3600;
+
   for (const p of paths) {
     const { data, error } = await adminSb.storage
       .from(bucket)
-      .createSignedUrl(p, body.expiresIn ?? 3600);
+      .createSignedUrl(p, exp);
     if (!error && data?.signedUrl) signedUrls[p] = data.signedUrl;
+
+    if (transform) {
+      try {
+        const { data: td, error: terr } = await adminSb.storage
+          .from(bucket)
+          .createSignedUrl(p, exp, { transform });
+        if (!terr && td?.signedUrl) thumbUrls[p] = td.signedUrl;
+        else if (data?.signedUrl) thumbUrls[p] = data.signedUrl;
+      } catch {
+        if (data?.signedUrl) thumbUrls[p] = data.signedUrl;
+      }
+    }
   }
 
-  // Respuesta única: un mapa path -> signedUrl (para lotes).
+  // Respuesta única (lotes): mapa path -> signedUrl (+ thumbnails si aplica).
   if (Array.isArray(body.paths)) {
-    return new Response(JSON.stringify({ signedUrls }), {
+    return new Response(JSON.stringify({ signedUrls, thumbUrls }), {
       headers: { ...cors, "content-type": "application/json" },
     });
   }
@@ -127,7 +178,8 @@ Deno.serve(async (req) => {
       { status: 404, headers: { ...cors, "content-type": "application/json" } },
     );
   }
-  return new Response(JSON.stringify({ signedUrl: signedUrls[single] }), {
-    headers: { ...cors, "content-type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ signedUrl: signedUrls[single], thumbUrl: thumbUrls[single] }),
+    { headers: { ...cors, "content-type": "application/json" } },
+  );
 });

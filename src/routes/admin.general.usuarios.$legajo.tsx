@@ -985,13 +985,16 @@ function DocumentoCard({
   doc,
   legajo,
   resolvedUrl,
+  thumbUrl,
 }: {
   doc: Documento;
   legajo: string;
   resolvedUrl: string | null;
+  thumbUrl: string | null;
 }) {
   const [error, setError] = useState(false);
   const resolved = resolvedUrl;
+  const preview = thumbUrl ?? resolvedUrl;
 
   const descargar = async () => {
     if (!resolved) return;
@@ -1036,7 +1039,7 @@ function DocumentoCard({
           </div>
         ) : esUrlImagen(resolved) ? (
           <img
-            src={resolved}
+            src={preview ?? undefined}
             alt={doc.label}
             className="h-full w-full object-cover"
             onError={() => setError(true)}
@@ -1093,7 +1096,7 @@ function DocumentosTab({ legajo }: { legajo: string }) {
   });
 
   const documentos = query.data ?? [];
-  const urls = useDocumentosUrls(documentos, legajo);
+  const { urls, thumbs } = useDocumentosUrls(documentos, legajo);
   const imagenesDemo = imagenesParaLegajo(legajo);
   const mostrarDemo = documentos.length === 0 && imagenesDemo.length > 0;
   const hayContenido = documentos.length > 0 || imagenesDemo.length > 0;
@@ -1114,6 +1117,7 @@ function DocumentosTab({ legajo }: { legajo: string }) {
               doc={doc}
               legajo={legajo}
               resolvedUrl={urls[doc.id] ?? null}
+              thumbUrl={thumbs[doc.id] ?? null}
             />
           ))}
         </div>
