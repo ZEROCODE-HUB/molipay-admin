@@ -16,6 +16,9 @@ import {
   Eye,
   Key,
   Pause,
+  PauseCircle,
+  PlayCircle,
+  CheckCircle,
   Lock,
   ArrowDownLeft,
   ArrowUpRight,
@@ -29,6 +32,7 @@ import { Badge, Input, BtnOutline } from "./portal-shell";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { FormDialog } from "./form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
+import { ActionsDropdown } from "./actions-dropdown";
 import { DataTable, type Column } from "./data-table";
 import { useDocumentosUrls } from "@/lib/api/use-documento-url";
 import { DOCUMENTO_LABELS } from "@/lib/api/documentos";
@@ -141,6 +145,7 @@ export type Subcuenta = {
   resp: string;
   lim: string;
   retirosHab: boolean;
+  validada?: boolean;
   movimientos: MovimientoSub[];
 };
 
@@ -1111,6 +1116,29 @@ export function UserModal({
     toast.success("Subcuenta eliminada");
   };
 
+  const actualizarSubcuenta = (sub: Subcuenta, cambios: Partial<Subcuenta>) => {
+    if (!onUserChange) return;
+    onUserChange({
+      ...user,
+      subcuentas: user.subcuentas.map((s) => (s.id === sub.id ? { ...s, ...cambios } : s)),
+    });
+  };
+
+  const validarSubcuenta = (sub: Subcuenta) => {
+    actualizarSubcuenta(sub, { validada: true });
+    toast.success(`Subcuenta "${sub.nombre}" validada`);
+  };
+
+  const suspenderSubcuenta = (sub: Subcuenta) => {
+    actualizarSubcuenta(sub, { estado: "Pausada" });
+    toast.success(`Subcuenta "${sub.nombre}" suspendida`);
+  };
+
+  const reactivarSubcuenta = (sub: Subcuenta) => {
+    actualizarSubcuenta(sub, { estado: "Activa" });
+    toast.success(`Subcuenta "${sub.nombre}" reactivada`);
+  };
+
   const monoFields = new Set([
     "legajo",
     "cuit",
@@ -1381,31 +1409,45 @@ export function UserModal({
                           </Badge>
                         </td>
                         <td className="px-4 py-2.5">
-                          <div className="flex gap-1 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => setSubDetail(sub)}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
-                              title="Ver detalle"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirEditarSubcuenta(sub)}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
-                              title="Editar"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSubEliminar(sub)}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition"
-                              title="Borrar"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                          <div className="flex justify-end">
+                            <ActionsDropdown
+                              actions={[
+                                {
+                                  label: "Ver detalles",
+                                  icon: Eye,
+                                  onClick: () => setSubDetail(sub),
+                                },
+                                {
+                                  label: "Editar",
+                                  icon: Pencil,
+                                  onClick: () => abrirEditarSubcuenta(sub),
+                                },
+                                {
+                                  label: "Validar",
+                                  icon: CheckCircle,
+                                  onClick: () => validarSubcuenta(sub),
+                                  disabled: sub.validada,
+                                },
+                                {
+                                  label: "Suspender",
+                                  icon: PauseCircle,
+                                  onClick: () => suspenderSubcuenta(sub),
+                                  disabled: sub.estado === "Pausada",
+                                },
+                                {
+                                  label: "Reactivar",
+                                  icon: PlayCircle,
+                                  onClick: () => reactivarSubcuenta(sub),
+                                  disabled: sub.estado === "Activa",
+                                },
+                                {
+                                  label: "Eliminar",
+                                  icon: Trash2,
+                                  variant: "danger",
+                                  onClick: () => setSubEliminar(sub),
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>
