@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   AlertTriangle,
@@ -547,10 +548,21 @@ function AccionesMenu({
   items: { label: string; onClick: () => void; disabled?: boolean }[];
 }) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.right - 176 });
+    }
+  }, [open]);
+
   if (items.length === 0) return null;
   return (
     <div className="relative inline-block text-left">
       <button
+        ref={btnRef}
         type="button"
         title="Acciones"
         onClick={(e) => {
@@ -561,10 +573,13 @@ function AccionesMenu({
       >
         <MoreVertical size={16} />
       </button>
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+          <div
+            className="fixed z-40 w-44 overflow-hidden rounded-md border border-border bg-card shadow-lg"
+            style={{ top: pos.top, left: pos.left }}
+          >
             {items.map((it) => (
               <button
                 key={it.label}
@@ -580,7 +595,8 @@ function AccionesMenu({
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
