@@ -13,7 +13,6 @@ import {
   Landmark,
   Link2,
   Globe,
-  Check,
   Download,
   ImageOff,
   Eye,
@@ -1356,6 +1355,73 @@ function ParametrosEditorModal({
   );
 }
 
+function ApiUsuariosInline({
+  legajo,
+  onVerDetalle,
+}: {
+  legajo: string;
+  onVerDetalle: () => void;
+}) {
+  const query = useQuery({
+    queryKey: ["api_usuarios", "inline", legajo],
+    queryFn: () => listApiUsuarios({ page: 0, pageSize: 100 }),
+  });
+
+  if (query.isLoading) {
+    return <p className="text-sm text-muted-foreground">Cargando usuarios API…</p>;
+  }
+  if (query.isError) {
+    return <p className="text-sm text-red-600">{(query.error as Error).message}</p>;
+  }
+  const rows = query.data?.rows ?? [];
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+        <Inbox size={22} />
+        <p>Sin usuarios API asociados.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="px-4 py-3 font-medium">Código</th>
+            <th className="px-4 py-3 font-medium">Usuario</th>
+            <th className="px-4 py-3 font-medium">Nombre</th>
+            <th className="px-4 py-3 font-medium">Estado</th>
+            <th className="px-4 py-3 font-medium text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((u) => (
+            <tr key={u.id} className="border-b border-border last:border-b-0">
+              <td className="px-4 py-3 font-mono text-xs">{u.codigoUsuarioApi}</td>
+              <td className="px-4 py-3">{u.usuario}</td>
+              <td className="px-4 py-3">{u.nombreCompleto}</td>
+              <td className="px-4 py-3">
+                <Badge tone={u.estado === "Producción" ? "success" : u.estado === "Homologación" ? "warn" : "neutral"}>
+                  {u.estado}
+                </Badge>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <button
+                  type="button"
+                  onClick={onVerDetalle}
+                  className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  <Eye size={13} /> Ver detalle
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ApiUsuariosModal({
   open,
   onClose,
@@ -2129,13 +2195,13 @@ function ClienteDetailPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>("identificacion");
   const [riesgoSub, setRiesgoSub] = useState<"alertas" | "bloqueos">("alertas");
+  const [modulosSub, setModulosSub] = useState<"pct" | "links" | "api">("pct");
 
   const [editAlertasOpen, setEditAlertasOpen] = useState(false);
   const [editBloqueosOpen, setEditBloqueosOpen] = useState(false);
 
   const [pstOpen, setPstOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
-  const [apiOpen, setApiOpen] = useState(false);
   const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
   const [exencionOpen, setExencionOpen] = useState(false);
 
@@ -2291,10 +2357,7 @@ function ClienteDetailPage() {
   };
 
   const modulosData = modulosQuery.data ?? [];
-  const moduloByClave = (clave: string) => modulosData.find((m) => m.clave === clave);
-  const pstModulo = moduloByClave("pct");
-  const blpModulo = moduloByClave("blp");
-  const apiModulo = moduloByClave("api");
+  const apiModulo = modulosData.find((m) => m.clave === "api");
   const comerciosPst = comerciosPstQuery.data ?? [];
   const linksPago = linksPagoQuery.data ?? [];
 
@@ -2802,116 +2865,185 @@ function ClienteDetailPage() {
               ) : modulosQuery.isError ? (
                 <p className="text-sm text-red-600">{(modulosQuery.error as Error).message}</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* PST */}
-                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                        <Landmark size={16} />
-                      </span>
-                      <div className="font-display font-semibold text-sm">PST</div>
-                    </div>
-                    <dl className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <dt className="text-muted-foreground">Comercios PST</dt>
-                        <dd className="font-semibold text-foreground tabular-nums">
-                          {comerciosPst.length}
-                        </dd>
-                      </div>
-                      <p className="pt-1 text-muted-foreground">
-                        {comerciosPst.length === 0
-                          ? "No se encontró comercio PCT asociado por email o legajo."
-                          : "Comercio PCT asociado por email o legajo."}
-                      </p>
-                    </dl>
-                    <button
-                      type="button"
-                      onClick={() => setPstOpen(true)}
-                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
-                    >
-                      <Landmark size={13} /> Ver comercios PCT
-                    </button>
+                <div>
+                  {/* Sub-tabs */}
+                  <div className="flex gap-1 border-b border-border mb-4">
+                    {([
+                      { key: "pct" as const, label: "PCT", icon: Landmark },
+                      { key: "links" as const, label: "Links de pago", icon: Link2 },
+                      { key: "api" as const, label: "API externa", icon: Globe },
+                    ]).map((st) => (
+                      <button
+                        key={st.key}
+                        type="button"
+                        onClick={() => setModulosSub(st.key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                          modulosSub === st.key
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <st.icon size={14} />
+                        {st.label}
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Links de pago */}
-                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                        <Link2 size={16} />
-                      </span>
-                      <div className="font-display font-semibold text-sm">Links de pago</div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {blpModulo ? (
-                        <>
-                          <p className="mt-1">
-                            Comercios vinculados:{" "}
-                            <span className="font-semibold text-foreground tabular-nums">
-                              {linksPago.length}
-                            </span>
+                  {/* PCT sub-tab */}
+                  {modulosSub === "pct" && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-border p-4">
+                        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                          Comercios vinculados
+                        </div>
+                        <div className="text-2xl font-semibold tabular-nums">
+                          {comerciosPst.length}
+                        </div>
+                        {comerciosPst.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            No se encontró comercio PCT asociado por email o legajo.
                           </p>
-                          <p className="mt-2">
-                            {blpModulo.detalle ?? "Sin vínculos para este cliente."}
+                        ) : (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {comerciosPst.length} comercio(s) PCT vinculado(s) a este cliente.
                           </p>
-                          {linksPago.some((l) => l.estado === "Pendiente") && (
-                            <p className="mt-2 font-semibold text-amber-700">
-                              {linksPago.filter((l) => l.estado === "Pendiente").length} comercio(s)
-                              pendiente(s) de aprobación.
-                            </p>
-                          )}
-                        </>
+                        )}
+                      </div>
+                      {comerciosPst.length > 0 ? (
+                        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th className="px-4 py-3 font-medium">Comercio</th>
+                                <th className="px-4 py-3 font-medium">Email</th>
+                                <th className="px-4 py-3 font-medium">Legajo</th>
+                                <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {comerciosPst.map((c) => (
+                                <tr key={c.id} className="border-b border-border last:border-b-0">
+                                  <td className="px-4 py-3 font-medium">{c.nombre}</td>
+                                  <td className="px-4 py-3 text-muted-foreground">{c.email ?? "—"}</td>
+                                  <td className="px-4 py-3 font-mono text-xs">{c.legajo_comercio ?? "—"}</td>
+                                  <td className="px-4 py-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPstOpen(true)}
+                                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                                    >
+                                      <Eye size={13} /> Ver detalle
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       ) : (
-                        <p>Sin información de links de pago para este cliente.</p>
+                        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+                          <Inbox size={22} />
+                          <p>No se encontró comercio PCT asociado por email o legajo.</p>
+                        </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setLinksOpen(true)}
-                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent mt-auto self-start"
-                    >
-                      <Link2 size={13} /> Ver links de pago
-                    </button>
-                  </div>
+                  )}
 
-                  {/* API externa */}
-                  <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-md bg-muted/60 text-muted-foreground">
-                        <Globe size={16} />
-                      </span>
-                      <div className="font-display font-semibold text-sm">API externa</div>
+                  {/* Links de pago sub-tab */}
+                  {modulosSub === "links" && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-border p-4">
+                        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                          Comercios vinculados
+                        </div>
+                        <div className="text-2xl font-semibold tabular-nums">
+                          {linksPago.length}
+                        </div>
+                        {linksPago.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Sin comercios vinculados con links de pago.
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {linksPago.length} comercio(s) con links de pago activos.
+                          </p>
+                        )}
+                        {linksPago.some((l) => l.estado === "Pendiente") && (
+                          <p className="mt-2 text-xs font-semibold text-amber-700">
+                            {linksPago.filter((l) => l.estado === "Pendiente").length} comercio(s)
+                            pendiente(s) de aprobación.
+                          </p>
+                        )}
+                      </div>
+                      {linksPago.length > 0 ? (
+                        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th className="px-4 py-3 font-medium">Comercio</th>
+                                <th className="px-4 py-3 font-medium">URL</th>
+                                <th className="px-4 py-3 font-medium text-right">Monto</th>
+                                <th className="px-4 py-3 font-medium">Estado</th>
+                                <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {linksPago.map((l) => (
+                                <tr key={l.id} className="border-b border-border last:border-b-0">
+                                  <td className="px-4 py-3 font-medium">{l.comercio_nombre}</td>
+                                  <td className="px-4 py-3">
+                                    {l.url ? (
+                                      <a href={l.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-primary break-all hover:underline">
+                                        {l.url.length > 40 ? l.url.slice(0, 40) + "…" : l.url}
+                                      </a>
+                                    ) : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 text-right tabular-nums">{l.monto != null ? fmtMonto(l.monto) : "—"}</td>
+                                  <td className="px-4 py-3">
+                                    <Badge tone={l.estado === "Activo" ? "success" : l.estado === "Pendiente" ? "warn" : "neutral"}>
+                                      {l.estado ?? "—"}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setLinksOpen(true)}
+                                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                                    >
+                                      <Eye size={13} /> Ver detalle
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+                          <Inbox size={22} />
+                          <p>Sin links de pago vinculados.</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p className="mt-1">
-                        Cantidad de usuarios asociados:{" "}
-                        <span className="font-semibold text-foreground tabular-nums">
+                  )}
+
+                  {/* API externa sub-tab */}
+                  {modulosSub === "api" && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-border p-4">
+                        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                          Usuarios asociados
+                        </div>
+                        <div className="text-2xl font-semibold tabular-nums">
                           {apiModulo?.cantidad ?? 0}
-                        </span>
-                      </p>
-                      <p className="mt-1">
-                        Estado:{" "}
-                        <span className="font-semibold text-foreground">
-                          {apiModulo?.detalle ?? "Sin vínculos para este cliente."}
-                        </span>
-                      </p>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {apiModulo?.detalle ?? "Sin vínculos de API externa para este cliente."}
+                        </p>
+                      </div>
+                      <ApiUsuariosInline legajo={legajo} onVerDetalle={() => setApiDetalleOpen(true)} />
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-auto self-start">
-                      <button
-                        type="button"
-                        onClick={() => setApiOpen(true)}
-                        className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                      >
-                        <Globe size={13} /> Ver usuarios API
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setApiDetalleOpen(true)}
-                        className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                      >
-                        <Check size={13} /> Ver detalle
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </SectionCard>
@@ -3016,12 +3148,6 @@ function ClienteDetailPage() {
             </div>
           )}
         </ModalDialog>
-
-        <ApiUsuariosModal
-          open={apiOpen}
-          onClose={() => setApiOpen(false)}
-          cantidad={apiModulo?.cantidad ?? 0}
-        />
 
         <ApiDetalleModal
           open={apiDetalleOpen}
