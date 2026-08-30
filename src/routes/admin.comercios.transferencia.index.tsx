@@ -20,7 +20,6 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { LegajoCell } from "@/components/legajo-label";
 import { useComercios } from "@/hooks/useComercios";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { updateComercio, setComercioEstado, deleteComercio } from "@/lib/api/comercios";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
@@ -323,8 +322,6 @@ function ComercioFormModal({
 function Page() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
 
   const { can } = useCan();
   const puedeModificar = can("modificar", "comercios");
@@ -333,7 +330,6 @@ function Page() {
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComercios({
     page,
     pageSize: PAGE_SIZE,
-    search,
   });
 
   const { data: categoriasRaw } = useQuery({
@@ -523,21 +519,6 @@ function Page() {
         title="Comercios"
         description="Gestión de comercios para pagos con transferencia (PCT)."
       />
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Usuario (email) o legajo…"
-          />
-        </div>
-      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
