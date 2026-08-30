@@ -325,8 +325,6 @@ function Page() {
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
-  const [estadoFilter, setEstadoFilter] = useState<EstadoComercio | "">("");
-  const [nivelFilter, setNivelFilter] = useState<NivelComercio | "">("");
 
   const { can } = useCan();
   const puedeModificar = can("modificar", "comercios");
@@ -336,8 +334,6 @@ function Page() {
     page,
     pageSize: PAGE_SIZE,
     search,
-    estado: estadoFilter || undefined,
-    nivel: nivelFilter || undefined,
   });
 
   const { data: categoriasRaw } = useQuery({
@@ -477,40 +473,44 @@ function Page() {
 
   const columns: Column<Comercio>[] = [
     {
+      key: "legajo",
+      label: "Legajo",
+      sortable: true,
+      filterable: true,
+      render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.legajo}</span>,
+    },
+    {
       key: "usuario",
       label: "Usuario",
       sortable: true,
-      render: (r) => (
-        <div>
-          <div className="font-semibold">{r.usuario}</div>
-          <LegajoCell legajo={r.legajo} className="text-xs" />
-        </div>
-      ),
-    },
-    {
-      key: "categoria",
-      label: "Categoría",
-      sortable: true,
-      render: (r) =>
-        r.categoria ? (
-          <span className="font-mono tabular-nums">
-            {r.categoria.codigo} · {r.categoria.nombre}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      render: (r) => <Badge tone={estadoBadgeTone(r.estado)}>{r.estado}</Badge>,
+      filterable: true,
+      render: (r) => <span className="font-semibold">{r.usuario}</span>,
     },
     {
       key: "nivel",
       label: "Nivel",
       sortable: true,
+      filterable: true,
       render: (r) => r.nivel,
+    },
+    {
+      key: "estado",
+      label: "Estado",
+      sortable: true,
+      filterable: "enum",
+      filterOptions: [...ESTADOS_COMERCIO],
+      render: (r) => <Badge tone={estadoBadgeTone(r.estado)}>{r.estado}</Badge>,
+    },
+    {
+      key: "createdAt",
+      label: "Registro",
+      sortable: true,
+      filterable: "date",
+      render: (r) => (
+        <span className="font-mono text-xs tabular-nums">
+          {new Date(r.createdAt).toLocaleDateString("es-AR")}
+        </span>
+      ),
     },
   ];
 
@@ -536,44 +536,6 @@ function Page() {
             }}
             placeholder="Usuario (email) o legajo…"
           />
-        </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select
-            id="f-estado"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={estadoFilter}
-            onChange={(e) => {
-              setEstadoFilter(e.target.value as EstadoComercio | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {ESTADOS_COMERCIO.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="f-nivel">Nivel</Label>
-          <select
-            id="f-nivel"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={nivelFilter}
-            onChange={(e) => {
-              setNivelFilter(e.target.value as NivelComercio | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {NIVELES_COMERCIO.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 

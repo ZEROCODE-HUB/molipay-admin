@@ -33,7 +33,7 @@ export type ImpuestoFilters = Pagination & {
 };
 
 const IMPUESTOS_COLUMNS =
-  "id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at, impuestos_alicuotas(id, impuesto_id, codigo, tasa, descripcion, estado, created_at, updated_at)";
+  "id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at, impuestos_alicuotas(id, impuesto_id, codigo, tasa, descripcion, estado, created_at)";
 
 export async function listImpuestos(filters: ImpuestoFilters): Promise<Page<Impuesto>> {
   const sb = requireSupabase();

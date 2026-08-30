@@ -819,7 +819,7 @@ export type AlicuotaRow = {
   descripcion: string | null;
   estado: "Activo" | "Inactivo";
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 };
 
 export type Alicuota = {

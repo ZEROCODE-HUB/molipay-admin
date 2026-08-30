@@ -126,7 +126,7 @@ export function MovimientosSubRoute({
   }, [tipoCode, catalogoEstados, estadosDelTipoIds]);
 
   const opcionesEstado: { code: string; label: string }[] = tipoCode
-    ? estadosValidos.map((e) => ({ code: e.codigo, label: `${e.codigo} — ${e.nombre}` }))
+    ? estadosValidos.map((e) => ({ code: e.codigo, label: e.nombre }))
     : ESTADOS_MOVIMIENTO.map((s) => ({ code: s, label: s }));
 
   const [detail, setDetail] = useState<Movimiento | null>(null);

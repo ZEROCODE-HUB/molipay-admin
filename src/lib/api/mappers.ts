@@ -395,7 +395,7 @@ export function toAlicuota(r: AlicuotaRow): Alicuota {
     descripcion: r.descripcion,
     estado: r.estado,
     createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    updatedAt: r.updated_at ?? r.created_at,
   };
 }
 
