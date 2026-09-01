@@ -337,142 +337,155 @@ function AnalisisConciliacionModal({
     ahora.getMinutes(),
   ).padStart(2, "0")}`;
 
-  const Kpi = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="bg-muted/40 rounded-lg p-4 text-center">
-      <div className="font-display text-2xl font-semibold text-foreground tabular-nums">
+  const Kpi = ({
+    label,
+    value,
+    accent,
+  }: {
+    label: string;
+    value: string | number;
+    accent?: boolean;
+  }) => (
+    <div
+      className={`rounded-lg border px-2.5 py-2.5 text-center ${
+        accent ? "bg-primary/[0.06] border-primary/20" : "bg-muted/30 border-border/50"
+      }`}
+    >
+      <div className="font-display text-[18px] font-semibold leading-none tracking-tight tabular-nums text-foreground">
         {value}
       </div>
-      <div className="text-xs text-muted-foreground mt-1">{label}</div>
+      <div className="text-[10.5px] font-medium uppercase tracking-widest text-muted-foreground mt-1.5 leading-none">
+        {label}
+      </div>
     </div>
   );
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-xl">
-        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
+      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[88vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card border-b border-border px-5 py-3.5 flex justify-between items-start z-10">
           <div>
-            <h3 className="font-display text-lg font-semibold">Análisis de conciliación</h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {archivo.archivo} · Fecha: {archivo.fecha}
+            <h3 className="font-display text-[15px] font-semibold leading-none">Análisis de conciliación</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
+              {archivo.archivo} · {archivo.fecha}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md leading-none">
             ×
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Resumen general
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-5 space-y-4">
+          {/* Resumen + éxito en una sola grilla compacta */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Resumen general
+              </h4>
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                {porcentaje}% éxito · {resumen.encontrados}/{resumen.total}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <Kpi label="Total" value={resumen.total} />
-              <Kpi label="Encontrados" value={resumen.encontrados} />
+              <Kpi label="Encontrados" value={resumen.encontrados} accent />
               <Kpi label="No encontrados" value={resumen.noEncontrados} />
               <Kpi label="No completados" value={resumen.noCompletados} />
+              <Kpi label="Éxito" value={`${porcentaje}%`} accent />
             </div>
           </Card>
 
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Estadísticas generales
+          {/* Distribución por tipo - ocupa menos: 1 card en vez de 2 */}
+          <Card className="p-4">
+            <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+              Distribución por tipo
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Kpi label="Total encontrados" value={resumen.encontrados} />
-              <Kpi label="Total no encontrados" value={resumen.noEncontrados} />
-              <Kpi label="Porcentaje de éxito" value={`${porcentaje}%`} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              {resumen.encontrados} encontrados de {resumen.total} → {porcentaje}% de éxito.
-            </p>
-          </Card>
-
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Depósitos
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <Kpi label="Total de depósitos en el archivo" value={resumen.depositos.total} />
-              <Kpi label="Depósitos encontrados" value={resumen.depositos.encontrados} />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <Kpi label="Depósitos · total" value={resumen.depositos.total} />
+              <Kpi label="Depósitos · encontrados" value={resumen.depositos.encontrados} />
+              <Kpi label="Retiros · total" value={resumen.retiros.total} />
+              <Kpi label="Retiros · encontrados" value={resumen.retiros.encontrados} />
             </div>
           </Card>
 
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Retiros
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <Kpi label="Total de retiros en el archivo" value={resumen.retiros.total} />
-              <Kpi label="Retiros encontrados" value={resumen.retiros.encontrados} />
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Fecha del análisis
-            </h4>
-            <p className="text-sm font-medium">{fechaAnalisis}</p>
-          </Card>
-
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              IDs no encontrados
-            </h4>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">
-                  IDs de depósitos no encontrados
+          {/* IDs + meta en layout compacto de 2 columnas */}
+          <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-4">
+            <Card className="p-4">
+              <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                IDs no encontrados
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Depósitos</div>
+                  {resumen.idsDepositosNoEncontrados.length === 0 ? (
+                    <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      Sin IDs
+                    </span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {resumen.idsDepositosNoEncontrados.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]"
+                        >
+                          {id}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {resumen.idsDepositosNoEncontrados.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin IDs.</p>
-                ) : (
-                  <ul className="list-disc list-inside text-sm text-foreground space-y-0.5">
-                    {resumen.idsDepositosNoEncontrados.map((id) => (
-                      <li key={id} className="font-mono">
-                        {id}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">
-                  IDs de retiros no encontrados
+                <div>
+                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Retiros</div>
+                  {resumen.idsRetirosNoEncontrados.length === 0 ? (
+                    <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      Sin IDs
+                    </span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {resumen.idsRetirosNoEncontrados.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
+                        >
+                          {id}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {resumen.idsRetirosNoEncontrados.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin IDs.</p>
-                ) : (
-                  <ul className="list-disc list-inside text-sm text-foreground space-y-0.5">
-                    {resumen.idsRetirosNoEncontrados.map((id) => (
-                      <li key={id} className="font-mono">
-                        {id}
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          <div>
-            <BtnOutline
-              className="h-8 text-xs px-3"
-              onClick={() =>
-                downloadFile(
-                  archivo.archivo,
-                  "id_transaccion,tipo,monto,fecha\nTXN-001,DEPOSITO,50000,2026-07-15\n",
-                )
-              }
-            >
-              <Download size={14} /> Descargar archivo original
-            </BtnOutline>
+            <Card className="p-4 flex flex-col justify-between">
+              <div>
+                <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                  Análisis
+                </h4>
+                <p className="font-mono text-xs font-medium tabular-nums">{fechaAnalisis}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                  {resumen.encontrados} de {resumen.total} conciliados
+                </p>
+              </div>
+              <BtnOutline
+                className="mt-3 h-7 text-xs px-2.5 w-full justify-center"
+                onClick={() =>
+                  downloadFile(
+                    archivo.archivo,
+                    "id_transaccion,tipo,monto,fecha\nTXN-001,DEPOSITO,50000,2026-07-15\n",
+                  )
+                }
+              >
+                <Download size={14} /> Descargar original
+              </BtnOutline>
+            </Card>
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex justify-end">
-          <BtnOutline onClick={onClose}>Cerrar</BtnOutline>
+        <div className="sticky bottom-0 bg-card border-t border-border px-5 py-3 flex justify-end">
+          <BtnOutline onClick={onClose} className="h-8 text-xs px-4">
+            Cerrar
+          </BtnOutline>
         </div>
       </div>
     </div>
@@ -482,6 +495,29 @@ function AnalisisConciliacionModal({
 function Conciliaciones() {
   const [archivos, setArchivos] = useState<Archivo[]>(ARCHIVOS_INICIALES);
   const [analisisTarget, setAnalisisTarget] = useState<Archivo | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    nombre: "",
+    fecha: "",
+    file: null as File | null,
+  });
+
+  const guardarArchivo = () => {
+    if (!uploadForm.nombre.trim() || !uploadForm.fecha || !uploadForm.file) return;
+    const nombreArchivo = uploadForm.file.name || uploadForm.nombre.trim();
+    setArchivos((prev) => [
+      {
+        archivo: nombreArchivo,
+        fecha: uploadForm.fecha,
+        estado: "Pendiente",
+        downloadRows: [],
+      },
+      ...prev,
+    ]);
+    setUploadForm({ nombre: "", fecha: "", file: null });
+    setCargando(false);
+    toast.success("Archivo cargado correctamente");
+  };
 
   const columns: Column<Archivo>[] = [
     {
@@ -524,6 +560,9 @@ function Conciliaciones() {
         <p className="text-sm text-muted-foreground">
           El banco sube diariamente (día anterior) todas las transacciones.
         </p>
+        <BtnPrimary type="button" className="h-9 text-sm" onClick={() => setCargando(true)}>
+          <Plus size={14} /> Cargar CSV
+        </BtnPrimary>
       </div>
       <DataTable columns={columns} data={archivos} keyExtractor={(r) => r.archivo} />
 
@@ -532,6 +571,48 @@ function Conciliaciones() {
           archivo={analisisTarget}
           onClose={() => setAnalisisTarget(null)}
         />
+      )}
+
+      {cargando && (
+        <FormDialog
+          open
+          onClose={() => setCargando(false)}
+          title="Cargar archivo de conciliación"
+          description="Ingresá el nombre, la fecha de carga y el archivo CSV."
+          onSubmit={guardarArchivo}
+          submitLabel="Guardar"
+          cancelLabel="Cancelar"
+          size="md"
+        >
+          <div>
+            <Label htmlFor="conc-nombre">Nombre del archivo</Label>
+            <Input
+              id="conc-nombre"
+              value={uploadForm.nombre}
+              onChange={(e) => setUploadForm((f) => ({ ...f, nombre: e.target.value }))}
+              placeholder="conciliacion_20260801.csv"
+            />
+          </div>
+          <div>
+            <Label htmlFor="conc-fecha">Fecha de carga</Label>
+            <input
+              id="conc-fecha"
+              type="date"
+              value={uploadForm.fecha}
+              onChange={(e) => setUploadForm((f) => ({ ...f, fecha: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+          <div>
+            <Label>Archivo CSV</Label>
+            <FileDropzone
+              accept=".csv,.xlsx,.xls"
+              onFile={(f) =>
+                setUploadForm((fr) => ({ ...fr, file: f, nombre: f?.name ?? fr.nombre }))
+              }
+            />
+          </div>
+        </FormDialog>
       )}
     </div>
   );
