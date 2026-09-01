@@ -44,6 +44,7 @@ const PAGE_SIZE = 25;
 const TIPO_OPCIONES: { label: string; code: string }[] = [
   { label: "Depósito", code: "deposito" },
   { label: "Retiro", code: "retiro" },
+  { label: "Transferencia", code: "transferencia" },
   { label: "Pago con tarjeta", code: "tarjeta" },
   { label: "Pago PCT", code: "pago_pct" },
   { label: "Cobro PCT", code: "cobro_pct" },
