@@ -342,6 +342,12 @@
     background-color: var(--moli-red-light);
     color: var(--moli-red-dark);
   }
+
+  /* textos seleccionables - fix reportado: permitir copiar legajos, emails, montos */
+  p, span, div, td, th, h1, h2, h3, h4, label, li, dd, dt {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 /* Fuera de cualquier @layer para ganar a las utilidades de Tailwind (text-xs/text-sm):

@@ -2166,8 +2166,19 @@ function ClienteDetailPage() {
     staleTime: 15_000,
   });
 
+  const subcuentasQuery = useQuery({
+    queryKey: ["subcuentas", legajo],
+    queryFn: () => listSubcuentas(legajo),
+    enabled: !!cliente,
+  });
+
   const statsRows = movimientosStatsQuery.data?.rows ?? movimientosQuery.rows;
-  const saldoTotal = statsRows.reduce((acc, r) => acc + (r.montoOperacion ?? 0), 0);
+  // Saldo real = suma de subcuentas (disponible + retenido) como en MollyPay-Enterprises app.index.tsx:98-99
+  // Cuenta general = +1 (principal) no aporta saldo extra, saldo = disp+retenido de todas las subcuentas del legajo
+  const saldoTotal = (subcuentasQuery.data ?? []).reduce(
+    (acc, s) => acc + Number(s.saldoDisponible ?? 0) + Number(s.saldoRetenido ?? 0),
+    0,
+  );
   const totalMovimientos = movimientosStatsQuery.data?.total ?? movimientosQuery.total ?? 0;
   const porTipo = statsRows.reduce<Record<string, number>>((acc, r) => {
     const k = r.tipo ?? "otro";
@@ -2178,11 +2189,6 @@ function ClienteDetailPage() {
     page: 0,
     pageSize: 25,
     cliente_legajo: legajo ?? undefined,
-  });
-  const subcuentasQuery = useQuery({
-    queryKey: ["subcuentas", legajo],
-    queryFn: () => listSubcuentas(legajo),
-    enabled: !!cliente,
   });
   const comisionesQuery = useQuery({
     queryKey: ["comisiones_cliente", legajo],
@@ -2625,7 +2631,12 @@ function ClienteDetailPage() {
                 <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saldo total de la cuenta</p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">{fmtMonto(saldoTotal)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Suma de monto_operación del período</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Disponible + retenido · {(subcuentasQuery.data?.length ?? 0) > 0
+                      ? `1 principal + ${subcuentasQuery.data!.length} subcuenta(s)`
+                      : "sin subcuentas"}
+                    {subcuentasQuery.isLoading ? " (cargando…)" : ""}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total de movimientos</p>

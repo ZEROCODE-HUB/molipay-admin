@@ -25,6 +25,13 @@ export type ComercioFilters = Pagination & {
 // legajo es FK real a clientes.legajo -> la relación embebida se llama `clientes`.
 const COLUMNS =
   "id, usuario, legajo, categoria_id, estado, nivel, habilitado_pago_transferencia, habilitado_enlaces_pago, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+const COLUMNS_LEGACY =
+  "id, usuario, legajo, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+
+function isMissingColumnError(error: unknown): boolean {
+  const msg = (error as { message?: string })?.message ?? String(error);
+  return /habilitado_pago_transferencia|habilitado_enlaces_pago|column.*does not exist|PGRST204|schema cache/i.test(msg);
+}
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -36,18 +43,24 @@ export async function listComercios(filters: ComercioFilters): Promise<Page<Come
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("comercios").select(COLUMNS, { count: "exact" });
+  const buildQuery = (cols: string) => {
+    let q = sb.from("comercios").select(cols, { count: "exact" });
+    if (search && search.trim()) {
+      const qq = escapeLike(search);
+      q = q.or(`usuario.ilike.%${qq}%,legajo.ilike.%${qq}%`);
+    }
+    if (estado) q = q.eq("estado", estado);
+    if (nivel) q = q.eq("nivel", nivel);
+    return q.order("created_at", { ascending: false }).range(from, to);
+  };
 
-  if (search && search.trim()) {
-    const q = escapeLike(search);
-    query = query.or(`usuario.ilike.%${q}%,legajo.ilike.%${q}%`);
+  let { data, error, count } = await buildQuery(COLUMNS);
+  if (error && isMissingColumnError(error)) {
+    const fallback = await buildQuery(COLUMNS_LEGACY);
+    data = fallback.data as typeof data;
+    error = fallback.error;
+    count = fallback.count;
   }
-  if (estado) query = query.eq("estado", estado);
-  if (nivel) query = query.eq("nivel", nivel);
-
-  query = query.order("created_at", { ascending: false }).range(from, to);
-
-  const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
 
   const rows = (data ?? []) as (ComercioRow & {
@@ -74,7 +87,12 @@ export async function listComercios(filters: ComercioFilters): Promise<Page<Come
 
 export async function getComercio(id: string): Promise<Comercio | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("comercios").select(COLUMNS).eq("id", id).maybeSingle();
+  let { data, error } = await sb.from("comercios").select(COLUMNS).eq("id", id).maybeSingle();
+  if (error && isMissingColumnError(error)) {
+    const fb = await sb.from("comercios").select(COLUMNS_LEGACY).eq("id", id).maybeSingle();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   if (!data) return null;
   return toComercio(
@@ -98,19 +116,27 @@ export type ComercioCreateInput = ComercioInput;
 
 export async function createComercio(input: ComercioCreateInput): Promise<Comercio> {
   const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("comercios")
-    .insert({
+  const tryInsert = async (withFlags: boolean) => {
+    const payload: Record<string, unknown> = {
       usuario: input.usuario.trim(),
       legajo: input.legajo.trim(),
       categoria_id: input.categoriaId,
       nivel: input.nivel,
       estado: input.estado,
-      habilitado_pago_transferencia: input.habilitadoPagoTransferencia ?? false,
-      habilitado_enlaces_pago: input.habilitadoEnlacesPago ?? false,
-    })
-    .select(COLUMNS)
-    .single();
+    };
+    if (withFlags) {
+      payload.habilitado_pago_transferencia = input.habilitadoPagoTransferencia ?? false;
+      payload.habilitado_enlaces_pago = input.habilitadoEnlacesPago ?? false;
+    }
+    const cols = withFlags ? COLUMNS : COLUMNS_LEGACY;
+    return sb.from("comercios").insert(payload).select(cols).single();
+  };
+  let { data, error } = await tryInsert(true);
+  if (error && isMissingColumnError(error)) {
+    const fb = await tryInsert(false);
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return toComercio(
     data as ComercioRow & {
@@ -143,12 +169,15 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
     payload.habilitado_pago_transferencia = input.habilitadoPagoTransferencia;
   if (input.habilitadoEnlacesPago !== undefined) payload.habilitado_enlaces_pago = input.habilitadoEnlacesPago;
 
-  const { data, error } = await sb
-    .from("comercios")
-    .update(payload)
-    .eq("id", id)
-    .select(COLUMNS)
-    .single();
+  let { data, error } = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS).single();
+  if (error && isMissingColumnError(error)) {
+    // reintenta sin flags si la columna no existe aún
+    if ("habilitado_pago_transferencia" in payload) delete payload.habilitado_pago_transferencia;
+    if ("habilitado_enlaces_pago" in payload) delete payload.habilitado_enlaces_pago;
+    const fb = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS_LEGACY).single();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return toComercio(
     data as ComercioRow & {
