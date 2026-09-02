@@ -21,6 +21,12 @@ import { Card, Badge, BtnOutline, BtnPrimary, Input, Label } from "@/components/
 import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
 import { FileDropzone } from "@/components/file-dropzone";
+import { useEffect } from "react";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import {
+  listConciliacionesArchivos,
+  createConciliacionArchivo,
+} from "@/lib/api/conciliaciones";
 
 export const Route = createFileRoute("/admin/administracion/reportes")({
   head: () => ({ meta: [{ title: "Reportes — Admin Panel" }] }),
@@ -496,27 +502,88 @@ function Conciliaciones() {
   const [archivos, setArchivos] = useState<Archivo[]>(ARCHIVOS_INICIALES);
   const [analisisTarget, setAnalisisTarget] = useState<Archivo | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     nombre: "",
     fecha: "",
     file: null as File | null,
   });
 
-  const guardarArchivo = () => {
-    if (!uploadForm.nombre.trim() || !uploadForm.fecha || !uploadForm.file) return;
+  // Carga inicial desde Supabase si está configurado - cada fila refleja DB
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    listConciliacionesArchivos({ page: 0, pageSize: 50, tipo: "bancaria" })
+      .then((res) => {
+        if (res.rows.length > 0) {
+          setArchivos(
+            res.rows.map((r) => ({
+              archivo: r.nombreArchivo,
+              fecha: r.fechaCarga,
+              estado: (r.estado === "Analizado" ? "Analizado" : "Pendiente") as Archivo["estado"],
+              downloadRows: [],
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        // fallback a mocks si RLS/migración aún no aplicada
+      });
+  }, []);
+
+  const guardarArchivo = async () => {
+    if (!uploadForm.nombre.trim() || !uploadForm.fecha || !uploadForm.file) {
+      toast.error("Completá nombre, fecha y archivo");
+      return;
+    }
     const nombreArchivo = uploadForm.file.name || uploadForm.nombre.trim();
-    setArchivos((prev) => [
-      {
-        archivo: nombreArchivo,
-        fecha: uploadForm.fecha,
-        estado: "Pendiente",
-        downloadRows: [],
-      },
-      ...prev,
-    ]);
+    // Persistencia real si hay Supabase
+    if (isSupabaseConfigured) {
+      setSaving(true);
+      try {
+        const created = await createConciliacionArchivo({
+          nombreArchivo,
+          fechaCarga: uploadForm.fecha,
+          tipo: "bancaria",
+          estado: "Pendiente",
+          file: uploadForm.file,
+        });
+        setArchivos((prev) => [
+          {
+            archivo: created.nombreArchivo,
+            fecha: created.fechaCarga,
+            estado: "Pendiente",
+            downloadRows: [],
+          },
+          ...prev,
+        ]);
+        toast.success("Archivo guardado en base de datos");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Si la tabla aún no existe (migración pendiente), fallback a solo UI
+        if (/Could not find the table|PGRST205|does not exist/i.test(msg)) {
+          setArchivos((prev) => [
+            { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows: [] },
+            ...prev,
+          ]);
+          toast.success("Archivo cargado (modo local: aplicá migración 0016)");
+        } else {
+          toast.error(`Error al guardar: ${msg}`);
+          setSaving(false);
+          return;
+        }
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Sin Supabase: solo UI local
+      setArchivos((prev) => [
+        { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows: [] },
+        ...prev,
+      ]);
+      toast.success("Archivo cargado correctamente");
+    }
     setUploadForm({ nombre: "", fecha: "", file: null });
     setCargando(false);
-    toast.success("Archivo cargado correctamente");
   };
 
   const columns: Column<Archivo>[] = [
@@ -576,11 +643,11 @@ function Conciliaciones() {
       {cargando && (
         <FormDialog
           open
-          onClose={() => setCargando(false)}
+          onClose={() => (saving ? null : setCargando(false))}
           title="Cargar archivo de conciliación"
-          description="Ingresá el nombre, la fecha de carga y el archivo CSV."
+          description="Ingresá el nombre, la fecha de carga y el archivo CSV. Se guarda en la base de datos."
           onSubmit={guardarArchivo}
-          submitLabel="Guardar"
+          submitLabel={saving ? "Guardando..." : "Guardar"}
           cancelLabel="Cancelar"
           size="md"
         >
@@ -2023,6 +2090,7 @@ function BlpAnalisisModal({ archivo, onClose }: { archivo: BlpArchivo; onClose: 
 function ConciliacionesBLP() {
   const [data, setData] = useState<BlpArchivo[]>(blpData);
   const [cargando, setCargando] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [analisisTarget, setAnalisisTarget] = useState<BlpArchivo | null>(null);
   const [noRequiere, setNoRequiere] = useState<string | null>(null);
   const [cargarForm, setCargarForm] = useState({
@@ -2031,15 +2099,69 @@ function ConciliacionesBLP() {
     file: null as File | null,
   });
 
-  const guardarArchivo = () => {
-    if (!cargarForm.nombre.trim() || !cargarForm.fecha || !cargarForm.file) return;
-    setData((prev) => [
-      { archivo: cargarForm.file!.name, fecha: cargarForm.fecha, estado: "Pendiente" },
-      ...prev,
-    ]);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    listConciliacionesArchivos({ page: 0, pageSize: 50, tipo: "blp" })
+      .then((res) => {
+        if (res.rows.length > 0) {
+          setData(
+            res.rows.map((r) => ({
+              archivo: r.nombreArchivo,
+              fecha: r.fechaCarga,
+              estado: r.estado as BlpArchivo["estado"],
+            })),
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const guardarArchivo = async () => {
+    if (!cargarForm.nombre.trim() || !cargarForm.fecha || !cargarForm.file) {
+      toast.error("Completá nombre, fecha y archivo");
+      return;
+    }
+    const nombreArchivo = cargarForm.file.name || cargarForm.nombre.trim();
+    if (isSupabaseConfigured) {
+      setSaving(true);
+      try {
+        const created = await createConciliacionArchivo({
+          nombreArchivo,
+          fechaCarga: cargarForm.fecha,
+          tipo: "blp",
+          estado: "Pendiente",
+          file: cargarForm.file,
+        });
+        setData((prev) => [
+          { archivo: created.nombreArchivo, fecha: created.fechaCarga, estado: "Pendiente" },
+          ...prev,
+        ]);
+        toast.success("Archivo BLP guardado en base de datos");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (/Could not find the table|PGRST205|does not exist/i.test(msg)) {
+          setData((prev) => [
+            { archivo: nombreArchivo, fecha: cargarForm.fecha, estado: "Pendiente" },
+            ...prev,
+          ]);
+          toast.success("Archivo cargado (modo local: aplicá migración 0016)");
+        } else {
+          toast.error(`Error al guardar: ${msg}`);
+          setSaving(false);
+          return;
+        }
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setData((prev) => [
+        { archivo: nombreArchivo, fecha: cargarForm.fecha, estado: "Pendiente" },
+        ...prev,
+      ]);
+      toast.success("Archivo cargado correctamente");
+    }
     setCargarForm({ nombre: "", fecha: "", file: null });
     setCargando(false);
-    toast.success("Archivo cargado correctamente");
   };
 
   const abrirAnalisis = (r: BlpArchivo) => {
@@ -2109,10 +2231,11 @@ function ConciliacionesBLP() {
       {cargando && (
         <FormDialog
           open
-          onClose={() => setCargando(false)}
+          onClose={() => (saving ? null : setCargando(false))}
           title="Cargar nuevo archivo"
+          description="Se guarda en la base de datos (tipo BLP)."
           onSubmit={guardarArchivo}
-          submitLabel="Guardar"
+          submitLabel={saving ? "Guardando..." : "Guardar"}
           size="md"
         >
           <div>

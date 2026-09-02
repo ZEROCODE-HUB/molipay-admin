@@ -287,6 +287,31 @@ export type Conciliacion = {
   createdAt: string;
 };
 
+// --- conciliaciones_archivos (persistencia de carga CSV) -------------------
+export type ConciliacionArchivoRow = {
+  id: string;
+  nombre_archivo: string;
+  fecha_carga: string;
+  storage_path: string | null;
+  estado: string;
+  tipo: "bancaria" | "blp";
+  archivo_origen: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type ConciliacionArchivo = {
+  id: string;
+  nombreArchivo: string;
+  fechaCarga: string;
+  storagePath: string | null;
+  estado: string;
+  tipo: "bancaria" | "blp";
+  archivoOrigen: string | null;
+  createdAt: string;
+  createdBy: string | null;
+};
+
 // --- comercios (tabla real: comercios / puntos_venta / codigos_categoria) --
 //
 // Regla de negocio (confirmada por el cliente): `comercios.legajo` es una FK
