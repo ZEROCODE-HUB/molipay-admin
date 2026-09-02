@@ -211,6 +211,8 @@ export function toComercio(
       : null,
     nivel: r.nivel,
     estado: r.estado,
+    habilitadoPagoTransferencia: (r.habilitado_pago_transferencia as boolean) ?? false,
+    habilitadoEnlacesPago: (r.habilitado_enlaces_pago as boolean) ?? false,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,

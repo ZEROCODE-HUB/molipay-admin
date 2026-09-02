@@ -12,7 +12,6 @@ export const Route = createFileRoute("/admin/comercios/gestion")({
 });
 
 const tabs: Tab[] = [
-  { label: "Gestión de comercios", to: "/admin/comercios/gestion" },
   { label: "Comercios", to: "/admin/comercios/gestion" },
   { label: "Código de categoría", to: "/admin/comercios/gestion/categoria" },
 ];

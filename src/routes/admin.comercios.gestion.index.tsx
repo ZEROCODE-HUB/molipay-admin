@@ -174,6 +174,22 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
                   </span>
                 }
               />
+              <Field
+                label="Pago con transferencias"
+                value={
+                  <Badge tone={comercio.habilitadoPagoTransferencia ? "success" : "neutral"}>
+                    {comercio.habilitadoPagoTransferencia ? "Habilitado" : "No habilitado"}
+                  </Badge>
+                }
+              />
+              <Field
+                label="Enlaces de pago"
+                value={
+                  <Badge tone={comercio.habilitadoEnlacesPago ? "success" : "neutral"}>
+                    {comercio.habilitadoEnlacesPago ? "Habilitado" : "No habilitado"}
+                  </Badge>
+                }
+              />
             </div>
           </Card>
 
@@ -272,6 +288,8 @@ function ComercioFormModal({
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
+    habilitadoPagoTransferencia: boolean;
+    habilitadoEnlacesPago: boolean;
   }) => void;
 }) {
   const [clienteLegajo, setClienteLegajo] = useState(comercio?.legajo ?? "");
@@ -282,6 +300,12 @@ function ComercioFormModal({
   const [nivel, setNivel] = useState<NivelComercio>(comercio?.nivel ?? "Pequeño");
   const [estado, setEstado] = useState<EstadoComercio>(
     comercio?.estado ?? "Pendiente de aprobación",
+  );
+  const [habilitadoPagoTransferencia, setHabilitadoPagoTransferencia] = useState(
+    comercio?.habilitadoPagoTransferencia ?? false,
+  );
+  const [habilitadoEnlacesPago, setHabilitadoEnlacesPago] = useState(
+    comercio?.habilitadoEnlacesPago ?? false,
   );
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
@@ -294,6 +318,8 @@ function ComercioFormModal({
       categoriaId: categoriaId ? Number(categoriaId) : null,
       nivel,
       estado,
+      habilitadoPagoTransferencia,
+      habilitadoEnlacesPago,
     });
   };
 
@@ -392,6 +418,26 @@ function ComercioFormModal({
             ))}
           </select>
         </div>
+        <div className="sm:col-span-2 flex flex-col gap-3 pt-2 border-t border-border mt-2">
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={habilitadoPagoTransferencia}
+              onChange={(e) => setHabilitadoPagoTransferencia(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            Habilitado para pago con transferencias
+          </label>
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={habilitadoEnlacesPago}
+              onChange={(e) => setHabilitadoEnlacesPago(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            Habilitado para enlaces de pago
+          </label>
+        </div>
       </div>
     </FormDialog>
   );
@@ -456,6 +502,8 @@ function Page() {
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
+    habilitadoPagoTransferencia: boolean;
+    habilitadoEnlacesPago: boolean;
   }) => {
     try {
       if (editTarget) {
@@ -464,6 +512,8 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
+          habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
+          habilitadoEnlacesPago: input.habilitadoEnlacesPago,
         });
       } else {
         await createComercio({
@@ -472,6 +522,8 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
+          habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
+          habilitadoEnlacesPago: input.habilitadoEnlacesPago,
         });
       }
       invalidar();
@@ -607,7 +659,7 @@ function Page() {
   return (
     <PermissionGuard recurso="comercios">
       <PageHeader
-        title="Gestión de comercios"
+        title="Comercios"
         description="Listado centralizado de comercios de la plataforma, recuperados desde la base de datos."
         action={
           <BtnPrimary

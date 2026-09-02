@@ -402,6 +402,8 @@ export type ComercioRow = {
   categoria_id: number | null;
   estado: EstadoComercio;
   nivel: NivelComercio;
+  habilitado_pago_transferencia: boolean | null;
+  habilitado_enlaces_pago: boolean | null;
   created_at: string;
   updated_at: string;
   clientes?:
@@ -432,6 +434,8 @@ export type Comercio = {
   categoria: CodigoCategoria | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
+  habilitadoPagoTransferencia: boolean;
+  habilitadoEnlacesPago: boolean;
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -443,6 +447,8 @@ export type ComercioInput = {
   categoriaId: number | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
+  habilitadoPagoTransferencia?: boolean;
+  habilitadoEnlacesPago?: boolean;
 };
 
 export type ClienteSelect = {

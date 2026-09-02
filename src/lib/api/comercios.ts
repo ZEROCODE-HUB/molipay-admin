@@ -24,7 +24,7 @@ export type ComercioFilters = Pagination & {
 
 // legajo es FK real a clientes.legajo -> la relación embebida se llama `clientes`.
 const COLUMNS =
-  "id, usuario, legajo, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+  "id, usuario, legajo, categoria_id, estado, nivel, habilitado_pago_transferencia, habilitado_enlaces_pago, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -106,6 +106,8 @@ export async function createComercio(input: ComercioCreateInput): Promise<Comerc
       categoria_id: input.categoriaId,
       nivel: input.nivel,
       estado: input.estado,
+      habilitado_pago_transferencia: input.habilitadoPagoTransferencia ?? false,
+      habilitado_enlaces_pago: input.habilitadoEnlacesPago ?? false,
     })
     .select(COLUMNS)
     .single();
@@ -137,6 +139,9 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
   if (input.categoriaId !== undefined) payload.categoria_id = input.categoriaId;
   if (input.nivel !== undefined) payload.nivel = input.nivel;
   if (input.estado !== undefined) payload.estado = input.estado;
+  if (input.habilitadoPagoTransferencia !== undefined)
+    payload.habilitado_pago_transferencia = input.habilitadoPagoTransferencia;
+  if (input.habilitadoEnlacesPago !== undefined) payload.habilitado_enlaces_pago = input.habilitadoEnlacesPago;
 
   const { data, error } = await sb
     .from("comercios")
