@@ -209,13 +209,15 @@ export async function deleteComercio(id: string): Promise<void> {
 // --- catálogos auxiliares ---------------------------------------------------
 
 // Legajo siempre es un cliente: el alta de comercio exige elegir un cliente
-// existente (FK real a clientes.legajo). Esta lista alimenta el selector.
-export async function listClientesForSelect(): Promise<ClienteSelect[]> {
+// existente (FK real a clientes.legajo). Selector con búsqueda server-side + limit.
+export async function listClientesForSelect(search?: string): Promise<ClienteSelect[]> {
   const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("clientes")
-    .select("legajo, nombre, correo")
-    .order("nombre", { ascending: true });
+  let query = sb.from("clientes").select("legajo, nombre, correo").order("nombre", { ascending: true }).limit(20);
+  if (search?.trim()) {
+    const q = search.trim().replace(/[%_]/g, "\\$&");
+    query = query.or(`legajo.ilike.%${q}%,correo.ilike.%${q}%,nombre.ilike.%${q}%`);
+  }
+  const { data, error } = await query;
   if (error) throw new DataAccessError(error);
   return (data ?? []).map(
     (r: { legajo: string; nombre: string; correo: string }): ClienteSelect => ({

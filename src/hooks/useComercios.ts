@@ -25,10 +25,10 @@ export function useComercios(filters: ComercioFilters) {
   };
 }
 
-export function useClientesForSelect() {
+export function useClientesForSelect(search?: string) {
   return useQuery<ClienteSelect[]>({
-    queryKey: ["clientes", "select"],
-    queryFn: listClientesForSelect,
+    queryKey: ["clientes", "select", search ?? ""],
+    queryFn: () => listClientesForSelect(search),
     staleTime: 5 * 60_000,
   });
 }

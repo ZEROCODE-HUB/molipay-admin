@@ -19,6 +19,7 @@ import { LegajoCell } from "@/components/legajo-label";
 import { useComercios, useClientesForSelect } from "@/hooks/useComercios";
 import { useCodigosCategoria } from "@/hooks/useCodigosCategoria";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { Search } from "lucide-react";
 import {
   createComercio,
   deleteComercio,
@@ -310,6 +311,15 @@ function ComercioFormModal({
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
+  // Combobox con búsqueda server-side (debounce 350ms, limit 20)
+  const [clienteSearchInput, setClienteSearchInput] = useState("");
+  const debouncedClienteSearch = useDebouncedValue(clienteSearchInput, 350);
+  const { data: clientesFiltrados } = useClientesForSelect(
+    comercio ? undefined : debouncedClienteSearch,
+  );
+  const clientesOptions = comercio ? clientes : (clientesFiltrados ?? clientes);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+
   const guardar = () => {
     if (!clienteLegajo) return;
     onSave({
@@ -340,25 +350,65 @@ function ComercioFormModal({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <Label htmlFor="gc-cliente">Cliente (legajo)</Label>
-          <select
-            id="gc-cliente"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={clienteLegajo}
-            disabled={!!comercio}
-            onChange={(e) => {
-              const legajo = e.target.value;
-              setClienteLegajo(legajo);
-              const cli = clientes.find((c) => c.legajo === legajo);
-              if (cli && !comercio) setUsuario(cli.correo);
-            }}
-          >
-            <option value="">Seleccioná un cliente…</option>
-            {clientes.map((c) => (
-              <option key={c.legajo} value={c.legajo}>
-                {c.nombre} · {c.legajo}
-              </option>
-            ))}
-          </select>
+          {comercio ? (
+            <Input id="gc-cliente" value={`${clienteSeleccionado?.nombre ?? comercio.legajo} · ${comercio.legajo}`} disabled />
+          ) : (
+            <div className="relative">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="gc-cliente"
+                  value={clienteSearchInput}
+                  onChange={(e) => {
+                    setClienteSearchInput(e.target.value);
+                    setComboboxOpen(true);
+                    if (!e.target.value.trim()) setClienteLegajo("");
+                  }}
+                  onFocus={() => setComboboxOpen(true)}
+                  onBlur={() => setTimeout(() => setComboboxOpen(false), 150)}
+                  placeholder="Buscar por nombre, legajo o correo…"
+                  className="pl-9"
+                  autoComplete="off"
+                />
+              </div>
+              {comboboxOpen && (
+                <div className="absolute z-20 mt-1 w-full rounded-md border border-input bg-card shadow-lg max-h-60 overflow-auto">
+                  {(clientesOptions ?? []).length === 0 ? (
+                    <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      {debouncedClienteSearch ? "Sin resultados." : "Escribí para buscar (máx. 20 resultados)."}
+                    </div>
+                  ) : (
+                    (clientesOptions ?? []).map((c) => (
+                      <button
+                        key={c.legajo}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setClienteLegajo(c.legajo);
+                          setClienteSearchInput(`${c.nombre} · ${c.legajo}`);
+                          setUsuario(c.correo);
+                          setComboboxOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-accent flex flex-col ${
+                          c.legajo === clienteLegajo ? "bg-accent" : ""
+                        }`}
+                      >
+                        <span className="font-medium">{c.nombre}</span>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {c.legajo} · {c.correo}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+              {clienteLegajo && clienteSeleccionado && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Seleccionado: <span className="font-mono">{clienteSeleccionado.legajo}</span> · {clienteSeleccionado.correo}
+                </p>
+              )}
+            </div>
+          )}
           <p className="text-[11px] text-muted-foreground mt-1">
             El legajo es una FK real a <code>clientes.legajo</code>; no se puede cargar texto libre.
           </p>
