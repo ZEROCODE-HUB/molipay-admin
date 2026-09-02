@@ -93,7 +93,7 @@ function TodosPage() {
     setLegajoInput(legajo ?? "");
   }, [legajo]);
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useMovimientos({
+  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } = useMovimientos({
     page,
     pageSize: PAGE_SIZE,
     search: search || legajo || undefined,
@@ -276,8 +276,8 @@ function TodosPage() {
             showGlobalFilter={false}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total === 0 || total ? `${total} movimiento(s) · ` : ""}página {page + 1} de{" "}
+            <span title={isEstimated ? "Conteo estimado" : undefined}>
+              {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}página {page + 1} de{" "}
               {totalPaginas}
             </span>
             <div className="flex gap-2">

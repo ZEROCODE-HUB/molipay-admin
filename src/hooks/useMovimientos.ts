@@ -11,6 +11,19 @@ export function useMovimientos(filters: MovimientoFilters) {
   });
 
   const rows = query.data?.rows ?? [];
+  const filtrosEstructuradosActivos = Boolean(
+    filters.estadoCodigo ||
+      filters.tipo ||
+      filters.clienteId ||
+      filters.legajo ||
+      filters.fechaDesde ||
+      filters.fechaHasta ||
+      filters.conImpuesto ||
+      filters.conComision,
+  );
+  const countModeEfectivo = filtrosEstructuradosActivos ? "exact" : (filters.countMode ?? "estimated");
+  const isEstimated = countModeEfectivo !== "exact";
+
   return {
     rows,
     total: query.data?.total ?? 0,
@@ -22,5 +35,7 @@ export function useMovimientos(filters: MovimientoFilters) {
     error: query.error as Error | null,
     isEmpty: !query.isLoading && rows.length === 0,
     refetch: query.refetch,
+    isEstimated,
+    countModeEfectivo,
   };
 }

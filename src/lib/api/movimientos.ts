@@ -45,14 +45,10 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
     countMode = "estimated",
   } = filters;
 
-  // BUG A (Opción 1, 2026-08-24): count exacto cuando hay CUALQUIER filtro
-  // aplicado (search/fecha/estado/tipo/cliente/legajo/impuesto/comisión),
-  // estimated solo en la query base sin filtros (donde sí importa performance
-  // a 120k+ filas). Los índices reales sobre legajo/estado_id/fecha mantienen
-  // el costo de exact filtrado bajo.
-  const filtrosActivos = Boolean(
-    search?.trim() ||
-      estadoCodigo ||
+  // Filtros estructurados (acotan por índice) SÍ ameritan COUNT exacto;
+  // la búsqueda de texto libre (ilike) NO fuerza exact por sí sola.
+  const filtrosEstructuradosActivos = Boolean(
+    estadoCodigo ||
       tipo ||
       clienteId ||
       legajo ||
@@ -61,7 +57,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
       conImpuesto ||
       conComision,
   );
-  const countModeEfectivo: "exact" | "planned" | "estimated" = filtrosActivos
+  const countModeEfectivo: "exact" | "planned" | "estimated" = filtrosEstructuradosActivos
     ? "exact"
     : countMode;
 

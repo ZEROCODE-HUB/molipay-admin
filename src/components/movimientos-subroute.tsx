@@ -112,7 +112,7 @@ export function MovimientosSubRoute({
     [page, search, estadoCodigo, legajo, tipoCode, soloConImpuesto, soloConComision],
   );
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } =
+  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } =
     useMovimientos(filtros);
 
   const { data: catalogoEstados = [] } = useEstadosMovimiento();
@@ -277,8 +277,8 @@ export function MovimientosSubRoute({
             showGlobalFilter={false}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total === 0 || total ? `${total} movimiento(s) · ` : ""}página {page + 1} de{" "}
+            <span title={isEstimated ? "Conteo estimado" : undefined}>
+              {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}página {page + 1} de{" "}
               {totalPaginas}
             </span>
             <div className="flex gap-2">
