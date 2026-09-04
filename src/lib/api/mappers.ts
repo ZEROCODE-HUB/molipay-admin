@@ -67,6 +67,10 @@ export function toCliente(r: ClienteRow): Cliente {
     fechaAlta: r.fecha_alta,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    emailVerificado: (r.email_verificado as boolean) ?? false,
+    onboardingCompleto: (r.onboarding_completo as boolean) ?? false,
+    cbu: (r.cbu as string | null) ?? null,
+    cbuCancelado: (r.cbu_cancelado as boolean) ?? false,
   };
 }
 

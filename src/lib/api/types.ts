@@ -8,8 +8,26 @@
 export type TipoPersona = "fisica" | "juridica";
 export const TIPOS_PERSONA: TipoPersona[] = ["fisica", "juridica"];
 
-export type EstadoCliente = "activo" | "suspendido" | "rechazado";
-export const ESTADOS_CLIENTE: EstadoCliente[] = ["activo", "suspendido", "rechazado"];
+export type EstadoCliente =
+  | "pendiente_verificacion"
+  | "registrado"
+  | "preactivado"
+  | "activado"
+  | "suspendido"
+  | "deshabilitado"
+  | "eliminado"
+  // legacy compat (datos existentes antes de 0019)
+  | "activo"
+  | "rechazado";
+export const ESTADOS_CLIENTE: EstadoCliente[] = [
+  "pendiente_verificacion",
+  "registrado",
+  "preactivado",
+  "activado",
+  "suspendido",
+  "deshabilitado",
+  "eliminado",
+];
 
 // --- admin_users (rol_id FK a roles) --------------------------------------
 
@@ -48,6 +66,10 @@ export type ClienteRow = {
   fecha_alta: string;
   created_at: string;
   updated_at: string;
+  email_verificado?: boolean | null;
+  onboarding_completo?: boolean | null;
+  cbu?: string | null;
+  cbu_cancelado?: boolean | null;
 };
 
 export type Cliente = {
@@ -61,6 +83,10 @@ export type Cliente = {
   fechaAlta: string;
   createdAt: string;
   updatedAt: string;
+  emailVerificado?: boolean;
+  onboardingCompleto?: boolean;
+  cbu?: string | null;
+  cbuCancelado?: boolean;
 };
 
 // --- comisiones_cliente ----------------------------------------------------

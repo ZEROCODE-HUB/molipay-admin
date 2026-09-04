@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Eye, XCircle, RotateCcw, AlertTriangle, Inbox } from "lucide-react";
+import { Eye, XCircle, RotateCcw, AlertTriangle, Inbox, ShieldCheck, Ban, Trash2, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -9,11 +9,21 @@ import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown"
 import { Badge } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { useClientes } from "@/hooks/useClientes";
-import { updateClienteEstado } from "@/lib/api/clientes";
+import {
+  aprobarDocumentacionCliente,
+  activarCliente,
+  suspenderCliente,
+  reactivarCliente,
+  deshabilitarCliente,
+  eliminarCliente,
+  getClienteByLegajo,
+} from "@/lib/api/clientes";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { Cliente, EstadoCliente } from "@/lib/api/types";
+import { ESTADO_LABEL, ESTADO_TONE, normalizarEstado, FILTRO_ESTADOS_OPCIONES, LABEL_A_ESTADO } from "@/lib/cliente-estados";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/general/usuarios/")({
   head: () => ({
@@ -27,21 +37,14 @@ export const Route = createFileRoute("/admin/general/usuarios/")({
 
 const PAGE_SIZE = 25;
 
-type EstadoUsuario = "Activado" | "Suspendido" | "Rechazado";
-
-const estadoFromDb = (e: EstadoCliente): EstadoUsuario =>
-  e === "suspendido" ? "Suspendido" : e === "rechazado" ? "Rechazado" : "Activado";
-
-const estadoBadgeTone = (e: EstadoUsuario) =>
-  e === "Activado" ? "success" : e === "Suspendido" ? "danger" : "warn";
-
 type Usuario = {
   id: string;
   legajo: string;
   correo: string;
   nombres: string;
-  apellidos: string;
-  estado: EstadoUsuario;
+  estadoRaw: EstadoCliente;
+  estadoLabel: string;
+  estadoTone: "success" | "warn" | "danger" | "neutral";
   fechaRegistro: string;
 };
 
@@ -97,10 +100,15 @@ function UsuariosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
+
+  const estadoFiltroDb = filtroEstado ? (LABEL_A_ESTADO[filtroEstado] as EstadoCliente | undefined) : undefined;
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useClientes({
     page,
     pageSize: PAGE_SIZE,
+    estado: estadoFiltroDb,
+    tipoPersona: "fisica",
   });
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -113,25 +121,58 @@ function UsuariosPage() {
 
   const { can } = useCan();
   const puedeModificar = can("modificar", "usuarios");
+  const puedeBorrar = can("borrar", "usuarios");
 
-  const data: Usuario[] = rows.map((c: Cliente) => ({
-    id: c.id,
-    legajo: c.legajo,
-    correo: c.correo,
-    nombres: c.nombre,
-    apellidos: "",
-    estado: estadoFromDb(c.estado),
-    fechaRegistro: c.fechaAlta,
-  }));
+  const data: Usuario[] = rows.map((c: Cliente) => {
+    const norm = normalizarEstado(c.estado);
+    return {
+      id: c.id,
+      legajo: c.legajo,
+      correo: c.correo,
+      nombres: c.nombre,
+      estadoRaw: c.estado,
+      estadoLabel: ESTADO_LABEL[norm],
+      estadoTone: ESTADO_TONE[norm] as Usuario["estadoTone"],
+      fechaRegistro: c.fechaAlta,
+    };
+  });
 
-  const cambiarEstado = async (row: Usuario, nuevo: EstadoCliente) => {
+  const ejecutar = async (
+    legajo: string,
+    accion: "aprobar" | "activar" | "suspender" | "reactivar" | "deshabilitar" | "eliminar",
+  ) => {
     try {
-      await updateClienteEstado(row.id, nuevo);
+      const cliente = await getClienteByLegajo(legajo);
+      if (!cliente) throw new Error("Cliente no encontrado");
+      let res: { ok: boolean; motivo?: string } | { ok: true } = { ok: false, motivo: "No implementado" };
+      if (accion === "aprobar") res = await aprobarDocumentacionCliente(cliente);
+      else if (accion === "activar") res = await activarCliente(cliente);
+      else if (accion === "suspender") res = await suspenderCliente(cliente);
+      else if (accion === "reactivar") res = await reactivarCliente(cliente);
+      else if (accion === "deshabilitar") res = await deshabilitarCliente(cliente);
+      else if (accion === "eliminar") res = await eliminarCliente(cliente);
+
+      if (!res.ok) {
+        const motivo = (res as { motivo?: string }).motivo ?? "No se pudo completar la acción";
+        toast.error(motivo);
+        setConfirmAction({
+          title: "No se pudo completar",
+          message: motivo,
+          confirmLabel: "Cerrar",
+          variant: "danger",
+          onConfirm: () => setConfirmAction(null),
+        });
+        return;
+      }
+      toast.success("Estado actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      setConfirmAction(null);
     } catch (e) {
+      const msg = (e as Error).message;
+      toast.error(msg);
       setConfirmAction({
-        title: "No se pudo actualizar",
-        message: (e as Error).message,
+        title: "Error",
+        message: msg,
         confirmLabel: "Cerrar",
         variant: "danger",
         onConfirm: () => setConfirmAction(null),
@@ -139,45 +180,110 @@ function UsuariosPage() {
     }
   };
 
-  const getActions = (row: Usuario): ActionItem[] => [
-    {
-      label: "Ver detalle",
-      icon: Eye,
-      onClick: () =>
-        navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo } }),
-    },
-    ...(row.estado === "Suspendido"
-      ? [
-          {
-            label: "Reactivar",
-            icon: RotateCcw,
-            disabled: !puedeModificar,
-            onClick: () =>
-              setConfirmAction({
-                title: "Reactivar usuario",
-                message: `¿Estás seguro de reactivar a ${row.nombres}?`,
-                confirmLabel: "Reactivar",
-                variant: "default" as const,
-                onConfirm: () => cambiarEstado(row, "activo"),
-              }),
-          },
-        ]
-      : [
-          {
-            label: "Suspender",
-            icon: XCircle,
-            disabled: !puedeModificar,
-            onClick: () =>
-              setConfirmAction({
-                title: "Suspender usuario",
-                message: `¿Estás seguro de suspender a ${row.nombres}?`,
-                confirmLabel: "Suspender",
-                variant: "danger" as const,
-                onConfirm: () => cambiarEstado(row, "suspendido"),
-              }),
-          },
-        ]),
-  ];
+  const getActions = (row: Usuario): ActionItem[] => {
+    const norm = normalizarEstado(row.estadoRaw);
+    const items: ActionItem[] = [
+      {
+        label: "Ver detalle",
+        icon: Eye,
+        onClick: () => navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo } }),
+      },
+    ];
+
+    if (norm === "registrado") {
+      items.push({
+        label: "Preactivar (aprobar documentación)",
+        icon: ShieldCheck,
+        disabled: !puedeModificar,
+        onClick: () =>
+          setConfirmAction({
+            title: "Aprobar documentación",
+            message: `¿Aprobar la documentación de ${row.nombres}? Pasará a Preactivado.`,
+            confirmLabel: "Aprobar",
+            variant: "default",
+            onConfirm: () => ejecutar(row.legajo, "aprobar"),
+          }),
+      });
+    }
+    if (norm === "preactivado") {
+      items.push({
+        label: "Activar",
+        icon: CheckCircle,
+        disabled: !puedeModificar,
+        onClick: () =>
+          setConfirmAction({
+            title: "Activar usuario",
+            message: `¿Activar a ${row.nombres}? Requiere CBU y comisión cargados.`,
+            confirmLabel: "Activar",
+            variant: "default",
+            onConfirm: () => ejecutar(row.legajo, "activar"),
+          }),
+      });
+    }
+    if (norm === "activado") {
+      items.push({
+        label: "Suspender",
+        icon: XCircle,
+        disabled: !puedeModificar,
+        variant: "danger" as const,
+        onClick: () =>
+          setConfirmAction({
+            title: "Suspender usuario",
+            message: `¿Suspender a ${row.nombres}? Se conservará su historial.`,
+            confirmLabel: "Suspender",
+            variant: "danger",
+            onConfirm: () => ejecutar(row.legajo, "suspender"),
+          }),
+      });
+    }
+    if (norm === "suspendido") {
+      items.push({
+        label: "Reactivar",
+        icon: RotateCcw,
+        disabled: !puedeModificar,
+        onClick: () =>
+          setConfirmAction({
+            title: "Reactivar usuario",
+            message: `¿Reactivar a ${row.nombres}?`,
+            confirmLabel: "Reactivar",
+            variant: "default",
+            onConfirm: () => ejecutar(row.legajo, "reactivar"),
+          }),
+      });
+    }
+    if (norm !== "deshabilitado" && norm !== "eliminado") {
+      items.push({
+        label: "Deshabilitar",
+        icon: Ban,
+        disabled: !puedeModificar,
+        variant: "danger" as const,
+        onClick: () =>
+          setConfirmAction({
+            title: "Deshabilitar usuario",
+            message: `¿Deshabilitar a ${row.nombres}? Se cancelará su CBU y se conservará el historial (auditoría BCRA).`,
+            confirmLabel: "Deshabilitar",
+            variant: "danger",
+            onConfirm: () => ejecutar(row.legajo, "deshabilitar"),
+          }),
+      });
+      items.push({
+        label: "Eliminar",
+        icon: Trash2,
+        disabled: !puedeBorrar,
+        variant: "danger" as const,
+        onClick: () =>
+          setConfirmAction({
+            title: "Eliminar usuario",
+            message: `¿Eliminar a ${row.nombres}? Solo se permite si nunca tuvo movimientos.`,
+            confirmLabel: "Eliminar",
+            variant: "danger",
+            onConfirm: () => ejecutar(row.legajo, "eliminar"),
+          }),
+      });
+    }
+
+    return items;
+  };
 
   const err = error instanceof DataAccessError ? error : null;
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -186,8 +292,29 @@ function UsuariosPage() {
     <PermissionGuard recurso="usuarios">
       <PageHeader
         title="Usuarios de la plataforma"
-        description="Clientes dados de alta (personas físicas y jurídicas) recuperados desde la base de datos."
+        description="Personas físicas — flujo homologado: Pendiente → Registrado → Preactivado → Activado."
       />
+
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Estado</label>
+          <select
+            value={filtroEstado}
+            onChange={(e) => {
+              setFiltroEstado(e.target.value);
+              setPage(0);
+            }}
+            className="h-10 rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="">Todos</option>
+            {FILTRO_ESTADOS_OPCIONES.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
@@ -206,10 +333,7 @@ function UsuariosPage() {
         <>
           <DataTable
             columns={columns}
-            data={data.map((d) => ({
-              ...d,
-              _estadoTone: estadoBadgeTone(d.estado) as "success" | "warn" | "danger",
-            }))}
+            data={data}
             keyExtractor={(r) => r.legajo}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
@@ -254,7 +378,7 @@ function UsuariosPage() {
   );
 }
 
-const columns: Column<Usuario & { _estadoTone: "success" | "danger" | "warn" }>[] = [
+const columns: Column<Usuario>[] = [
   {
     key: "legajo",
     label: "Legajo",
@@ -265,11 +389,9 @@ const columns: Column<Usuario & { _estadoTone: "success" | "danger" | "warn" }>[
   { key: "correo", label: "Usuario", filterable: true, render: (row) => row.correo },
   { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },
   {
-    key: "estado",
+    key: "estadoLabel",
     label: "Estado",
-    filterable: "enum",
-    filterOptions: ["Activado", "Suspendido", "Rechazado"],
-    render: (row) => <Badge tone={row._estadoTone}>{row.estado}</Badge>,
+    render: (row) => <Badge tone={row.estadoTone as "success" | "warn" | "danger" | "neutral"}>{row.estadoLabel}</Badge>,
   },
   {
     key: "fechaRegistro",

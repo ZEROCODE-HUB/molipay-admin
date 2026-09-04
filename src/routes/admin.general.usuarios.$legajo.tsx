@@ -34,7 +34,17 @@ import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gest
 import { useClienteByLegajo } from "@/hooks/useClientes";
 import { useMovimientos } from "@/hooks/useMovimientos";
 import { useImpuestosAsignaciones } from "@/hooks/useImpuestos";
-import { updateClienteEstado } from "@/lib/api/clientes";
+import {
+  aprobarDocumentacionCliente,
+  activarCliente,
+  suspenderCliente,
+  reactivarCliente,
+  deshabilitarCliente,
+  eliminarCliente,
+  clienteTieneMovimientos,
+  clienteTieneComision,
+  generarCbuParaCliente,
+} from "@/lib/api/clientes";
 import {
   listSubcuentas,
   createSubcuenta,
@@ -116,16 +126,28 @@ export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
 });
 
 const estadoLabel: Record<EstadoCliente, string> = {
-  activo: "Activo",
+  pendiente_verificacion: "Pendiente de verificación de email",
+  registrado: "Registrado",
+  preactivado: "Preactivado",
+  activado: "Activado",
   suspendido: "Suspendido",
-  rechazado: "Rechazado",
-};
+  deshabilitado: "Deshabilitado",
+  eliminado: "Eliminado",
+  activo: "Activado",
+  rechazado: "Deshabilitado",
+} as Record<EstadoCliente, string>;
 
-const estadoTone: Record<EstadoCliente, "success" | "danger" | "warn"> = {
-  activo: "success",
+const estadoTone: Record<EstadoCliente, "success" | "danger" | "warn" | "neutral"> = {
+  pendiente_verificacion: "warn",
+  registrado: "warn",
+  preactivado: "warn",
+  activado: "success",
   suspendido: "danger",
-  rechazado: "warn",
-};
+  deshabilitado: "neutral",
+  eliminado: "danger",
+  activo: "success",
+  rechazado: "neutral",
+} as Record<EstadoCliente, "success" | "danger" | "warn" | "neutral">;
 
 type TabKey =
   | "identificacion"
@@ -2117,12 +2139,16 @@ function ClienteDetailPage() {
           correo: clienteMock.correo,
           nombre: clienteMock.razonSocial,
           cuit: clienteMock.cuit,
-          estado:
-            clienteMock.estado === "Suspendido"
-              ? "suspendido"
-              : clienteMock.estado === "Rechazado"
-                ? "rechazado"
-                : "activo",
+          estado: (() => {
+            const e = clienteMock.estado;
+            if (e === "Suspendido") return "suspendido" as const;
+            if (e === "Rechazado" || e === "Deshabilitado") return "deshabilitado" as const;
+            if (e === "Pre-activado" || e === "Preactivado") return "preactivado" as const;
+            if (e === "Registrado") return "registrado" as const;
+            if (e === "Pendiente de verificación de email") return "pendiente_verificacion" as const;
+            if (e === "Activado") return "activado" as const;
+            return "registrado" as const;
+          })(),
           fechaAlta: clienteMock.fechaRegistro,
           createdAt: "",
           updatedAt: "",
@@ -2283,10 +2309,26 @@ function ClienteDetailPage() {
 
   const [forzando, setForzando] = useState(false);
 
-  const cambiarEstado = async (c: Cliente, nuevo: EstadoCliente) => {
+  const cambiarEstadoHomologado = async (
+    c: Cliente,
+    accion: "aprobar" | "activar" | "suspender" | "reactivar" | "deshabilitar" | "eliminar",
+  ) => {
     try {
-      await updateClienteEstado(c.id, nuevo);
+      let res: { ok: boolean; motivo?: string } = { ok: false, motivo: "" };
+      if (accion === "aprobar") res = await aprobarDocumentacionCliente(c);
+      else if (accion === "activar") res = await activarCliente(c);
+      else if (accion === "suspender") res = await suspenderCliente(c);
+      else if (accion === "reactivar") res = await reactivarCliente(c);
+      else if (accion === "deshabilitar") res = await deshabilitarCliente(c);
+      else if (accion === "eliminar") res = await eliminarCliente(c);
+      if (!res.ok) {
+        setConfirmAction({ title: "No se pudo actualizar", message: res.motivo ?? "No se pudo completar", confirmLabel: "Cerrar", variant: "danger", onConfirm: () => setConfirmAction(null) });
+        toast.error(res.motivo ?? "No se pudo completar");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["clientes", "legajo", c.legajo] });
+      toast.success("Estado actualizado");
     } catch (e) {
       setConfirmAction({
         title: "No se pudo actualizar",
@@ -2456,53 +2498,181 @@ function ClienteDetailPage() {
               {cliente.legajo} · {cliente.correo}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge tone={estadoTone[cliente.estado] ?? "neutral"}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={(estadoTone[cliente.estado] ?? "neutral") as "success" | "danger" | "warn" | "neutral"}>
               {estadoLabel[cliente.estado] ?? cliente.estado}
             </Badge>
-            {cliente.estado === "activo"
-              ? puedeModificar && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setConfirmAction({
-                        title: "Suspender cliente",
-                        message: `¿Estás seguro de suspender a ${cliente.nombre}?`,
-                        confirmLabel: "Suspender",
-                        variant: "danger",
-                        onConfirm: () => {
-                          setConfirmAction(null);
-                          void cambiarEstado(cliente, "suspendido");
-                        },
-                      })
-                    }
-                    className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent"
-                  >
-                    Suspender
-                  </button>
-                )
-              : puedeModificar && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setConfirmAction({
-                        title: "Reactivar cliente",
-                        message: `¿Estás seguro de reactivar a ${cliente.nombre}?`,
-                        confirmLabel: "Reactivar",
-                        variant: "default",
-                        onConfirm: () => {
-                          setConfirmAction(null);
-                          void cambiarEstado(cliente, "activo");
-                        },
-                      })
-                    }
-                    className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent"
-                  >
-                    Reactivar
-                  </button>
-                )}
+            {(() => {
+              const norm = (cliente.estado as string).toLowerCase();
+              const isRegistrado = norm === "registrado";
+              const isPreactivado = norm === "preactivado";
+              const isActivado = norm === "activado" || norm === "activo";
+              const isSuspendido = norm === "suspendido";
+              const isTerminal = norm === "deshabilitado" || norm === "eliminado" || norm === "rechazado";
+              return (
+                <>
+                  {isRegistrado && puedeModificar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Aprobar documentación",
+                          message: `¿Aprobar la documentación de ${cliente.nombre}? Pasará a Preactivado.`,
+                          confirmLabel: "Aprobar",
+                          variant: "default",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "aprobar");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+                    >
+                      Aprobar documentación
+                    </button>
+                  )}
+                  {isPreactivado && puedeModificar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Activar usuario",
+                          message: `¿Activar a ${cliente.nombre}? Requiere CBU y comisión cargados.`,
+                          confirmLabel: "Activar",
+                          variant: "default",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "activar");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+                    >
+                      Activar
+                    </button>
+                  )}
+                  {isActivado && puedeModificar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Suspender cliente",
+                          message: `¿Suspender a ${cliente.nombre}? Se conservará su historial.`,
+                          confirmLabel: "Suspender",
+                          variant: "danger",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "suspender");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    >
+                      Suspender
+                    </button>
+                  )}
+                  {isSuspendido && puedeModificar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Reactivar cliente",
+                          message: `¿Reactivar a ${cliente.nombre}?`,
+                          confirmLabel: "Reactivar",
+                          variant: "default",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "reactivar");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    >
+                      Reactivar
+                    </button>
+                  )}
+                  {!isTerminal && puedeModificar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Deshabilitar usuario",
+                          message: `¿Deshabilitar a ${cliente.nombre}? Se cancelará su CBU y se conservará el historial (auditoría BCRA).`,
+                          confirmLabel: "Deshabilitar",
+                          variant: "danger",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "deshabilitar");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    >
+                      Deshabilitar
+                    </button>
+                  )}
+                  {!isTerminal && (
+                    <button
+                      type="button"
+                      disabled={!can("borrar", "usuarios")}
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Eliminar usuario",
+                          message: `¿Eliminar a ${cliente.nombre}? Solo permitido si nunca tuvo movimientos.`,
+                          confirmLabel: "Eliminar",
+                          variant: "danger",
+                          onConfirm: () => {
+                            setConfirmAction(null);
+                            void cambiarEstadoHomologado(cliente, "eliminar");
+                          },
+                        })
+                      }
+                      className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
+
+        {/* Requisitos de activación (homologado) */}
+        {(() => {
+          const norm = (cliente.estado as string).toLowerCase();
+          if (norm === "preactivado") {
+            const hasCbu = Boolean(cliente.cbu && !cliente.cbuCancelado) || (subcuentasQuery.data?.length ?? 0) > 0;
+            const hasCom = (comisionesQuery.data?.length ?? 0) > 0 || (impuestosQuery.rows?.length ?? 0) >= 0 ? (comisionesQuery.data?.length ?? 0) > 0 : false;
+            // comisionesQuery.data es de subcuentas? Usamos comisiones_cliente check via query separate would be ideal, but usamos commissions list
+            return (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-semibold">Requisitos para activar</p>
+                <ul className="mt-1 list-disc pl-5">
+                  <li>CBU: {hasCbu ? "✓ cargado" : "✗ pendiente"}</li>
+                  <li>Comisión: {hasCom ? "✓ cargada" : "✗ pendiente"}</li>
+                </ul>
+                {!hasCbu && <p className="mt-1 text-xs">Cargar CBU en la pestaña Subcuentas y CVUs.</p>}
+                {!hasCom && <p className="mt-1 text-xs">Cargar comisión en Admin → Usuarios → Comisiones.</p>}
+              </div>
+            );
+          }
+          if (norm === "pendiente_verificacion") {
+            return (
+              <div className="mt-4 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                Usuario pendiente de verificación de email. Debe verificar su correo para pasar a Registrado.
+              </div>
+            );
+          }
+          if (norm === "deshabilitado") {
+            return (
+              <div className="mt-4 rounded-xl border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+                Usuario deshabilitado — CBU cancelado. Historial conservado para auditoría BCRA.
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* --- Tabs --- */}
         <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
