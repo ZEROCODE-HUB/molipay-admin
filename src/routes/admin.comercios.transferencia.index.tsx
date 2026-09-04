@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Eye, Edit3, XCircle, Ban, Trash2, AlertTriangle, Inbox, QrCode, Download, Printer } from "lucide-react";
+import { Eye, Edit3, XCircle, Ban, Trash2, AlertTriangle, Inbox, QrCode, Download, Printer, CheckCircle } from "lucide-react";
 import QRCode from "qrcode";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -148,11 +148,13 @@ function Page() {
 
   const getActions = (r: PuntoVenta): ActionItem[] => {
     const items: ActionItem[] = [{ label:"Ver detalles", icon:Eye, onClick:()=>setDetail(r) }];
-    // Admin no activa manualmente
+    // Todas las transiciones siempre disponibles (si no esta ya en ese estado)
+    if (r.estado !== "Activado") items.push({ label:"Activar", icon:CheckCircle, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Activar QR", message:`¿Activar ${r.nombre}?`, confirmLabel:"Activar", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Activado"); } }) });
     if (r.estado !== "Desactivado") items.push({ label:"Desactivar", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Desactivar QR", message:`¿Desactivar ${r.nombre}?`, confirmLabel:"Desactivar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Desactivado"); } }) });
     if (r.estado !== "Rechazado") items.push({ label:"Rechazar", icon:XCircle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Rechazar QR", message:`¿Rechazar ${r.nombre}?`, confirmLabel:"Rechazar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Rechazado"); } }) });
     if (r.estado !== "Suspendido") items.push({ label:"Suspender", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Suspender QR", message:`¿Suspender ${r.nombre}?`, confirmLabel:"Suspender", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Suspendido"); } }) });
-    items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar QR", message:`¿Eliminar ${r.nombre}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
+    if (r.estado !== "Pendiente de aprobación" && (r.estado as string) !== "Pendiente de aprobacion") items.push({ label:"Pendiente", icon:Ban, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Marcar pendiente QR", message:`¿Marcar ${r.nombre} como Pendiente de aprobación?`, confirmLabel:"Pendiente", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Pendiente de aprobación"); } }) });
+    if (r.estado !== "Eliminado") items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar QR", message:`¿Eliminar ${r.nombre}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
     return items;
   };
 

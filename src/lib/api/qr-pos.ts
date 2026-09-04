@@ -66,7 +66,6 @@ export async function getQrPos(id: string): Promise<PuntoVenta | null> {
 }
 
 export async function updateQrEstado(id: string, estado: EstadoQr): Promise<PuntoVenta> {
-  if (estado === "Activado") throw new Error("La activación la realiza Payway. El administrador no puede activar manualmente.");
   const sb = requireSupabase();
   let { data, error } = await sb.from("puntos_venta").update({ estado }).eq("id", id).select(COLUMNS).single();
   if (error && isMissingColumnError(error)) {

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, Ban, XCircle, Trash2, AlertTriangle, Inbox, Link2, Copy } from "lucide-react";
+import { Eye, Ban, XCircle, Trash2, AlertTriangle, Inbox, Link2, Copy, CheckCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
@@ -108,10 +108,12 @@ function Page() {
 
   const getActions = (r: EnlacePago): ActionItem[] => {
     const items: ActionItem[] = [{ label:"Ver detalles", icon:Eye, onClick:()=>setDetail(r) }];
+    if (r.estado !== "Activado") items.push({ label:"Activar", icon:CheckCircle, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Activar enlace", message:`¿Activar ${r.url ?? r.id}?`, confirmLabel:"Activar", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Activado"); } }) });
     if (r.estado !== "Desactivado") items.push({ label:"Desactivar", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Desactivar enlace", message:`¿Desactivar ${r.url ?? r.id}?`, confirmLabel:"Desactivar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Desactivado"); } }) });
     if (r.estado !== "Rechazado") items.push({ label:"Rechazar", icon:XCircle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Rechazar enlace", message:`¿Rechazar ${r.url ?? r.id}?`, confirmLabel:"Rechazar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Rechazado"); } }) });
     if (r.estado !== "Suspendido") items.push({ label:"Suspender", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Suspender enlace", message:`¿Suspender ${r.url ?? r.id}?`, confirmLabel:"Suspender", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Suspendido"); } }) });
-    items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar enlace", message:`¿Eliminar ${r.url ?? r.id}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
+    if (r.estado !== "Pendiente de aprobación" && (r.estado as string) !== "Pendiente de aprobacion") items.push({ label:"Pendiente", icon:Ban, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Marcar pendiente enlace", message:`¿Marcar ${r.url ?? r.id} como Pendiente de aprobación?`, confirmLabel:"Pendiente", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Pendiente de aprobación"); } }) });
+    if (r.estado !== "Eliminado") items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar enlace", message:`¿Eliminar ${r.url ?? r.id}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
     return items;
   };
 

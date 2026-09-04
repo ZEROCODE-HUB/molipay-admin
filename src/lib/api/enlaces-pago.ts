@@ -137,7 +137,6 @@ export async function getEnlace(id: string): Promise<EnlacePago | null> {
 }
 
 export async function updateEnlaceEstado(id: string, estado: string): Promise<EnlacePago> {
-  if (estado === "Activado") throw new Error("La activación la realiza Payway. El administrador no puede activar manualmente.");
   const sb = requireSupabase();
   let { data, error } = await sb.from("cliente_links_pago").update({ estado }).eq("id", id).select(COLUMNS).single();
   if (error && isMissingColumnError(error)) {
