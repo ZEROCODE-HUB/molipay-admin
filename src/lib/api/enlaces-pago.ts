@@ -83,20 +83,42 @@ export type EnlaceFilters = Pagination & {
 };
 
 const COLUMNS = "id, cliente_legajo, comercio_nombre, url, monto, estado, referencia, notas, expira_en, pagos_parciales, metodos_pago, vistas, pagos, cajero, created_at, updated_at, clientes(correo, nombre)";
+const COLUMNS_LEGACY = "id, cliente_legajo, comercio_nombre, url, monto, estado, created_at, clientes(correo, nombre)";
+
+function isMissingColumnError(error: unknown): boolean {
+  const msg = (error as { message?: string })?.message ?? String(error);
+  return /column.*does not exist|PGRST204|schema cache|cajero|referencia|notas|expira_en|pagos_parciales|metodos_pago|vistas|pagos/i.test(msg);
+}
 
 export async function listEnlaces(filters: EnlaceFilters): Promise<Page<EnlacePago>> {
   const sb = requireSupabase();
   const { page, pageSize, search, estado } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  let query = sb.from("cliente_links_pago").select(COLUMNS, { count: "exact" });
-  if (search?.trim()) {
-    const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`url.ilike.%${q}%,comercio_nombre.ilike.%${q}%,cliente_legajo.ilike.%${q}%,referencia.ilike.%${q}%`);
+
+  const build = (cols: string, withRefSearch: boolean) => {
+    let query = sb.from("cliente_links_pago").select(cols, { count: "exact" });
+    if (search?.trim()) {
+      const q = search.trim().replace(/[%_]/g, "\\$&");
+      if (withRefSearch) {
+        query = query.or(`url.ilike.%${q}%,comercio_nombre.ilike.%${q}%,cliente_legajo.ilike.%${q}%,referencia.ilike.%${q}%`);
+      } else {
+        query = query.or(`url.ilike.%${q}%,comercio_nombre.ilike.%${q}%,cliente_legajo.ilike.%${q}%`);
+      }
+    }
+    if (estado) query = query.eq("estado", estado);
+    query = query.order("created_at", { ascending: false }).range(from, to);
+    return query;
+  };
+
+  let { data, error, count } = await build(COLUMNS, true);
+  if (error && isMissingColumnError(error)) {
+    const fb = await build(COLUMNS_LEGACY, false);
+    const res = await fb;
+    data = res.data as typeof data;
+    error = res.error;
+    count = res.count;
   }
-  if (estado) query = query.eq("estado", estado);
-  query = query.order("created_at", { ascending: false }).range(from, to);
-  const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
   const rows = (data ?? []) as EnlacePagoRow[];
   return { rows: rows.map(toEnlace), total: count ?? rows.length, page, pageSize };
@@ -104,7 +126,12 @@ export async function listEnlaces(filters: EnlaceFilters): Promise<Page<EnlacePa
 
 export async function getEnlace(id: string): Promise<EnlacePago | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("cliente_links_pago").select(COLUMNS).eq("id", id).maybeSingle();
+  let { data, error } = await sb.from("cliente_links_pago").select(COLUMNS).eq("id", id).maybeSingle();
+  if (error && isMissingColumnError(error)) {
+    const fb = await sb.from("cliente_links_pago").select(COLUMNS_LEGACY).eq("id", id).maybeSingle();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return data ? toEnlace(data as EnlacePagoRow) : null;
 }
@@ -112,7 +139,12 @@ export async function getEnlace(id: string): Promise<EnlacePago | null> {
 export async function updateEnlaceEstado(id: string, estado: string): Promise<EnlacePago> {
   if (estado === "Activado") throw new Error("La activación la realiza Payway. El administrador no puede activar manualmente.");
   const sb = requireSupabase();
-  const { data, error } = await sb.from("cliente_links_pago").update({ estado }).eq("id", id).select(COLUMNS).single();
+  let { data, error } = await sb.from("cliente_links_pago").update({ estado }).eq("id", id).select(COLUMNS).single();
+  if (error && isMissingColumnError(error)) {
+    const fb = await sb.from("cliente_links_pago").update({ estado }).eq("id", id).select(COLUMNS_LEGACY).single();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return toEnlace(data as EnlacePagoRow);
 }

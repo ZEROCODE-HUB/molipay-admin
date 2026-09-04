@@ -10,6 +10,12 @@ export type QrFilters = Pagination & {
 };
 
 const COLUMNS = "id, comercio_id, nombre, estado, created_at, tipo, cajero, qr_url, alias, comercios(id, usuario, legajo, clientes(nombre, correo))";
+const COLUMNS_LEGACY = "id, comercio_id, nombre, estado, created_at, comercios(id, usuario, legajo, clientes(nombre, correo))";
+
+function isMissingColumnError(error: unknown): boolean {
+  const msg = (error as { message?: string })?.message ?? String(error);
+  return /column.*does not exist|PGRST204|schema cache|tipo|cajero|qr_url|alias/i.test(msg);
+}
 
 export async function listQrPos(filters: QrFilters): Promise<Page<PuntoVenta>> {
   const sb = requireSupabase();
@@ -17,18 +23,31 @@ export async function listQrPos(filters: QrFilters): Promise<Page<PuntoVenta>> {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("puntos_venta").select(COLUMNS, { count: "exact" });
-  if (search?.trim()) {
-    const q = search.trim().replace(/[%_]/g, "\\$&");
-    // buscar por nombre QR/POS, comercio usuario/legajo, cajero
-    query = query.or(`nombre.ilike.%${q}%,cajero.ilike.%${q}%,alias.ilike.%${q}%`);
-  }
-  if (estado) query = query.eq("estado", estado);
-  if (comercioId) query = query.eq("comercio_id", comercioId);
-  // no mostrar eliminados por defecto? se muestran si filtro lo pide
-  query = query.order("created_at", { ascending: false }).range(from, to);
+  const build = async (cols: string, includeExtraSearch: boolean) => {
+    let query = sb.from("puntos_venta").select(cols, { count: "exact" });
+    if (search?.trim()) {
+      const q = search.trim().replace(/[%_]/g, "\\$&");
+      if (includeExtraSearch) {
+        query = query.or(`nombre.ilike.%${q}%,cajero.ilike.%${q}%,alias.ilike.%${q}%`);
+      } else {
+        query = query.ilike("nombre", `%${q}%`);
+      }
+    }
+    if (estado) query = query.eq("estado", estado);
+    if (comercioId) query = query.eq("comercio_id", comercioId);
+    query = query.order("created_at", { ascending: false }).range(from, to);
+    return query;
+  };
 
-  const { data, error, count } = await query;
+  let q = await build(COLUMNS, true);
+  let { data, error, count } = await q;
+  if (error && isMissingColumnError(error)) {
+    const fb = await build(COLUMNS_LEGACY, false);
+    const res = await fb;
+    data = res.data as typeof data;
+    error = res.error;
+    count = res.count;
+  }
   if (error) throw new DataAccessError(error);
   const rows = (data ?? []) as (PuntoVentaRow & { comercios?: { id: string; usuario: string; legajo: string; clientes?: { nombre: string; correo: string }[] | null } | null })[];
   return { rows: rows.map((r) => toPuntoVenta(r as never)), total: count ?? rows.length, page, pageSize };
@@ -36,16 +55,25 @@ export async function listQrPos(filters: QrFilters): Promise<Page<PuntoVenta>> {
 
 export async function getQrPos(id: string): Promise<PuntoVenta | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("puntos_venta").select(COLUMNS).eq("id", id).maybeSingle();
+  let { data, error } = await sb.from("puntos_venta").select(COLUMNS).eq("id", id).maybeSingle();
+  if (error && isMissingColumnError(error)) {
+    const fb = await sb.from("puntos_venta").select(COLUMNS_LEGACY).eq("id", id).maybeSingle();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return data ? toPuntoVenta(data as never) : null;
 }
 
 export async function updateQrEstado(id: string, estado: EstadoQr): Promise<PuntoVenta> {
-  // Admin no puede activar manualmente (Payway). Validar.
   if (estado === "Activado") throw new Error("La activación la realiza Payway. El administrador no puede activar manualmente.");
   const sb = requireSupabase();
-  const { data, error } = await sb.from("puntos_venta").update({ estado }).eq("id", id).select(COLUMNS).single();
+  let { data, error } = await sb.from("puntos_venta").update({ estado }).eq("id", id).select(COLUMNS).single();
+  if (error && isMissingColumnError(error)) {
+    const fb = await sb.from("puntos_venta").update({ estado }).eq("id", id).select(COLUMNS_LEGACY).single();
+    data = fb.data as typeof data;
+    error = fb.error;
+  }
   if (error) throw new DataAccessError(error);
   return toPuntoVenta(data as never);
 }
