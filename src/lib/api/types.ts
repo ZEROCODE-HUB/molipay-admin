@@ -370,20 +370,33 @@ export const NIVELES_COMERCIO: NivelComercio[] = [
   "Enterprise",
 ];
 
+export type EstadoQr = "Pendiente de aprobación" | "Pendiente de aprobacion" | "Activado" | "Desactivado" | "Rechazado" | "Suspendido" | "Eliminado";
+export const ESTADOS_QR: EstadoQr[] = ["Pendiente de aprobación","Activado","Desactivado","Rechazado","Suspendido","Eliminado"];
+
 export type PuntoVentaRow = {
   id: string;
   comercio_id: string;
   nombre: string;
-  estado: "Activado" | "Desactivado";
+  estado: EstadoQr;
   created_at: string;
+  tipo?: string | null;
+  cajero?: string | null;
+  qr_url?: string | null;
+  alias?: string | null;
+  comercios?: { id: string; usuario: string; legajo: string; clientes?: { nombre: string; correo: string }[] | null } | null;
 };
 
 export type PuntoVenta = {
   id: string;
   comercioId: string;
   nombre: string;
-  estado: "Activado" | "Desactivado";
+  estado: EstadoQr;
   createdAt: string;
+  tipo?: string | null;
+  cajero?: string | null;
+  qrUrl?: string | null;
+  alias?: string | null;
+  comercio?: { id: string; usuario: string; legajo: string; clienteNombre?: string; clienteCorreo?: string } | null;
 };
 
 export type CodigoCategoriaRow = {

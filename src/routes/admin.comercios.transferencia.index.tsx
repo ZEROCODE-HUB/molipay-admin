@@ -1,607 +1,165 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import { requireSupabase } from "@/lib/supabase";
-import {
-  Eye,
-  Edit3,
-  CheckCircle,
-  XCircle,
-  FileCheck,
-  Trash2,
-  XCircle as XCircleIcon,
-  AlertTriangle,
-  Inbox,
-} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Eye, Edit3, XCircle, Ban, Trash2, AlertTriangle, Inbox, QrCode } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { PageHeader, Badge, Card, BtnOutline, Input, Label } from "@/components/portal-shell";
+import { PageHeader, Badge, Card } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { FormDialog } from "@/components/form-dialog";
-import { LegajoCell } from "@/components/legajo-label";
-import { useComercios } from "@/hooks/useComercios";
-import { updateComercio, setComercioEstado, deleteComercio } from "@/lib/api/comercios";
-import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { Comercio, EstadoComercio, NivelComercio, CodigoCategoria } from "@/lib/api/types";
-import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
+import { DataAccessError } from "@/lib/api/errors";
+import { Badge as BadgeComp } from "@/components/portal-shell";
+import { LegajoCell } from "@/components/legajo-label";
+import { useQuery } from "@tanstack/react-query";
+import { listQrPos, updateQrEstado, deleteQrPos } from "@/lib/api/qr-pos";
+import type { PuntoVenta, EstadoQr } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/comercios/transferencia/")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Comercios — Pagos con transferencia — Admin Molly" },
-      {
-        name: "description",
-        content: "Gestión de comercios habilitados para pagos con transferencia (PCT).",
-      },
+      { title: "Pagos con QR — Admin Molly" },
+      { name: "description", content: "QRs/POS creados por comercios desde Enterprise." },
     ],
   }),
 });
 
 const PAGE_SIZE = 25;
+const ESTADOS_QR: EstadoQr[] = ["Pendiente de aprobación","Activado","Desactivado","Rechazado","Suspendido","Eliminado"];
 
-function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" | "danger" {
+function tone(estado: string): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Activado") return "success";
+  if (estado === "Rechazado" || estado === "Eliminado") return "danger";
+  if (estado === "Suspendido") return "danger";
   if (estado === "Desactivado") return "neutral";
-  if (estado === "Rechazado") return "danger";
   return "warn";
 }
 
-function MensajeEstado({
-  tipo,
-  mensaje,
-  onRetry,
-}: {
-  tipo: "error" | "vacio" | "permiso";
-  mensaje: string;
-  onRetry?: () => void;
-}) {
-  if (tipo === "permiso") {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
-        <AlertTriangle size={28} />
-        <div>
-          <p className="font-semibold">No tenés permiso para ver esto</p>
-          <p className="mt-1">{mensaje}</p>
-        </div>
-      </div>
-    );
-  }
-  if (tipo === "error") {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
-        <AlertTriangle size={28} />
-        <div>
-          <p className="font-semibold">Ocurrió un error al cargar los comercios</p>
-          <p className="mt-1">{mensaje}</p>
-        </div>
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-2 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Reintentar
-          </button>
-        )}
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-      <Inbox size={28} />
-      <p>No hay comercios que coincidan con la búsqueda.</p>
-    </div>
-  );
-}
-
-function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
+function QrDetalle({ qr, onClose }: { qr: PuntoVenta; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
+      <div className="relative bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div>
-            <h3 className="font-display text-lg font-semibold">Detalle de comercio</h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {comercio.usuario} · {comercio.legajo}
-            </p>
+            <h3 className="font-display text-lg font-semibold flex items-center gap-2"><QrCode size={18}/> Detalle QR/POS</h3>
+            <p className="text-sm text-muted-foreground">QR: {qr.nombre} · POS asociado: {qr.nombre}</p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
-            <XCircleIcon size={18} />
-          </button>
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md"><XCircle size={18}/></button>
         </div>
-
-        <div className="p-6 space-y-5">
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-              Información general
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-              <Field label="Usuario" value={comercio.usuario} />
-              <Field label="Legajo" value={<LegajoCell legajo={comercio.legajo} />} />
-              <Field
-                label="Fecha de registro"
-                value={
-                  <span className="font-mono text-xs tabular-nums">
-                    {new Date(comercio.createdAt).toLocaleDateString("es-AR")}
-                  </span>
-                }
-              />
-              <Field
-                label="Estado"
-                value={<Badge tone={estadoBadgeTone(comercio.estado)}>{comercio.estado}</Badge>}
-              />
-              <Field label="Nivel" value={comercio.nivel} />
-              <Field
-                label="Categoría"
-                value={
-                  comercio.categoria ? (
-                    <span className="font-mono tabular-nums">
-                      {comercio.categoria.codigo} · {comercio.categoria.nombre}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )
-                }
-              />
+        <div className="p-6 space-y-4">
+          <Card className="p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">QR</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-muted-foreground">Nombre QR/POS</span><div className="font-semibold">{qr.nombre}</div></div>
+              <div><span className="text-muted-foreground">Tipo</span><div className="font-semibold">{qr.tipo ?? "QR"}</div></div>
+              <div><span className="text-muted-foreground">Alias</span><div className="font-mono text-xs">{qr.alias ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">Estado</span><div><BadgeComp tone={tone(qr.estado)}>{qr.estado}</BadgeComp></div></div>
+              <div><span className="text-muted-foreground">QR URL</span><div className="font-mono text-xs break-all">{qr.qrUrl ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">Cajero</span><div className="font-semibold">{qr.cajero ?? "—"}</div></div>
             </div>
           </Card>
-
-          <Card className="p-0">
-            <div className="px-5 pt-5 pb-1">
-              <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Puntos de venta (PCT)
-              </h4>
+          <Card className="p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">POS asociado</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-muted-foreground">Nombre POS</span><div className="font-semibold">{qr.nombre}</div></div>
+              <div><span className="text-muted-foreground">Fecha creación</span><div className="font-mono text-xs">{new Date(qr.createdAt).toLocaleDateString("es-AR")}</div></div>
             </div>
-            {comercio.puntosVenta.length === 0 ? (
-              <div className="px-5 pb-5 pt-3">
-                <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
-                  Sin puntos de venta cargados para este comercio.
-                </div>
-              </div>
-            ) : (
-              <div className="p-5 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50 text-left">
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Nombre del punto de venta
-                      </th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Estado
-                      </th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Fecha de creación
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comercio.puntosVenta.map((pdv) => (
-                      <tr key={pdv.id} className="border-b last:border-0">
-                        <td className="px-3 py-2.5 font-medium">{pdv.nombre}</td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone={pdv.estado === "Activado" ? "success" : "neutral"}>
-                            {pdv.estado}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="font-mono tabular-nums text-xs">
-                            {new Date(pdv.createdAt).toLocaleDateString("es-AR")}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </Card>
-        </div>
-
-        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex justify-end">
-          <BtnOutline type="button" onClick={onClose}>
-            Cerrar
-          </BtnOutline>
+          <Card className="p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Comercio / Usuario</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-muted-foreground">Comercio</span><div className="font-semibold">{qr.comercio?.usuario ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">Legajo comercio</span><div className="font-mono text-xs">{qr.comercio?.legajo ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">Usuario</span><div className="font-semibold">{qr.comercio?.clienteCorreo ?? qr.comercio?.usuario ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">Cliente</span><div className="font-semibold">{qr.comercio?.clienteNombre ?? "—"}</div></div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-      <div className="font-medium mt-0.5">{value}</div>
-    </div>
-  );
-}
-
-type ComercioForm = {
-  categoriaId: string;
-  nivel: NivelComercio;
-  estado: EstadoComercio;
-};
-
-function ComercioFormModal({
-  comercio,
-  categorias,
-  onClose,
-  onSave,
-}: {
-  comercio: Comercio;
-  categorias: CodigoCategoria[];
-  onClose: () => void;
-  onSave: (input: {
-    categoriaId: number | null;
-    nivel: NivelComercio;
-    estado: EstadoComercio;
-  }) => void;
-}) {
-  const [categoriaId, setCategoriaId] = useState(
-    comercio?.categoriaId != null ? String(comercio.categoriaId) : "",
-  );
-  const [nivel, setNivel] = useState<NivelComercio>(comercio?.nivel ?? "Pequeño");
-  const [estado, setEstado] = useState<EstadoComercio>(
-    comercio?.estado ?? "Pendiente de aprobación",
-  );
-
-  const guardar = () => {
-    onSave({
-      categoriaId: categoriaId ? Number(categoriaId) : null,
-      nivel,
-      estado,
-    });
-  };
-
-  return (
-    <FormDialog
-      open
-      onClose={onClose}
-      title="Editar comercio"
-      description={`Modificá los datos del comercio ${comercio.usuario}.`}
-      onSubmit={guardar}
-      submitLabel="Guardar cambios"
-      size="lg"
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <Label htmlFor="gc-categoria">Código de categoría</Label>
-          <select
-            id="gc-categoria"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-          >
-            <option value="">Sin categoría</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.codigo} · {c.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="gc-nivel">Nivel</Label>
-          <select
-            id="gc-nivel"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={nivel}
-            onChange={(e) => setNivel(e.target.value as NivelComercio)}
-          >
-            {NIVELES_COMERCIO.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="gc-estado">Estado</Label>
-          <select
-            id="gc-estado"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoComercio)}
-          >
-            {ESTADOS_COMERCIO.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </FormDialog>
   );
 }
 
 function Page() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const [page, setPage] = useState(0);
-
+  const [search, setSearch] = useState("");
+  const [estado, setEstado] = useState<EstadoQr | "">("");
   const { can } = useCan();
-  const puedeModificar = can("modificar", "comercios");
-  const puedeBorrar = can("borrar", "comercios");
+  const puedeModificar = can("modificar","comercios");
+  const puedeBorrar = can("borrar","comercios");
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComercios({
-    page,
-    pageSize: PAGE_SIZE,
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ["qr-pos", page, search, estado],
+    queryFn: () => listQrPos({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estado || undefined }),
   });
 
-  const { data: categoriasRaw } = useQuery({
-    queryKey: ["codigos_categoria", "all"],
-    queryFn: async () => {
-      const sb = requireSupabase();
-      const { data, error } = await sb
-        .from("codigos_categoria")
-        .select("id, codigo, nombre, descripcion, estado, created_at, updated_at")
-        .order("codigo", { ascending: true });
-      if (error) throw new DataAccessError(error);
-      return (data ?? []).map((r) => ({
-        id: r.id,
-        codigo: r.codigo,
-        nombre: r.nombre,
-        descripcion: r.descripcion,
-        estado: r.estado,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      }));
-    },
-    staleTime: 5 * 60_000,
-  });
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const [detail, setDetail] = useState<PuntoVenta | null>(null);
+  const [confirm, setConfirm] = useState<{ title:string; message:string; confirmLabel:string; variant:"default"|"danger"; onConfirm:()=>void }|null>(null);
 
-  const categorias = categoriasRaw ?? [];
-
-  const [detail, setDetail] = useState<Comercio | null>(null);
-  const [editTarget, setEditTarget] = useState<Comercio | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{
-    title: string;
-    message: string;
-    confirmLabel: string;
-    variant: "default" | "danger";
-    onConfirm: () => void;
-  } | null>(null);
-
-  const invalidar = () => queryClient.invalidateQueries({ queryKey: ["comercios"] });
-
-  const cambiarEstado = async (row: Comercio, nuevo: EstadoComercio) => {
+  const cambiar = async (row: PuntoVenta, nuevo: EstadoQr) => {
     try {
-      await setComercioEstado(row.id, nuevo);
-      invalidar();
+      await updateQrEstado(row.id, nuevo);
+      qc.invalidateQueries({ queryKey: ["qr-pos"] });
     } catch (e) {
-      setConfirmAction({
-        title: "No se pudo actualizar",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
+      setConfirm({ title:"No se pudo actualizar", message:(e as Error).message, confirmLabel:"Cerrar", variant:"danger", onConfirm:()=>setConfirm(null) });
     }
   };
 
-  const guardarEdicion = async (input: {
-    categoriaId: number | null;
-    nivel: NivelComercio;
-    estado: EstadoComercio;
-  }) => {
-    if (!editTarget) return;
+  const eliminar = async (row: PuntoVenta) => {
     try {
-      await updateComercio(editTarget.id, {
-        categoriaId: input.categoriaId,
-        nivel: input.nivel,
-        estado: input.estado,
-      });
-      invalidar();
-      setEditTarget(null);
+      await deleteQrPos(row.id);
+      qc.invalidateQueries({ queryKey: ["qr-pos"] });
     } catch (e) {
-      setConfirmAction({
-        title: "No se pudo guardar",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
+      setConfirm({ title:"No se pudo eliminar", message:(e as Error).message, confirmLabel:"Cerrar", variant:"danger", onConfirm:()=>setConfirm(null) });
     }
   };
 
-  const eliminar = async () => {
-    if (!confirmDelete) return;
-    try {
-      await deleteComercio(confirmDelete.id);
-      invalidar();
-    } catch (e) {
-      setConfirmAction({
-        title: "No se pudo eliminar",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
-    }
-    setConfirmDelete(null);
-  };
-
-  const getActions = (row: Comercio): ActionItem[] => {
-    const items: ActionItem[] = [];
-    if (row.estado === "Activado") {
-      items.push({
-        label: "Suspender",
-        icon: XCircle,
-        variant: "danger",
-        disabled: !puedeModificar,
-        onClick: () => cambiarEstado(row, "Suspendido"),
-      });
-    } else {
-      items.push({
-        label: "Activar",
-        icon: CheckCircle,
-        disabled: !puedeModificar,
-        onClick: () => cambiarEstado(row, "Activado"),
-      });
-    }
-    items.push({
-      label: "Validar",
-      icon: FileCheck,
-      disabled: !puedeModificar,
-      onClick: () => cambiarEstado(row, "Activado"),
-    });
-    items.push({
-      label: "Eliminar",
-      icon: Trash2,
-      variant: "danger",
-      disabled: !puedeBorrar,
-      onClick: () => setConfirmDelete(row),
-    });
-    items.push({
-      label: "Editar",
-      icon: Edit3,
-      disabled: !puedeModificar,
-      onClick: () => setEditTarget(row),
-    });
-    items.push({ label: "Ver detalle", icon: Eye, onClick: () => setDetail(row) });
+  const getActions = (r: PuntoVenta): ActionItem[] => {
+    const items: ActionItem[] = [{ label:"Ver detalles", icon:Eye, onClick:()=>setDetail(r) }];
+    // Admin no activa manualmente
+    if (r.estado !== "Desactivado") items.push({ label:"Desactivar", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Desactivar QR", message:`¿Desactivar ${r.nombre}?`, confirmLabel:"Desactivar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Desactivado"); } }) });
+    if (r.estado !== "Rechazado") items.push({ label:"Rechazar", icon:XCircle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Rechazar QR", message:`¿Rechazar ${r.nombre}?`, confirmLabel:"Rechazar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Rechazado"); } }) });
+    if (r.estado !== "Suspendido") items.push({ label:"Suspender", icon:Ban, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Suspender QR", message:`¿Suspender ${r.nombre}?`, confirmLabel:"Suspender", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Suspendido"); } }) });
+    items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar QR", message:`¿Eliminar ${r.nombre}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
     return items;
   };
 
-  const columns: Column<Comercio>[] = [
-    {
-      key: "legajo",
-      label: "Legajo",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.legajo}</span>,
-    },
-    {
-      key: "usuario",
-      label: "Usuario",
-      sortable: true,
-      filterable: true,
-      render: (r) => <span className="font-semibold">{r.usuario}</span>,
-    },
-    {
-      key: "nivel",
-      label: "Nivel",
-      sortable: true,
-      filterable: true,
-      render: (r) => r.nivel,
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      filterable: "enum",
-      filterOptions: [...ESTADOS_COMERCIO],
-      render: (r) => <Badge tone={estadoBadgeTone(r.estado)}>{r.estado}</Badge>,
-    },
-    {
-      key: "createdAt",
-      label: "Registro",
-      sortable: true,
-      filterable: "date",
-      render: (r) => (
-        <span className="font-mono text-xs tabular-nums">
-          {new Date(r.createdAt).toLocaleDateString("es-AR")}
-        </span>
-      ),
-    },
+  const columns: import("@/components/data-table").Column<PuntoVenta>[] = [
+    { key:"nombre", label:"QR / POS", filterable:true, render:(r)=> <span className="font-semibold flex items-center gap-1.5"><QrCode size={14}/> {r.nombre} <span className="text-xs text-muted-foreground">({r.tipo ?? "QR"})</span></span> },
+    { key:"comercio", label:"Comercio", render:(r)=> <span>{r.comercio?.usuario ?? "—"}</span> },
+    { key:"usuario", label:"Usuario", render:(r)=> <span>{r.comercio?.clienteCorreo ?? r.comercio?.usuario ?? "—"}</span> },
+    { key:"cajero", label:"Cajero", render:(r)=> <span>{r.cajero ?? "—"}</span> },
+    { key:"estado", label:"Estado", filterable:"enum", filterOptions:[...ESTADOS_QR], render:(r)=><Badge tone={tone(r.estado)}>{r.estado}</Badge> },
+    { key:"createdAt", label:"Fecha", render:(r)=><span className="font-mono text-xs">{new Date(r.createdAt).toLocaleDateString("es-AR")}</span> },
   ];
 
   const err = error instanceof DataAccessError ? error : null;
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <PermissionGuard recurso="comercios">
-      <PageHeader
-        title="Comercios"
-        description="Gestión de comercios para pagos con transferencia (PCT)."
-      />
-
-      {isLoading ? (
-        <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
-          <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
-          Cargando comercios…
-        </div>
-      ) : isError ? (
-        <MensajeEstado
-          tipo={err?.permission ? "permiso" : "error"}
-          mensaje={err?.message ?? "Error desconocido"}
-          onRetry={() => refetch()}
-        />
-      ) : isEmpty ? (
-        <MensajeEstado tipo="vacio" mensaje="" />
-      ) : (
-        <>
-          <DataTable
-            columns={columns}
-            data={rows}
-            keyExtractor={(r) => r.id}
-            pageSize={PAGE_SIZE}
-            showDownloadButton={false}
-            showEnumAllOption={false}
-            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-          />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total} comercio(s) · página {page + 1} de {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {detail && <ComercioDetalle comercio={detail} onClose={() => setDetail(null)} />}
-
-      {editTarget && categorias && (
-        <ComercioFormModal
-          comercio={editTarget}
-          categorias={categorias}
-          onClose={() => setEditTarget(null)}
-          onSave={guardarEdicion}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        title="Eliminar comercio"
-        message={`¿Estás seguro de eliminar el comercio "${confirmDelete?.usuario}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        variant="danger"
-        onConfirm={eliminar}
-      />
-
-      {confirmAction && (
-        <ConfirmDialog
-          open={!!confirmAction}
-          onClose={() => setConfirmAction(null)}
-          title={confirmAction.title}
-          message={confirmAction.message}
-          confirmLabel={confirmAction.confirmLabel}
-          variant={confirmAction.variant}
-          onConfirm={confirmAction.onConfirm}
-        />
-      )}
+      <PageHeader title="Pagos con QR" description="QRs/POS creados por comercios desde Enterprise. Payway activa; Admin gestiona estados." />
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input className="h-10 px-3 rounded-md border bg-card text-sm flex-1 min-w-[200px]" placeholder="Buscar QR, comercio, cajero..." value={search} onChange={(e)=>{ setSearch(e.target.value); setPage(0); }} />
+        <select className="h-10 px-3 rounded-md border bg-card text-sm" value={estado} onChange={(e)=>{ setEstado(e.target.value as EstadoQr | ""); setPage(0); }}>
+          <option value="">Todos los estados</option>
+          {ESTADOS_QR.map((e)=><option key={e} value={e}>{e}</option>)}
+        </select>
+      </div>
+      {isLoading ? <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground"><span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2"/>Cargando QRs…</div>
+      : isError ? <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700"><AlertTriangle size={28}/><p>{err?.message ?? "Error"}</p><button onClick={()=>refetch()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground">Reintentar</button></div>
+      : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay QRs/POS.</p><p className="text-xs">Crea un QR en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>
+      : <>
+          <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} QR(s) · página {page+1} de {totalPages}</span><div className="flex gap-2"><button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
+        </>}
+      {detail && <QrDetalle qr={detail} onClose={()=>setDetail(null)} />}
+      {confirm && <ConfirmDialog open={!!confirm} onClose={()=>setConfirm(null)} title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel} variant={confirm.variant} onConfirm={confirm.onConfirm} />}
     </PermissionGuard>
   );
 }

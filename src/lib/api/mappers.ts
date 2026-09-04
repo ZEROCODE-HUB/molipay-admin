@@ -160,13 +160,20 @@ function firstOrNull<T>(v: T[] | null | undefined): T | null {
   return (v as T | null) ?? null;
 }
 
-export function toPuntoVenta(r: PuntoVentaRow): PuntoVenta {
+export function toPuntoVenta(r: PuntoVentaRow & { comercios?: { id: string; usuario: string; legajo: string; clientes?: { nombre: string; correo: string }[] | null } | null }): PuntoVenta {
+  const com = r.comercios as { id: string; usuario: string; legajo: string; clientes?: { nombre: string; correo: string }[] | null } | null;
+  const cli = Array.isArray(com?.clientes) ? com?.clientes[0] : com?.clientes ?? null;
   return {
     id: r.id,
     comercioId: r.comercio_id,
     nombre: r.nombre,
-    estado: r.estado,
+    estado: r.estado as PuntoVenta["estado"],
     createdAt: r.created_at,
+    tipo: (r as PuntoVentaRow).tipo ?? null,
+    cajero: (r as PuntoVentaRow).cajero ?? null,
+    qrUrl: (r as PuntoVentaRow).qr_url ?? null,
+    alias: (r as PuntoVentaRow).alias ?? null,
+    comercio: com ? { id: com.id, usuario: com.usuario, legajo: com.legajo, clienteNombre: cli?.nombre ?? undefined, clienteCorreo: cli?.correo ?? undefined } : null,
   };
 }
 

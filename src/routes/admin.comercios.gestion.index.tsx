@@ -197,51 +197,12 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
           <Card className="p-0">
             <div className="px-5 pt-5 pb-1">
               <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Puntos de venta (PCT)
+                Resumen
               </h4>
             </div>
-            {comercio.puntosVenta.length === 0 ? (
-              <div className="px-5 pb-5 pt-3">
-                <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
-                  Sin puntos de venta cargados para este comercio.
-                </div>
-              </div>
-            ) : (
-              <div className="p-5 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50 text-left">
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Nombre del punto de venta
-                      </th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Estado
-                      </th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                        Fecha de creación
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comercio.puntosVenta.map((pdv) => (
-                      <tr key={pdv.id} className="border-b last:border-0">
-                        <td className="px-3 py-2.5 font-medium">{pdv.nombre}</td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone={pdv.estado === "Activado" ? "success" : "neutral"}>
-                            {pdv.estado}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="font-mono tabular-nums text-xs">
-                            {new Date(pdv.createdAt).toLocaleDateString("es-AR")}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="px-5 pb-5 pt-3 text-sm text-muted-foreground">
+              Los puntos de venta / QR se gestionan en <span className="font-semibold">Pagos con QR</span> y los enlaces en <span className="font-semibold">Enlaces de pago</span>.
+            </div>
           </Card>
         </div>
 
@@ -302,12 +263,7 @@ function ComercioFormModal({
   const [estado, setEstado] = useState<EstadoComercio>(
     comercio?.estado ?? "Pendiente de aprobación",
   );
-  const [habilitadoPagoTransferencia, setHabilitadoPagoTransferencia] = useState(
-    comercio?.habilitadoPagoTransferencia ?? false,
-  );
-  const [habilitadoEnlacesPago, setHabilitadoEnlacesPago] = useState(
-    comercio?.habilitadoEnlacesPago ?? false,
-  );
+  // habilitadoPagoTransferencia / habilitadoEnlacesPago removidos: gestion de medios de pago movida a secciones especificas
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
@@ -328,8 +284,8 @@ function ComercioFormModal({
       categoriaId: categoriaId ? Number(categoriaId) : null,
       nivel,
       estado,
-      habilitadoPagoTransferencia,
-      habilitadoEnlacesPago,
+      habilitadoPagoTransferencia: false,
+      habilitadoEnlacesPago: false,
     });
   };
 
@@ -468,26 +424,7 @@ function ComercioFormModal({
             ))}
           </select>
         </div>
-        <div className="sm:col-span-2 flex flex-col gap-3 pt-2 border-t border-border mt-2">
-          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-            <input
-              type="checkbox"
-              checked={habilitadoPagoTransferencia}
-              onChange={(e) => setHabilitadoPagoTransferencia(e.target.checked)}
-              className="h-4 w-4 rounded border-input accent-primary"
-            />
-            Habilitado para pago con transferencias
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-            <input
-              type="checkbox"
-              checked={habilitadoEnlacesPago}
-              onChange={(e) => setHabilitadoEnlacesPago(e.target.checked)}
-              className="h-4 w-4 rounded border-input accent-primary"
-            />
-            Habilitado para enlaces de pago
-          </label>
-        </div>
+
       </div>
     </FormDialog>
   );
@@ -608,30 +545,32 @@ function Page() {
   };
 
   const getActions = (row: Comercio): ActionItem[] => {
-    const items: ActionItem[] = [];
+    const items: ActionItem[] = [
+      { label: "Ver detalle", icon: Eye, onClick: () => setDetail(row) },
+      {
+        label: "Editar",
+        icon: Edit3,
+        disabled: !puedeModificar,
+        onClick: () => setEditTarget(row),
+      },
+    ];
+    // Solo habilitar/deshabilitar (estados de comercio). Sin gestion de medios de pago.
     if (row.estado === "Activado") {
       items.push({
-        label: "Suspender",
+        label: "Deshabilitar",
         icon: XCircle,
         variant: "danger",
         disabled: !puedeModificar,
-        onClick: () => cambiarEstado(row, "Suspendido"),
+        onClick: () => cambiarEstado(row, "Desactivado"),
       });
     } else {
       items.push({
-        label: "Activar",
+        label: "Habilitar",
         icon: CheckCircle,
         disabled: !puedeModificar,
         onClick: () => cambiarEstado(row, "Activado"),
       });
     }
-    items.push({
-      label: "Editar",
-      icon: Edit3,
-      disabled: !puedeModificar,
-      onClick: () => setEditTarget(row),
-    });
-    items.push({ label: "Ver detalle", icon: Eye, onClick: () => setDetail(row) });
     items.push({
       label: "Eliminar",
       icon: Trash2,
