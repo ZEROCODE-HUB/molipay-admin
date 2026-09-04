@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Eye, Edit3, XCircle, Ban, Trash2, AlertTriangle, Inbox, QrCode } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, Edit3, XCircle, Ban, Trash2, AlertTriangle, Inbox, QrCode, Download, Printer } from "lucide-react";
+import QRCode from "qrcode";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
@@ -37,6 +38,17 @@ function tone(estado: string): "success" | "neutral" | "warn" | "danger" {
 }
 
 function QrDetalle({ qr, onClose }: { qr: PuntoVenta; onClose: () => void }) {
+  const qrValue = qr.qrUrl || `https://molipay.com.ar/qr/pdv/${qr.id}`;
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(qrValue, { width: 260, margin: 2 }).then((url) => {
+      if (!cancelled) setQrDataUrl(url);
+    }).catch(() => setQrDataUrl(""));
+    return () => { cancelled = true; };
+  }, [qrValue]);
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -50,14 +62,27 @@ function QrDetalle({ qr, onClose }: { qr: PuntoVenta; onClose: () => void }) {
         </div>
         <div className="p-6 space-y-4">
           <Card className="p-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">QR</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-muted-foreground">Nombre QR/POS</span><div className="font-semibold">{qr.nombre}</div></div>
-              <div><span className="text-muted-foreground">Tipo</span><div className="font-semibold">{qr.tipo ?? "QR"}</div></div>
-              <div><span className="text-muted-foreground">Alias</span><div className="font-mono text-xs">{qr.alias ?? "—"}</div></div>
-              <div><span className="text-muted-foreground">Estado</span><div><BadgeComp tone={tone(qr.estado)}>{qr.estado}</BadgeComp></div></div>
-              <div><span className="text-muted-foreground">QR URL</span><div className="font-mono text-xs break-all">{qr.qrUrl ?? "—"}</div></div>
-              <div><span className="text-muted-foreground">Cajero</span><div className="font-semibold">{qr.cajero ?? "—"}</div></div>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">QR — claramente identificado</h4>
+            <div className="grid grid-cols-[1fr_auto] gap-6">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Nombre QR/POS</span><div className="font-semibold">{qr.nombre}</div></div>
+                <div><span className="text-muted-foreground">Tipo</span><div className="font-semibold">{qr.tipo ?? "QR"}</div></div>
+                <div><span className="text-muted-foreground">Alias</span><div className="font-mono text-xs">{qr.alias ?? "—"}</div></div>
+                <div><span className="text-muted-foreground">Estado</span><div><BadgeComp tone={tone(qr.estado)}>{qr.estado}</BadgeComp></div></div>
+                <div className="col-span-2"><span className="text-muted-foreground">QR URL</span><div className="font-mono text-xs break-all">{qrValue}</div></div>
+                <div><span className="text-muted-foreground">Cajero</span><div className="font-semibold">{qr.cajero ?? "—"}</div></div>
+                <div><span className="text-muted-foreground">ID</span><div className="font-mono text-xs">{qr.id.slice(0,8)}</div></div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="border-2 rounded-xl p-2 bg-white">
+                  {qrDataUrl ? <img src={qrDataUrl} alt="QR" className="w-32 h-32" /> : <div className="w-32 h-32 bg-muted animate-pulse rounded" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground text-center">QR para cobro<br/>{qr.nombre}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => { if (qrDataUrl) { const a=document.createElement("a"); a.href=qrDataUrl; a.download=`qr-${qr.id}.png`; a.click(); } }} className="h-7 px-2 rounded border text-xs flex items-center gap-1"><Download size={12}/>PNG</button>
+                  <button onClick={() => { if (qrDataUrl) { const w=window.open(); if(w) w.document.write(`<img src="${qrDataUrl}" onload="window.print()"/>`); } }} className="h-7 px-2 rounded border text-xs flex items-center gap-1"><Printer size={12}/>Imprimir</button>
+                </div>
+              </div>
             </div>
           </Card>
           <Card className="p-4">
@@ -65,6 +90,8 @@ function QrDetalle({ qr, onClose }: { qr: PuntoVenta; onClose: () => void }) {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-muted-foreground">Nombre POS</span><div className="font-semibold">{qr.nombre}</div></div>
               <div><span className="text-muted-foreground">Fecha creación</span><div className="font-mono text-xs">{new Date(qr.createdAt).toLocaleDateString("es-AR")}</div></div>
+              <div><span className="text-muted-foreground">Comercio</span><div className="font-semibold">{qr.comercio?.usuario ?? "—"}</div></div>
+              <div><span className="text-muted-foreground">ID POS</span><div className="font-mono text-xs">{qr.id.slice(0,8)}</div></div>
             </div>
           </Card>
           <Card className="p-4">
