@@ -27,6 +27,7 @@ export async function listClientes(filters: ClienteFilters): Promise<Page<Client
     query = query.or(`legajo.ilike.%${q}%,correo.ilike.%${q}%,nombre.ilike.%${q}%`);
   }
   if (estado) query = query.eq("estado", estado);
+  else query = query.neq("estado", "eliminado");
   if (tipoPersona) query = query.eq("tipo_persona", tipoPersona);
 
   query = query.order("fecha_alta", { ascending: false }).range(from, to);
