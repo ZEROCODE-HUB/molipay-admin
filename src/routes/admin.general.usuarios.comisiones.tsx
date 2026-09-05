@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
@@ -23,6 +23,8 @@ import {
 } from "@/lib/api/types";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
+import { useClientesForSelect } from "@/hooks/useComercios";
+import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   head: () => ({
@@ -95,18 +97,59 @@ function ComisionFormFields({
   draft: ComisionDraft;
   onChange: (d: ComisionDraft) => void;
 }) {
+  const [searchInput, setSearchInput] = useState(draft.correo);
+  const debounced = useDebouncedValue(searchInput, 350);
+  const { data: clientesOpt } = useClientesForSelect(debounced || undefined);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (draft.correo && draft.correo !== searchInput) setSearchInput(draft.correo);
+  }, [draft.correo]);
+
   return (
     <>
-      <div>
+      <div className="relative">
         <Label htmlFor="com-correo">Email del cliente</Label>
-        <Input
-          id="com-correo"
-          value={draft.correo}
-          onChange={(e) => onChange({ ...draft, correo: e.target.value })}
-          placeholder="usuario@email.com"
-        />
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            id="com-correo"
+            value={searchInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearchInput(v);
+              onChange({ ...draft, correo: v });
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            placeholder="Buscar por email, legajo o nombre..."
+            className="pl-9"
+            autoComplete="off"
+          />
+        </div>
+        {open && (clientesOpt?.length ?? 0) > 0 && (
+          <div className="absolute z-20 mt-1 w-full rounded-md border border-input bg-card shadow-lg max-h-60 overflow-auto">
+            {(clientesOpt ?? []).map((c) => (
+              <button
+                key={c.legajo}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setSearchInput(c.correo);
+                  onChange({ ...draft, correo: c.correo, cuit: (c.cuit as string) ?? draft.cuit, tipoPersona: (c.tipoPersona as ComisionDraft["tipoPersona"]) ?? draft.tipoPersona } as ComisionDraft);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex flex-col"
+              >
+                <span className="font-medium">{c.correo}</span>
+                <span className="text-xs text-muted-foreground font-mono">{c.legajo} · {c.nombre}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <p className="text-[11px] text-muted-foreground mt-1">
-          El cliente debe estar dado de alta. Su legajo (LPF/LPJ-CUIT) se resuelve desde la BD.
+          Búsqueda rápida (server-side, 20 resultados). Seleccioná un usuario existente de la lista.
         </p>
       </div>
       <div>
@@ -117,6 +160,7 @@ function ComisionFormFields({
           onChange={(e) => onChange({ ...draft, cuit: e.target.value })}
           placeholder="20-12345678-9"
         />
+        <p className="text-[11px] text-muted-foreground mt-1">Se autocompleta al seleccionar email, editable si hace falta.</p>
       </div>
       <div>
         <Label htmlFor="com-operacion">Tipo de operación</Label>
@@ -422,13 +466,13 @@ function ComisionesPage() {
 
   const guardarDraft = async () => {
     setFormError(null);
-    if (!draft.correo || !draft.cuit) {
-      setFormError("Completá el correo y el CUIT del cliente.");
+    if (!draft.correo) {
+      setFormError("Seleccioná el email del cliente (búsqueda rápida).");
       return;
     }
     setSaving(true);
     try {
-      const cliente = await getClienteByCorreo(draft.correo);
+      const cliente = await getClienteByCorreo(draft.correo.trim().toLowerCase());
       if (!cliente) {
         setFormError("No existe un cliente con ese correo. Dalo de alta primero.");
         setSaving(false);
@@ -448,6 +492,10 @@ function ComisionesPage() {
         descripcion: draft.descripcion,
       });
       queryClient.invalidateQueries({ queryKey: ["comisiones"] });
+      queryClient.invalidateQueries({ queryKey: ["comisiones_cliente", cliente.legajo] });
+      queryClient.invalidateQueries({ queryKey: ["comisiones", "by-legajo", cliente.legajo] });
+      // fuerza refetch del detalle si está abierto
+      queryClient.invalidateQueries({ queryKey: ["subcuentas", cliente.legajo] });
       setShowNueva(false);
       setEditTarget(null);
     } catch (e) {

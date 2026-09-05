@@ -87,8 +87,10 @@ import {
   type ParametroConfig,
   type ComercioPst,
   type LinkPago,
-  type ComisionCliente,
+  type ComisionCliente as ComisionClienteLegacy,
 } from "@/lib/api/detalle-cliente";
+import { listComisiones } from "@/lib/api/comisiones";
+import type { ComisionCliente } from "@/lib/api/types";
 import {
   listApiUsuarios,
   listApiUsuarioEndpoints,
@@ -2221,6 +2223,11 @@ function ClienteDetailPage() {
     queryFn: () => listComisionesCliente(legajo),
     enabled: !!cliente,
   });
+  const comisionesRealesQuery = useQuery({
+    queryKey: ["comisiones", "by-cliente", cliente?.id],
+    queryFn: () => listComisiones({ page: 0, pageSize: 10, clienteId: cliente!.id }),
+    enabled: !!cliente?.id,
+  });
   const documentosResumenQuery = useQuery({
     queryKey: ["documentos", legajo],
     queryFn: () => listDocumentos(legajo),
@@ -2295,6 +2302,7 @@ function ClienteDetailPage() {
 
   const [movDetail, setMovDetail] = useState<DetailMovimiento | null>(null);
   const [impuestoDetail, setImpuestoDetail] = useState<ImpuestoAsignacion | null>(null);
+  const [comisionDetail, setComisionDetail] = useState<ComisionCliente | null>(null);
   const [estadoTarget, setEstadoTarget] = useState<{
     dbId: string;
     estadoActual: string;
@@ -2959,9 +2967,9 @@ function ClienteDetailPage() {
                 <KpiCard
                   label="Comisiones"
                   value={
-                    comisionesQuery.isError
+                    comisionesRealesQuery.isError
                       ? "Por definir"
-                      : String(comisionesQuery.data?.length ?? 0)
+                      : String(comisionesRealesQuery.data?.rows.length ?? 0)
                   }
                 />
                 <KpiCard
@@ -2992,19 +3000,21 @@ function ClienteDetailPage() {
                   ]}
                   datos={(subcuentasQuery.data ?? []).slice(0, 10)}
                 />
-                <MiniDashboard
-                  titulo="Últimas comisiones"
-                  columnas={[
-                    { label: "Concepto", render: (c: ComisionCliente) => c.concepto },
-                    {
-                      label: "Monto",
-                      render: (c: ComisionCliente) => fmtMonto(c.monto),
-                    },
-                    { label: "Fecha", render: (c: ComisionCliente) => c.fecha },
-                  ]}
-                  datos={(comisionesQuery.data ?? []).slice(0, 10)}
-                  vacio="Sin comisiones registradas."
-                />
+                <div className="rounded-lg border border-border p-4">
+                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Últimas comisiones</h4>
+                  {(comisionesRealesQuery.data?.rows.length ?? 0) === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sin comisiones registradas.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Operación</th><th className="px-2 py-1.5">Tipo</th><th className="px-2 py-1.5">Estado</th><th className="px-2 py-1.5 text-right">Detalle</th></tr></thead>
+                        <tbody>{(comisionesRealesQuery.data?.rows ?? []).slice(0,10).map((c) => (
+                          <tr key={c.id} className="border-b last:border-0"><td className="px-2 py-1.5 font-mono">{c.operacion}</td><td className="px-2 py-1.5">{c.tipo}</td><td className="px-2 py-1.5"><Badge tone={c.estado==="Habilitado"?"success":"neutral"}>{c.estado}</Badge></td><td className="px-2 py-1.5 text-right"><button onClick={()=>setComisionDetail(c)} className="inline-flex items-center gap-1 h-6 px-2 rounded border text-[11px] hover:bg-accent"><Eye size={11}/> Ver detalle</button></td></tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
                 <MiniDashboard
                   titulo="Impuestos recientes"
                   columnas={[
@@ -3046,6 +3056,19 @@ function ClienteDetailPage() {
                   ].slice(0, 10)}
                 />
               </div>
+              {comisionDetail && (
+                <ModalDialog open={!!comisionDetail} onClose={() => setComisionDetail(null)} title="Detalle de comisión" description={`${comisionDetail.operacion} · ${comisionDetail.tipo}`}>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><span className="text-muted-foreground">Operación</span><div className="font-mono font-semibold">{comisionDetail.operacion}</div></div>
+                    <div><span className="text-muted-foreground">Tipo</span><div>{comisionDetail.tipo}</div></div>
+                    <div><span className="text-muted-foreground">Modalidad</span><div>{comisionDetail.modalidad}</div></div>
+                    <div><span className="text-muted-foreground">Estado</span><div><Badge tone={comisionDetail.estado==="Habilitado"?"success":"neutral"}>{comisionDetail.estado}</Badge></div></div>
+                    <div><span className="text-muted-foreground">Porcentaje</span><div className="font-mono">{comisionDetail.porcentaje ?? "—"}%</div></div>
+                    <div><span className="text-muted-foreground">Monto fijo</span><div className="font-mono">{comisionDetail.montoFijo != null ? `$ ${comisionDetail.montoFijo}` : "—"}</div></div>
+                    <div className="col-span-2"><span className="text-muted-foreground">Descripción</span><div>{comisionDetail.descripcion ?? "—"}</div></div>
+                  </div>
+                </ModalDialog>
+              )}
             </section>
           )}
 

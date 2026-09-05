@@ -494,6 +494,8 @@ export type ClienteSelect = {
   legajo: string;
   nombre: string;
   correo: string;
+  cuit?: string;
+  tipoPersona?: TipoPersona;
 };
 
 // --- resolvers (tabla real: resolvers) -------------------------------------

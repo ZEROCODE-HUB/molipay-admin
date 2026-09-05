@@ -107,6 +107,57 @@ export async function listSubcuentas(clienteLegajo: string): Promise<Subcuenta[]
   return ((data as SubcuentaRow[]) ?? []).map(toSubcuenta);
 }
 
+export type CvuFilters = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  estado?: SubcuentaEstado;
+};
+
+export type CvuRow = Subcuenta & {
+  cliente?: { correo: string; nombre: string; cuit: string; tipoPersona: string } | null;
+  legajo: string;
+};
+
+const COLUMNS_WITH_CLIENTE = COLUMNS + ", clientes(legajo, correo, nombre, cuit, tipo_persona)";
+
+export async function listAllCvus(filters: CvuFilters): Promise<{ rows: CvuRow[]; total: number; page: number; pageSize: number }> {
+  const sb = requireSupabase();
+  const { page, pageSize, search, estado } = filters;
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+  let query = sb.from("subcuentas").select(COLUMNS_WITH_CLIENTE, { count: "exact" });
+  if (search?.trim()) {
+    const q = search.trim().replace(/[%_]/g, "\\$&");
+    query = query.or(`cliente_legajo.ilike.%${q}%,email.ilike.%${q}%,nombre.ilike.%${q}%,cbu.ilike.%${q}%`);
+  }
+  if (estado) query = query.eq("estado", estado);
+  query = query.order("created_at", { ascending: false }).range(from, to);
+  const { data, error, count } = await query;
+  if (error) throw new DataAccessError(error);
+  const rows = ((data ?? []) as (SubcuentaRow & { clientes?: { legajo: string; correo: string; nombre: string; cuit: string; tipo_persona: string } | null })[]).map((r) => {
+    const base = toSubcuenta(r as SubcuentaRow);
+    const cli = r.clientes as unknown as { legajo: string; correo: string; nombre: string; cuit: string; tipo_persona: string } | null;
+    return {
+      ...base,
+      legajo: r.cliente_legajo,
+      cliente: cli ? { correo: cli.correo, nombre: cli.nombre, cuit: cli.cuit, tipoPersona: cli.tipo_persona } : null,
+    } as CvuRow;
+  });
+  return { rows, total: count ?? rows.length, page, pageSize };
+}
+
+export function generarCbu(): string {
+  // 22 dígitos, prefijo 00000031 (banco) + 14 aleatorios
+  const rand = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join("");
+  return `00000031${rand}`;
+}
+
+export function generarAlias(email: string): string {
+  const base = email.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, ".") ?? "usuario";
+  return `${base}.${Math.floor(100 + Math.random() * 900)}`;
+}
+
 export type SubcuentaInput = {
   nombre: string;
   apellido?: string;

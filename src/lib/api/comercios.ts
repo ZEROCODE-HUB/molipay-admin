@@ -212,7 +212,7 @@ export async function deleteComercio(id: string): Promise<void> {
 // existente (FK real a clientes.legajo). Selector con búsqueda server-side + limit.
 export async function listClientesForSelect(search?: string): Promise<ClienteSelect[]> {
   const sb = requireSupabase();
-  let query = sb.from("clientes").select("legajo, nombre, correo").order("nombre", { ascending: true }).limit(20);
+  let query = sb.from("clientes").select("legajo, nombre, correo, cuit, tipo_persona").order("nombre", { ascending: true }).limit(20);
   if (search?.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
     query = query.or(`legajo.ilike.%${q}%,correo.ilike.%${q}%,nombre.ilike.%${q}%`);
@@ -220,10 +220,12 @@ export async function listClientesForSelect(search?: string): Promise<ClienteSel
   const { data, error } = await query;
   if (error) throw new DataAccessError(error);
   return (data ?? []).map(
-    (r: { legajo: string; nombre: string; correo: string }): ClienteSelect => ({
+    (r: { legajo: string; nombre: string; correo: string; cuit: string; tipo_persona: string }): ClienteSelect => ({
       legajo: r.legajo,
       nombre: r.nombre,
       correo: r.correo,
+      cuit: r.cuit,
+      tipoPersona: r.tipo_persona as ClienteSelect["tipoPersona"],
     }),
   );
 }
