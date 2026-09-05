@@ -256,29 +256,6 @@ function JuridicasPage() {
     <PermissionGuard recurso="usuarios">
       <PageHeader title="Personas jurídicas" description="Empresas y organizaciones — flujo homologado con personas físicas." />
 
-      <div className="rounded-xl border border-border bg-card p-4 mb-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="text-xs font-semibold text-foreground mb-1.5 block">Estado</label>
-            <select
-              value={filtroEstado}
-              onChange={(e) => {
-                setFiltroEstado(e.target.value);
-                setPage(0);
-              }}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">Todos</option>
-              {FILTRO_ESTADOS_OPCIONES.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
@@ -290,7 +267,32 @@ function JuridicasPage() {
         <EstadoMensaje tipo="vacio" mensaje="" />
       ) : (
         <>
-          <DataTable columns={columns} data={data} keyExtractor={(r) => r.legajo} actions={(r) => <ActionsDropdown actions={getActions(r)} />} />
+          <DataTable
+            columns={columns}
+            data={data}
+            keyExtractor={(r) => r.legajo}
+            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            extraFilters={
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                <select
+                  value={filtroEstado}
+                  onChange={(e) => {
+                    setFiltroEstado(e.target.value);
+                    setPage(0);
+                  }}
+                  className="w-full sm:min-w-[180px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                >
+                  <option value="">Todos</option>
+                  {FILTRO_ESTADOS_OPCIONES.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            }
+          />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>
               {total} resultado(s) · página {page + 1} de {totalPaginas}

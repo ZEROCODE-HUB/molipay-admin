@@ -42,6 +42,7 @@ type DataTableProps<T> = {
   dateFilterColumns?: string[];
   initialQuery?: string;
   showGlobalFilter?: boolean;
+  extraFilters?: ReactNode;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -78,6 +79,7 @@ export function DataTable<T>({
   dateFilterColumns,
   initialQuery,
   showGlobalFilter = true,
+  extraFilters,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -359,8 +361,9 @@ export function DataTable<T>({
             )}
           </div>
 
-          {showSpecificFilters && (
+          {(showSpecificFilters || !!extraFilters) && (
             <div className="flex flex-wrap items-end gap-3">
+              {extraFilters && <div className="space-y-1 min-w-0">{extraFilters}</div>}
               {filterCols.map((col) => (
                 <div key={col.key} className="space-y-1 min-w-0">
                   <label className="text-xs font-medium text-muted-foreground">
