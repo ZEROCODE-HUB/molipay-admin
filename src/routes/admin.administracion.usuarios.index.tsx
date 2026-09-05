@@ -14,7 +14,6 @@ import { crearAdminUser } from "@/lib/api/edge";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const PAGE_SIZE = 25;
 
@@ -33,8 +32,6 @@ function fmtFecha(iso: string): string {
 function Page() {
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
   const [detail, setDetail] = useState<AdminUser | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -44,8 +41,8 @@ function Page() {
   const rolNombre = new Map<string, string>(roles.map((r) => [r.id, r.nombre]));
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-    queryKey: ["admin-users", page, search],
-    queryFn: () => listAdminUsers({ page, pageSize: PAGE_SIZE, search: search || undefined }),
+    queryKey: ["admin-users", page],
+    queryFn: () => listAdminUsers({ page, pageSize: PAGE_SIZE }),
   });
 
   const rows: AdminUser[] = data?.rows ?? [];
@@ -125,20 +122,6 @@ function Page() {
           </button>
         }
       />
-
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex-1 min-w-[220px]">
-          <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Buscar</label>
-          <Input
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Legajo, email o nombre…"
-          />
-        </div>
-      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
