@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Ban, XCircle, Trash2, AlertTriangle, Inbox, Link2, Copy, CheckCircle } from "lucide-react";
+import { requireSupabase } from "@/lib/supabase";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
@@ -82,7 +83,24 @@ function Page() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["enlaces-pago", page, search, estado],
     queryFn: () => listEnlaces({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estado || undefined }),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    const sb = requireSupabase();
+    if (!sb) return;
+    const ch = sb
+      .channel("realtime-enlaces-pago")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cliente_links_pago" }, () => {
+        qc.invalidateQueries({ queryKey: ["enlaces-pago"] });
+      })
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
+  }, [qc]);
 
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;

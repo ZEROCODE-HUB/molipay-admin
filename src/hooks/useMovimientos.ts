@@ -1,14 +1,33 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { listMovimientos, type MovimientoFilters } from "@/lib/api/movimientos";
+import { requireSupabase } from "@/lib/supabase";
 import type { Movimiento, Page } from "@/lib/api/types";
 
 export function useMovimientos(filters: MovimientoFilters) {
+  const queryClient = useQueryClient();
   const query = useQuery<Page<Movimiento>>({
     queryKey: ["movimientos", filters],
     queryFn: () => listMovimientos(filters),
     placeholderData: keepPreviousData,
     staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    const sb = requireSupabase();
+    if (!sb) return;
+    const ch = sb
+      .channel("realtime-movimientos")
+      .on("postgres_changes", { event: "*", schema: "public", table: "movimientos" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+      })
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
+  }, [queryClient]);
 
   const rows = query.data?.rows ?? [];
   const filtrosEstructuradosActivos = Boolean(

@@ -13,6 +13,7 @@ import { DataAccessError } from "@/lib/api/errors";
 import { Badge as BadgeComp } from "@/components/portal-shell";
 import { LegajoCell } from "@/components/legajo-label";
 import { useQuery } from "@tanstack/react-query";
+import { requireSupabase } from "@/lib/supabase";
 import { listQrPos, updateQrEstado, deleteQrPos } from "@/lib/api/qr-pos";
 import type { PuntoVenta, EstadoQr } from "@/lib/api/types";
 
@@ -121,7 +122,24 @@ function Page() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["qr-pos", page, search, estado],
     queryFn: () => listQrPos({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estado || undefined }),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    const sb = requireSupabase();
+    if (!sb) return;
+    const ch = sb
+      .channel("realtime-puntos_venta")
+      .on("postgres_changes", { event: "*", schema: "public", table: "puntos_venta" }, () => {
+        qc.invalidateQueries({ queryKey: ["qr-pos"] });
+      })
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
+  }, [qc]);
 
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;

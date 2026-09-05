@@ -1,14 +1,33 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { getClienteByLegajo, listClientes, type ClienteFilters } from "@/lib/api/clientes";
+import { requireSupabase } from "@/lib/supabase";
 import type { Cliente, Page } from "@/lib/api/types";
 
 export function useClientes(filters: ClienteFilters) {
+  const queryClient = useQueryClient();
   const query = useQuery<Page<Cliente>>({
     queryKey: ["clientes", filters],
     queryFn: () => listClientes(filters),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    const sb = requireSupabase();
+    if (!sb) return;
+    const ch = sb
+      .channel("realtime-clientes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clientes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      })
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
+  }, [queryClient]);
 
   const rows = query.data?.rows ?? [];
   return {
