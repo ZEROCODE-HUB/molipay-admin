@@ -54,7 +54,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Usuarios — Admin Molly  (/admin/general/usuarios)
    - Ficha de cliente — Admin Molly  (/admin/general/usuarios/$legajo)
    - Carga de comisiones — Usuarios — Admin Molly  (/admin/general/usuarios/comisiones)
-   - Usuarios con CVU — Usuarios — Admin Molly  (/admin/general/usuarios/cvu)
+   - Usuarios con CBU/CVU — Usuarios — Admin Molly  (/admin/general/usuarios/cvu)
    - Personas jurídicas — Usuarios — Admin Molly  (/admin/general/usuarios/juridicas)
 
 • Comunicación:
@@ -247,7 +247,7 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   },
   {
     "path": "/admin/general/usuarios/cvu",
-    "title": "Usuarios con CVU — Usuarios — Admin Molly"
+    "title": "Usuarios con CBU/CVU — Usuarios — Admin Molly"
   },
   {
     "path": "/admin/general/usuarios/juridicas",
