@@ -1,6 +1,7 @@
 // Máquina de estados homologada MolliPay Enterprises ↔ MolliPay Admin
 // Flujo: Pendiente verificación → Registrado → Preactivado → Activado
-//        + ramas: Suspendido / Deshabilitado / Eliminado
+//        + ramas: Suspendido / Deshabilitado
+//        + Eliminado = borrado físico (no es estado almacenado, solo si no tiene movimientos)
 // Compartible entre ambos proyectos (sin dependencias de UI).
 
 export const ESTADOS_CLIENTE = [
@@ -50,8 +51,8 @@ export const ESTADO_TONE: Record<EstadoClienteNuevo, "neutral" | "warn" | "succe
   eliminado: "danger",
 };
 
-// Para filtros desplegables (orden del spec §7)
-export const FILTRO_ESTADOS_OPCIONES: string[] = ESTADOS_CLIENTE.map((e) => ESTADO_LABEL[e]);
+// Para filtros desplegables (§7) — Eliminado NO es un estado almacenado, es borrado físico; se excluye del filtro
+export const FILTRO_ESTADOS_OPCIONES: string[] = ESTADOS_CLIENTE.filter((e) => e !== "eliminado").map((e) => ESTADO_LABEL[e]);
 
 // Reverse lookup label -> estado
 export const LABEL_A_ESTADO: Record<string, EstadoClienteNuevo> = Object.fromEntries(

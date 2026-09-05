@@ -223,25 +223,67 @@ export async function deshabilitarCliente(cliente: Cliente): Promise<TransicionR
 }
 
 export async function eliminarCliente(cliente: Cliente): Promise<TransicionResult> {
-  // Guard estricto ya en puedeTransicionar, pero doble validación
+  // Eliminado NO es estado: borrado físico (hard delete) solo si no tiene movimientos
   const hasMov = await clienteTieneMovimientos(cliente.legajo);
-  if (hasMov) return { ok: false, motivo: "No se puede eliminar: tiene movimientos." };
-  // Soft delete: pasar a eliminado (no borrar fila para trazabilidad)
-  // Si se requiere hard delete, hacerlo solo si soft ok y sin movimientos:
-  const res = await transicionarCliente(cliente, "eliminado");
-  if (!res.ok) return res;
-  return res;
+  if (hasMov) return { ok: false, motivo: "No se puede eliminar: tiene movimientos. Solo puede deshabilitarse." };
+  try {
+    await hardDeleteCliente(cliente.id);
+    return { ok: true, cliente };
+  } catch (e) {
+    return { ok: false, motivo: (e as Error).message };
+  }
 }
 
-// Hard delete real (solo si el guard lo permite y el caller lo solicita)
+// Hard delete real — borrado físico en cascada (solo si no tiene movimientos)
 export async function hardDeleteCliente(id: string): Promise<void> {
   const sb = requireSupabase();
   const cliente = await getCliente(id);
   if (!cliente) throw new Error("Cliente no encontrado");
   const hasMov = await clienteTieneMovimientos(cliente.legajo);
   if (hasMov) throw new Error("No se puede eliminar: el cliente tiene movimientos históricos.");
-  const { error } = await sb.from("clientes").delete().eq("id", id);
+
+  // Limpieza de tablas dependientes (idempotente: ignora si tabla no existe o sin filas)
+  const legajo = cliente.legajo;
+  const cid = cliente.id;
+  const tablasLegajo = [
+    "subcuentas",
+    "documentos",
+    "historial_cambios",
+    "validaciones",
+    "alertas",
+    "bloqueos",
+    "cliente_modulos",
+    "cliente_parametros_alertas",
+    "cliente_parametros_bloqueos",
+    "cliente_comercios_pst",
+    "impuestos_asignaciones",
+    "cliente_transiciones",
+  ];
+  for (const t of tablasLegajo) {
+    try {
+      const col = t === "impuestos_asignaciones" ? "legajo" : "cliente_legajo";
+      // cliente_transiciones tiene ambos; intentamos legajo
+      if (t === "cliente_transiciones") {
+        await sb.from(t).delete().eq("legajo", legajo);
+        await sb.from(t).delete().eq("cliente_id", cid);
+      } else {
+        await sb.from(t).delete().eq(col, legajo);
+      }
+    } catch {
+      // ignora tabla inexistente o RLS
+    }
+  }
+  // Tablas por cliente_id
+  try { await sb.from("comisiones_cliente").delete().eq("cliente_id", cid); } catch {}
+  try { await sb.from("cliente_links_pago").delete().eq("cliente_legajo", legajo); } catch {}
+  try { await sb.from("productos").delete().eq("cliente_legajo", legajo); } catch {}
+  // comercios (y puntos_venta por CASCADE)
+  try { await sb.from("comercios").delete().eq("legajo", legajo); } catch {}
+
+  // Finalmente cliente
+  const { error } = await sb.from("clientes").delete().eq("id", cid);
   if (error) throw new DataAccessError(error);
+  // Nota: auth.users debe borrarse aparte via Authentication > Users (o SQL en auth schema) para re-registrar el mismo email
 }
 
 export async function generarCbuParaCliente(cliente: Cliente, cbu: string): Promise<Cliente> {
