@@ -533,56 +533,6 @@ function ComisionesPage() {
         }
       />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex-1 min-w-[220px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Legajo, correo, operación…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="f-tipo">Tipo</Label>
-          <select
-            id="f-tipo"
-            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-            value={tipo}
-            onChange={(e) => {
-              setTipo(e.target.value as TipoOperacion | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {TIPOS_OPERACION.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select
-            id="f-estado"
-            className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-            value={estado}
-            onChange={(e) => {
-              setEstado(e.target.value as EstadoComision | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            <option value="Habilitado">Habilitado</option>
-            <option value="Deshabilitado">Deshabilitado</option>
-          </select>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />

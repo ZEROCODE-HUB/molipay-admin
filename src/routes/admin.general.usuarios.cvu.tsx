@@ -166,21 +166,6 @@ function CvuPage() {
         }
       />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex-1 min-w-[220px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input id="buscar" value={searchInput} onChange={(e) => { setSearchInput(e.target.value); setPage(0); }} placeholder="Legajo, email, nombre, CBU..." />
-        </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select id="f-estado" className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setPage(0); }}>
-            <option value="">Todos</option>
-            <option value="Activa">Habilitado</option>
-            <option value="Pausada">Deshabilitado</option>
-          </select>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground"><span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />Cargando CBU/CVU…</div>
       ) : isError ? (
@@ -204,6 +189,25 @@ function CvuPage() {
             }))}
             keyExtractor={(r: any) => r.id}
             actions={(r: any) => <ActionsDropdown actions={getActions(r as CvuRow)} />}
+            extraFilters={
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-xs font-medium text-muted-foreground">Buscar</label>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input value={searchInput} onChange={(e) => { setSearchInput(e.target.value); setPage(0); }} placeholder="Legajo, email, nombre, CBU..." className="pl-8 h-8 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                  <select value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40">
+                    <option value="">Todos</option>
+                    <option value="Activa">Habilitado</option>
+                    <option value="Pausada">Deshabilitado</option>
+                  </select>
+                </div>
+              </div>
+            }
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} CBU/CVU · página {page + 1} de {totalPages}</span><div className="flex gap-2"><button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
         </>
