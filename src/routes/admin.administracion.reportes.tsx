@@ -22,11 +22,14 @@ import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
 import { FileDropzone } from "@/components/file-dropzone";
 import { useEffect } from "react";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, requireSupabase } from "@/lib/supabase";
 import {
   listConciliacionesArchivos,
   createConciliacionArchivo,
 } from "@/lib/api/conciliaciones";
+import { parseBancoFile } from "@/lib/conciliacion/parse";
+import { cruzarConciliacion, type AnalisisResumen } from "@/lib/conciliacion/engine";
+import { listMovimientos } from "@/lib/api/movimientos";
 
 export const Route = createFileRoute("/admin/administracion/reportes")({
   head: () => ({ meta: [{ title: "Reportes — Admin Panel" }] }),
@@ -146,6 +149,9 @@ type Archivo = {
   fecha: string;
   estado: "Analizado" | "Pendiente";
   downloadRows: Record<string, unknown>[];
+  bankRows?: import("@/lib/conciliacion/parse").BankRow[];
+  rawFile?: File | null;
+  storagePath?: string | null;
 };
 
 const CONCILIACION_COLS = [
@@ -153,7 +159,7 @@ const CONCILIACION_COLS = [
   "ID_DEBIN",
   "TIPO_MOV_COELSA",
   "CBU",
-  "CTA_BT_DEL_CUI",
+  "CTA_BT_DEL_CBU",
   "BT_SBO",
   "BT_TOP",
   "DENOMINACION",
@@ -304,28 +310,6 @@ const ARCHIVOS_INICIALES: Archivo[] = [
   },
 ];
 
-type AnalisisResumen = {
-  total: number;
-  encontrados: number;
-  noEncontrados: number;
-  noCompletados: number;
-  depositos: { total: number; encontrados: number };
-  retiros: { total: number; encontrados: number };
-  idsDepositosNoEncontrados: string[];
-  idsRetirosNoEncontrados: string[];
-};
-
-const ANALISIS_EJEMPLO: AnalisisResumen = {
-  total: 1017,
-  encontrados: 1017,
-  noEncontrados: 0,
-  noCompletados: 1,
-  depositos: { total: 612, encontrados: 612 },
-  retiros: { total: 405, encontrados: 405 },
-  idsDepositosNoEncontrados: [],
-  idsRetirosNoEncontrados: ["DEP-99812", "RET-44732"],
-};
-
 function AnalisisConciliacionModal({
   archivo,
   onClose,
@@ -333,15 +317,92 @@ function AnalisisConciliacionModal({
   archivo: Archivo;
   onClose: () => void;
 }) {
-  const resumen = ANALISIS_EJEMPLO;
-  const porcentaje =
-    resumen.total > 0 ? Math.round((resumen.encontrados / resumen.total) * 10000) / 100 : 0;
-  const ahora = new Date();
-  const fechaAnalisis = `${String(ahora.getDate()).padStart(2, "0")}/${String(
-    ahora.getMonth() + 1,
-  ).padStart(2, "0")}/${ahora.getFullYear()} ${String(ahora.getHours()).padStart(2, "0")}:${String(
-    ahora.getMinutes(),
-  ).padStart(2, "0")}`;
+  const [resumen, setResumen] = useState<AnalisisResumen | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      try {
+        setLoading(true);
+        setError(null);
+        let bankRows = archivo.bankRows ?? null;
+        // Si no hay bankRows en memoria, intentar obtener del storage o del downloadRows mock
+        if (!bankRows || bankRows.length === 0) {
+          if (archivo.rawFile) {
+            bankRows = await parseBancoFile(archivo.rawFile);
+          } else if (archivo.storagePath && isSupabaseConfigured) {
+            const sb = requireSupabase();
+            const { data, error: dlErr } = await sb.storage.from("conciliaciones").download(archivo.storagePath);
+            if (dlErr) throw dlErr;
+            const file = new File([data], archivo.archivo, { type: (data as Blob).type || "application/octet-stream" });
+            bankRows = await parseBancoFile(file);
+          } else if (archivo.downloadRows.length > 0) {
+            // fallback mock -> convertir downloadRows a BankRow shape mínimo
+            const mapped = archivo.downloadRows.map((r) => ({
+              fechaNegocio: String((r as Record<string, unknown>)["FECHA_NEGOCIO"] ?? ""),
+              idDebin: String((r as Record<string, unknown>)["ID_DEBIN"] ?? ""),
+              tipoMovCoelsa: String((r as Record<string, unknown>)["TIPO_MOV_COELSA"] ?? ""),
+              cbu: String((r as Record<string, unknown>)["CBU"] ?? ""),
+              ctaBtDelCbu: "",
+              btSbo: "",
+              btTop: "",
+              denominacion: "",
+              cuit: "",
+              importeRaw: String((r as Record<string, unknown>)["IMPORTE_COELSA"] ?? "0"),
+              importeCoelsa: Number((r as Record<string, unknown>)["IMPORTE_COELSA"] ?? 0),
+              estadoCoelsa: String((r as Record<string, unknown>)["ESTADO_COELSA"] ?? "COMPLETADA"),
+              astoEstado: String((r as Record<string, unknown>)["ASTO_ESTADO"] ?? ""),
+              cvu: String((r as Record<string, unknown>)["CVU"] ?? ""),
+              cuitVirtual: "",
+              cvu2: "",
+              cuitVirtual2: "",
+              cbu2: "",
+              cuit2: "",
+              concepto: "",
+              mismoTit: "",
+              detalle: "",
+              cvuCredito: "",
+              fechaHoraCoelsa: String((r as Record<string, unknown>)["FECHA_HORA_COELSA"] ?? ""),
+              raw: r as Record<string, string>,
+            })) as import("@/lib/conciliacion/parse").BankRow[];
+            bankRows = mapped;
+          } else {
+            throw new Error("No hay datos del archivo para analizar. Volvé a cargar el archivo.");
+          }
+        }
+        // Fetch movimientos de la plataforma del rango del archivo (fecha del archivo ± 2 días)
+        let movimientos: import("@/lib/api/types").Movimiento[] = [];
+        if (isSupabaseConfigured) {
+          // Parsear fecha archivo YYYY-MM-DD -> rango
+          const d = archivo.fecha ? new Date(archivo.fecha + "T00:00:00") : null;
+          const desde = d ? new Date(d.getTime() - 2 * 86400000).toISOString() : undefined;
+          const hasta = d ? new Date(d.getTime() + 2 * 86400000).toISOString() : undefined;
+          try {
+            const page = await listMovimientos({ page: 0, pageSize: 5000, fechaDesde: desde, fechaHasta: hasta });
+            movimientos = page.rows;
+          } catch {
+            // si falla (RLS, tabla vacía), continuar con cruce solo-banco
+            movimientos = [];
+          }
+        }
+        const res = cruzarConciliacion(bankRows!, movimientos);
+        if (!cancelled) setResumen(res);
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [archivo]);
+
+  const porcentaje = resumen ? (resumen.total > 0 ? Math.round((resumen.encontrados / resumen.total) * 10000) / 100 : 0) : 0;
+  const fechaAnalisis = resumen?.fechaAnalisis ?? "";
 
   const Kpi = ({
     label,
@@ -383,109 +444,128 @@ function AnalisisConciliacionModal({
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Resumen + éxito en una sola grilla compacta */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Resumen general
-              </h4>
-              <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                {porcentaje}% éxito · {resumen.encontrados}/{resumen.total}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              <Kpi label="Total" value={resumen.total} />
-              <Kpi label="Encontrados" value={resumen.encontrados} accent />
-              <Kpi label="No encontrados" value={resumen.noEncontrados} />
-              <Kpi label="No completados" value={resumen.noCompletados} />
-              <Kpi label="Éxito" value={`${porcentaje}%`} accent />
-            </div>
-          </Card>
-
-          {/* Distribución por tipo - ocupa menos: 1 card en vez de 2 */}
-          <Card className="p-4">
-            <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              Distribución por tipo
-            </h4>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-              <Kpi label="Depósitos · total" value={resumen.depositos.total} />
-              <Kpi label="Depósitos · encontrados" value={resumen.depositos.encontrados} />
-              <Kpi label="Retiros · total" value={resumen.retiros.total} />
-              <Kpi label="Retiros · encontrados" value={resumen.retiros.encontrados} />
-            </div>
-          </Card>
-
-          {/* IDs + meta en layout compacto de 2 columnas */}
-          <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-4">
-            <Card className="p-4">
-              <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-                IDs no encontrados
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Depósitos</div>
-                  {resumen.idsDepositosNoEncontrados.length === 0 ? (
-                    <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      Sin IDs
-                    </span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {resumen.idsDepositosNoEncontrados.map((id) => (
-                        <span
-                          key={id}
-                          className="inline-flex rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]"
-                        >
-                          {id}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+          {loading && <p className="text-sm text-muted-foreground">Analizando… cruzando ID_DEBIN ↔ id_txn y montos…</p>}
+          {error && <p className="text-sm text-red-600">Error: {error}</p>}
+          {resumen && !loading && !error && (
+            <>
+              {/* Resumen + éxito */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Resumen general
+                  </h4>
+                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                    {porcentaje}% éxito · {resumen.encontrados}/{resumen.total}
+                  </span>
                 </div>
-                <div>
-                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Retiros</div>
-                  {resumen.idsRetirosNoEncontrados.length === 0 ? (
-                    <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      Sin IDs
-                    </span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {resumen.idsRetirosNoEncontrados.map((id) => (
-                        <span
-                          key={id}
-                          className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
-                        >
-                          {id}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                  <Kpi label="Total" value={resumen.total} />
+                  <Kpi label="Encontrados" value={resumen.encontrados} accent />
+                  <Kpi label="No encontrados" value={resumen.noEncontrados} />
+                  <Kpi label="No completados" value={resumen.noCompletados} />
+                  <Kpi label="Dif. monto" value={resumen.diferenciasMonto} />
+                  <Kpi label="Éxito" value={`${porcentaje}%`} accent />
                 </div>
-              </div>
-            </Card>
+                {resumen.soloPlataforma > 0 && (
+                  <p className="text-[11px] text-amber-600 mt-2">+ {resumen.soloPlataforma} movimientos solo en plataforma (no están en banco)</p>
+                )}
+              </Card>
 
-            <Card className="p-4 flex flex-col justify-between">
-              <div>
-                <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                  Análisis
+              <Card className="p-4">
+                <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                  Distribución por tipo (TIPO_MOV_COELSA: CREDITO=Depósito / DEBITO=Retiro)
                 </h4>
-                <p className="font-mono text-xs font-medium tabular-nums">{fechaAnalisis}</p>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  {resumen.encontrados} de {resumen.total} conciliados
-                </p>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <Kpi label="Depósitos · total" value={resumen.depositos.total} />
+                  <Kpi label="Depósitos · encontrados" value={resumen.depositos.encontrados} />
+                  <Kpi label="Retiros · total" value={resumen.retiros.total} />
+                  <Kpi label="Retiros · encontrados" value={resumen.retiros.encontrados} />
+                </div>
+              </Card>
+
+              <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-4">
+                <Card className="p-4">
+                  <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                    IDs no encontrados (cruce por ID_DEBIN = id_txn)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Depósitos (CREDITO)</div>
+                      {resumen.idsDepositosNoEncontrados.length === 0 ? (
+                        <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Sin IDs</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {resumen.idsDepositosNoEncontrados.map((id) => (
+                            <span key={id} className="inline-flex rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]">
+                              {id}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Retiros (DEBITO)</div>
+                      {resumen.idsRetirosNoEncontrados.length === 0 ? (
+                        <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Sin IDs</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {resumen.idsRetirosNoEncontrados.map((id) => (
+                            <span key={id} className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                              {id}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {resumen.idsDiferenciaMonto.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Diferencias de monto</div>
+                      <div className="flex flex-wrap gap-1">
+                        {resumen.idsDiferenciaMonto.map((id) => (
+                          <span key={id} className="inline-flex rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 font-mono text-[11px] text-red-700">
+                            {id}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
+                <Card className="p-4 flex flex-col justify-between">
+                  <div>
+                    <h4 className="font-display text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Análisis</h4>
+                    <p className="font-mono text-xs font-medium tabular-nums">{fechaAnalisis}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{resumen.encontrados} de {resumen.total} conciliados — mapeo ID_DEBIN= id_txn, |IMPORTE_COELSA|= monto_operacion</p>
+                  </div>
+                  <BtnOutline
+                    className="mt-3 h-7 text-xs px-2.5 w-full justify-center"
+                    onClick={() => {
+                      const rows = resumen.items.map((it) => ({
+                        ID_DEBIN: it.bankRow.idDebin,
+                        TIPO: it.bankRow.tipoMovCoelsa,
+                        IMPORTE_BANCO: it.bankRow.importeCoelsa,
+                        ESTADO_BANCO: it.bankRow.estadoCoelsa,
+                        id_txn_plataforma: it.movimiento?.idTxn ?? "",
+                        monto_plataforma: it.movimiento?.montoOperacion ?? "",
+                        estado_cruce: it.estado,
+                        detalle: it.detalle,
+                      }));
+                      const cols = Object.keys(rows[0] ?? {});
+                      const esc = (v: unknown) => {
+                        const s = v == null ? "" : String(v);
+                        return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+                      };
+                      const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc((r as Record<string, unknown>)[c])).join(","))].join("\n");
+                      downloadFile(`cruce_${archivo.archivo.replace(/\.[^.]+$/, "")}.csv`, csv);
+                    }}
+                  >
+                    <Download size={14} /> Descargar cruce CSV
+                  </BtnOutline>
+                </Card>
               </div>
-              <BtnOutline
-                className="mt-3 h-7 text-xs px-2.5 w-full justify-center"
-                onClick={() =>
-                  downloadFile(
-                    archivo.archivo,
-                    "id_transaccion,tipo,monto,fecha\nTXN-001,DEPOSITO,50000,2026-07-15\n",
-                  )
-                }
-              >
-                <Download size={14} /> Descargar original
-              </BtnOutline>
-            </Card>
-          </div>
+            </>
+          )}
         </div>
 
         <div className="sticky bottom-0 bg-card border-t border-border px-5 py-3 flex justify-end">
@@ -521,6 +601,9 @@ function Conciliaciones() {
               fecha: r.fechaCarga,
               estado: (r.estado === "Analizado" ? "Analizado" : "Pendiente") as Archivo["estado"],
               downloadRows: [],
+              storagePath: r.storagePath,
+              bankRows: undefined,
+              rawFile: null,
             })),
           );
         }
@@ -536,6 +619,18 @@ function Conciliaciones() {
       return;
     }
     const nombreArchivo = uploadForm.file.name || uploadForm.nombre.trim();
+    // Parsear localmente para tener bankRows listos para Analizar (mapeo real aunque falle Supabase)
+    let parsed: import("@/lib/conciliacion/parse").BankRow[] = [];
+    let downloadRows: Record<string, unknown>[] = [];
+    try {
+      parsed = await parseBancoFile(uploadForm.file);
+      downloadRows = parsed.map((b) => ({ ...b.raw, IMPORTE_COELSA: b.importeCoelsa })) as Record<string, unknown>[];
+      toast.success(`Parseado: ${parsed.length} filas (mapeo ID_DEBIN→id_txn)`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(`Error parseando archivo: ${msg}`);
+      return;
+    }
     // Persistencia real si hay Supabase
     if (isSupabaseConfigured) {
       setSaving(true);
@@ -552,17 +647,19 @@ function Conciliaciones() {
             archivo: created.nombreArchivo,
             fecha: created.fechaCarga,
             estado: "Pendiente",
-            downloadRows: [],
+            downloadRows,
+            bankRows: parsed,
+            rawFile: uploadForm.file,
+            storagePath: created.storagePath,
           },
           ...prev,
         ]);
         toast.success("Archivo guardado en base de datos");
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        // Si la tabla aún no existe (migración pendiente), fallback a solo UI
         if (/Could not find the table|PGRST205|does not exist/i.test(msg)) {
           setArchivos((prev) => [
-            { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows: [] },
+            { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows, bankRows: parsed, rawFile: uploadForm.file },
             ...prev,
           ]);
           toast.success("Archivo cargado (modo local: aplicá migración 0016)");
@@ -575,9 +672,8 @@ function Conciliaciones() {
         setSaving(false);
       }
     } else {
-      // Sin Supabase: solo UI local
       setArchivos((prev) => [
-        { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows: [] },
+        { archivo: nombreArchivo, fecha: uploadForm.fecha, estado: "Pendiente", downloadRows, bankRows: parsed, rawFile: uploadForm.file },
         ...prev,
       ]);
       toast.success("Archivo cargado correctamente");
