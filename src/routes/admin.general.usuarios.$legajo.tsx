@@ -2658,8 +2658,7 @@ function ClienteDetailPage() {
           const norm = (cliente.estado as string).toLowerCase();
           if (norm === "preactivado") {
             const hasCbu = Boolean(cliente.cbu && !cliente.cbuCancelado) || (subcuentasQuery.data?.length ?? 0) > 0;
-            const hasCom = (comisionesQuery.data?.length ?? 0) > 0 || (impuestosQuery.rows?.length ?? 0) >= 0 ? (comisionesQuery.data?.length ?? 0) > 0 : false;
-            // comisionesQuery.data es de subcuentas? Usamos comisiones_cliente check via query separate would be ideal, but usamos commissions list
+            const hasCom = (comisionesRealesQuery.data?.rows.length ?? 0) > 0;
             return (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p className="font-semibold">Requisitos para activar</p>
