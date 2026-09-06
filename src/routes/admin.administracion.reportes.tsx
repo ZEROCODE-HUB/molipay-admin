@@ -312,14 +312,17 @@ const ARCHIVOS_INICIALES: Archivo[] = [
 
 function AnalisisConciliacionModal({
   archivo,
+  allArchivos,
   onClose,
 }: {
   archivo: Archivo;
+  allArchivos: Archivo[];
   onClose: () => void;
 }) {
   const [resumen, setResumen] = useState<AnalisisResumen | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rangoLabel, setRangoLabel] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -372,23 +375,36 @@ function AnalisisConciliacionModal({
             throw new Error("No hay datos del archivo para analizar. Volvé a cargar el archivo.");
           }
         }
-        // Fetch movimientos del rango real del archivo (FECHA_HORA_COELSA) ±2 días, si no hay fallback a archivo.fecha
+        // Rango incremental: 1er reporte = todo hasta fecha carga, siguientes = (fecha último reporte, fecha actual]
+        // (usuario confirmó: 20260903 full, siguiente delta desde último)
         let movimientos: import("@/lib/api/types").Movimiento[] = [];
         let movCountDebug = 0;
+        let rangoLabel = "";
         if (isSupabaseConfigured) {
-          const parseDMY = (s: string) => {
-            const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-            if (!m) return null;
-            return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-          };
-          const fechas = (bankRows ?? []).map((b) => parseDMY(b.fechaHoraCoelsa || b.fechaNegocio)).filter(Boolean) as Date[];
-          const minD = fechas.length ? new Date(Math.min(...fechas.map((d) => d.getTime()))) : null;
-          const maxD = fechas.length ? new Date(Math.max(...fechas.map((d) => d.getTime()))) : null;
-          const fallbackD = archivo.fecha ? new Date(archivo.fecha + "T00:00:00") : null;
-          const baseMin = minD ?? fallbackD;
-          const baseMax = maxD ?? fallbackD;
-          const desde = baseMin ? new Date(baseMin.getTime() - 2 * 86400000).toISOString() : undefined;
-          const hasta = baseMax ? new Date(baseMax.getTime() + 2 * 86400000).toISOString() : undefined;
+          const sorted = [...allArchivos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+          const idx = sorted.findIndex((a) => a.archivo === archivo.archivo);
+          const prev = idx > 0 ? sorted[idx - 1] : null;
+          let desde: string | undefined;
+          let hasta: string | undefined;
+          if (prev) {
+            const dPrev = new Date(prev.fecha + "T00:00:00");
+            dPrev.setDate(dPrev.getDate() + 1);
+            desde = dPrev.toISOString();
+            hasta = new Date(archivo.fecha + "T00:00:00").toISOString();
+            // incluir todo el día hasta 23:59
+            const h = new Date(hasta);
+            h.setHours(23, 59, 59, 999);
+            hasta = h.toISOString();
+            rangoLabel = `${prev.fecha} → ${archivo.fecha} (delta)`;
+          } else {
+            // primer reporte: histórico hasta fecha carga
+            hasta = new Date(archivo.fecha + "T00:00:00").toISOString();
+            const h = new Date(hasta);
+            h.setHours(23, 59, 59, 999);
+            hasta = h.toISOString();
+            desde = undefined;
+            rangoLabel = `histórico hasta ${archivo.fecha}`;
+          }
           try {
             const page = await listMovimientos({ page: 0, pageSize: 5000, fechaDesde: desde, fechaHasta: hasta });
             movimientos = page.rows;
@@ -396,6 +412,7 @@ function AnalisisConciliacionModal({
           } catch {
             movimientos = [];
           }
+          if (!cancelled) setRangoLabel(rangoLabel);
         }
         const res = cruzarConciliacion(bankRows!, movimientos);
         // inyectar debug count para UI si hace falta
@@ -447,8 +464,9 @@ function AnalisisConciliacionModal({
           <div>
             <h3 className="font-display text-[15px] font-semibold leading-none">Análisis de conciliación</h3>
             <p className="text-xs text-muted-foreground mt-1 font-mono">
-              {archivo.archivo} · {archivo.fecha}
+              {archivo.archivo} · {archivo.fecha} {rangoLabel ? `· ${rangoLabel}` : ""}
             </p>
+            {rangoLabel && <p className="text-[11px] text-muted-foreground mt-0.5">Rango plataforma: {rangoLabel} — 1er reporte histórico, siguientes delta desde último.</p>}
           </div>
           <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md leading-none">
             ×
@@ -762,6 +780,7 @@ function Conciliaciones() {
       {analisisTarget && (
         <AnalisisConciliacionModal
           archivo={analisisTarget}
+          allArchivos={archivos}
           onClose={() => setAnalisisTarget(null)}
         />
       )}
