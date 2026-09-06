@@ -43,6 +43,7 @@ type DataTableProps<T> = {
   initialQuery?: string;
   showGlobalFilter?: boolean;
   extraFilters?: ReactNode;
+  hidePagination?: boolean;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -80,6 +81,7 @@ export function DataTable<T>({
   initialQuery,
   showGlobalFilter = true,
   extraFilters,
+  hidePagination = false,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -271,9 +273,10 @@ export function DataTable<T>({
   const safePage = Math.min(page, totalPages);
 
   const paginatedData = useMemo(() => {
+    if (hidePagination) return sortedData;
     const start = (safePage - 1) * pageSize;
     return sortedData.slice(start, start + pageSize);
-  }, [sortedData, safePage, pageSize]);
+  }, [sortedData, safePage, pageSize, hidePagination]);
 
   const filteredKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor]);
   const allFilteredSelected =
@@ -521,45 +524,47 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
-          <select
-            className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-          >
-            {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          <span className="text-muted-foreground text-xs sm:text-sm">
-            Pág. {safePage} de {totalPages}
-          </span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+      {!hidePagination && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+            <select
+              className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
             >
-              Anterior
-            </button>
-            <button
-              type="button"
-              className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Siguiente
-            </button>
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Pág. {safePage} de {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

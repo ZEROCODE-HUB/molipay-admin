@@ -189,6 +189,7 @@ function CvuPage() {
             }))}
             keyExtractor={(r: any) => r.id}
             actions={(r: any) => <ActionsDropdown actions={getActions(r as CvuRow)} />}
+            hidePagination
             extraFilters={
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[180px]">

@@ -272,6 +272,7 @@ function JuridicasPage() {
             data={data}
             keyExtractor={(r) => r.legajo}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            hidePagination
             extraFilters={
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Estado</label>

@@ -553,6 +553,7 @@ function ComisionesPage() {
             data={data}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            hidePagination
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>

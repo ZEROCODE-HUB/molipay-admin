@@ -156,6 +156,7 @@ function Page() {
             data={rows}
             keyExtractor={(r) => r.id}
             pageSize={PAGE_SIZE}
+            hidePagination
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
