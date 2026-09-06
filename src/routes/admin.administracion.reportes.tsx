@@ -195,6 +195,7 @@ function AnalisisConciliacionModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rangoLabel, setRangoLabel] = useState<string>("");
+  const [movCount, setMovCount] = useState<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,17 +279,28 @@ function AnalisisConciliacionModal({
             rangoLabel = `histórico hasta ${archivo.fecha}`;
           }
           try {
-            const page = await listMovimientos({ page: 0, pageSize: 5000, fechaDesde: desde, fechaHasta: hasta });
-            movimientos = page.rows;
-            movCountDebug = page.total ?? movimientos.length;
+            // Paginado para histórico grande (>5000)
+            const all: import("@/lib/api/types").Movimiento[] = [];
+            let page = 0;
+            const pageSize = 5000;
+            while (true) {
+              const resPage = await listMovimientos({ page, pageSize, fechaDesde: desde, fechaHasta: hasta });
+              all.push(...resPage.rows);
+              movCountDebug = resPage.total ?? all.length;
+              if (resPage.rows.length < pageSize) break;
+              page++;
+              if (page > 20) break; // safety cap 100k
+            }
+            movimientos = all;
           } catch {
             movimientos = [];
           }
-          if (!cancelled) setRangoLabel(rangoLabel);
+          if (!cancelled) {
+            setRangoLabel(rangoLabel);
+            setMovCount(movCountDebug);
+          }
         }
         const res = cruzarConciliacion(bankRows!, movimientos);
-        // inyectar debug count para UI si hace falta
-        (res as unknown as Record<string, unknown>).__movCount = movCountDebug;
         if (!cancelled) setResumen(res);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -300,7 +312,7 @@ function AnalisisConciliacionModal({
     return () => {
       cancelled = true;
     };
-  }, [archivo]);
+  }, [archivo, allArchivos]);
 
   const porcentaje = resumen ? (resumen.total > 0 ? Math.round((resumen.encontrados / resumen.total) * 10000) / 100 : 0) : 0;
   const fechaAnalisis = resumen?.fechaAnalisis ?? "";
@@ -416,7 +428,7 @@ function AnalisisConciliacionModal({
                   </div>
                 )}
                 <p className="text-[11px] text-muted-foreground mt-3">
-                  Movimientos consultados en plataforma: {(resumen as unknown as Record<string, unknown>).__movCount as number ?? "?"} · Si ves 0, la tabla <code>movimientos</code> no tiene filas para el rango ({archivo.fecha} ±2d) o RLS lo bloquea; entonces 0 conciliados es esperado.
+                  Movimientos consultados en plataforma: {movCount} · Rango {rangoLabel || archivo.fecha} · Si ves 0, la tabla <code>movimientos</code> no tiene filas para ese rango o RLS lo bloquea; entonces 0 conciliados es esperado.
                 </p>
               </Card>
               <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-4">

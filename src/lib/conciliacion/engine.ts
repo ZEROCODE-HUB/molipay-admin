@@ -44,15 +44,11 @@ function isDebito(tipo: string): boolean {
 }
 
 function parseBancoFechaHora(s: string): Date | null {
-  // "03/09/2026 00:11:55" o "3/9/2026"
   const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
   if (!m) return null;
   const d = Number(m[1]), mo = Number(m[2]) - 1, y = Number(m[3]);
   const h = m[4] ? Number(m[4]) : 0, mi = m[5] ? Number(m[5]) : 0, se = m[6] ? Number(m[6]) : 0;
   return new Date(y, mo, d, h, mi, se);
-}
-function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 export function cruzarConciliacion(bankRows: BankRow[], movimientos: Movimiento[]): AnalisisResumen {
@@ -119,12 +115,9 @@ export function cruzarConciliacion(bankRows: BankRow[], movimientos: Movimiento[
           mov = cands[0];
           fallback = true;
         } else if (cands.length > 1) {
-          // si hay varios con mismo monto+día, desempatar por CVU si existe
           const byCvu = cands.find((c) => c.cvu && b.cvu && c.cvu.trim() === b.cvu.trim());
-          if (byCvu) {
-            mov = byCvu;
-            fallback = true;
-          }
+          mov = byCvu ?? cands[0];
+          fallback = true;
         }
       }
     }
