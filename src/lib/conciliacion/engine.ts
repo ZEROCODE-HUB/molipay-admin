@@ -43,13 +43,33 @@ function isDebito(tipo: string): boolean {
   return tipo.trim().toUpperCase() === "DEBITO";
 }
 
+function parseBancoFechaHora(s: string): Date | null {
+  // "03/09/2026 00:11:55" o "3/9/2026"
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
+  if (!m) return null;
+  const d = Number(m[1]), mo = Number(m[2]) - 1, y = Number(m[3]);
+  const h = m[4] ? Number(m[4]) : 0, mi = m[5] ? Number(m[5]) : 0, se = m[6] ? Number(m[6]) : 0;
+  return new Date(y, mo, d, h, mi, se);
+}
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export function cruzarConciliacion(bankRows: BankRow[], movimientos: Movimiento[]): AnalisisResumen {
   const total = bankRows.length;
   const byIdTxn = new Map<string, Movimiento>();
   for (const m of movimientos) {
-    // id_txn exacto; también indexar sin trim para robustez
     byIdTxn.set(m.idTxn.trim(), m);
     byIdTxn.set(m.idTxn.trim().toUpperCase(), m);
+  }
+  // Índice secundario por |monto| + día para fallback cuando ID no matchea (títulos distintos)
+  const byMontoDia = new Map<string, Movimiento[]>();
+  for (const m of movimientos) {
+    const dayKey = m.fecha ? new Date(m.fecha).toISOString().slice(0, 10) : "";
+    const key = `${Math.abs(m.montoOperacion).toFixed(2)}|${dayKey}`;
+    const arr = byMontoDia.get(key) ?? [];
+    arr.push(m);
+    byMontoDia.set(key, arr);
   }
 
   let encontrados = 0;
@@ -85,18 +105,40 @@ export function cruzarConciliacion(bankRows: BankRow[], movimientos: Movimiento[
     }
 
     // Clave exacta ID_DEBIN == id_txn
-    const mov = byIdTxn.get(b.idDebin.trim()) ?? byIdTxn.get(b.idDebin.trim().toUpperCase()) ?? null;
+    let mov = byIdTxn.get(b.idDebin.trim()) ?? byIdTxn.get(b.idDebin.trim().toUpperCase()) ?? null;
+    let fallback = false;
+
+    if (!mov) {
+      // Fallback: mismo |monto| + mismo día (FECHA_HORA_COELSA vs movimiento.fecha)
+      const dBanco = parseBancoFechaHora(b.fechaHoraCoelsa || b.fechaNegocio);
+      if (dBanco) {
+        const dayKey = dBanco.toISOString().slice(0, 10);
+        const key = `${Math.abs(b.importeCoelsa).toFixed(2)}|${dayKey}`;
+        const cands = byMontoDia.get(key) ?? [];
+        if (cands.length === 1) {
+          mov = cands[0];
+          fallback = true;
+        } else if (cands.length > 1) {
+          // si hay varios con mismo monto+día, desempatar por CVU si existe
+          const byCvu = cands.find((c) => c.cvu && b.cvu && c.cvu.trim() === b.cvu.trim());
+          if (byCvu) {
+            mov = byCvu;
+            fallback = true;
+          }
+        }
+      }
+    }
 
     if (!mov) {
       noEncontrados++;
       if (credito) idsDepositosNoEncontrados.push(b.idDebin);
       if (debito) idsRetirosNoEncontrados.push(b.idDebin);
-      items.push({ bankRow: b, movimiento: null, estado: "no_encontrado", detalle: "Sin match por ID_DEBIN en plataforma" });
+      items.push({ bankRow: b, movimiento: null, estado: "no_encontrado", detalle: "Sin match por ID_DEBIN (ni fallback monto+fecha) en plataforma" });
       continue;
     }
 
-    // Existe mov: comparar monto (abs)
-    if (!montoIgual(b.importeCoelsa, mov.montoOperacion)) {
+    // Existe mov: comparar monto (abs) — si vino por fallback ya coincide por construcción
+    if (!fallback && !montoIgual(b.importeCoelsa, mov.montoOperacion)) {
       diferenciasMonto++;
       idsDiferenciaMonto.push(b.idDebin);
       items.push({
@@ -109,12 +151,10 @@ export function cruzarConciliacion(bankRows: BankRow[], movimientos: Movimiento[
       continue;
     }
 
-    // (opcional) validar tipo compatible: CREDITO~deposito/cobro, DEBITO~retiro/pago
-    // no bloqueante: solo warning si no coincide, pero se considera conciliado si monto ok
     encontrados++;
     if (credito) depEncontrados++;
     if (debito) retEncontrados++;
-    items.push({ bankRow: b, movimiento: mov, estado: "conciliado", detalle: "Conciliado por ID_DEBIN + monto" });
+    items.push({ bankRow: b, movimiento: mov, estado: "conciliado", detalle: fallback ? "Conciliado por fallback |monto|+fecha (ID distinto)" : "Conciliado por ID_DEBIN + monto" });
   }
 
   // Solo en plataforma: mov cuyo id_txn no está en banco (útil para detectar faltantes del banco)
