@@ -35,7 +35,7 @@ export const Route = createFileRoute("/admin/general/movimientos/")({
   component: TodosPage,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 // Tipos de movimiento: label visible en la UI -> código real en BD.
 // Únicos valores que existen en movimientos.tipo (coinciden con

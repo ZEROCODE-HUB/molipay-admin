@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin/general/usuarios/cvu")({
   component: CvuPage,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function estadoBadge(e: string) {
   const map: Record<string, { label: string; tone: "success" | "danger" | "warn" | "neutral" }> = {

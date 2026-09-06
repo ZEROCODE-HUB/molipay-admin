@@ -31,7 +31,7 @@ export const Route = createFileRoute("/admin/comercios/apis/resolvers")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function MensajeEstado({
   tipo,

@@ -32,7 +32,7 @@ export const Route = createFileRoute("/admin/comercios/impuestos/")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 const ALICUOTA_PAGE_SIZE = 5;
 
 const TIPOS_IMPUESTO: TipoImpuesto[] = ["Porcentaje", "Fijo", "Otro"];

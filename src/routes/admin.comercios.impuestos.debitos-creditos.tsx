@@ -45,7 +45,7 @@ export const Route = createFileRoute("/admin/comercios/impuestos/debitos-credito
   component: Page,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 type SrInfo = {
   icon: LucideIcon;

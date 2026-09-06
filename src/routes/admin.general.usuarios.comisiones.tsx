@@ -39,7 +39,7 @@ export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   component: ComisionesPage,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 type Comision = {
   id: string;

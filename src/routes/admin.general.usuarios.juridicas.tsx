@@ -35,7 +35,7 @@ export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
   component: JuridicasPage,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 type JuridicaRow = {
   id: string;

@@ -35,7 +35,7 @@ export const Route = createFileRoute("/admin/general/usuarios/")({
   component: UsuariosPage,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 type Usuario = {
   id: string;

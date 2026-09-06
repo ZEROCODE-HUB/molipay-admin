@@ -15,7 +15,7 @@ import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/admin/administracion/usuarios/")({
   head: () => ({ meta: [{ title: "Administración de personal — Admin Panel" }] }),

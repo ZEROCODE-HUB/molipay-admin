@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin/comercios/apis/restricciones")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function estadoTone(estado: EstadoRestriccion): "danger" | "neutral" {
   return estado === "Restringiendo" ? "danger" : "neutral";

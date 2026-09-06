@@ -46,7 +46,7 @@ type DataTableProps<T> = {
   hidePagination?: boolean;
 };
 
-const PAGE_SIZES = [10, 20, 50, 100];
+const PAGE_SIZES = [10, 20, 50];
 
 function parseDateCell(text: string): Date | null {
   const dmy = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);

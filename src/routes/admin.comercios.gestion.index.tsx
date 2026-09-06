@@ -52,7 +52,7 @@ export const Route = createFileRoute("/admin/comercios/gestion/")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Activado") return "success";

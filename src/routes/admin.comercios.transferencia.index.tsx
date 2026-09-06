@@ -27,7 +27,7 @@ export const Route = createFileRoute("/admin/comercios/transferencia/")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 const ESTADOS_QR: EstadoQr[] = ["Pendiente de aprobación","Activado","Desactivado","Rechazado","Suspendido","Eliminado"];
 
 function tone(estado: string): "success" | "neutral" | "warn" | "danger" {

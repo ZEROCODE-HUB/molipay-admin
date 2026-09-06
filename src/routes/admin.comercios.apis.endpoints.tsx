@@ -28,7 +28,7 @@ export const Route = createFileRoute("/admin/comercios/apis/endpoints")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function estadoTone(estado: EstadoEndpoint): "success" | "neutral" {
   return estado === "Habilitado" ? "success" : "neutral";

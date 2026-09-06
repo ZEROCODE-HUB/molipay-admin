@@ -24,7 +24,7 @@ export const Route = createFileRoute("/admin/comercios/link-pago/")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function tone(e: string): "success" | "neutral" | "warn" | "danger" {
   if (e === "Activado") return "success";

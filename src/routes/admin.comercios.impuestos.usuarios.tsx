@@ -25,7 +25,7 @@ export const Route = createFileRoute("/admin/comercios/impuestos/usuarios")({
   component: Page,
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 const TIPOS_IMPUESTO: TipoImpuesto[] = ["Porcentaje", "Fijo", "Otro"];
 

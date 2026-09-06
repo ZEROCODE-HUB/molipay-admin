@@ -46,7 +46,7 @@ export const Route = createFileRoute("/admin/comercios/apis/")({
   }),
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function estadoTone(estado: EstadoApiUsuario): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Producción") return "success";
