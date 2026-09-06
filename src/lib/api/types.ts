@@ -70,6 +70,22 @@ export type ClienteRow = {
   onboarding_completo?: boolean | null;
   cbu?: string | null;
   cbu_cancelado?: boolean | null;
+  genero?: string | null;
+  cuit_cuil?: string | null;
+  fecha_nacimiento?: string | null;
+  ocupacion?: string | null;
+  origen_fondos?: string | null;
+  es_pep?: boolean | null;
+  tipo_sociedad?: string | null;
+  nombre_legal?: string | null;
+  nombre_fantasia?: string | null;
+  fecha_inscripcion?: string | null;
+  direccion?: string | null;
+  direccion2?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  cp?: string | null;
+  estado_onboarding?: string | null;
 };
 
 export type Cliente = {
@@ -87,6 +103,22 @@ export type Cliente = {
   onboardingCompleto?: boolean;
   cbu?: string | null;
   cbuCancelado?: boolean;
+  genero?: string | null;
+  cuitCuil?: string | null;
+  fechaNacimiento?: string | null;
+  ocupacion?: string | null;
+  origenFondos?: string | null;
+  esPep?: boolean;
+  tipoSociedad?: string | null;
+  nombreLegal?: string | null;
+  nombreFantasia?: string | null;
+  fechaInscripcion?: string | null;
+  direccion?: string | null;
+  direccion2?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  cp?: string | null;
+  estadoOnboarding?: string | null;
 };
 
 // --- comisiones_cliente ----------------------------------------------------

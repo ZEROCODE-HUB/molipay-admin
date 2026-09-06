@@ -768,6 +768,9 @@ function TablaImpuestos({
 }
 
 function camposIdentificacion(c: Cliente) {
+  const partes = c.nombre.trim().split(/\s+/);
+  const apellidoDerivado = c.tipoPersona === "juridica" ? "—" : (partes.slice(1).join(" ") || "—");
+  const nombreDerivado = c.tipoPersona === "juridica" ? c.nombre : (partes[0] ?? c.nombre);
   const personal: { label: string; valor: string }[] = [
     { label: "Legajo", valor: c.legajo },
     { label: "Email", valor: c.correo },
@@ -776,31 +779,31 @@ function camposIdentificacion(c: Cliente) {
       label: "Tipo de cuenta",
       valor: c.tipoPersona === "juridica" ? "Persona Jurídica" : "Persona Física",
     },
-    { label: "Estado", valor: estadoLabel[c.estado] },
+    { label: "Estado", valor: estadoLabel[c.estado] ?? c.estado },
     { label: "Cant. cuentas bancarias", valor: "—" },
     { label: "Cant. cuentas virtuales", valor: "—" },
-    { label: "Nombre", valor: c.nombre },
-    { label: "Apellido", valor: "—" },
-    { label: "CUIT", valor: c.cuit },
-    { label: "Género", valor: "—" },
-    { label: "Dirección", valor: "—" },
-    { label: "Número de dirección", valor: "—" },
-    { label: "Ciudad", valor: "—" },
-    { label: "Estado / Provincia", valor: "—" },
-    { label: "Código postal", valor: "—" },
-    { label: "Fecha de nacimiento", valor: "—" },
+    { label: "Nombre", valor: nombreDerivado },
+    { label: "Apellido", valor: apellidoDerivado },
+    { label: "CUIT", valor: c.cuit_cuil ?? c.cuit ?? "—" },
+    { label: "Género", valor: c.genero ?? "—" },
+    { label: "Dirección", valor: c.direccion ?? "—" },
+    { label: "Número de dirección", valor: c.direccion2 ?? "—" },
+    { label: "Ciudad", valor: c.ciudad ?? "—" },
+    { label: "Estado / Provincia", valor: c.provincia ?? "—" },
+    { label: "Código postal", valor: c.cp ?? "—" },
+    { label: "Fecha de nacimiento", valor: c.fechaNacimiento ? fmtFecha(c.fechaNacimiento) : "—" },
   ];
   const compliance: { label: string; valor: string }[] = [
-    { label: "Ocupación", valor: "—" },
-    { label: "Origen de fondos", valor: "—" },
-    { label: "PEP", valor: "—" },
+    { label: "Ocupación", valor: c.ocupacion ?? "—" },
+    { label: "Origen de fondos", valor: c.origenFondos ?? "—" },
+    { label: "PEP", valor: c.esPep ? "Sí" : c.esPep === false ? "No" : "—" },
   ];
   const empresa: { label: string; valor: string }[] = [
-    { label: "CUIT de la empresa", valor: "—" },
-    { label: "Tipo de empresa", valor: "—" },
-    { label: "Nombre legal", valor: c.tipoPersona === "juridica" ? c.nombre : "—" },
-    { label: "Nombre comercial", valor: "—" },
-    { label: "Fecha de inscripción", valor: "—" },
+    { label: "CUIT de la empresa", valor: c.cuit ?? "—" },
+    { label: "Tipo de empresa", valor: c.tipoSociedad ?? "—" },
+    { label: "Nombre legal", valor: c.nombreLegal ?? (c.tipoPersona === "juridica" ? c.nombre : "—") },
+    { label: "Nombre comercial", valor: c.nombreFantasia ?? "—" },
+    { label: "Fecha de inscripción", valor: c.fechaInscripcion ? fmtFecha(c.fechaInscripcion) : "—" },
   ];
   return { personal, compliance, empresa };
 }

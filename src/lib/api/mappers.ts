@@ -71,6 +71,22 @@ export function toCliente(r: ClienteRow): Cliente {
     onboardingCompleto: (r.onboarding_completo as boolean) ?? false,
     cbu: (r.cbu as string | null) ?? null,
     cbuCancelado: (r.cbu_cancelado as boolean) ?? false,
+    genero: (r.genero as string | null) ?? null,
+    cuitCuil: (r.cuit_cuil as string | null) ?? null,
+    fechaNacimiento: (r.fecha_nacimiento as string | null) ?? null,
+    ocupacion: (r.ocupacion as string | null) ?? null,
+    origenFondos: (r.origen_fondos as string | null) ?? null,
+    esPep: (r.es_pep as boolean) ?? false,
+    tipoSociedad: (r.tipo_sociedad as string | null) ?? null,
+    nombreLegal: (r.nombre_legal as string | null) ?? null,
+    nombreFantasia: (r.nombre_fantasia as string | null) ?? null,
+    fechaInscripcion: (r.fecha_inscripcion as string | null) ?? null,
+    direccion: (r.direccion as string | null) ?? null,
+    direccion2: (r.direccion2 as string | null) ?? null,
+    ciudad: (r.ciudad as string | null) ?? null,
+    provincia: (r.provincia as string | null) ?? null,
+    cp: (r.cp as string | null) ?? null,
+    estadoOnboarding: (r.estado_onboarding as string | null) ?? null,
   };
 }
 
