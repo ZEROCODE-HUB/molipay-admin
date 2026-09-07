@@ -12,8 +12,10 @@ export const Route = createFileRoute("/admin/comercios/link-pago")({
 });
 
 const tabs: Tab[] = [
-  { label: "Comercios", to: "/admin/comercios/link-pago" },
-  { label: "Métodos de pago", to: "/admin/comercios/link-pago/metodos-pago" },
+  { label: "Links de Pago", to: "/admin/comercios/link-pago" },
+  { label: "Lotes de Acreditación", to: "/admin/comercios/link-pago/lotes" },
+  { label: "Contracargos", to: "/admin/comercios/link-pago/contracargos" },
+  { label: "Adelantos de Dinero", to: "/admin/comercios/link-pago/adelantos" },
 ];
 
 function LinkPagoLayout() {

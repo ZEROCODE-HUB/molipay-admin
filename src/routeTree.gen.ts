@@ -64,6 +64,9 @@ import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './rou
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
 import { Route as AdminComerciosLinkPagoMetodosPagoRouteImport } from './routes/admin.comercios.link-pago.metodos-pago'
+import { Route as AdminComerciosLinkPagoLotesRouteImport } from './routes/admin.comercios.link-pago.lotes'
+import { Route as AdminComerciosLinkPagoContracargosRouteImport } from './routes/admin.comercios.link-pago.contracargos'
+import { Route as AdminComerciosLinkPagoAdelantosRouteImport } from './routes/admin.comercios.link-pago.adelantos'
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
 import { Route as AdminComerciosImpuestosIngresosBrutosRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos'
 import { Route as AdminComerciosImpuestosDebitosCreditosRouteImport } from './routes/admin.comercios.impuestos.debitos-creditos'
@@ -384,6 +387,24 @@ const AdminComerciosLinkPagoMetodosPagoRoute =
     path: '/metodos-pago',
     getParentRoute: () => AdminComerciosLinkPagoRoute,
   } as any)
+const AdminComerciosLinkPagoLotesRoute =
+  AdminComerciosLinkPagoLotesRouteImport.update({
+    id: '/lotes',
+    path: '/lotes',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
+const AdminComerciosLinkPagoContracargosRoute =
+  AdminComerciosLinkPagoContracargosRouteImport.update({
+    id: '/contracargos',
+    path: '/contracargos',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
+const AdminComerciosLinkPagoAdelantosRoute =
+  AdminComerciosLinkPagoAdelantosRouteImport.update({
+    id: '/adelantos',
+    path: '/adelantos',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
 const AdminComerciosImpuestosUsuariosRoute =
   AdminComerciosImpuestosUsuariosRouteImport.update({
     id: '/usuarios',
@@ -498,6 +519,9 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
+  '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -551,6 +575,9 @@ export interface FileRoutesByTo {
   '/admin/comercios/gestion/categoria': typeof AdminComerciosGestionCategoriaRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
+  '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -621,6 +648,9 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
+  '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/metodos-pago': typeof AdminComerciosLinkPagoMetodosPagoRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -692,6 +722,9 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/adelantos'
+    | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/metodos-pago'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -745,6 +778,9 @@ export interface FileRouteTypes {
     | '/admin/comercios/gestion/categoria'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/adelantos'
+    | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/metodos-pago'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -814,6 +850,9 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/adelantos'
+    | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/metodos-pago'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -1239,6 +1278,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosLinkPagoMetodosPagoRouteImport
       parentRoute: typeof AdminComerciosLinkPagoRoute
     }
+    '/admin/comercios/link-pago/lotes': {
+      id: '/admin/comercios/link-pago/lotes'
+      path: '/lotes'
+      fullPath: '/admin/comercios/link-pago/lotes'
+      preLoaderRoute: typeof AdminComerciosLinkPagoLotesRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
+    '/admin/comercios/link-pago/contracargos': {
+      id: '/admin/comercios/link-pago/contracargos'
+      path: '/contracargos'
+      fullPath: '/admin/comercios/link-pago/contracargos'
+      preLoaderRoute: typeof AdminComerciosLinkPagoContracargosRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
+    '/admin/comercios/link-pago/adelantos': {
+      id: '/admin/comercios/link-pago/adelantos'
+      path: '/adelantos'
+      fullPath: '/admin/comercios/link-pago/adelantos'
+      preLoaderRoute: typeof AdminComerciosLinkPagoAdelantosRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
     '/admin/comercios/impuestos/usuarios': {
       id: '/admin/comercios/impuestos/usuarios'
       path: '/usuarios'
@@ -1396,12 +1456,19 @@ const AdminComerciosImpuestosRouteWithChildren =
   )
 
 interface AdminComerciosLinkPagoRouteChildren {
+  AdminComerciosLinkPagoAdelantosRoute: typeof AdminComerciosLinkPagoAdelantosRoute
+  AdminComerciosLinkPagoContracargosRoute: typeof AdminComerciosLinkPagoContracargosRoute
+  AdminComerciosLinkPagoLotesRoute: typeof AdminComerciosLinkPagoLotesRoute
   AdminComerciosLinkPagoMetodosPagoRoute: typeof AdminComerciosLinkPagoMetodosPagoRoute
   AdminComerciosLinkPagoIndexRoute: typeof AdminComerciosLinkPagoIndexRoute
 }
 
 const AdminComerciosLinkPagoRouteChildren: AdminComerciosLinkPagoRouteChildren =
   {
+    AdminComerciosLinkPagoAdelantosRoute: AdminComerciosLinkPagoAdelantosRoute,
+    AdminComerciosLinkPagoContracargosRoute:
+      AdminComerciosLinkPagoContracargosRoute,
+    AdminComerciosLinkPagoLotesRoute: AdminComerciosLinkPagoLotesRoute,
     AdminComerciosLinkPagoMetodosPagoRoute:
       AdminComerciosLinkPagoMetodosPagoRoute,
     AdminComerciosLinkPagoIndexRoute: AdminComerciosLinkPagoIndexRoute,

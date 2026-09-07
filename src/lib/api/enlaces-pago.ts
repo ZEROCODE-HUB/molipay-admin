@@ -2,8 +2,40 @@ import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 import type { Page, Pagination } from "./types";
 
-export type EstadoEnlace = "Pendiente de aprobación" | "Pendiente de aprobacion" | "Activado" | "Desactivado" | "Rechazado" | "Suspendido" | "Eliminado" | "Activo" | "Inactivo";
-export const ESTADOS_ENLACE: EstadoEnlace[] = ["Pendiente de aprobación","Activado","Desactivado","Rechazado","Suspendido","Eliminado"];
+export type EstadoEnlace =
+  | "Pendiente de aprobación"
+  | "Pendiente de aprobacion"
+  | "Activado"
+  | "Desactivado"
+  | "Contracargo"
+  | "Cancelado"
+  | "Pagado"
+  // legacy compat (datos viejos)
+  | "Rechazado"
+  | "Suspendido"
+  | "Eliminado"
+  | "Activo"
+  | "Inactivo";
+export const ESTADOS_ENLACE: EstadoEnlace[] = [
+  "Pendiente de aprobación",
+  "Activado",
+  "Desactivado",
+  "Contracargo",
+  "Cancelado",
+  "Pagado",
+];
+// Todos los estados para filtro (incluye legacy para compat)
+export const ESTADOS_ENLACE_FILTRO: EstadoEnlace[] = [
+  "Pendiente de aprobación",
+  "Activado",
+  "Desactivado",
+  "Contracargo",
+  "Cancelado",
+  "Pagado",
+  "Rechazado",
+  "Suspendido",
+  "Eliminado",
+];
 
 export type EnlacePagoRow = {
   id: string;
@@ -24,6 +56,21 @@ export type EnlacePagoRow = {
   updated_at?: string;
   // joins
   clientes?: { correo: string; nombre: string }[] | null;
+  // pago (solo si Pagado / Contracargo)
+  metodo_pago?: string | null;
+  tipo_tarjeta?: string | null;
+  cuotas?: number | null;
+  marca_tarjeta?: string | null;
+};
+
+export type PagoInfo = {
+  metodoPago: string;
+  tipoTarjeta: string;
+  marcaTarjeta?: string | null;
+  cuotas: number;
+  importePagado?: number | null;
+  fechaPago?: string | null;
+  autorizacion?: string | null;
 };
 
 export type EnlacePago = {
@@ -44,17 +91,32 @@ export type EnlacePago = {
   createdAt: string;
   usuario?: string;
   clienteNombre?: string;
+  pago?: PagoInfo | null;
 };
 
 function toEnlace(r: EnlacePagoRow): EnlacePago {
   const cli = Array.isArray(r.clientes) ? r.clientes[0] : null;
+  const estado = normalizeEstado(r.estado);
+  // Mock pago info para Pagado/Contracargo (v1: derivado en UI, no persiste en DB)
+  const pago: PagoInfo | null =
+    estado === "Pagado" || estado === "Contracargo"
+      ? {
+          metodoPago: r.metodo_pago ?? (r.metodos_pago?.[0] ?? "Tarjeta"),
+          tipoTarjeta: r.tipo_tarjeta ?? (Math.random() > 0.5 ? "Crédito" : "Débito"),
+          marcaTarjeta: r.marca_tarjeta ?? ["Visa", "Mastercard", "Amex", "Cabal"][Math.floor(Math.random() * 4)],
+          cuotas: r.cuotas ?? (estado === "Pagado" ? (Math.random() > 0.6 ? 1 : 3) : 1),
+          importePagado: r.monto ?? null,
+          fechaPago: r.updated_at ?? r.created_at,
+          autorizacion: `AUTH-${r.id.slice(0, 6).toUpperCase()}`,
+        }
+      : null;
   return {
     id: r.id,
     clienteLegajo: r.cliente_legajo,
     comercioNombre: r.comercio_nombre,
     url: r.url,
     monto: r.monto == null ? null : Number(r.monto),
-    estado: normalizeEstado(r.estado),
+    estado,
     referencia: r.referencia,
     notas: r.notas,
     expiraEn: r.expira_en,
@@ -66,6 +128,7 @@ function toEnlace(r: EnlacePagoRow): EnlacePago {
     createdAt: r.created_at,
     usuario: cli?.correo ?? undefined,
     clienteNombre: cli?.nombre ?? undefined,
+    pago,
   };
 }
 
@@ -74,6 +137,10 @@ function normalizeEstado(raw: string | null): string {
   if (raw === "Pendiente de aprobacion") return "Pendiente de aprobación";
   if (raw === "Activo") return "Activado";
   if (raw === "Inactivo") return "Desactivado";
+  // Legacy → nuevo mapeo (no romper filtros viejos)
+  if (raw === "Rechazado") return "Cancelado";
+  if (raw === "Suspendido") return "Desactivado";
+  if (raw === "Eliminado") return "Cancelado";
   return raw;
 }
 
