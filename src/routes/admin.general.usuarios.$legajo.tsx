@@ -79,6 +79,7 @@ import {
   forzarValidacion,
   crearExencion,
   listComisionesCliente,
+  listClienteApiUsuarios,
   type ExencionDireccion,
   type HistorialCambio,
   type Validacion,
@@ -92,7 +93,7 @@ import {
 import { listComisiones } from "@/lib/api/comisiones";
 import type { ComisionCliente } from "@/lib/api/types";
 import {
-  listApiUsuarios,
+  getApiUsuario,
   listApiUsuarioEndpoints,
   listApiUsuarioLogs,
   setApiUsuarioEstado,
@@ -1403,11 +1404,12 @@ function ApiUsuariosInline({
   onVerDetalle,
 }: {
   legajo: string;
-  onVerDetalle: () => void;
+  onVerDetalle: (id: string) => void;
 }) {
   const query = useQuery({
-    queryKey: ["api_usuarios", "inline", legajo],
-    queryFn: () => listApiUsuarios({ page: 0, pageSize: 100 }),
+    queryKey: ["cliente_api_usuarios", legajo],
+    queryFn: () => listClienteApiUsuarios(legajo),
+    enabled: !!legajo,
   });
 
   if (query.isLoading) {
@@ -1416,12 +1418,12 @@ function ApiUsuariosInline({
   if (query.isError) {
     return <p className="text-sm text-red-600">{(query.error as Error).message}</p>;
   }
-  const rows = query.data?.rows ?? [];
+  const rows = query.data ?? [];
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-6 py-8 text-sm text-muted-foreground">
         <Inbox size={22} />
-        <p>Sin usuarios API asociados.</p>
+        <p>Sin usuarios API asociados a este cliente.</p>
       </div>
     );
   }
@@ -1451,7 +1453,7 @@ function ApiUsuariosInline({
               <td className="px-4 py-3 text-right">
                 <button
                   type="button"
-                  onClick={onVerDetalle}
+                  onClick={() => onVerDetalle(u.id)}
                   className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                 >
                   <Eye size={13} /> Ver detalle
@@ -1469,15 +1471,17 @@ function ApiUsuariosModal({
   open,
   onClose,
   cantidad,
+  legajo,
 }: {
   open: boolean;
   onClose: () => void;
   cantidad: number;
+  legajo: string;
 }) {
   const query = useQuery({
-    queryKey: ["api_usuarios", "popup"],
-    queryFn: () => listApiUsuarios({ page: 0, pageSize: 25 }),
-    enabled: open,
+    queryKey: ["cliente_api_usuarios", legajo, "popup"],
+    queryFn: () => listClienteApiUsuarios(legajo),
+    enabled: open && !!legajo,
   });
   const [detalle, setDetalle] = useState<{
     id: string;
@@ -1499,18 +1503,18 @@ function ApiUsuariosModal({
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : query.isError ? (
         <p className="text-sm text-red-600">{(query.error as Error).message}</p>
-      ) : (query.data?.rows.length ?? 0) === 0 ? (
+      ) : (query.data?.length ?? 0) === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-8 text-sm text-muted-foreground">
           <Inbox size={22} />
           <p>Sin usuarios API asociados.</p>
         </div>
       ) : (
         <DataTable
-          columns={apiUsuariosColumns}
-          data={query.data!.rows}
-          keyExtractor={(u) => u.id}
+          columns={apiUsuariosColumns as never}
+          data={query.data! as never}
+          keyExtractor={(u: { id: string }) => u.id}
           emptyMessage="Sin usuarios API"
-          actions={(u) => (
+          actions={(u: { id: string; codigoUsuarioApi: string; usuario: string; nombreCompleto: string; estado: string }) => (
             <button
               type="button"
               onClick={() => setDetalle(u)}
@@ -1796,12 +1800,10 @@ function ApiDetalleModal({
 }) {
   const usuarioQuery = useQuery({
     queryKey: ["api_usuarios", "detalle", apiUsuarioId],
-    queryFn: () => listApiUsuarios({ page: 0, pageSize: 25 }),
-    enabled: open,
+    queryFn: () => (apiUsuarioId ? getApiUsuario(apiUsuarioId) : Promise.resolve(null)),
+    enabled: open && !!apiUsuarioId,
   });
-  const usuario = apiUsuarioId
-    ? (usuarioQuery.data?.rows ?? []).find((u) => u.id === apiUsuarioId)
-    : (usuarioQuery.data?.rows ?? [])[0];
+  const usuario = usuarioQuery.data ?? null;
   const effectiveId = apiUsuarioId ?? usuario?.id ?? null;
   const endpointsQuery = useQuery({
     queryKey: ["api_endpoints", effectiveId],
@@ -1822,6 +1824,8 @@ function ApiDetalleModal({
       setApiUsuarioEstado(effectiveId!, estado),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api_usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["cliente_api_usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["cliente_modulos"] });
     },
   });
 
@@ -2282,6 +2286,11 @@ function ClienteDetailPage() {
     queryFn: () => listLinksPago(legajo),
     enabled: !!cliente,
   });
+  const clienteApiUsuariosQuery = useQuery({
+    queryKey: ["cliente_api_usuarios", legajo],
+    queryFn: () => listClienteApiUsuarios(legajo),
+    enabled: !!cliente,
+  });
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -2300,7 +2309,8 @@ function ClienteDetailPage() {
 
   const [pstOpen, setPstOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
-  const [apiDetalleOpen, setApiDetalleOpen] = useState(false);
+  const [apiDetalleId, setApiDetalleId] = useState<string | null>(null);
+  const apiDetalleOpen = !!apiDetalleId;
   const [exencionOpen, setExencionOpen] = useState(false);
 
   const [movDetail, setMovDetail] = useState<DetailMovimiento | null>(null);
@@ -2479,6 +2489,9 @@ function ClienteDetailPage() {
   const apiModulo = modulosData.find((m) => m.clave === "api");
   const comerciosPst = comerciosPstQuery.data ?? [];
   const linksPago = linksPagoQuery.data ?? [];
+  const apiUsuariosVinculados = clienteApiUsuariosQuery.data ?? [];
+  // cantidad real prevalece sobre desnormalizado cliente_modulos.cantidad
+  const apiCantidadReal = clienteApiUsuariosQuery.isSuccess ? apiUsuariosVinculados.length : (apiModulo?.cantidad ?? 0);
 
   const alertasHabilitadas = (paramAlertasQuery.data ?? []).filter((p) => p.habilitado).length;
   const bloqueosHabilitados = (paramBloqueosQuery.data ?? []).filter((p) => p.habilitado).length;
@@ -3215,7 +3228,10 @@ function ClienteDetailPage() {
               actions={
                 <button
                   type="button"
-                  onClick={() => modulosQuery.refetch()}
+                  onClick={() => {
+                    modulosQuery.refetch();
+                    clienteApiUsuariosQuery.refetch();
+                  }}
                   className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
                 >
                   <RefreshCw size={13} /> Recargar
@@ -3397,13 +3413,18 @@ function ClienteDetailPage() {
                           Usuarios asociados
                         </div>
                         <div className="text-2xl font-semibold tabular-nums">
-                          {apiModulo?.cantidad ?? 0}
+                          {apiCantidadReal}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {apiModulo?.detalle ?? "Sin vínculos de API externa para este cliente."}
+                          {apiCantidadReal === 0
+                            ? "Sin vínculos de API externa para este cliente."
+                            : `${apiCantidadReal} usuario(s) API vinculado(s) a este cliente.`}
                         </p>
+                        {clienteApiUsuariosQuery.isError && (
+                          <p className="mt-1 text-xs text-amber-700">No se pudo cargar desde Supabase (fallback a cliente_modulos).</p>
+                        )}
                       </div>
-                      <ApiUsuariosInline legajo={legajo} onVerDetalle={() => setApiDetalleOpen(true)} />
+                      <ApiUsuariosInline legajo={legajo} onVerDetalle={(id) => setApiDetalleId(id)} />
                     </div>
                   )}
                 </div>
@@ -3513,9 +3534,9 @@ function ClienteDetailPage() {
 
         <ApiDetalleModal
           open={apiDetalleOpen}
-          onClose={() => setApiDetalleOpen(false)}
-          apiUsuarioId={null}
-          cantidad={apiModulo?.cantidad ?? 0}
+          onClose={() => setApiDetalleId(null)}
+          apiUsuarioId={apiDetalleId}
+          cantidad={apiCantidadReal}
         />
 
         {/* Edición de parámetros dentro del contexto del usuario */}

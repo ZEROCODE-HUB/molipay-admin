@@ -418,3 +418,74 @@ export async function listComisionesCliente(clienteLegajo: string): Promise<Comi
     estado: r.estado ?? "—",
   }));
 }
+
+// --- Cliente <-> API usuarios (API externa) ----------------------------------
+export type ClienteApiUsuario = {
+  id: string;
+  clienteLegajo: string;
+  apiUsuarioId: string;
+  codigoUsuarioApi: string;
+  usuario: string;
+  nombreCompleto: string;
+  estado: string;
+  createdAt: string;
+};
+
+type ClienteApiUsuarioRow = {
+  id: string;
+  cliente_legajo: string;
+  api_usuario_id: string;
+  created_at: string;
+  api_usuarios:
+    | {
+        id: string;
+        codigo_usuario_api: string;
+        usuario: string;
+        nombre_completo: string;
+        estado: string;
+        created_at: string;
+      }
+    | null;
+};
+
+export async function listClienteApiUsuarios(clienteLegajo: string): Promise<ClienteApiUsuario[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("cliente_api_usuarios")
+    .select("id, cliente_legajo, api_usuario_id, created_at, api_usuarios(id, codigo_usuario_api, usuario, nombre_completo, estado, created_at)")
+    .eq("cliente_legajo", clienteLegajo)
+    .order("created_at", { ascending: false });
+  if (error) throw new DataAccessError(error);
+  const rows = (data as unknown as ClienteApiUsuarioRow[] | null) ?? [];
+  return rows
+    .filter((r) => r.api_usuarios)
+    .map((r) => ({
+      id: r.api_usuarios!.id,
+      clienteLegajo: r.cliente_legajo,
+      apiUsuarioId: r.api_usuario_id,
+      codigoUsuarioApi: r.api_usuarios!.codigo_usuario_api,
+      usuario: r.api_usuarios!.usuario,
+      nombreCompleto: r.api_usuarios!.nombre_completo,
+      estado: r.api_usuarios!.estado,
+      createdAt: r.api_usuarios!.created_at,
+    }));
+}
+
+export async function vincularApiUsuarioACliente(clienteLegajo: string, apiUsuarioId: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from("cliente_api_usuarios").insert({
+    cliente_legajo: clienteLegajo,
+    api_usuario_id: apiUsuarioId,
+  });
+  if (error) throw new DataAccessError(error);
+}
+
+export async function desvincularApiUsuarioDeCliente(clienteLegajo: string, apiUsuarioId: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb
+    .from("cliente_api_usuarios")
+    .delete()
+    .eq("cliente_legajo", clienteLegajo)
+    .eq("api_usuario_id", apiUsuarioId);
+  if (error) throw new DataAccessError(error);
+}

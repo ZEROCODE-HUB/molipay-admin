@@ -48,7 +48,33 @@ export async function listClientes(filters: ClienteFilters): Promise<Page<Client
   }
   if (error) throw new DataAccessError(error);
 
-  const rows = (data ?? []) as ClienteRow[];
+  let rows = (data ?? []) as ClienteRow[];
+
+  // Excluir emails de backoffice (admin_users) para que no aparezcan en
+  // /admin/general/usuarios (persona física/jurídica). Solo deben verse en
+  // /admin/administracion/usuarios. Best-effort: si falla (RLS/no admin), no filtramos.
+  try {
+    const { data: admins } = await sb.from("admin_users").select("email").limit(200);
+    if (admins && admins.length) {
+      const adminSet = new Set((admins as { email: string }[]).map((a) => a.email.trim().toLowerCase()));
+      const before = rows.length;
+      rows = rows.filter((r) => !adminSet.has(r.correo.trim().toLowerCase()));
+      // Ajustar total para paginación (aproximado, evita contar admins como clientes)
+      if (rows.length !== before && typeof count === "number") {
+        // Si filtramos N filas en esta página, restamos al total proporcional
+        // Best-effort: si la página filtró todo, el total puede quedar levemente inflado,
+        // pero evita mostrar al admin en la lista.
+        const filteredInPage = before - rows.length;
+        count = Math.max(0, count - filteredInPage);
+        // Si el total real de admins es mayor que lo filtrado en esta página,
+        // la paginación puede quedar con páginas vacías; el migración 0023
+        // elimina el duplicado a nivel DB para que el count sea exacto.
+      }
+    }
+  } catch {
+    // ignorar: sin permiso para leer admin_users o tabla inexistente
+  }
+
   return { rows: rows.map(toCliente), total: count ?? rows.length, page, pageSize };
 }
 
@@ -324,10 +350,31 @@ export async function hardDeleteCliente(id: string): Promise<void> {
   // comercios (y puntos_venta por CASCADE)
   try { await sb.from("comercios").delete().eq("legajo", legajo); } catch {}
 
-  // Finalmente cliente
+  // Finalmente cliente (dispara trigger trg_cliente_deleted_cleanup que borra auth.users)
   const { error } = await sb.from("clientes").delete().eq("id", cid);
   if (error) throw new DataAccessError(error);
-  // Nota: auth.users debe borrarse aparte via Authentication > Users (o SQL en auth schema) para re-registrar el mismo email
+
+  // Garantizar borrado en auth aunque el trigger no tenga permisos o la migración
+  // aún no esté aplicada: best-effort via Edge Function + RPC.
+  const correoLower = legajo ? cliente.correo.trim().toLowerCase() : "";
+  if (correoLower) {
+    // 1) Edge Function con service_role (borra auth + limpia public huérfano)
+    try {
+      // supabase.functions.invoke está disponible si el cliente está configurado
+      const supabaseAny = sb as unknown as { functions?: { invoke: (name: string, opts: unknown) => Promise<unknown> } };
+      if (supabaseAny.functions?.invoke) {
+        await supabaseAny.functions.invoke("eliminar-usuario", { body: { email: correoLower, legajo } });
+      }
+    } catch {
+      // ignorar: edge puede no estar desplegada aún
+    }
+    // 2) Fallback RPC SECURITY DEFINER (no requiere service_role en el cliente)
+    try {
+      await sb.rpc("eliminar_auth_por_email", { p_email: correoLower });
+    } catch {
+      // ignorar: función puede no existir si migración no aplicada
+    }
+  }
 }
 
 export async function generarCbuParaCliente(cliente: Cliente, cbu: string): Promise<Cliente> {
