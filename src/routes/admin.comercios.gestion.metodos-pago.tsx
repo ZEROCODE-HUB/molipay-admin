@@ -14,12 +14,12 @@ import {
 } from "@/components/portal-shell";
 import { metodosPagoIniciales, TIPOS, type MetodoPago, type Cuota } from "@/data/metodos-pago";
 
-export const Route = createFileRoute("/admin/comercios/link-pago/metodos-pago")({
+export const Route = createFileRoute("/admin/comercios/gestion/metodos-pago")({
   component: Page,
   head: () => ({
     meta: [
-      { title: "Métodos de pago — Link de pago — Admin — Moli" },
-      { name: "description", content: "Gestión de métodos de pago para link de pago." },
+      { title: "Métodos de pago — Gestión — Admin — Moli" },
+      { name: "description", content: "Gestión de métodos de pago para comercios." },
     ],
   }),
 });
@@ -306,7 +306,7 @@ function Page() {
     <>
       <PageHeader
         title="Métodos de pago"
-        description="Gestión de métodos de pago disponibles para link de pago."
+        description="Gestión de métodos de pago disponibles para comercios."
         action={
           <BtnPrimary type="button" onClick={() => setModal({ metodo: null })}>
             <Plus size={14} /> Crear método de pago

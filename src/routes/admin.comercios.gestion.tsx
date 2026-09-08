@@ -13,7 +13,8 @@ export const Route = createFileRoute("/admin/comercios/gestion")({
 
 const tabs: Tab[] = [
   { label: "Comercios", to: "/admin/comercios/gestion" },
-  { label: "Código de categoría", to: "/admin/comercios/gestion/categoria" },
+  { label: "Códigos de categoría", to: "/admin/comercios/gestion/categoria" },
+  { label: "Métodos de pago", to: "/admin/comercios/gestion/metodos-pago" },
 ];
 
 function GestionLayout() {

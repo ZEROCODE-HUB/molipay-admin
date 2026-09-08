@@ -25,12 +25,15 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - APIs externas — Restricciones — Admin — Moli  (/admin/comercios/apis/restricciones)
    - Gestión — Admin — Moli  (/admin/comercios/gestion)
    - Códigos de categoría — Admin — Moli  (/admin/comercios/gestion/categoria)
+   - Métodos de pago — Gestión — Admin — Moli  (/admin/comercios/gestion/metodos-pago)
    - Impuestos — Admin — Moli  (/admin/comercios/impuestos)
    - Débitos y créditos — Admin — Moli  (/admin/comercios/impuestos/debitos-creditos)
    - Ingresos Brutos — Admin — Moli  (/admin/comercios/impuestos/ingresos-brutos)
    - Usuarios con impuestos — Admin — Moli  (/admin/comercios/impuestos/usuarios)
    - Link de pago — Admin — Moli  (/admin/comercios/link-pago)
-   - Métodos de pago — Link de pago — Admin — Moli  (/admin/comercios/link-pago/metodos-pago)
+   - Adelantos de Dinero — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/adelantos)
+   - Contracargos — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/contracargos)
+   - Lotes de Acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
 
 • Configuración:
@@ -146,6 +149,10 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Códigos de categoría — Admin — Moli"
   },
   {
+    "path": "/admin/comercios/gestion/metodos-pago",
+    "title": "Métodos de pago — Gestión — Admin — Moli"
+  },
+  {
     "path": "/admin/comercios/impuestos",
     "title": "Impuestos — Admin — Moli"
   },
@@ -166,8 +173,16 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Link de pago — Admin — Moli"
   },
   {
-    "path": "/admin/comercios/link-pago/metodos-pago",
-    "title": "Métodos de pago — Link de pago — Admin — Moli"
+    "path": "/admin/comercios/link-pago/adelantos",
+    "title": "Adelantos de Dinero — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/contracargos",
+    "title": "Contracargos — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/lotes",
+    "title": "Lotes de Acreditación — Links de Pago — Admin — Moli"
   },
   {
     "path": "/admin/comercios/transferencia",
