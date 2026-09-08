@@ -466,6 +466,15 @@ export type ComercioClienteRow = {
   correo: string;
 };
 
+export type ComercioMetodoConfig = {
+  metodoId: number;
+  metodoNombre: string;
+  tipo: string;
+  comisionMolipay: number;
+  comisionPayway: number;
+  comisionNeta: number;
+};
+
 export type ComercioRow = {
   id: string;
   usuario: string;
@@ -475,6 +484,7 @@ export type ComercioRow = {
   nivel: NivelComercio;
   habilitado_pago_transferencia: boolean | null;
   habilitado_enlaces_pago: boolean | null;
+  metodos_config?: ComercioMetodoConfig[] | null;
   created_at: string;
   updated_at: string;
   clientes?:
@@ -507,6 +517,7 @@ export type Comercio = {
   estado: EstadoComercio;
   habilitadoPagoTransferencia: boolean;
   habilitadoEnlacesPago: boolean;
+  metodosConfig: ComercioMetodoConfig[];
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -520,6 +531,7 @@ export type ComercioInput = {
   estado: EstadoComercio;
   habilitadoPagoTransferencia?: boolean;
   habilitadoEnlacesPago?: boolean;
+  metodosConfig?: ComercioMetodoConfig[];
 };
 
 export type ClienteSelect = {

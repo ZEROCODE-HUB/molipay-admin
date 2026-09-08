@@ -211,6 +211,33 @@ export function toComercio(
   const cli = firstOrNull(r.clientes);
   const cat = firstOrNull(r.codigos_categoria);
   const pdvs = (r.puntos_venta ?? []) as PuntoVentaRow[];
+  // metodos_config puede venir como jsonb o null; normaliza y calcula neta si falta
+  const rawMetodos = (r as unknown as { metodos_config?: unknown }).metodos_config;
+  let metodosConfig: Comercio["metodosConfig"] = [];
+  if (Array.isArray(rawMetodos)) {
+    metodosConfig = (rawMetodos as Comercio["metodosConfig"]).map((m) => ({
+      metodoId: Number(m.metodoId),
+      metodoNombre: String(m.metodoNombre ?? ""),
+      tipo: String(m.tipo ?? ""),
+      comisionMolipay: Number(m.comisionMolipay ?? 0),
+      comisionPayway: Number(m.comisionPayway ?? 0),
+      comisionNeta: Number(
+        m.comisionNeta ?? Number(m.comisionMolipay ?? 0) - Number(m.comisionPayway ?? 0),
+      ),
+    }));
+  }
+  // fallback localStorage si DB no tiene columna y hay datos locales
+  if (metodosConfig.length === 0 && typeof window !== "undefined") {
+    try {
+      const ls = window.localStorage.getItem(`comercio_metodos_${r.id}`);
+      if (ls) {
+        const parsed = JSON.parse(ls);
+        if (Array.isArray(parsed)) metodosConfig = parsed;
+      }
+    } catch {
+      // ignore
+    }
+  }
   return {
     id: r.id,
     usuario: r.usuario,
@@ -240,6 +267,7 @@ export function toComercio(
     estado: r.estado,
     habilitadoPagoTransferencia: (r.habilitado_pago_transferencia as boolean) ?? false,
     habilitadoEnlacesPago: (r.habilitado_enlaces_pago as boolean) ?? false,
+    metodosConfig,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,

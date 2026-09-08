@@ -33,10 +33,12 @@ import type {
   ClienteSelect,
   CodigoCategoria,
   Comercio,
+  ComercioMetodoConfig,
   EstadoComercio,
   NivelComercio,
 } from "@/lib/api/types";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
+import { metodosPagoIniciales } from "@/data/metodos-pago";
 
 export const Route = createFileRoute("/admin/comercios/gestion/")({
   component: Page,
@@ -109,11 +111,16 @@ function MensajeEstado({
   );
 }
 
+function formatPct(n: number): string {
+  return `${n.toFixed(2)}%`;
+}
+
 function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
+  const habilitados = comercio.metodosConfig ?? [];
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative bg-card rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
           <div>
             <h3 className="font-display text-lg font-semibold">Detalle de comercio</h3>
@@ -194,6 +201,42 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
             </div>
           </Card>
 
+          <Card className="p-5">
+            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+              Banderas habilitadas (métodos de pago)
+            </h4>
+            {habilitados.length === 0 ? (
+              <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
+                Sin métodos de pago habilitados para este comercio.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50 text-left">
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Método</th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Tipo</th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión MoliPay</th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión PayWay (Pasarela)</th>
+                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión neta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {habilitados.map((m) => (
+                      <tr key={m.metodoId} className="border-b last:border-0">
+                        <td className="px-3 py-2.5 font-medium">{m.metodoNombre}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{m.tipo}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(m.comisionMolipay)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(m.comisionPayway)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums font-semibold">{formatPct(m.comisionNeta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
           <Card className="p-0">
             <div className="px-5 pt-5 pb-1">
               <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -233,6 +276,12 @@ type ComercioForm = {
   estado: EstadoComercio;
 };
 
+type MetodoFormState = {
+  enabled: boolean;
+  comisionMolipay: string;
+  comisionPayway: string;
+};
+
 function ComercioFormModal({
   comercio,
   clientes,
@@ -252,6 +301,7 @@ function ComercioFormModal({
     estado: EstadoComercio;
     habilitadoPagoTransferencia: boolean;
     habilitadoEnlacesPago: boolean;
+    metodosConfig: ComercioMetodoConfig[];
   }) => void;
 }) {
   const [clienteLegajo, setClienteLegajo] = useState(comercio?.legajo ?? "");
@@ -276,8 +326,47 @@ function ComercioFormModal({
   const clientesOptions = comercio ? clientes : (clientesFiltrados ?? clientes);
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
+  // Banderas habilitadas: todos los métodos definidos en Gestión → Métodos de Pago
+  const metodosDisponibles = metodosPagoIniciales;
+  const [metodosState, setMetodosState] = useState<Record<number, MetodoFormState>>(() => {
+    const init: Record<number, MetodoFormState> = {};
+    for (const m of metodosDisponibles) {
+      const existing = comercio?.metodosConfig?.find((c) => c.metodoId === m.id);
+      init[m.id] = {
+        enabled: !!existing,
+        comisionMolipay: existing ? String(existing.comisionMolipay) : "",
+        comisionPayway: existing ? String(existing.comisionPayway) : "",
+      };
+    }
+    return init;
+  });
+
+  const toggleMetodo = (id: number, enabled: boolean) => {
+    setMetodosState((prev) => ({ ...prev, [id]: { ...prev[id], enabled } }));
+  };
+  const updateComision = (id: number, field: "comisionMolipay" | "comisionPayway", value: string) => {
+    // solo números y punto/coma
+    if (value !== "" && !/^[0-9]*[.,]?[0-9]*$/.test(value)) return;
+    setMetodosState((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+
   const guardar = () => {
     if (!clienteLegajo) return;
+    const metodosConfig: ComercioMetodoConfig[] = metodosDisponibles
+      .filter((m) => metodosState[m.id]?.enabled)
+      .map((m) => {
+        const s = metodosState[m.id];
+        const molipay = parseFloat((s.comisionMolipay || "0").replace(",", ".")) || 0;
+        const payway = parseFloat((s.comisionPayway || "0").replace(",", ".")) || 0;
+        return {
+          metodoId: m.id,
+          metodoNombre: m.nombre,
+          tipo: m.tipo,
+          comisionMolipay: molipay,
+          comisionPayway: payway,
+          comisionNeta: molipay - payway,
+        };
+      });
     onSave({
       clienteLegajo,
       usuario: usuario.trim() || (clienteSeleccionado?.correo ?? ""),
@@ -286,6 +375,7 @@ function ComercioFormModal({
       estado,
       habilitadoPagoTransferencia: false,
       habilitadoEnlacesPago: false,
+      metodosConfig,
     });
   };
 
@@ -426,6 +516,79 @@ function ComercioFormModal({
         </div>
 
       </div>
+
+      <div className="mt-6 border-t border-border pt-5">
+        <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Banderas habilitadas (métodos de pago)
+        </h4>
+        <p className="text-xs text-muted-foreground mb-4">
+          Seleccioná los métodos de pago habilitados para este comercio. Al habilitar una bandera se habilitan los campos de comisión. La comisión neta se calcula automáticamente.
+        </p>
+        <div className="space-y-3">
+          {metodosDisponibles.map((m) => {
+            const st = metodosState[m.id];
+            const enabled = st?.enabled ?? false;
+            const molipay = st?.comisionMolipay ?? "";
+            const payway = st?.comisionPayway ?? "";
+            const neta =
+              molipay !== "" || payway !== ""
+                ? (parseFloat(molipay.replace(",", ".") || "0") || 0) - (parseFloat(payway.replace(",", ".") || "0") || 0)
+                : null;
+            return (
+              <div key={m.id} className={`rounded-lg border p-3 ${enabled ? "bg-card border-primary/30" : "bg-muted/30 border-border"}`}>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => toggleMetodo(m.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-input accent-primary"
+                  />
+                  <span className="font-medium text-sm">{m.nombre}</span>
+                  <span className="text-xs text-muted-foreground">· {m.tipo}</span>
+                </label>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div>
+                    <Label htmlFor={`mp-molipay-${m.id}`}>Comisión MoliPay (%)</Label>
+                    <Input
+                      id={`mp-molipay-${m.id}`}
+                      value={molipay}
+                      onChange={(e) => updateComision(m.id, "comisionMolipay", e.target.value)}
+                      disabled={!enabled}
+                      placeholder="0.00"
+                      className="h-9"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`mp-payway-${m.id}`}>Comisión PayWay (Pasarela) (%)</Label>
+                    <Input
+                      id={`mp-payway-${m.id}`}
+                      value={payway}
+                      onChange={(e) => updateComision(m.id, "comisionPayway", e.target.value)}
+                      disabled={!enabled}
+                      placeholder="0.00"
+                      className="h-9"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div>
+                    <Label>Comisión neta (%)</Label>
+                    <div className="h-9 rounded-md border border-input bg-muted px-3 flex items-center text-sm font-mono tabular-nums">
+                      {enabled && neta !== null ? `${neta.toFixed(2)}%` : "—"}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">MoliPay − PayWay</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {metodosDisponibles.length === 0 && (
+            <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+              No hay métodos de pago disponibles. Creálos en <span className="font-semibold">Gestión → Métodos de pago</span>.
+            </div>
+          )}
+        </div>
+      </div>
     </FormDialog>
   );
 }
@@ -437,6 +600,8 @@ function Page() {
   const search = useDebouncedValue(searchInput, 350);
   const [estadoFilter, setEstadoFilter] = useState<EstadoComercio | "">("");
   const [nivelFilter, setNivelFilter] = useState<NivelComercio | "">("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   const { can } = useCan();
   const puedeCrear = can("crear", "comercios");
@@ -449,6 +614,8 @@ function Page() {
     search,
     estado: estadoFilter || undefined,
     nivel: nivelFilter || undefined,
+    fechaDesde: fechaDesde || undefined,
+    fechaHasta: fechaHasta || undefined,
   });
 
   const { rows: categorias } = useCodigosCategoria({ page: 0, pageSize: 1000 });
@@ -491,6 +658,7 @@ function Page() {
     estado: EstadoComercio;
     habilitadoPagoTransferencia: boolean;
     habilitadoEnlacesPago: boolean;
+    metodosConfig: ComercioMetodoConfig[];
   }) => {
     try {
       if (editTarget) {
@@ -501,6 +669,7 @@ function Page() {
           estado: input.estado,
           habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
           habilitadoEnlacesPago: input.habilitadoEnlacesPago,
+          metodosConfig: input.metodosConfig,
         });
       } else {
         await createComercio({
@@ -511,6 +680,7 @@ function Page() {
           estado: input.estado,
           habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
           habilitadoEnlacesPago: input.habilitadoEnlacesPago,
+          metodosConfig: input.metodosConfig,
         });
       }
       invalidar();
@@ -661,58 +831,101 @@ function Page() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Usuario (email) o legajo…"
-          />
+      <Card className="p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <Label htmlFor="buscar">Buscar</Label>
+            <Input
+              id="buscar"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Usuario (email) o legajo…"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-estado">Estado</Label>
+            <select
+              id="f-estado"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              value={estadoFilter}
+              onChange={(e) => {
+                setEstadoFilter(e.target.value as EstadoComercio | "");
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              {ESTADOS_COMERCIO.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="f-nivel">Nivel</Label>
+            <select
+              id="f-nivel"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              value={nivelFilter}
+              onChange={(e) => {
+                setNivelFilter(e.target.value as NivelComercio | "");
+                setPage(0);
+              }}
+            >
+              <option value="">Todos</option>
+              {NIVELES_COMERCIO.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="f-desde">Fecha desde</Label>
+            <Input
+              id="f-desde"
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => {
+                setFechaDesde(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-hasta">Fecha hasta</Label>
+            <Input
+              id="f-hasta"
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => {
+                setFechaHasta(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          {(fechaDesde || fechaHasta || estadoFilter || nivelFilter || searchInput) && (
+            <BtnOutline
+              type="button"
+              onClick={() => {
+                setSearchInput("");
+                setEstadoFilter("");
+                setNivelFilter("");
+                setFechaDesde("");
+                setFechaHasta("");
+                setPage(0);
+              }}
+            >
+              Limpiar filtros
+            </BtnOutline>
+          )}
         </div>
-        <div>
-          <Label htmlFor="f-estado">Estado</Label>
-          <select
-            id="f-estado"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={estadoFilter}
-            onChange={(e) => {
-              setEstadoFilter(e.target.value as EstadoComercio | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {ESTADOS_COMERCIO.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="f-nivel">Nivel</Label>
-          <select
-            id="f-nivel"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={nivelFilter}
-            onChange={(e) => {
-              setNivelFilter(e.target.value as NivelComercio | "");
-              setPage(0);
-            }}
-          >
-            <option value="">Todos</option>
-            {NIVELES_COMERCIO.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      </Card>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
