@@ -187,18 +187,10 @@ function Detalle({ c, onClose, onSave }: { c: Contra; onClose: () => void; onSav
 
 function Page() {
   const [rows, setRows] = useState<Contra[]>(MOCK);
-  const [q, setQ] = useState("");
-  const [estado, setEstado] = useState<string>("");
   const [detail, setDetail] = useState<Contra | null>(null);
   const [confirm, setConfirm] = useState<{title:string;message:string}|null>(null);
   const { can } = useCan();
   const puedeGestionar = can("modificar","comercios");
-
-  const filtered = rows.filter((r) => {
-    if (estado && r.estado !== estado) return false;
-    if (q.trim() && !`${r.id} ${r.linkId} ${r.comercio} ${r.ticketPayway ?? ""} ${r.motivo}`.toLowerCase().includes(q.trim().toLowerCase())) return false;
-    return true;
-  });
 
   const guardar = (u: Contra) => setRows((prev)=> prev.map((p)=> p.id===u.id ? u : p));
 
@@ -211,13 +203,13 @@ function Page() {
   ];
 
   const columns: Column<Contra>[] = [
-    { key:"id", label:"Contracargo", render:(r)=> <span className="font-mono text-xs font-semibold">{r.id}</span> },
+    { key:"id", label:"Contracargo", filterable: true, render:(r)=> <span className="font-mono text-xs font-semibold">{r.id}</span> },
     { key:"linkId", label:"Link", render:(r)=> <div><div className="font-mono text-xs">{r.linkId}</div><div className="font-mono text-[11px] text-muted-foreground truncate max-w-[160px]">{r.linkUrl}</div></div> },
-    { key:"comercio", label:"Comercio", render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[140px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"comercio", label:"Comercio", filterable: true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[140px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
     { key:"importe", label:"Importe", render:(r)=> <span className="font-mono tabular-nums font-semibold">{fmt(r.importe)}</span> },
-    { key:"ticketPayway", label:"Ticket PayWay", render:(r)=> <span className="font-mono text-xs">{r.ticketPayway ?? "—"}</span> },
+    { key:"ticketPayway", label:"Ticket PayWay", filterable: true, render:(r)=> <span className="font-mono text-xs">{r.ticketPayway ?? "—"}</span> },
     { key:"estado", label:"Estado", filterable:"enum", filterOptions:["Abierto","En mediación","Cerrado acreditado","Cerrado retenido"], render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
-    { key:"fecha", label:"Fecha", render:(r)=> <span className="font-mono text-xs">{r.fecha}</span> },
+    { key:"fecha", label:"Fecha", filterable: "date", render:(r)=> <span className="font-mono text-xs">{r.fecha}</span> },
   ];
 
   return (
@@ -226,26 +218,13 @@ function Page() {
       <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground mb-4">
         <strong>Contracargo ≠ Lote.</strong> Cada registro es un pago individual en disputa. El lote de acreditación descuenta los contracargos del importe a acreditar.
       </div>
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input className="h-10 px-3 rounded-md border bg-card text-sm flex-1 min-w-[200px]" placeholder="Buscar contracargo, link, comercio, ticket..." value={q} onChange={(e)=> setQ(e.target.value)} />
-        <select className="h-10 px-3 rounded-md border bg-card text-sm" value={estado} onChange={(e)=> setEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          <option value="Abierto">Abierto</option>
-          <option value="En mediación">En mediación</option>
-          <option value="Cerrado acreditado">Cerrado acreditado</option>
-          <option value="Cerrado retenido">Cerrado retenido</option>
-        </select>
-      </div>
+
       <div className="grid grid-cols-4 gap-3 mb-4">
         { (["Abierto","En mediación","Cerrado acreditado","Cerrado retenido"] as const).map((s)=> (
           <Card key={s} className="p-3"><div className="text-xs text-muted-foreground">{s}</div><div className="font-mono text-xl font-semibold mt-1">{rows.filter((r)=> r.estado===s).length}</div></Card>
         ))}
       </div>
-      {filtered.length===0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay contracargos para el filtro.</p></div>
-      ) : (
-        <DataTable columns={columns} data={filtered} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
-      )}
+      <DataTable columns={columns} data={rows} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
       {detail && <Detalle c={detail} onClose={()=> setDetail(null)} onSave={guardar} />}
       {confirm && <ConfirmDialog open={!!confirm} onClose={()=> setConfirm(null)} title={confirm.title} message={confirm.message} confirmLabel="Cerrar" variant="default" onConfirm={()=> setConfirm(null)} />}
     </PermissionGuard>

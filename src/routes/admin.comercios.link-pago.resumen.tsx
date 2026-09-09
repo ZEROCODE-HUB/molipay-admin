@@ -55,8 +55,19 @@ function Page() {
         <Card className="p-4"><div className="text-xs text-muted-foreground">Impuestos</div><div className="font-mono text-xl font-semibold mt-1">{fmt(kpi.impuestos)}</div><div className="text-xs text-muted-foreground mt-1">Total impuestos período</div></Card>
       </div>
 
-
       <Card className="p-4 mb-4">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Resultado económico del período</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-muted-foreground">Bruto</span><span className="font-mono">{fmt(kpi.bruto)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Impuestos</span><span className="font-mono text-red-600">- {fmt(kpi.impuestos)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Neto PayWay</span><span className="font-mono text-red-600">- {fmt(kpi.netoPayWay)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Neto MoliPay</span><span className="font-mono text-emerald-700">{fmt(kpi.netoMoliPay)}</span></div>
+          <div className="border-t my-2"/>
+          <div className="flex justify-between font-semibold"><span>Disponible + pendiente</span><span className="font-mono">{fmt(kpi.recaudadora + kpi.pendiente)}</span></div>
+        </div>
+      </Card>
+
+      <Card className="p-4">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Impuestos por pagar por comercio</h4>
         {(() => {
           const data = getImpuestosPorComercio();
@@ -69,19 +80,7 @@ function Page() {
           ];
           return <DataTable columns={cols} data={data} keyExtractor={(r)=> r.legajo} />;
         })()}
-        <p className="text-[11px] text-muted-foreground mt-2">Mock: misma data que en gesti�n. Usa tabla por comercio mostrando impuesto pendiente y detalle.</p>
-      </Card>
-
-      <Card className="p-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Resultado económico del período</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Bruto</span><span className="font-mono">{fmt(kpi.bruto)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Impuestos</span><span className="font-mono text-red-600">- {fmt(kpi.impuestos)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Neto PayWay</span><span className="font-mono text-red-600">- {fmt(kpi.netoPayWay)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Neto MoliPay</span><span className="font-mono text-emerald-700">{fmt(kpi.netoMoliPay)}</span></div>
-          <div className="border-t my-2"/>
-          <div className="flex justify-between font-semibold"><span>Disponible + pendiente</span><span className="font-mono">{fmt(kpi.recaudadora + kpi.pendiente)}</span></div>
-        </div>
+        <p className="text-[11px] text-muted-foreground mt-2">Mock: misma data que en gestión. Usa tabla por comercio mostrando impuesto pendiente y detalle.</p>
       </Card>
     </PermissionGuard>
   );

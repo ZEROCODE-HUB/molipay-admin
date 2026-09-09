@@ -303,6 +303,7 @@ function Page() {
   const [nombre, setNombre] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPadronPopup, setShowPadronPopup] = useState(false);
 
   const { rows: impuestosDisponibles } = useImpuestosForAsignacion();
 
@@ -337,15 +338,22 @@ function Page() {
     <PermissionGuard recurso="impuestos">
       <PageHeader title="Ingresos Brutos" description="Gestión de padrones TXT de Ingresos Brutos." />
 
-      <section className="bg-card border rounded-lg overflow-hidden">
-        <header className="px-5 py-4 border-b">
-          <h3 className="font-display font-semibold text-base">Gestión de Padrones</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Cargá un padrón TXT para un impuesto determinado. Los padrones son archivos .txt.
-          </p>
-        </header>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex justify-end mb-4">
+        <BtnPrimary onClick={()=> setShowPadronPopup(true)} disabled={!puedeCrear}>
+          Cargar padrón
+        </BtnPrimary>
+      </div>
+
+      {showPadronPopup && (
+        <FormDialog
+          open
+          onClose={()=> { setShowPadronPopup(false); setFormError(null); }}
+          title="Cargar padrón TXT"
+          description="Cargá un padrón TXT para un impuesto determinado."
+          onSubmit={async ()=> { await cargarPadron(); setShowPadronPopup(false); }}
+          submitLabel="Cargar padrón"
+        >
+          <div className="space-y-4">
             <div>
               <Label htmlFor="ib-impuesto">Impuesto</Label>
               <select
@@ -373,20 +381,14 @@ function Page() {
                 disabled={!puedeCrear}
               />
             </div>
+            <div>
+              <Label>Archivo</Label>
+              <FileDropzone onFile={setFile} accept=".txt" />
+            </div>
+            {formError && <p className="text-sm text-red-600">{formError}</p>}
           </div>
-          <div>
-            <Label>Archivo (.txt)</Label>
-            <FileDropzone onFile={setFile} accept=".txt" />
-            <p className="text-xs text-muted-foreground mt-1">Solo se permiten archivos .txt</p>
-          </div>
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
-          <div className="flex justify-end">
-            <BtnPrimary onClick={cargarPadron} disabled={!puedeCrear}>
-              Cargar padrón
-            </BtnPrimary>
-          </div>
-        </div>
-      </section>
+        </FormDialog>
+      )}
 
       <section className="bg-card border rounded-lg p-5">
         <ReportesMock />

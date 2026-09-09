@@ -22,7 +22,7 @@ import type { ImpuestoAsignacion, TipoImpuesto } from "@/lib/api/types";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto, type ImpuestoPorCobrar } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/usuarios")({
-  head: () => ({ meta: [{ title: "Usuarios con impuestos — Admin — Moli" }] }),
+  head: () => ({ meta: [{ title: "Usuarios con impuestos â€” Admin â€” Moli" }] }),
   component: Page,
 });
 
@@ -35,7 +35,7 @@ function formatTasa(tasa: number) {
 }
 
 function montoLabel(asig: ImpuestoAsignacion) {
-  if (asig.monto === null) return "—";
+  if (asig.monto === null) return "â€”";
   return asig.tipo === "Porcentaje" ? `${formatTasa(asig.monto)}%` : `$ ${formatTasa(asig.monto)}`;
 }
 
@@ -53,7 +53,7 @@ function MensajeEstado({
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
         <AlertTriangle size={28} />
         <div>
-          <p className="font-semibold">No tenés permiso para ver esto</p>
+          <p className="font-semibold">No tenÃ©s permiso para ver esto</p>
           <p className="mt-1">{mensaje}</p>
         </div>
       </div>
@@ -64,7 +64,7 @@ function MensajeEstado({
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
         <AlertTriangle size={28} />
         <div>
-          <p className="font-semibold">Ocurrió un error al cargar las asignaciones</p>
+          <p className="font-semibold">OcurriÃ³ un error al cargar las asignaciones</p>
           <p className="mt-1">{mensaje}</p>
         </div>
         {onRetry && (
@@ -82,7 +82,7 @@ function MensajeEstado({
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
       <Inbox size={28} />
-      <p>No hay asignaciones que coincidan con la búsqueda.</p>
+      <p>No hay asignaciones que coincidan con la bÃºsqueda.</p>
     </div>
   );
 }
@@ -90,8 +90,6 @@ function MensajeEstado({
 type AsignacionForm = {
   clienteLegajo: string;
   impuestoId: string;
-  tipo: TipoImpuesto;
-  monto: string;
   estado: "Activo" | "Inactivo";
 };
 
@@ -108,38 +106,32 @@ function AsignacionFormModal({
   const [form, setForm] = useState<AsignacionForm>(() => ({
     clienteLegajo: asignacion?.clienteLegajo ?? "",
     impuestoId: asignacion?.impuestoId ?? "",
-    tipo: asignacion?.tipo ?? "Porcentaje",
-    monto:
-      asignacion?.monto === null || asignacion?.monto === undefined ? "" : String(asignacion.monto),
     estado: asignacion?.estado ?? "Activo",
   }));
 
-  const necesitaMonto = form.tipo !== "Otro";
   const legajoValido = /^[A-Z]{3}-\d{11}$/.test(form.clienteLegajo.trim());
-  const montoValido = !necesitaMonto || (form.monto.trim() !== "" && Number(form.monto) >= 0);
   const valido =
     form.clienteLegajo.trim() !== "" &&
     (!asignacion ? legajoValido : true) &&
-    form.impuestoId !== "" &&
-    montoValido;
+    form.impuestoId !== "";
 
   const guardar = () => {
     if (!valido) return;
-    onSave({ ...form, monto: necesitaMonto ? form.monto : "" });
+    onSave(form);
   };
 
   return (
     <FormDialog
       open
       onClose={onClose}
-      title={asignacion ? "Editar asignación" : "Nueva asignación de impuesto"}
+      title={asignacion ? "Editar asignaciÃ³n" : "Nueva asignaciÃ³n de impuesto"}
       description={
         asignacion
-          ? `Modificá la asignación de ${asignacion.clienteLegajo}.`
-          : "Asigná un impuesto activo a un cliente por su legajo."
+          ? `ModificÃ¡ la asignaciÃ³n de ${asignacion.clienteLegajo}.`
+          : "AsignÃ¡ un impuesto activo a un cliente por su legajo."
       }
       onSubmit={guardar}
-      submitLabel={asignacion ? "Guardar cambios" : "Crear asignación"}
+      submitLabel={asignacion ? "Guardar cambios" : "Crear asignaciÃ³n"}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -163,7 +155,7 @@ function AsignacionFormModal({
                 Formato LPF/LPJ-CUIT (ej: LPF-20111111111). Debe existir en clientes.
               </p>
               {form.clienteLegajo.trim() !== "" && !legajoValido && (
-                <p className="text-xs text-red-600 mt-1">Formato inválido. Ej: LPF-20111111111.</p>
+                <p className="text-xs text-red-600 mt-1">Formato invÃ¡lido. Ej: LPF-20111111111.</p>
               )}
             </>
           )}
@@ -176,25 +168,10 @@ function AsignacionFormModal({
             value={form.impuestoId}
             onChange={(e) => setForm({ ...form, impuestoId: e.target.value })}
           >
-            <option value="">Seleccionar…</option>
+            <option value="">Seleccionarâ€¦</option>
             {impuestosDisponibles.map((i) => (
               <option key={i.id} value={i.id}>
-                {i.codigo} — {i.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="as-tipo">Tipo</Label>
-          <select
-            id="as-tipo"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoImpuesto })}
-          >
-            {TIPOS_IMPUESTO.map((t) => (
-              <option key={t} value={t}>
-                {t}
+                {i.codigo} â€” {i.nombre}
               </option>
             ))}
           </select>
@@ -211,24 +188,10 @@ function AsignacionFormModal({
             <option value="Inactivo">Inactivo</option>
           </select>
         </div>
-        {necesitaMonto && (
-          <div className="sm:col-span-2">
-            <Label htmlFor="as-monto">Monto {form.tipo === "Porcentaje" ? "(%)" : "($)"}</Label>
-            <Input
-              id="as-monto"
-              type="number"
-              step="any"
-              min="0"
-              value={form.monto}
-              onChange={(e) => setForm({ ...form, monto: e.target.value })}
-              placeholder={form.tipo === "Porcentaje" ? "Ej: 35" : "Ej: 0.60"}
-            />
-          </div>
-        )}
       </div>
       {!valido && (
         <p className="text-xs text-muted-foreground">
-          Completá el legajo, el impuesto {necesitaMonto ? "y el monto" : ""} para poder guardar.
+          CompletÃ¡ el legajo, el impuesto {necesitaMonto ? "y el monto" : ""} para poder guardar.
         </p>
       )}
     </FormDialog>
@@ -236,19 +199,11 @@ function AsignacionFormModal({
 }
 
 function ImpuestosPorCobrarTab() {
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
+  const [subTab, setSubTab] = useState<"por_cobrar" | "historial">("por_cobrar");
 
   const filtrados = useMemo(() => {
-    return MOCK_IMPUESTOS_POR_COBRAR.filter((r) => {
-      if (desde && r.fechaLote < desde) return false;
-      if (hasta && r.fechaLote > hasta) return false;
-      return true;
-    });
-  }, [desde, hasta]);
-
-  const totalPendiente = filtrados.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0);
-  const totalPagado = filtrados.filter(r=>r.estado==="pagado").reduce((a,b)=>a+b.monto,0);
+    return MOCK_IMPUESTOS_POR_COBRAR;
+  }, []);
 
   const columns: Column<ImpuestoPorCobrar>[] = [
     { key: "usuario", label: "Usuario", filterable:true, render: (r)=> <span className="text-xs font-medium">{r.usuario}</span> },
@@ -279,24 +234,24 @@ function ImpuestosPorCobrarTab() {
         {(desde || hasta) && (
           <button type="button" onClick={()=>{setDesde("");setHasta("");}} className="h-9 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-accent">Limpiar</button>
         )}
-        <span className="text-xs text-muted-foreground">{filtrados.length} registro(s) · pendiente {formatImpuestoMonto(totalPendiente)} · pagado {formatImpuestoMonto(totalPagado)}</span>
+        <span className="text-xs text-muted-foreground">{filtrados.length} registro(s) Â· pendiente {formatImpuestoMonto(totalPendiente)} Â· pagado {formatImpuestoMonto(totalPagado)}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos por cobrar lote actual</div><div className="font-mono text-lg font-semibold mt-1">{formatImpuestoMonto(loteActual.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0))}</div><div className="text-[11px] text-muted-foreground">Lote completo al corte y por bandera · {loteActual.length} items</div></Card>
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Historial pagado</div><div className="font-mono text-lg font-semibold mt-1 text-emerald-700">{formatImpuestoMonto(totalPagado)}</div><div className="text-[11px] text-muted-foreground">Cuándo se pagaron · {historial.length} items</div></Card>
+        <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos por cobrar lote actual</div><div className="font-mono text-lg font-semibold mt-1">{formatImpuestoMonto(loteActual.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0))}</div><div className="text-[11px] text-muted-foreground">Lote completo al corte y por bandera Â· {loteActual.length} items</div></Card>
+        <Card className="p-3"><div className="text-xs text-muted-foreground">Historial pagado</div><div className="font-mono text-lg font-semibold mt-1 text-emerald-700">{formatImpuestoMonto(totalPagado)}</div><div className="text-[11px] text-muted-foreground">CuÃ¡ndo se pagaron Â· {historial.length} items</div></Card>
       </div>
 
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Impuestos por cobrar — lote actual (mock)</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Impuestos por cobrar â€” lote actual (mock)</h4>
         <DataTable columns={columns} data={loteActual} keyExtractor={(r)=> r.id} />
       </div>
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historial de lotes — cuándo se pagaron</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historial de lotes â€” cuÃ¡ndo se pagaron</h4>
         <DataTable columns={columns} data={historial} keyExtractor={(r)=> r.id} />
       </div>
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Todos (con filtros por período)</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Todos (con filtros por perÃ­odo)</h4>
         <DataTable columns={columns} data={filtrados} keyExtractor={(r)=> r.id} />
       </div>
     </div>
@@ -310,6 +265,8 @@ function Page() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
   const [estadoFilter, setEstadoFilter] = useState<"Activo" | "Inactivo" | "">("");
+  const [searchDesde, setSearchDesde] = useState("");
+  const [searchHasta, setSearchHasta] = useState("");
 
   const { can } = useCan();
   const puedeCrear = can("crear", "impuestos");
@@ -360,18 +317,16 @@ function Page() {
       if (editTarget) {
         await updateImpuestoAsignacion(editTarget.id, {
           impuesto_id: form.impuestoId || undefined,
-          tipo: form.tipo,
-          monto: form.tipo === "Otro" ? null : Number(form.monto),
           estado: form.estado,
-        });
+        } as any);
       } else {
         await createImpuestoAsignacion({
           cliente_legajo: form.clienteLegajo.trim(),
           impuesto_id: form.impuestoId,
-          tipo: form.tipo,
-          monto: form.tipo === "Otro" ? null : Number(form.monto),
+          tipo: "Porcentaje" as any,
+          monto: 0,
           estado: form.estado,
-        });
+        } as any);
       }
       invalidar();
       setShowNew(false);
@@ -382,7 +337,7 @@ function Page() {
       setConfirmAction({
         title: "No se pudo guardar",
         message: esFk
-          ? `El legajo "${form.clienteLegajo.trim()}" no existe en la tabla de clientes. Verificá el formato (LPF/LPJ-CUIT).`
+          ? `El legajo "${form.clienteLegajo.trim()}" no existe en la tabla de clientes. VerificÃ¡ el formato (LPF/LPJ-CUIT).`
           : (e as Error).message,
         confirmLabel: "Cerrar",
         variant: "danger",
@@ -442,7 +397,7 @@ function Page() {
             <div className="text-xs text-muted-foreground font-mono">{r.cliente.cuit}</div>
           </div>
         ) : (
-          "—"
+          "â€”"
         ),
     },
     {
@@ -455,7 +410,7 @@ function Page() {
             <div className="text-xs text-muted-foreground font-mono">{r.impuesto.codigo}</div>
           </div>
         ) : (
-          "—"
+          "â€”"
         ),
     },
     {
@@ -477,7 +432,7 @@ function Page() {
     },
     {
       key: "fechaAsignacion",
-      label: "Fecha de asignación",
+      label: "Fecha de asignaciÃ³n",
       sortable: true,
       render: (r) =>
         r.fechaAsignacion ? (
@@ -485,7 +440,7 @@ function Page() {
             {new Date(r.fechaAsignacion).toLocaleDateString("es-AR")}
           </span>
         ) : (
-          "—"
+          "â€”"
         ),
     },
   ];
@@ -497,7 +452,7 @@ function Page() {
         description="Asignaciones de impuestos a clientes."
         action={
           <BtnPrimary type="button" onClick={() => setShowNew(true)} disabled={!puedeCrear}>
-            <Plus size={14} /> Nueva asignación
+            <Plus size={14} /> Nueva asignaciÃ³n
           </BtnPrimary>
         }
       />
@@ -511,7 +466,7 @@ function Page() {
         <ImpuestosPorCobrarTab />
       ) : (
         <>
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+            <div className="mb-4 bg-card border rounded-lg p-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
           <Label htmlFor="buscar">Buscar</Label>
           <Input
@@ -521,7 +476,7 @@ function Page() {
               setSearchInput(e.target.value);
               setPage(0);
             }}
-            placeholder="Código o nombre del impuesto…"
+            placeholder="CÃ³digo o nombre del impuestoâ€¦"
           />
         </div>
         <div>
@@ -540,12 +495,20 @@ function Page() {
             <option value="Inactivo">Inactivo</option>
           </select>
         </div>
+        <div>
+          <Label htmlFor="f-desde">Fecha desde</Label>
+          <Input id="f-desde" type="date" value={searchDesde} onChange={(e)=> {setSearchDesde(e.target.value); setPage(0);}} className="h-9" />
+        </div>
+        <div>
+          <Label htmlFor="f-hasta">Fecha hasta</Label>
+          <Input id="f-hasta" type="date" value={searchHasta} onChange={(e)=> {setSearchHasta(e.target.value); setPage(0);}} className="h-9" />
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
-          Cargando asignaciones…
+          Cargando asignacionesâ€¦
         </div>
       ) : isError ? (
         <MensajeEstado
@@ -567,7 +530,7 @@ function Page() {
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>
-              {total} asignacion(es) · página {page + 1} de {totalPaginas}
+              {total} asignacion(es) Â· pÃ¡gina {page + 1} de {totalPaginas}
             </span>
             <div className="flex gap-2">
               <button
@@ -607,8 +570,8 @@ function Page() {
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        title="Eliminar asignación"
-        message={`¿Eliminar la asignación de ${confirmDelete?.clienteLegajo ?? ""}? Esta acción no se puede deshacer.`}
+        title="Eliminar asignaciÃ³n"
+        message={`Â¿Eliminar la asignaciÃ³n de ${confirmDelete?.clienteLegajo ?? ""}? Esta acciÃ³n no se puede deshacer.`}
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={eliminar}

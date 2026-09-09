@@ -982,6 +982,8 @@ function Page() {
             keyExtractor={(r) => r.id}
             pageSize={PAGE_SIZE}
             showDownloadButton={false}
+            showGlobalFilter={false}
+            dateFilterColumns={[]}
             hidePagination
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
