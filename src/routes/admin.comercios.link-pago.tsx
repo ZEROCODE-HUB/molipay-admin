@@ -16,6 +16,7 @@ const tabs: Tab[] = [
   { label: "Lotes de Acreditación", to: "/admin/comercios/link-pago/lotes" },
   { label: "Contracargos", to: "/admin/comercios/link-pago/contracargos" },
   { label: "Adelantos de Dinero", to: "/admin/comercios/link-pago/adelantos" },
+  { label: "Resumen general", to: "/admin/comercios/link-pago/resumen" },
 ];
 
 function LinkPagoLayout() {

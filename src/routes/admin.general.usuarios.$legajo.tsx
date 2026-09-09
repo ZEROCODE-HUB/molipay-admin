@@ -2988,7 +2988,7 @@ function ClienteDetailPage() {
                   value={
                     comisionesRealesQuery.isError
                       ? "Por definir"
-                      : String(comisionesRealesQuery.data?.rows.length ?? 0)
+                      : String((comisionesRealesQuery.data?.rows ?? []).filter((c) => c.tipo === "Depósito" || c.tipo === "Retiro").length)
                   }
                 />
                 <KpiCard
@@ -3021,18 +3021,40 @@ function ClienteDetailPage() {
                 />
                 <div className="rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Últimas comisiones</h4>
-                  {(comisionesRealesQuery.data?.rows.length ?? 0) === 0 ? (
-                    <p className="text-xs text-muted-foreground">Sin comisiones registradas.</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Operación</th><th className="px-2 py-1.5">Tipo</th><th className="px-2 py-1.5">Estado</th><th className="px-2 py-1.5 text-right">Detalle</th></tr></thead>
-                        <tbody>{(comisionesRealesQuery.data?.rows ?? []).slice(0,10).map((c) => (
-                          <tr key={c.id} className="border-b last:border-0"><td className="px-2 py-1.5 font-mono">{c.operacion}</td><td className="px-2 py-1.5">{c.tipo}</td><td className="px-2 py-1.5"><Badge tone={c.estado==="Habilitado"?"success":"neutral"}>{c.estado}</Badge></td><td className="px-2 py-1.5 text-right"><button onClick={()=>setComisionDetail(c)} className="inline-flex items-center gap-1 h-6 px-2 rounded border text-[11px] hover:bg-accent"><Eye size={11}/> Ver detalle</button></td></tr>
-                        ))}</tbody>
-                      </table>
-                    </div>
-                  )}
+                  {(() => {
+                    const comisionesFiltradas = (comisionesRealesQuery.data?.rows ?? []).filter((c) => c.tipo === "Depósito" || c.tipo === "Retiro");
+                    return comisionesFiltradas.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sin comisiones registradas.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Operación</th><th className="px-2 py-1.5">Tipo</th><th className="px-2 py-1.5">Estado</th><th className="px-2 py-1.5 text-right">Detalle</th></tr></thead>
+                          <tbody>{comisionesFiltradas.slice(0,10).map((c) => (
+                            <tr key={c.id} className="border-b last:border-0"><td className="px-2 py-1.5 font-mono">{c.operacion}</td><td className="px-2 py-1.5">{c.tipo}</td><td className="px-2 py-1.5"><Badge tone={c.estado==="Habilitado"?"success":"neutral"}>{c.estado}</Badge></td><td className="px-2 py-1.5 text-right"><button onClick={()=>setComisionDetail(c)} className="inline-flex items-center gap-1 h-6 px-2 rounded border text-[11px] hover:bg-accent"><Eye size={11}/> Ver detalle</button></td></tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="rounded-lg border border-border p-4 mt-3">
+                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comisiones Link de Pago / E-commerce</h4>
+                  <p className="text-[11px] text-muted-foreground mb-2">Se gestionan separadamente.</p>
+                  {(() => {
+                    const comisionesLink = (comisionesRealesQuery.data?.rows ?? []).filter((c) => c.tipo === "Link de pago" || c.tipo === "E-commerce");
+                    return comisionesLink.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sin comisiones de Link de Pago / E-commerce.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Tipo</th><th className="px-2 py-1.5">Porcentaje</th><th className="px-2 py-1.5">Estado</th></tr></thead>
+                          <tbody>{comisionesLink.slice(0,10).map((c) => (
+                            <tr key={c.id} className="border-b last:border-0"><td className="px-2 py-1.5">{c.tipo}</td><td className="px-2 py-1.5 font-mono">{c.porcentaje != null ? c.porcentaje + "%" : c.montoFijo != null ? "$ " + c.montoFijo : "—"}</td><td className="px-2 py-1.5"><Badge tone={c.estado==="Habilitado"?"success":"neutral"}>{c.estado}</Badge></td></tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <MiniDashboard
                   titulo="Impuestos recientes"

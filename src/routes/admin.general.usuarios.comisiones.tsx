@@ -41,6 +41,8 @@ export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
 
 const PAGE_SIZE = 10;
 
+const TIPOS_COMISION_USUARIOS: TipoOperacion[] = ["Depósito", "Retiro"];
+
 type Comision = {
   id: string;
   legajo: string;
@@ -170,7 +172,7 @@ function ComisionFormFields({
           value={draft.tipo}
           onChange={(e) => onChange({ ...draft, tipo: e.target.value as TipoOperacion })}
         >
-          {TIPOS_OPERACION.map((t) => (
+          {TIPOS_COMISION_USUARIOS.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -367,6 +369,8 @@ function ComisionesPage() {
     descripcion: c.descripcion ?? "",
   }));
 
+  const dataFiltrado = data.filter((c) => c.tipo === "Depósito" || c.tipo === "Retiro");
+
   const [draft, setDraft] = useState<ComisionDraft>({
     correo: "",
     cuit: "",
@@ -550,7 +554,7 @@ function ComisionesPage() {
         <>
           <DataTable
             columns={columns}
-            data={data}
+            data={dataFiltrado}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
@@ -714,7 +718,7 @@ const columns: Column<Comision>[] = [
     key: "tipo",
     label: "Operación",
     filterable: "enum",
-    filterOptions: [...TIPOS_OPERACION],
+    filterOptions: [...TIPOS_COMISION_USUARIOS],
     render: (r) => r.tipo,
   },
   {

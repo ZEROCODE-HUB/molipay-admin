@@ -63,6 +63,7 @@ import { Route as AdminGeneralMovimientosCobrosQrRouteImport } from './routes/ad
 import { Route as AdminGeneralAlertasParametrosBloqueosRouteImport } from './routes/admin.general.alertas.parametros-bloqueos'
 import { Route as AdminGeneralAlertasParametrosAlertasRouteImport } from './routes/admin.general.alertas.parametros-alertas'
 import { Route as AdminGeneralAlertasBloqueosRouteImport } from './routes/admin.general.alertas.bloqueos'
+import { Route as AdminComerciosLinkPagoResumenRouteImport } from './routes/admin.comercios.link-pago.resumen'
 import { Route as AdminComerciosLinkPagoLotesRouteImport } from './routes/admin.comercios.link-pago.lotes'
 import { Route as AdminComerciosLinkPagoContracargosRouteImport } from './routes/admin.comercios.link-pago.contracargos'
 import { Route as AdminComerciosLinkPagoAdelantosRouteImport } from './routes/admin.comercios.link-pago.adelantos'
@@ -381,6 +382,12 @@ const AdminGeneralAlertasBloqueosRoute =
     path: '/bloqueos',
     getParentRoute: () => AdminGeneralAlertasRoute,
   } as any)
+const AdminComerciosLinkPagoResumenRoute =
+  AdminComerciosLinkPagoResumenRouteImport.update({
+    id: '/resumen',
+    path: '/resumen',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
 const AdminComerciosLinkPagoLotesRoute =
   AdminComerciosLinkPagoLotesRouteImport.update({
     id: '/lotes',
@@ -523,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
+  '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -579,6 +587,7 @@ export interface FileRoutesByTo {
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
+  '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -652,6 +661,7 @@ export interface FileRoutesById {
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
+  '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
   '/admin/general/alertas/parametros-bloqueos': typeof AdminGeneralAlertasParametrosBloqueosRoute
@@ -726,6 +736,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/contracargos'
     | '/admin/comercios/link-pago/lotes'
+    | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -782,6 +793,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/contracargos'
     | '/admin/comercios/link-pago/lotes'
+    | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -854,6 +866,7 @@ export interface FileRouteTypes {
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/contracargos'
     | '/admin/comercios/link-pago/lotes'
+    | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
     | '/admin/general/alertas/parametros-bloqueos'
@@ -1271,6 +1284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGeneralAlertasBloqueosRouteImport
       parentRoute: typeof AdminGeneralAlertasRoute
     }
+    '/admin/comercios/link-pago/resumen': {
+      id: '/admin/comercios/link-pago/resumen'
+      path: '/resumen'
+      fullPath: '/admin/comercios/link-pago/resumen'
+      preLoaderRoute: typeof AdminComerciosLinkPagoResumenRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
     '/admin/comercios/link-pago/lotes': {
       id: '/admin/comercios/link-pago/lotes'
       path: '/lotes'
@@ -1461,6 +1481,7 @@ interface AdminComerciosLinkPagoRouteChildren {
   AdminComerciosLinkPagoAdelantosRoute: typeof AdminComerciosLinkPagoAdelantosRoute
   AdminComerciosLinkPagoContracargosRoute: typeof AdminComerciosLinkPagoContracargosRoute
   AdminComerciosLinkPagoLotesRoute: typeof AdminComerciosLinkPagoLotesRoute
+  AdminComerciosLinkPagoResumenRoute: typeof AdminComerciosLinkPagoResumenRoute
   AdminComerciosLinkPagoIndexRoute: typeof AdminComerciosLinkPagoIndexRoute
 }
 
@@ -1470,6 +1491,7 @@ const AdminComerciosLinkPagoRouteChildren: AdminComerciosLinkPagoRouteChildren =
     AdminComerciosLinkPagoContracargosRoute:
       AdminComerciosLinkPagoContracargosRoute,
     AdminComerciosLinkPagoLotesRoute: AdminComerciosLinkPagoLotesRoute,
+    AdminComerciosLinkPagoResumenRoute: AdminComerciosLinkPagoResumenRoute,
     AdminComerciosLinkPagoIndexRoute: AdminComerciosLinkPagoIndexRoute,
   }
 
