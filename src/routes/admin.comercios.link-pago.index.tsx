@@ -117,15 +117,13 @@ function EnlaceDetalle({ enlace, onClose }: { enlace: EnlacePago; onClose: () =>
 function Page() {
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
-  const [search, setSearch] = useState("");
-  const [estado, setEstado] = useState<string>("");
   const { can } = useCan();
   const puedeModificar = can("modificar","comercios");
   const puedeBorrar = can("borrar","comercios");
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["enlaces-pago", page, search, estado],
-    queryFn: () => listEnlaces({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estado || undefined }),
+    queryKey: ["enlaces-pago", page],
+    queryFn: () => listEnlaces({ page, pageSize: PAGE_SIZE }),
     staleTime: 15_000,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
@@ -196,13 +194,6 @@ function Page() {
   return (
     <PermissionGuard recurso="comercios">
       <PageHeader title="Links de Pago" description="Links gestionados por MoliPay. PayWay crea en Pendiente; Admin gestiona ciclo completo (ver detalle para método/tarjeta/cuotas)." />
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input className="h-10 px-3 rounded-md border bg-card text-sm flex-1 min-w-[200px]" placeholder="Buscar enlace, comercio, usuario, cajero..." value={search} onChange={(e)=>{ setSearch(e.target.value); setPage(0); }} />
-        <select className="h-10 px-3 rounded-md border bg-card text-sm" value={estado} onChange={(e)=>{ setEstado(e.target.value); setPage(0); }}>
-          <option value="">Todos los estados</option>
-          {ESTADOS_ENLACE.map((e)=><option key={e} value={e}>{e}</option>)}
-        </select>
-      </div>
       {isLoading ? <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground"><span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2"/>Cargando enlaces…</div>
       : isError ? <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700"><AlertTriangle size={28}/><p>{err?.message ?? "Error"}</p><button onClick={()=>refetch()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground">Reintentar</button></div>
       : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay enlaces de pago.</p><p className="text-xs">Crea un enlace en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>

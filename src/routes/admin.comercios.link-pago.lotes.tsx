@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Eye, AlertTriangle, Inbox, Calendar, Store, Wallet, Receipt, Percent, ArrowUpRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Eye, Inbox, Calendar, Store, Receipt, Percent, ArrowUpRight } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -19,21 +19,24 @@ export const Route = createFileRoute("/admin/comercios/link-pago/lotes")({
   }),
 });
 
-// Tipos — Lote generado por MoliPay (corte diario), no por el comercio
+// Tipos — Lote generado por MoliPay (corte diario) por bandera/método de pago
 type EstadoLote = "Acreditado" | "Rechazado" | "Contracargo";
 type Lote = {
   id: string;
   fecha: string; // DD/MM/YYYY
   comercio: string;
   legajo: string;
+  bandera: string; // Visa, Mastercard, Amex, etc.
   cantidadOps: number;
   importeBruto: number;
   impuestos: number;
-  tasasIntereses: number;
-  comisiones: number;
+  tasaPayWayPct: number;
+  tasaPayWayMonto: number;
+  tasaMoliPayPct: number;
+  tasaMoliPayMonto: number;
   importeFinal: number;
   estado: EstadoLote;
-  linksIds: string[]; // ids de links incluidos
+  linksIds: string[];
 };
 
 const MOCK_LOTES: Lote[] = [
@@ -42,26 +45,66 @@ const MOCK_LOTES: Lote[] = [
     fecha: "07/09/2026",
     comercio: "Distribuidora Delta SRL",
     legajo: "LPJ-30778899001",
+    bandera: "Visa",
     cantidadOps: 10,
     importeBruto: 1_250_000,
     impuestos: 26_250,
-    tasasIntereses: 12_500,
-    comisiones: 37_500,
-    importeFinal: 1_173_750,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 37_500,
+    tasaMoliPayPct: 2,
+    tasaMoliPayMonto: 25_000,
+    importeFinal: 1_161_250,
     estado: "Contracargo",
     linksIds: ["LP-8841", "LP-8842", "LP-8843", "LP-8844", "LP-8845", "LP-8846", "LP-8847", "LP-8848", "LP-8849", "LP-8850"],
+  },
+  {
+    id: "LOTE-2026-09-07-002",
+    fecha: "07/09/2026",
+    comercio: "Distribuidora Delta SRL",
+    legajo: "LPJ-30778899001",
+    bandera: "Mastercard",
+    cantidadOps: 6,
+    importeBruto: 780_000,
+    impuestos: 16_380,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 23_400,
+    tasaMoliPayPct: 2,
+    tasaMoliPayMonto: 15_600,
+    importeFinal: 724_620,
+    estado: "Acreditado",
+    linksIds: ["LP-8851", "LP-8852", "LP-8853", "LP-8854", "LP-8855", "LP-8856"],
+  },
+  {
+    id: "LOTE-2026-09-07-003",
+    fecha: "07/09/2026",
+    comercio: "Distribuidor del Tercer Red",
+    legajo: "LPJ-30889900112",
+    bandera: "Visa",
+    cantidadOps: 12,
+    importeBruto: 1_500_000,
+    impuestos: 31_500,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 45_000,
+    tasaMoliPayPct: 2.5,
+    tasaMoliPayMonto: 37_500,
+    importeFinal: 1_386_000,
+    estado: "Acreditado",
+    linksIds: ["LP-8860", "LP-8861", "LP-8862", "LP-8863", "LP-8864", "LP-8865", "LP-8866", "LP-8867", "LP-8868", "LP-8869", "LP-8870", "LP-8871"],
   },
   {
     id: "LOTE-2026-09-06-014",
     fecha: "06/09/2026",
     comercio: "Tech Zeta SRL",
     legajo: "LPJ-30667788990",
+    bandera: "Amex",
     cantidadOps: 9,
     importeBruto: 890_000,
     impuestos: 18_690,
-    tasasIntereses: 8_900,
-    comisiones: 26_700,
-    importeFinal: 835_710,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 26_700,
+    tasaMoliPayPct: 2,
+    tasaMoliPayMonto: 17_800,
+    importeFinal: 826_810,
     estado: "Acreditado",
     linksIds: ["LP-8801", "LP-8802", "LP-8803", "LP-8804", "LP-8805", "LP-8806", "LP-8807", "LP-8808", "LP-8809"],
   },
@@ -70,12 +113,15 @@ const MOCK_LOTES: Lote[] = [
     fecha: "06/09/2026",
     comercio: "Alimentos Eta SA",
     legajo: "LPJ-30778899001",
+    bandera: "Cabal",
     cantidadOps: 4,
     importeBruto: 320_000,
     impuestos: 6_720,
-    tasasIntereses: 3_200,
-    comisiones: 9_600,
-    importeFinal: 300_480,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 9_600,
+    tasaMoliPayPct: 1.5,
+    tasaMoliPayMonto: 4_800,
+    importeFinal: 298_880,
     estado: "Acreditado",
     linksIds: ["LP-8810", "LP-8811", "LP-8812", "LP-8813"],
   },
@@ -84,12 +130,15 @@ const MOCK_LOTES: Lote[] = [
     fecha: "05/09/2026",
     comercio: "Constructora Alpha SA",
     legajo: "LPJ-30112233445",
+    bandera: "Visa",
     cantidadOps: 6,
     importeBruto: 540_000,
     impuestos: 11_340,
-    tasasIntereses: 5_400,
-    comisiones: 16_200,
-    importeFinal: 507_060,
+    tasaPayWayPct: 3,
+    tasaPayWayMonto: 16_200,
+    tasaMoliPayPct: 2,
+    tasaMoliPayMonto: 10_800,
+    importeFinal: 501_660,
     estado: "Rechazado",
     linksIds: ["LP-8701", "LP-8702", "LP-8703", "LP-8704", "LP-8705", "LP-8706"],
   },
@@ -98,7 +147,7 @@ const MOCK_LOTES: Lote[] = [
 function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
   if (e === "Contracargo") return "danger";
-  return "warn"; // Rechazado
+  return "warn";
 }
 
 function fmt(n: number) {
@@ -106,7 +155,8 @@ function fmt(n: number) {
 }
 
 function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
-  const totalDescuentos = lote.impuestos + lote.tasasIntereses + lote.comisiones;
+  const totalDescuentos = lote.impuestos + lote.tasaPayWayMonto + lote.tasaMoliPayMonto;
+  const menosImpuestos = lote.importeBruto - lote.impuestos;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -114,31 +164,28 @@ function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div className="min-w-0">
             <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Receipt size={18}/> Detalle del lote</h3>
-            <p className="text-sm font-mono text-muted-foreground">{lote.id} · {lote.fecha} · {lote.comercio}</p>
+            <p className="text-sm font-mono text-muted-foreground">{lote.id} · {lote.fecha} · {lote.comercio} · {lote.bandera}</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">✕</button>
         </div>
         <div className="p-6 space-y-4">
-          {/* Concepto diferenciado */}
-          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-            <strong>Lote de Acreditación</strong> generado por <strong>MoliPay</strong> (corte diario). No es el lote creado por el comercio. Determina qué importe acreditar al comercio descontando impuestos/tasas/comisiones. Ejemplo del 07/09: 10 links, 9 acreditables, 1 contracargo → se acredita 9.
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="p-3"><div className="text-xs text-muted-foreground flex items-center gap-1"><Calendar size={12}/> Fecha</div><div className="font-mono font-semibold mt-1">{lote.fecha}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground flex items-center gap-1"><Store size={12}/> Comercio</div><div className="font-semibold mt-1 truncate">{lote.comercio}</div><div className="font-mono text-xs text-muted-foreground">{lote.legajo}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Operaciones</div><div className="font-mono text-xl font-semibold mt-1">{lote.cantidadOps}</div><div className="text-xs text-muted-foreground truncate">{lote.linksIds.slice(0, 3).join(", ")}…</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Estado</div><div className="mt-1"><Badge tone={tone(lote.estado)}>{lote.estado}</Badge></div><div className="text-xs text-muted-foreground mt-1">{lote.estado === "Contracargo" ? "Al menos 1 link con contracargo" : lote.estado === "Rechazado" ? "Pendiente definición funcional" : "Dinero en cuenta recaudadora"}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Bandera</div><div className="font-semibold mt-1">{lote.bandera}</div><div className="text-xs text-muted-foreground">Método de pago</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Estado</div><div className="mt-1"><Badge tone={tone(lote.estado)}>{lote.estado}</Badge></div><div className="font-mono text-xs mt-1">{lote.cantidadOps} ops</div></Card>
           </div>
 
-          {/* Breakdown cómo se llegó al importe final */}
           <Card className="p-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Cómo se llegó al importe a acreditar</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Detalle financiero del lote</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Importe bruto (suma links acreditables)</span><span className="font-mono font-semibold">{fmt(lote.importeBruto)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Importe bruto</span><span className="font-mono font-semibold">{fmt(lote.importeBruto)}</span></div>
               <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Receipt size={12}/> Impuestos</span><span className="font-mono text-red-600">- {fmt(lote.impuestos)}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Percent size={12}/> Tasas / intereses</span><span className="font-mono text-red-600">- {fmt(lote.tasasIntereses)}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Wallet size={12}/> Comisiones MoliPay</span><span className="font-mono text-red-600">- {fmt(lote.comisiones)}</span></div>
+              <div className="flex justify-between text-xs font-medium"><span className="text-muted-foreground">Menos impuestos</span><span className="font-mono">{fmt(menosImpuestos)}</span></div>
+              <div className="border-t my-2"/>
+              <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Percent size={12}/> Tasa de interés PayWay ({lote.tasaPayWayPct}%)</span><span className="font-mono text-red-600">- {fmt(lote.tasaPayWayMonto)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Percent size={12}/> Tasa de interés MoliPay ({lote.tasaMoliPayPct}%)</span><span className="font-mono text-red-600">- {fmt(lote.tasaMoliPayMonto)}</span></div>
+              <p className="text-[11px] text-muted-foreground">Tasa MoliPay = tasa cobrada al comercio − tasa PayWay a MoliPay (neto).</p>
               <div className="border-t my-2"/>
               <div className="flex justify-between text-xs text-muted-foreground"><span>Total descuentos</span><span className="font-mono">- {fmt(totalDescuentos)}</span></div>
               <div className="flex justify-between text-base font-semibold"><span>Importe final a acreditar</span><span className="font-mono text-emerald-700">{fmt(lote.importeFinal)}</span></div>
@@ -146,7 +193,6 @@ function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
             </div>
           </Card>
 
-          {/* Links incluidos */}
           <Card className="p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Links / pagos incluidos ({lote.cantidadOps})</h4>
             <div className="flex flex-wrap gap-1.5">
@@ -154,7 +200,6 @@ function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
                 <span key={id} className="inline-flex items-center rounded-full border bg-muted/50 px-2.5 py-0.5 text-xs font-mono">{id}</span>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Lote de Links (creado por comercio) ≠ Lote de Acreditación (creado por MoliPay). Este lote acredita 9 de 10 links del 07/09 — el restante fue contracargo.</p>
           </Card>
         </div>
       </div>
@@ -162,22 +207,23 @@ function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
   );
 }
 
+type ResumenComercio = {
+  comercio: string;
+  legajo: string;
+  cantidadLotes: number;
+  cantidadOps: number;
+  totalBruto: number;
+  totalImpuestos: number;
+  totalTasas: number;
+  totalFinal: number;
+};
+
 function Page() {
-  const [q, setQ] = useState("");
-  const [estado, setEstado] = useState<string>("");
   const [detail, setDetail] = useState<Lote | null>(null);
   const [confirm, setConfirm] = useState<{title:string;message:string} | null>(null);
+  const [tab, setTab] = useState<"lotes" | "resumen">("lotes");
   const { can } = useCan();
   const puedeGestionar = can("modificar","comercios");
-
-  const filtered = MOCK_LOTES.filter((l) => {
-    if (estado && l.estado !== estado) return false;
-    if (q.trim()) {
-      const s = q.trim().toLowerCase();
-      if (!`${l.id} ${l.comercio} ${l.legajo} ${l.fecha}`.toLowerCase().includes(s)) return false;
-    }
-    return true;
-  });
 
   const getActions = (r: Lote): ActionItem[] => [
     { label:"Ver detalle", icon: Eye, onClick:()=> setDetail(r) },
@@ -190,41 +236,82 @@ function Page() {
   const columns: Column<Lote>[] = [
     { key:"fecha", label:"Fecha", render:(r)=> <span className="font-mono text-xs tabular-nums">{r.fecha}</span> },
     { key:"id", label:"Lote", render:(r)=> <span className="font-mono text-xs font-semibold">{r.id}</span> },
-    { key:"comercio", label:"Comercio", filterable:true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"comercio", label:"Comercio / Legajo", filterable:true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"bandera", label:"Bandera", filterable:"enum", filterOptions:["Visa","Mastercard","Amex","Cabal"], render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
     { key:"cantidadOps", label:"Ops", render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOps}</span> },
     { key:"importeFinal", label:"Importe a acreditar", render:(r)=> <span className={`font-mono tabular-nums font-semibold ${r.estado==="Contracargo" ? "text-red-600" : "text-emerald-700"}`}>{fmt(r.importeFinal)}</span> },
     { key:"estado", label:"Estado", filterable:"enum", filterOptions:["Acreditado","Rechazado","Contracargo"], render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
   ];
 
+  const resumenData: ResumenComercio[] = useMemo(() => {
+    const map = new Map<string, ResumenComercio>();
+    for (const l of MOCK_LOTES) {
+      const key = `${l.comercio}__${l.legajo}`;
+      const prev = map.get(key);
+      if (!prev) {
+        map.set(key, {
+          comercio: l.comercio,
+          legajo: l.legajo,
+          cantidadLotes: 1,
+          cantidadOps: l.cantidadOps,
+          totalBruto: l.importeBruto,
+          totalImpuestos: l.impuestos,
+          totalTasas: l.tasaPayWayMonto + l.tasaMoliPayMonto,
+          totalFinal: l.importeFinal,
+        });
+      } else {
+        prev.cantidadLotes += 1;
+        prev.cantidadOps += l.cantidadOps;
+        prev.totalBruto += l.importeBruto;
+        prev.totalImpuestos += l.impuestos;
+        prev.totalTasas += l.tasaPayWayMonto + l.tasaMoliPayMonto;
+        prev.totalFinal += l.importeFinal;
+      }
+    }
+    return Array.from(map.values());
+  }, []);
+
+  const resumenColumns: Column<ResumenComercio>[] = [
+    { key:"comercio", label:"Comercio / Legajo", filterable:true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[180px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"cantidadLotes", label:"Lotes", render:(r)=> <span className="font-mono tabular-nums">{r.cantidadLotes}</span> },
+    { key:"cantidadOps", label:"Ops", render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOps}</span> },
+    { key:"totalBruto", label:"Total bruto", render:(r)=> <span className="font-mono text-xs">{fmt(r.totalBruto)}</span> },
+    { key:"totalFinal", label:"Total a pagar", render:(r)=> <span className="font-mono font-semibold text-emerald-700">{fmt(r.totalFinal)}</span> },
+  ];
+
   return (
     <PermissionGuard recurso="comercios">
-      <PageHeader title="Lotes de Acreditación" description="Corte diario generado por MoliPay: qué pagos se acreditan al comercio y con qué descuentos (no es el lote creado por el comercio)." />
+      <PageHeader title="Lotes de Acreditación" description="Corte diario generado por MoliPay por bandera: qué pagos se acreditan al comercio y con qué descuentos." />
 
-      {/* Diferenciación conceptual */}
-      <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground mb-4">
-        <strong>Lote de Acreditación</strong> = generado por MoliPay para acreditar. <strong>Lote de Links</strong> = creado por el comercio. No confundir. Ver ejemplo 07/09 en detalle.
+      <div className="flex gap-2 mb-4 border-b">
+        <button
+          onClick={() => setTab("lotes")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab==="lotes" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          Lotes por bandera
+        </button>
+        <button
+          onClick={() => setTab("resumen")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab==="resumen" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          Resumen por comercio
+        </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input className="h-10 px-3 rounded-md border bg-card text-sm flex-1 min-w-[200px]" placeholder="Buscar lote, comercio, legajo, fecha..." value={q} onChange={(e)=> setQ(e.target.value)} />
-        <select className="h-10 px-3 rounded-md border bg-card text-sm" value={estado} onChange={(e)=> setEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          <option value="Acreditado">Acreditado</option>
-          <option value="Rechazado">Rechazado</option>
-          <option value="Contracargo">Contracargo</option>
-        </select>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Acreditados</div><div className="font-mono text-xl font-semibold mt-1 text-emerald-700">{MOCK_LOTES.filter(l=>l.estado==="Acreditado").length}</div></Card>
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{MOCK_LOTES.filter(l=>l.estado==="Contracargo").length}</div></Card>
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{MOCK_LOTES.filter(l=>l.estado==="Rechazado").length}</div></Card>
-      </div>
-
-      {filtered.length===0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay lotes para el filtro.</p></div>
+      {tab === "lotes" ? (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Acreditados</div><div className="font-mono text-xl font-semibold mt-1 text-emerald-700">{MOCK_LOTES.filter(l=>l.estado==="Acreditado").length}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{MOCK_LOTES.filter(l=>l.estado==="Contracargo").length}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{MOCK_LOTES.filter(l=>l.estado==="Rechazado").length}</div></Card>
+          </div>
+          <DataTable columns={columns} data={MOCK_LOTES} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
+        </>
       ) : (
-        <DataTable columns={columns} data={filtered} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
+        <>
+          <p className="text-sm text-muted-foreground mb-3">Total consolidado que corresponde pagar a cada comercio (suma de todos sus lotes por bandera).</p>
+          <DataTable columns={resumenColumns} data={resumenData} keyExtractor={(r)=> r.legajo + r.comercio} />
+        </>
       )}
 
       {detail && <LoteDetalle lote={detail} onClose={()=> setDetail(null)} />}
