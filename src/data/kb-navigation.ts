@@ -34,6 +34,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Adelantos de Dinero — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/adelantos)
    - Contracargos — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/contracargos)
    - Lotes de Acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes)
+   - Resumen general — Link de Pago — Admin — Moli  (/admin/comercios/link-pago/resumen)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
 
 • Configuración:
@@ -183,6 +184,10 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   {
     "path": "/admin/comercios/link-pago/lotes",
     "title": "Lotes de Acreditación — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/resumen",
+    "title": "Resumen general — Link de Pago — Admin — Moli"
   },
   {
     "path": "/admin/comercios/transferencia",
