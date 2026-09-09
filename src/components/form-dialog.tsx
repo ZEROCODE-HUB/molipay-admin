@@ -21,7 +21,7 @@ export function FormDialog({
   children: ReactNode;
   onSubmit: () => void;
   submitLabel?: string;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl" | "2xl";
   hideCancel?: boolean;
   cancelLabel?: string;
 }) {
@@ -35,7 +35,8 @@ export function FormDialog({
   }, [open, onClose]);
 
   if (!open) return null;
-  const w = size === "lg" ? "max-w-2xl" : "max-w-md";
+  const w =
+    size === "2xl" ? "max-w-5xl" : size === "xl" ? "max-w-4xl" : size === "lg" ? "max-w-2xl" : "max-w-md";
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />

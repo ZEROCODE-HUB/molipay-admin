@@ -120,7 +120,7 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative bg-card rounded-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-start z-10">
           <div>
             <h3 className="font-display text-lg font-semibold">Detalle de comercio</h3>
@@ -391,7 +391,7 @@ function ComercioFormModal({
       }
       onSubmit={guardar}
       submitLabel={comercio ? "Guardar cambios" : "Crear comercio"}
-      size="lg"
+      size="xl"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -521,73 +521,80 @@ function ComercioFormModal({
         <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Banderas habilitadas (métodos de pago)
         </h4>
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="text-xs text-muted-foreground mb-3">
           Seleccioná los métodos de pago habilitados para este comercio. Al habilitar una bandera se habilitan los campos de comisión. La comisión neta se calcula automáticamente.
         </p>
-        <div className="space-y-3">
-          {metodosDisponibles.map((m) => {
-            const st = metodosState[m.id];
-            const enabled = st?.enabled ?? false;
-            const molipay = st?.comisionMolipay ?? "";
-            const payway = st?.comisionPayway ?? "";
-            const neta =
-              molipay !== "" || payway !== ""
-                ? (parseFloat(molipay.replace(",", ".") || "0") || 0) - (parseFloat(payway.replace(",", ".") || "0") || 0)
-                : null;
-            return (
-              <div key={m.id} className={`rounded-lg border p-3 ${enabled ? "bg-card border-primary/30" : "bg-muted/30 border-border"}`}>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    onChange={(e) => toggleMetodo(m.id, e.target.checked)}
-                    className="h-4 w-4 rounded border-input accent-primary"
-                  />
-                  <span className="font-medium text-sm">{m.nombre}</span>
-                  <span className="text-xs text-muted-foreground">· {m.tipo}</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div>
-                    <Label htmlFor={`mp-molipay-${m.id}`}>Comisión MoliPay (%)</Label>
+        <div className="overflow-x-auto">
+          <div className="min-w-[680px]">
+            <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground border-b">
+              <span>Bandera / Método de pago</span>
+              <span className="text-right">Comisión MoliPay</span>
+              <span className="text-right">Comisión PayWay (Pasarela)</span>
+              <span className="text-right">Comisión neta</span>
+            </div>
+            <div className="space-y-2 mt-2">
+              {metodosDisponibles.map((m) => {
+                const st = metodosState[m.id];
+                const enabled = st?.enabled ?? false;
+                const molipay = st?.comisionMolipay ?? "";
+                const payway = st?.comisionPayway ?? "";
+                const neta =
+                  molipay !== "" || payway !== ""
+                    ? (parseFloat(molipay.replace(",", ".") || "0") || 0) - (parseFloat(payway.replace(",", ".") || "0") || 0)
+                    : null;
+                return (
+                  <div
+                    key={m.id}
+                    className={`grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 items-center rounded-lg border px-3 py-2.5 ${enabled ? "bg-card border-primary/30" : "bg-muted/30 border-border"}`}
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={(e) => toggleMetodo(m.id, e.target.checked)}
+                        className="h-4 w-4 rounded border-input accent-primary shrink-0"
+                      />
+                      <span className="font-medium text-sm truncate">{m.nombre}</span>
+                      <span className="text-xs text-muted-foreground truncate">· {m.tipo}</span>
+                    </label>
                     <Input
                       id={`mp-molipay-${m.id}`}
+                      aria-label={`Comisión MoliPay ${m.nombre}`}
                       value={molipay}
                       onChange={(e) => updateComision(m.id, "comisionMolipay", e.target.value)}
                       disabled={!enabled}
                       placeholder="0.00"
-                      className="h-9"
+                      className="h-9 text-right font-mono tabular-nums"
                       inputMode="decimal"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor={`mp-payway-${m.id}`}>Comisión PayWay (Pasarela) (%)</Label>
                     <Input
                       id={`mp-payway-${m.id}`}
+                      aria-label={`Comisión PayWay ${m.nombre}`}
                       value={payway}
                       onChange={(e) => updateComision(m.id, "comisionPayway", e.target.value)}
                       disabled={!enabled}
                       placeholder="0.00"
-                      className="h-9"
+                      className="h-9 text-right font-mono tabular-nums"
                       inputMode="decimal"
                     />
-                  </div>
-                  <div>
-                    <Label>Comisión neta (%)</Label>
-                    <div className="h-9 rounded-md border border-input bg-muted px-3 flex items-center text-sm font-mono tabular-nums">
+                    <div
+                      className="h-9 rounded-md border border-input bg-muted px-3 flex items-center justify-end text-sm font-mono tabular-nums"
+                      title="MoliPay − PayWay"
+                    >
                       {enabled && neta !== null ? `${neta.toFixed(2)}%` : "—"}
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">MoliPay − PayWay</p>
                   </div>
+                );
+              })}
+              {metodosDisponibles.length === 0 && (
+                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+                  No hay métodos de pago disponibles. Creálos en <span className="font-semibold">Gestión → Métodos de pago</span>.
                 </div>
-              </div>
-            );
-          })}
-          {metodosDisponibles.length === 0 && (
-            <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
-              No hay métodos de pago disponibles. Creálos en <span className="font-semibold">Gestión → Métodos de pago</span>.
+              )}
             </div>
-          )}
+          </div>
         </div>
+        <p className="text-[11px] text-muted-foreground mt-2">Comisión neta = MoliPay − PayWay</p>
       </div>
     </FormDialog>
   );
