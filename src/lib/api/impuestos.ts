@@ -8,6 +8,7 @@ import {
   toIbNormalizacionPreview,
 } from "./mappers";
 import type {
+  AmbitoImpuesto,
   Impuesto,
   ImpuestoRow,
   ImpuestoInput,
@@ -30,10 +31,38 @@ export type ImpuestoFilters = Pagination & {
   search?: string;
   estado?: "Activo" | "Inactivo";
   tipo?: "Porcentaje" | "Fijo" | "Otro";
+  ambito?: AmbitoImpuesto;
 };
 
 const IMPUESTOS_COLUMNS =
   "id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at, impuestos_alicuotas(id, impuesto_id, codigo, tasa, descripcion, estado, created_at)";
+
+const IMPUESTOS_COLUMNS_WITH_AMBITO =
+  "id, codigo, nombre, descripcion, tipo, monto, estado, ambito, created_at, updated_at, impuestos_alicuotas(id, impuesto_id, codigo, tasa, descripcion, estado, created_at)";
+
+function isAmbitoColumnError(error: unknown): boolean {
+  const msg = (error as { message?: string })?.message ?? String(error ?? "");
+  return /ambito/i.test(msg) && /column|does not exist|schema cache/i.test(msg);
+}
+
+function persistAmbitoLocal(id: string, ambito: AmbitoImpuesto) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem("impuestos_ambito_map");
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    map[id] = ambito;
+    window.localStorage.setItem("impuestos_ambito_map", JSON.stringify(map));
+  } catch {}
+}
+
+function encodeDescripcionConAmbito(
+  descripcion: string | null | undefined,
+  ambito: AmbitoImpuesto | undefined
+): string | null {
+  const clean = (descripcion ?? "").trim().replace(/^[(Interno|Externo)]s*/, "");
+  if (!ambito) return clean || null;
+  return clean ? "[" + ambito + "] " + clean : "[" + ambito + "]";
+}
 
 export async function listImpuestos(filters: ImpuestoFilters): Promise<Page<Impuesto>> {
   const sb = requireSupabase();
@@ -69,12 +98,19 @@ export async function listImpuestos(filters: ImpuestoFilters): Promise<Page<Impu
 
 export async function getImpuesto(id: string): Promise<Impuesto | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("impuestos")
-    .select(IMPUESTOS_COLUMNS)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new DataAccessError(error);
+  let data: unknown = null;
+  let error: unknown = null;
+  {
+    const res = await sb.from("impuestos").select(IMPUESTOS_COLUMNS_WITH_AMBITO).eq("id", id).maybeSingle();
+    data = res.data;
+    error = res.error;
+    if (error && isAmbitoColumnError(error)) {
+      const fallback = await sb.from("impuestos").select(IMPUESTOS_COLUMNS).eq("id", id).maybeSingle();
+      data = fallback.data;
+      error = fallback.error;
+    }
+  }
+  if (error) throw new DataAccessError(error as { message: string });
   return data
     ? toImpuesto(data as ImpuestoRow & { impuestos_alicuotas?: AlicuotaRow[] | null })
     : null;
@@ -84,44 +120,113 @@ export type ImpuestoCreateInput = ImpuestoInput;
 
 export async function createImpuesto(input: ImpuestoCreateInput): Promise<Impuesto> {
   const sb = requireSupabase();
-  const { data: impuesto, error: impuestoError } = await sb
-    .from("impuestos")
-    .insert({
+  const ambito = (input.ambito as AmbitoImpuesto | undefined) ?? "Externo";
+  const descripcionClean = input.descripcion?.trim() ?? null;
+
+  // Try with ambito column first
+  let impuestoId: string | null = null;
+  {
+    const payload: Record<string, unknown> = {
       codigo: input.codigo.trim(),
       nombre: input.nombre.trim(),
-      descripcion: input.descripcion?.trim() ?? null,
+      descripcion: descripcionClean,
       tipo: input.tipo,
       monto: input.monto,
       estado: input.estado,
-    })
-    .select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at")
-    .single();
-  if (impuestoError) throw new DataAccessError(impuestoError);
+      ambito,
+    };
+    const { data, error } = await sb
+      .from("impuestos")
+      .insert(payload)
+      .select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at")
+      .single();
+    if (!error && data) {
+      impuestoId = (data as { id: string }).id;
+      persistAmbitoLocal(impuestoId, ambito);
+    } else if (error && isAmbitoColumnError(error)) {
+      const fallbackDesc = encodeDescripcionConAmbito(descripcionClean, ambito);
+      const { data: data2, error: error2 } = await sb
+        .from("impuestos")
+        .insert({
+          codigo: input.codigo.trim(),
+          nombre: input.nombre.trim(),
+          descripcion: fallbackDesc,
+          tipo: input.tipo,
+          monto: input.monto,
+          estado: input.estado,
+        })
+        .select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at")
+        .single();
+      if (error2) throw new DataAccessError(error2);
+      impuestoId = (data2 as { id: string }).id;
+      persistAmbitoLocal(impuestoId, ambito);
+    } else if (error) {
+      throw new DataAccessError(error as { message: string });
+    }
+  }
 
-  return getImpuesto(impuesto.id) as Promise<Impuesto>;
+  if (!impuestoId) throw new DataAccessError({ message: "No se pudo crear impuesto" } as unknown as { message: string });
+  // persist also if fallback succeeded already
+  persistAmbitoLocal(impuestoId, ambito);
+  return getImpuesto(impuestoId) as Promise<Impuesto>;
 }
 
 export type ImpuestoUpdateInput = Partial<ImpuestoInput>;
 
 export async function updateImpuesto(id: string, input: ImpuestoUpdateInput): Promise<Impuesto> {
   const sb = requireSupabase();
+  const ambito = input.ambito as AmbitoImpuesto | undefined;
   const payload: Record<string, unknown> = {};
   if (input.codigo !== undefined) payload.codigo = input.codigo.trim();
   if (input.nombre !== undefined) payload.nombre = input.nombre.trim();
-  if (input.descripcion !== undefined) payload.descripcion = input.descripcion?.trim() ?? null;
+  if (input.descripcion !== undefined) {
+    // if ambito is being updated, encode descripcion with ambito prefix as fallback
+    if (ambito) {
+      payload.descripcion = encodeDescripcionConAmbito(input.descripcion?.trim() ?? null, ambito);
+    } else {
+      payload.descripcion = input.descripcion?.trim() ?? null;
+    }
+  } else if (ambito && input.descripcion === undefined) {
+    // need to fetch current descripcion to encode? Simplify: just handle ambito column separately
+    // Do nothing for descripcion here; will be handled via ambito column or local storage
+  }
   if (input.tipo !== undefined) payload.tipo = input.tipo;
   if (input.monto !== undefined) payload.monto = input.monto;
   if (input.estado !== undefined) payload.estado = input.estado;
+  if (ambito !== undefined) payload.ambito = ambito;
 
-  const { data, error } = await sb
-    .from("impuestos")
-    .update(payload)
-    .eq("id", id)
-    .select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at")
-    .single();
-  if (error) throw new DataAccessError(error);
+  let data: { id: string } | null = null;
+  let error: unknown = null;
+  {
+    const res = await sb.from("impuestos").update(payload).eq("id", id).select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at").single();
+    data = res.data as { id: string } | null;
+    error = res.error;
+    if (error && isAmbitoColumnError(error)) {
+      const fallbackPayload: Record<string, unknown> = { ...payload };
+      delete fallbackPayload.ambito;
+      // if ambito requested, ensure descripcion encodes it
+      if (ambito) {
+        // fetch current descripcion if not provided
+        let descForEncode: string | null = null;
+        if (input.descripcion !== undefined) descForEncode = input.descripcion?.trim() ?? null;
+        else {
+          // try to get current from DB via getImpuesto local fallback? Use existing payload descripcion if set else null
+          descForEncode = (fallbackPayload.descripcion as string | null) ?? null;
+        }
+        fallbackPayload.descripcion = encodeDescripcionConAmbito(descForEncode, ambito);
+      }
+      const res2 = await sb.from("impuestos").update(fallbackPayload).eq("id", id).select("id, codigo, nombre, descripcion, tipo, monto, estado, created_at, updated_at").single();
+      data = res2.data as { id: string } | null;
+      error = res2.error;
+      if (!error && ambito) persistAmbitoLocal(id, ambito);
+    } else if (!error && ambito) {
+      persistAmbitoLocal(id, ambito);
+    }
+  }
+  if (error) throw new DataAccessError(error as { message: string });
+  if (ambito) persistAmbitoLocal(id, ambito);
 
-  return getImpuesto(data.id) as Promise<Impuesto>;
+  return getImpuesto((data as { id: string }).id) as Promise<Impuesto>;
 }
 
 export async function setImpuestoEstado(

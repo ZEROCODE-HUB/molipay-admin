@@ -885,6 +885,9 @@ export type EventoNotificacionFiltros = {
 
 // --- impuestos -------------------------------------------------------------
 
+export type AmbitoImpuesto = "Externo" | "Interno";
+export const AMBITOS_IMPUESTO: AmbitoImpuesto[] = ["Externo", "Interno"];
+
 export type TipoImpuesto = "Porcentaje" | "Fijo" | "Otro";
 export type EstadoImpuesto = "Activo" | "Inactivo";
 
@@ -896,6 +899,7 @@ export type ImpuestoRow = {
   tipo: TipoImpuesto;
   monto: number | null;
   estado: EstadoImpuesto;
+  ambito?: AmbitoImpuesto | string | null;
   created_at: string;
   updated_at: string;
 };
@@ -908,6 +912,7 @@ export type Impuesto = {
   tipo: TipoImpuesto;
   monto: number | null;
   estado: EstadoImpuesto;
+  ambito: AmbitoImpuesto;
   alicuotas: Alicuota[];
   createdAt: string;
   updatedAt: string;
@@ -920,6 +925,7 @@ export type ImpuestoInput = {
   tipo: TipoImpuesto;
   monto: number | null;
   estado: EstadoImpuesto;
+  ambito?: AmbitoImpuesto | string | null;
 };
 
 export type ImpuestoFilters = Pagination & {

@@ -39,6 +39,7 @@ import type {
 } from "@/lib/api/types";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
 import { metodosPagoIniciales } from "@/data/metodos-pago";
+import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/comercios/gestion/")({
   component: Page,
@@ -235,6 +236,32 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
                 </table>
               </div>
             )}
+          </Card>
+
+                    <Card className="p-5">
+            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Impuestos totales por pagar
+            </h4>
+            {(() => {
+              const porCobrar = MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.legajo === comercio.legajo);
+              let total = porCobrar.filter((r) => r.estado === "pendiente").reduce((a,b)=>a+b.monto,0);
+              if (porCobrar.length === 0) {
+                const base = (comercio.metodosConfig?.length ?? 0) * 8500;
+                const comisionSum = (comercio.metodosConfig ?? []).reduce((a,c)=> a + c.comisionMolipay * 1000, 0);
+                total = base + comisionSum + 3200;
+                if (total === 3200) total = 12400;
+              }
+              const pendientes = porCobrar.filter((r)=> r.estado==="pendiente").length || (comercio.metodosConfig?.length ?? 0);
+              return (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-mono font-semibold tabular-nums">{formatImpuestoMonto(total)}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Suma mock de impuestos del comercio · {pendientes} concepto(s) pendiente(s) · calculado desde metodosConfig o fijo</div>
+                  </div>
+                  <Badge tone="warn">Por pagar</Badge>
+                </div>
+              );
+            })()}
           </Card>
 
           <Card className="p-0">

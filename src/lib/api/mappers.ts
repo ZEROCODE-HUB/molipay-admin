@@ -1,4 +1,5 @@
 import type {
+  AmbitoImpuesto,
   AdminUser,
   AdminUserRow,
   ApiEndpoint,
@@ -423,6 +424,35 @@ export function toEventoNotificacion(
   };
 }
 
+function parseAmbitoImpuesto(r: ImpuestoRow): AmbitoImpuesto {
+  const raw = (r as unknown as { ambito?: unknown }).ambito;
+  if (raw === "Interno" || raw === "Externo") return raw as AmbitoImpuesto;
+  if (typeof r.descripcion === "string") {
+    if (r.descripcion.startsWith("[Interno]")) return "Interno";
+    if (r.descripcion.startsWith("[Externo]")) return "Externo";
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const mapRaw = window.localStorage.getItem("impuestos_ambito_map");
+      if (mapRaw) {
+        const map = JSON.parse(mapRaw) as Record<string, string>;
+        const v = map[r.id];
+        if (v === "Interno" || v === "Externo") return v as AmbitoImpuesto;
+      }
+    } catch {}
+  }
+  return "Externo";
+}
+
+function cleanDescripcionImpuesto(r: ImpuestoRow): string | null {
+  if (!r.descripcion) return null;
+  if (r.descripcion.startsWith("[Interno]") || r.descripcion.startsWith("[Externo]")) {
+    const cleaned = r.descripcion.replace(/^\[(Interno|Externo)\]\s*/, "");
+    return cleaned || null;
+  }
+  return r.descripcion;
+}
+
 export function toImpuesto(
   r: ImpuestoRow & { impuestos_alicuotas?: AlicuotaRow[] | null },
 ): Impuesto {
@@ -433,10 +463,11 @@ export function toImpuesto(
     id: r.id,
     codigo: r.codigo,
     nombre: r.nombre,
-    descripcion: r.descripcion,
+    descripcion: cleanDescripcionImpuesto(r),
     tipo: r.tipo,
     monto: r.monto,
     estado: r.estado,
+    ambito: parseAmbitoImpuesto(r),
     alicuotas,
     createdAt: r.created_at,
     updatedAt: r.updated_at,

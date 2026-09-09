@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { PageHeader, Card, Badge } from "@/components/portal-shell";
+import { DataTable, type Column } from "@/components/data-table";
+import { getImpuestosPorComercio, formatImpuestoMonto, type ImpuestoPorComercio } from "@/data/impuestos-por-cobrar";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Wallet, Landmark, Percent, ArrowUpRight, Calendar } from "lucide-react";
 
@@ -52,6 +54,23 @@ function Page() {
         <Card className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpRight size={12}/> Neto PayWay</div><div className="font-mono text-xl font-semibold mt-1">{fmt(kpi.netoPayWay)}</div><div className="text-[11px] text-muted-foreground mt-1">A pagar a pasarela</div></Card>
         <Card className="p-4"><div className="text-xs text-muted-foreground">Impuestos</div><div className="font-mono text-xl font-semibold mt-1">{fmt(kpi.impuestos)}</div><div className="text-xs text-muted-foreground mt-1">Total impuestos período</div></Card>
       </div>
+
+
+      <Card className="p-4 mb-4">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Impuestos por pagar por comercio</h4>
+        {(() => {
+          const data = getImpuestosPorComercio();
+          const cols: Column<ImpuestoPorComercio>[] = [
+            { key: "comercio", label: "Comercio / Legajo", filterable:true, render: (r)=> <div><div className="font-semibold text-sm">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+            { key: "pendiente", label: "Impuesto pendiente", render: (r)=> <span className="font-mono font-semibold text-amber-700">{formatImpuestoMonto(r.pendiente)}</span> },
+            { key: "pagado", label: "Pagado", render: (r)=> <span className="font-mono text-emerald-700">{formatImpuestoMonto(r.pagado)}</span> },
+            { key: "total", label: "Total", render: (r)=> <span className="font-mono font-semibold">{formatImpuestoMonto(r.total)}</span> },
+            { key: "detalle", label: "Detalle", render: (r)=> <span className="text-xs text-muted-foreground">{r.detalle.map(d=> d.impuesto + " " + d.bandera + " " + d.loteId).join(", ").slice(0,80)}...</span> },
+          ];
+          return <DataTable columns={cols} data={data} keyExtractor={(r)=> r.legajo} />;
+        })()}
+        <p className="text-[11px] text-muted-foreground mt-2">Mock: misma data que en gesti�n. Usa tabla por comercio mostrando impuesto pendiente y detalle.</p>
+      </Card>
 
       <Card className="p-4">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Resultado económico del período</h4>

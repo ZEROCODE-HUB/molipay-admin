@@ -120,6 +120,7 @@ import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useEstadosMovimiento } from "@/hooks/useEstados";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { FormDialog } from "@/components/form-dialog";
+import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
   head: () => ({
@@ -2908,18 +2909,61 @@ function ClienteDetailPage() {
           )}
 
           {activeTab === "impuestos" && (
-            <Seccion
-              titulo="Impuestos asignados"
-              loading={impuestosQuery.isLoading}
-              error={impuestosQuery.isError ? impuestosQuery.error : null}
-              onRetry={impuestosQuery.refetch}
-              vacio={impuestosQuery.rows.length === 0}
-            >
-              <TablaImpuestos
-                rows={impuestosQuery.rows}
-                onVerDetalles={(a) => setImpuestoDetail(a)}
-              />
-            </Seccion>
+            <>
+              <Seccion
+                titulo="Impuestos asignados"
+                loading={impuestosQuery.isLoading}
+                error={impuestosQuery.isError ? impuestosQuery.error : null}
+                onRetry={impuestosQuery.refetch}
+                vacio={impuestosQuery.rows.length === 0}
+              >
+                <TablaImpuestos
+                  rows={impuestosQuery.rows}
+                  onVerDetalles={(a) => setImpuestoDetail(a)}
+                />
+              </Seccion>
+              {(() => {
+                const mockForLegajo = MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.legajo === legajo);
+                const pendientes = mockForLegajo.filter((r) => r.estado === "pendiente");
+                const pagados = mockForLegajo.filter((r) => r.estado === "pagado");
+                const fallbackPend = pendientes.length ? pendientes : MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.estado === "pendiente").slice(0, 2).map((r) => ({ ...r, legajo }));
+                const fallbackPag = pagados.length ? pagados : MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.estado === "pagado").slice(0, 2).map((r) => ({ ...r, legajo }));
+                const pendRows = pendientes.length ? pendientes : fallbackPend;
+                const pagRows = pagados.length ? pagados : fallbackPag;
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Impuestos pendientes de pago</h4>
+                      {pendRows.length === 0 ? <p className="text-xs text-muted-foreground">Sin pendientes.</p> : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Impuesto</th><th className="px-2 py-1.5">Lote</th><th className="px-2 py-1.5 text-right">Monto</th><th className="px-2 py-1.5">Bandera</th></tr></thead>
+                            <tbody>{pendRows.map((r) => (
+                              <tr key={r.id} className="border-b last:border-0"><td className="px-2 py-1.5 font-medium">{r.impuesto}</td><td className="px-2 py-1.5 font-mono">{r.loteId}</td><td className="px-2 py-1.5 text-right font-mono">{formatImpuestoMonto(r.monto)}</td><td className="px-2 py-1.5">{r.bandera}</td></tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-2">Mock tasa variable � lote correspondiente</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Impuestos pagados</h4>
+                      {pagRows.length === 0 ? <p className="text-xs text-muted-foreground">Sin pagados.</p> : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead><tr className="border-b text-left uppercase tracking-wide text-muted-foreground"><th className="px-2 py-1.5">Impuesto</th><th className="px-2 py-1.5">Lote</th><th className="px-2 py-1.5 text-right">Monto</th><th className="px-2 py-1.5">Fecha lote</th></tr></thead>
+                            <tbody>{pagRows.map((r) => (
+                              <tr key={r.id} className="border-b last:border-0"><td className="px-2 py-1.5 font-medium">{r.impuesto}</td><td className="px-2 py-1.5 font-mono">{r.loteId}</td><td className="px-2 py-1.5 text-right font-mono">{formatImpuestoMonto(r.monto)}</td><td className="px-2 py-1.5 font-mono">{r.fechaLote}</td></tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-2">Detalle y lote correspondiente (mock)</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
           )}
 
           {activeTab === "subcuentas" && (
@@ -3068,6 +3112,24 @@ function ClienteDetailPage() {
                   ]}
                   datos={impuestosQuery.rows.slice(0, 10)}
                 />
+                {(() => {
+                  const porCobrar = MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.legajo === legajo && r.estado === "pendiente").slice(0, 10);
+                  const fallback = porCobrar.length ? porCobrar : MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.estado === "pendiente").slice(0, 5);
+                  const rows = porCobrar.length ? porCobrar : fallback;
+                  return (
+                    <MiniDashboard
+                      titulo="Impuestos por cobrar"
+                      columnas={[
+                        { label: "Impuesto", render: (r: typeof rows[number]) => r.impuesto },
+                        { label: "Lote", render: (r: typeof rows[number]) => <span className="font-mono text-[11px]">{r.loteId}</span> },
+                        { label: "Bandera", render: (r: typeof rows[number]) => r.bandera },
+                        { label: "Monto", render: (r: typeof rows[number]) => <span className="font-mono">{formatImpuestoMonto(r.monto)}</span> },
+                        { label: "Estado", render: (r: typeof rows[number]) => r.estado },
+                      ]}
+                      datos={rows}
+                    />
+                  );
+                })()}
                 <MiniDashboard
                   titulo="Alertas y bloqueos recientes"
                   columnas={[

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Eye, Power, PowerOff, Edit3, Trash2, Plus, X, AlertTriangle, Inbox } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -23,7 +23,7 @@ import {
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { Impuesto, TipoImpuesto, Alicuota } from "@/lib/api/types";
+import type { Impuesto, TipoImpuesto, Alicuota, AmbitoImpuesto } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/")({
   component: Page,
@@ -36,6 +36,7 @@ const PAGE_SIZE = 10;
 const ALICUOTA_PAGE_SIZE = 5;
 
 const TIPOS_IMPUESTO: TipoImpuesto[] = ["Porcentaje", "Fijo", "Otro"];
+const AMBITOS_IMPUESTO: AmbitoImpuesto[] = ["Externo", "Interno"];
 
 function estadoTone(estado: "Activo" | "Inactivo"): "success" | "neutral" {
   return estado === "Activo" ? "success" : "neutral";
@@ -446,6 +447,7 @@ function DetalleModal({ imp, onClose }: { imp: Impuesto; onClose: () => void }) 
             <Field label="Código" value={<span className="font-mono">{imp.codigo}</span>} />
             <Field label="Nombre" value={imp.nombre} />
             <Field label="Descripción" value={imp.descripcion ?? "—"} />
+            <Field label="�mbito" value={<Badge tone={imp.ambito === "Interno" ? "success" : "neutral"}>{imp.ambito}</Badge>} />
             <Field label="Tipo" value={imp.tipo} />
             <Field
               label="Monto"
@@ -503,6 +505,7 @@ type ImpuestoForm = {
   tipo: TipoImpuesto;
   monto: string;
   estado: "Activo" | "Inactivo";
+  ambito: AmbitoImpuesto;
 };
 
 function ImpuestoFormModal({
@@ -521,6 +524,7 @@ function ImpuestoFormModal({
     tipo: impuesto?.tipo ?? "Porcentaje",
     monto: impuesto?.monto === null || impuesto?.monto === undefined ? "" : String(impuesto.monto),
     estado: impuesto?.estado ?? "Activo",
+    ambito: (impuesto?.ambito as AmbitoImpuesto) ?? "Externo",
   }));
 
   const necesitaMonto = form.tipo !== "Otro";
@@ -605,6 +609,22 @@ function ImpuestoFormModal({
             <option value="Inactivo">Inactivo</option>
           </select>
         </div>
+        <div>
+          <Label htmlFor="im-ambito">�mbito</Label>
+          <select
+            id="im-ambito"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={form.ambito}
+            onChange={(e) => setForm({ ...form, ambito: e.target.value as AmbitoImpuesto })}
+          >
+            {AMBITOS_IMPUESTO.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">Externo=neutral, Interno=success</p>
+        </div>
         {necesitaMonto && (
           <div className="sm:col-span-2">
             <Label htmlFor="im-monto">Monto {form.tipo === "Porcentaje" ? "(%)" : "($)"}</Label>
@@ -640,6 +660,7 @@ function Page() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
   const [estadoFilter, setEstadoFilter] = useState<"Activo" | "Inactivo" | "">("");
+  const [tab, setTab] = useState<"externos" | "internos">("externos");
 
   const { can } = useCan();
   const puedeCrear = can("crear", "impuestos");
@@ -652,6 +673,14 @@ function Page() {
     search,
     estado: estadoFilter || undefined,
   });
+
+  const filteredRows = useMemo(() => {
+    const target: AmbitoImpuesto = tab === "internos" ? "Interno" : "Externo";
+    return rows.filter((r) => (r.ambito ?? "Externo") === target);
+  }, [rows, tab]);
+
+  const externosCount = useMemo(() => rows.filter((r) => (r.ambito ?? "Externo") === "Externo").length, [rows]);
+  const internosCount = useMemo(() => rows.filter((r) => (r.ambito ?? "Externo") === "Interno").length, [rows]);
 
   const err = error instanceof DataAccessError ? error : null;
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -694,6 +723,7 @@ function Page() {
       tipo: form.tipo,
       monto: necesitaMonto ? Number(form.monto) : null,
       estado: form.estado,
+      ambito: form.ambito,
     };
     try {
       if (editTarget) {
@@ -811,6 +841,37 @@ function Page() {
         }
       />
 
+      <div className="flex gap-1 border-b border-border mb-4">
+        <button
+          type="button"
+          onClick={() => {
+            setTab("externos");
+            setPage(0);
+          }}
+          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+            tab === "externos"
+              ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Externos {externosCount > 0 ? "(" + externosCount + ")" : ""}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTab("internos");
+            setPage(0);
+          }}
+          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+            tab === "internos"
+              ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Internos {internosCount > 0 ? "(" + internosCount + ")" : ""}
+        </button>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
           <Label htmlFor="buscar">Buscar</Label>
@@ -859,7 +920,7 @@ function Page() {
         <>
           <DataTable
             columns={columns}
-            data={rows}
+            data={filteredRows}
             keyExtractor={(r) => r.id}
             pageSize={PAGE_SIZE}
             showDownloadButton={false}

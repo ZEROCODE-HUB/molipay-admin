@@ -1,43 +1,33 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Plus,
-  PlayCircle,
   Power,
   PowerOff,
   X,
-  Search,
-  ShieldCheck,
-  MousePointerClick,
-  AlertTriangle,
   Inbox,
-  type LucideIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { Badge, Input, Label, BtnPrimary, BtnOutline } from "@/components/portal-shell";
-import { KpiCard } from "@/components/kpi-card";
+import { Badge, Input, Label, BtnPrimary } from "@/components/portal-shell";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useCan } from "@/lib/permissions";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useDcExcepciones, useDcSyncRetroactivos } from "@/hooks/useDcExcepciones";
+import { useDcExcepciones } from "@/hooks/useDcExcepciones";
 import {
   createDcExcepcion,
   createDcExcepcionAmbos,
   setDcExcepcionEstado,
-  createDcSyncRetroactivo,
-  setDcSyncRetroactivoAplicado,
 } from "@/lib/api/dc-excepciones";
-import { DataAccessError } from "@/lib/api/errors";
 import type {
   DcExcepcion,
   DireccionDcExcepcion,
   TipoDcExcepcion,
-  DcSyncRetroactivo,
 } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/debitos-creditos")({
@@ -46,30 +36,6 @@ export const Route = createFileRoute("/admin/comercios/impuestos/debitos-credito
 });
 
 const PAGE_SIZE = 10;
-
-type SrInfo = {
-  icon: LucideIcon;
-  title: string;
-  text: string;
-};
-
-const srInfo: SrInfo[] = [
-  {
-    icon: Search,
-    title: "Qué va a hacer el preview",
-    text: "Analiza asociaciones e históricos. Revisa asociaciones de Débitos y Créditos y cargos históricos dentro del rango indicado.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "No persiste cambios",
-    text: "El primer paso sólo devuelve el impacto esperado para que puedas validar antes de aplicar.",
-  },
-  {
-    icon: MousePointerClick,
-    title: "Aplicación manual posterior",
-    text: "Si el preview es correcto, desde este mismo modal podés confirmar la ejecución real.",
-  },
-];
 
 function MensajeEstado({
   tipo,
@@ -152,90 +118,6 @@ const blankAlta: AltaForm = {
   autorizacion: "",
 };
 
-// --- Sync retroactivo ------------------------------------------------------------
-
-type SyncPreviewKPIs = {
-  usuariosAnalizados?: number;
-  impuestosActualizados?: number;
-  cargosAjustados?: number;
-  registrosOmitidos?: number;
-  errores?: number;
-  diferencias?: string;
-};
-
-function SyncPreviewModal({
-  sync,
-  onClose,
-  onConfirm,
-}: {
-  sync: DcSyncRetroactivo;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const kpis = (sync.previewJson ?? {}) as SyncPreviewKPIs;
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start z-10">
-          <div>
-            <h3 className="font-display font-semibold text-lg">
-              Preview de sincronización retroactiva
-            </h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              CUIT {sync.cuit} · {formatFecha(sync.desde)} →{" "}
-              {sync.hasta ? formatFecha(sync.hasta) : "presente"}
-              {sync.aplicado && (
-                <span className="ml-2 inline-flex">
-                  <Badge tone="success">Ya aplicado</Badge>
-                </span>
-              )}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <KpiCard label="Usuarios analizados" value={kpis.usuariosAnalizados ?? 0} />
-            <KpiCard label="Impuestos actualizados" value={kpis.impuestosActualizados ?? 0} />
-            <KpiCard label="Cargos ajustados" value={kpis.cargosAjustados ?? 0} />
-            <KpiCard label="Omitidos" value={kpis.registrosOmitidos ?? 0} />
-            <KpiCard label="Con error" value={kpis.errores ?? 0} />
-            <KpiCard label="Diferencia total" value={kpis.diferencias ?? "$ 0"} />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {srInfo.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.title} className="rounded-lg border border-border bg-muted/30 p-4">
-                  <Icon size={20} className="text-primary mb-2" />
-                  <h4 className="text-sm font-semibold">{s.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{s.text}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 bg-card border-t px-6 py-4 flex justify-end gap-2">
-          <BtnOutline type="button" onClick={onClose}>
-            Cerrar
-          </BtnOutline>
-          {!sync.aplicado && (
-            <BtnPrimary type="button" onClick={onConfirm}>
-              Confirmar ejecución
-            </BtnPrimary>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // --- Página ------------------------------------------------------------------------
 
 function Page() {
@@ -264,19 +146,7 @@ function Page() {
   const [alta, setAlta] = useState<AltaForm>(blankAlta);
   const [altaGuardando, setAltaGuardando] = useState(false);
 
-  // Sync retroactivo
-  const [showSync, setShowSync] = useState(false);
-  const [srForm, setSrForm] = useState({ cuit: "", desde: "", hasta: "" });
-  const [srGuardando, setSrGuardando] = useState(false);
-  const [previewSync, setPreviewSync] = useState<DcSyncRetroactivo | null>(null);
-  const [confirmEjecucion, setConfirmEjecucion] = useState(false);
-
-  const { rows: syncRows, refetch: refetchSync } = useDcSyncRetroactivos({
-    page: 0,
-    pageSize: 5,
-  });
-
-  const err = error instanceof DataAccessError ? error : null;
+  const err: any = error ?? null;
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -315,7 +185,7 @@ function Page() {
   const guardarAlta = async () => {
     if (!altaValido || altaGuardando) return;
     setAltaGuardando(true);
-    const base = {
+    const base: any = {
       email: alta.email,
       cuit: alta.cuit,
       tipo: "Alta manual" as TipoDcExcepcion,
@@ -323,6 +193,8 @@ function Page() {
       vigencia_desde: alta.desde,
       vigencia_hasta: alta.hasta || null,
       autorizacion_codigo: alta.autorizacion || null,
+      // Tasa fija 1,2% total (0,6% + 0,6%) - se fuerza internamente, no configurable por el usuario
+      tasa: 1.2,
     };
     try {
       let cantidad: number;
@@ -345,8 +217,8 @@ function Page() {
           : "Excepción creada correctamente.",
       );
     } catch (e) {
-      const dErr = e as DataAccessError;
-      const esCheck = dErr.code === "23514";
+      const dErr: any = e as any;
+      const esCheck = dErr?.code === "23514";
       setConfirmAction({
         title: "No se pudo guardar",
         message: esCheck
@@ -358,52 +230,6 @@ function Page() {
       });
     }
     setAltaGuardando(false);
-  };
-
-  const srValido = /^[0-9]{11}$/.test(srForm.cuit.replace(/[^0-9]/g, "")) && srForm.desde !== "";
-
-  const generarSyncPreview = async () => {
-    if (!srValido || srGuardando) return;
-    setSrGuardando(true);
-    try {
-      const sync = await createDcSyncRetroactivo({
-        cuit: srForm.cuit.replace(/[^0-9]/g, ""),
-        desde: srForm.desde,
-        hasta: srForm.hasta || null,
-      });
-      setShowSync(false);
-      setSrForm({ cuit: "", desde: "", hasta: "" });
-      setPreviewSync(sync);
-      void refetchSync();
-    } catch (e) {
-      setConfirmAction({
-        title: "No se pudo generar el preview",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
-    }
-    setSrGuardando(false);
-  };
-
-  const confirmarEjecucion = async () => {
-    if (!previewSync) return;
-    try {
-      const actualizado = await setDcSyncRetroactivoAplicado(previewSync.id, true);
-      setPreviewSync(actualizado);
-      void refetchSync();
-      setBanner("Sincronización retroactiva aplicada correctamente.");
-    } catch (e) {
-      setConfirmAction({
-        title: "No se pudo aplicar",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
-    }
-    setConfirmEjecucion(false);
   };
 
   const getActions = (row: DcExcepcion): ActionItem[] => [
@@ -466,49 +292,11 @@ function Page() {
     },
   ];
 
-  const syncColumns: Column<DcSyncRetroactivo>[] = [
-    {
-      key: "cuit",
-      label: "CUIT",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
-    },
-    {
-      key: "desde",
-      label: "Desde",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{formatFecha(r.desde)}</span>,
-    },
-    {
-      key: "hasta",
-      label: "Hasta",
-      render: (r) => <span className="font-mono tabular-nums text-xs">{formatFecha(r.hasta)}</span>,
-    },
-    {
-      key: "aplicado",
-      label: "Estado",
-      render: (r) =>
-        r.aplicado ? <Badge tone="success">Aplicado</Badge> : <Badge tone="warn">Pendiente</Badge>,
-    },
-    {
-      key: "acciones-preview",
-      label: "",
-      render: (r) =>
-        r.aplicado ? null : (
-          <button
-            type="button"
-            className="text-xs font-medium text-primary hover:underline"
-            onClick={() => setPreviewSync(r)}
-          >
-            Ver preview
-          </button>
-        ),
-    },
-  ];
-
   return (
     <PermissionGuard recurso="impuestos">
       <PageHeader
         title="Débitos y créditos"
-        description="Excepciones manuales y sincronización retroactiva de impuestos débito/crédito."
+        description="Excepciones manuales de impuestos débito/crédito. Este impuesto se presenta una vez por semana."
         action={
           <BtnPrimary type="button" onClick={() => setShowAlta(true)} disabled={!puedeCrear}>
             <Plus size={14} /> Nueva excepción
@@ -524,6 +312,10 @@ function Page() {
           </button>
         </div>
       )}
+
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 mb-4">
+        Este impuesto se presenta una vez por semana.
+      </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
@@ -605,32 +397,6 @@ function Page() {
         </>
       )}
 
-      {/* Sincronización retroactiva */}
-      <section className="bg-card border rounded-lg p-5 space-y-4 mt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-display font-semibold text-base">Sincronización retroactiva</h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Analiza históricos de un CUIT en un rango de fechas. Primero generá un preview; nada
-              se aplica hasta que lo confirmes.
-            </p>
-          </div>
-          <BtnPrimary type="button" onClick={() => setShowSync(true)} disabled={!puedeCrear}>
-            <PlayCircle size={16} /> Ejecutar análisis
-          </BtnPrimary>
-        </div>
-
-        {syncRows.length > 0 && (
-          <DataTable
-            columns={syncColumns}
-            data={syncRows}
-            keyExtractor={(r) => r.id}
-            pageSize={5}
-            showDownloadButton={false}
-          />
-        )}
-      </section>
-
       {/* Modal: nueva excepción */}
       {showAlta && (
         <FormDialog
@@ -641,7 +407,13 @@ function Page() {
           onSubmit={guardarAlta}
           submitLabel={altaGuardando ? "Guardando…" : "Crear excepción"}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            <p className="font-semibold">Tasa fija: 0,6% + 0,6% = 1,2% total</p>
+            <p className="text-xs text-blue-700 mt-1">
+              Este impuesto se presenta una vez por semana.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
               <Label htmlFor="ex-email">Email</Label>
               <Input
@@ -707,6 +479,7 @@ function Page() {
                 value={alta.desde}
                 onChange={(e) => setAlta({ ...alta, desde: e.target.value })}
               />
+              <p className="text-[11px] text-muted-foreground mt-1">Presentación semanal.</p>
             </div>
             <div>
               <Label htmlFor="ex-hasta">Vigencia hasta (opcional)</Label>
@@ -716,6 +489,7 @@ function Page() {
                 value={alta.hasta}
                 onChange={(e) => setAlta({ ...alta, hasta: e.target.value })}
               />
+              <p className="text-[11px] text-muted-foreground mt-1">Presentación semanal.</p>
             </div>
           </div>
           {!altaValido && (
@@ -725,86 +499,6 @@ function Page() {
           )}
         </FormDialog>
       )}
-
-      {/* Modal: sync retroactivo */}
-      {showSync && (
-        <FormDialog
-          open
-          onClose={() => setShowSync(false)}
-          title="Sincronización retroactiva de Débitos y Créditos"
-          description="Ingresá el CUIT y el rango de fechas a analizar."
-          onSubmit={generarSyncPreview}
-          submitLabel={srGuardando ? "Generando…" : "Generar preview"}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="sr-cuit">CUIT</Label>
-              <Input
-                id="sr-cuit"
-                value={srForm.cuit}
-                onChange={(e) => setSrForm({ ...srForm, cuit: e.target.value })}
-                placeholder="20111111111"
-                inputMode="numeric"
-              />
-            </div>
-            <div>
-              <Label htmlFor="sr-desde">Desde</Label>
-              <Input
-                id="sr-desde"
-                type="date"
-                value={srForm.desde}
-                onChange={(e) => setSrForm({ ...srForm, desde: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="sr-hasta">Hasta (opcional)</Label>
-              <Input
-                id="sr-hasta"
-                type="date"
-                value={srForm.hasta}
-                onChange={(e) => setSrForm({ ...srForm, hasta: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {srInfo.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.title} className="rounded-lg border border-border bg-muted/30 p-4">
-                  <Icon size={20} className="text-primary mb-2" />
-                  <h4 className="text-sm font-semibold">{s.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{s.text}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          {!srValido && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Ingresá un CUIT de 11 dígitos y la fecha inicial.
-            </p>
-          )}
-        </FormDialog>
-      )}
-
-      {previewSync && (
-        <SyncPreviewModal
-          sync={previewSync}
-          onClose={() => setPreviewSync(null)}
-          onConfirm={() => setConfirmEjecucion(true)}
-        />
-      )}
-
-      <ConfirmDialog
-        open={confirmEjecucion}
-        onClose={() => setConfirmEjecucion(false)}
-        title="Confirmar ejecución"
-        message="¿Aplicar la sincronización retroactiva? Los cambios serán definitivos."
-        confirmLabel="Confirmar ejecución"
-        variant="default"
-        onConfirm={confirmarEjecucion}
-      />
 
       {confirmAction && (
         <ConfirmDialog

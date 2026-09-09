@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Eye, Power, PowerOff, Edit3, Trash2, Plus, AlertTriangle, Inbox } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { PageHeader, Badge, BtnPrimary, Input, Label } from "@/components/portal-shell";
+import { PageHeader, Badge, BtnPrimary, Input, Label, Card } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { useImpuestosAsignaciones, useImpuestosForAsignacion } from "@/hooks/useImpuestos";
@@ -19,9 +19,10 @@ import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { ImpuestoAsignacion, TipoImpuesto } from "@/lib/api/types";
+import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto, type ImpuestoPorCobrar } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/usuarios")({
-  head: () => ({ meta: [{ title: "Usuarios con impuestos â€” Admin â€” Moli" }] }),
+  head: () => ({ meta: [{ title: "Usuarios con impuestos — Admin — Moli" }] }),
   component: Page,
 });
 
@@ -34,7 +35,7 @@ function formatTasa(tasa: number) {
 }
 
 function montoLabel(asig: ImpuestoAsignacion) {
-  if (asig.monto === null) return "â€”";
+  if (asig.monto === null) return "—";
   return asig.tipo === "Porcentaje" ? `${formatTasa(asig.monto)}%` : `$ ${formatTasa(asig.monto)}`;
 }
 
@@ -52,7 +53,7 @@ function MensajeEstado({
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
         <AlertTriangle size={28} />
         <div>
-          <p className="font-semibold">No tenÃ©s permiso para ver esto</p>
+          <p className="font-semibold">No tenés permiso para ver esto</p>
           <p className="mt-1">{mensaje}</p>
         </div>
       </div>
@@ -63,7 +64,7 @@ function MensajeEstado({
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
         <AlertTriangle size={28} />
         <div>
-          <p className="font-semibold">OcurriÃ³ un error al cargar las asignaciones</p>
+          <p className="font-semibold">Ocurrió un error al cargar las asignaciones</p>
           <p className="mt-1">{mensaje}</p>
         </div>
         {onRetry && (
@@ -81,7 +82,7 @@ function MensajeEstado({
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
       <Inbox size={28} />
-      <p>No hay asignaciones que coincidan con la bÃºsqueda.</p>
+      <p>No hay asignaciones que coincidan con la búsqueda.</p>
     </div>
   );
 }
@@ -118,7 +119,7 @@ function AsignacionFormModal({
   const montoValido = !necesitaMonto || (form.monto.trim() !== "" && Number(form.monto) >= 0);
   const valido =
     form.clienteLegajo.trim() !== "" &&
-    (!asignacion ? legajoValido : true) && // el legajo no se edita
+    (!asignacion ? legajoValido : true) &&
     form.impuestoId !== "" &&
     montoValido;
 
@@ -131,14 +132,14 @@ function AsignacionFormModal({
     <FormDialog
       open
       onClose={onClose}
-      title={asignacion ? "Editar asignaciÃ³n" : "Nueva asignaciÃ³n de impuesto"}
+      title={asignacion ? "Editar asignación" : "Nueva asignación de impuesto"}
       description={
         asignacion
-          ? `ModificÃ¡ la asignaciÃ³n de ${asignacion.clienteLegajo}.`
-          : "AsignÃ¡ un impuesto activo a un cliente por su legajo."
+          ? `Modificá la asignación de ${asignacion.clienteLegajo}.`
+          : "Asigná un impuesto activo a un cliente por su legajo."
       }
       onSubmit={guardar}
-      submitLabel={asignacion ? "Guardar cambios" : "Crear asignaciÃ³n"}
+      submitLabel={asignacion ? "Guardar cambios" : "Crear asignación"}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -162,7 +163,7 @@ function AsignacionFormModal({
                 Formato LPF/LPJ-CUIT (ej: LPF-20111111111). Debe existir en clientes.
               </p>
               {form.clienteLegajo.trim() !== "" && !legajoValido && (
-                <p className="text-xs text-red-600 mt-1">Formato invÃ¡lido. Ej: LPF-20111111111.</p>
+                <p className="text-xs text-red-600 mt-1">Formato inválido. Ej: LPF-20111111111.</p>
               )}
             </>
           )}
@@ -175,10 +176,10 @@ function AsignacionFormModal({
             value={form.impuestoId}
             onChange={(e) => setForm({ ...form, impuestoId: e.target.value })}
           >
-            <option value="">Seleccionarâ€¦</option>
+            <option value="">Seleccionar…</option>
             {impuestosDisponibles.map((i) => (
               <option key={i.id} value={i.id}>
-                {i.codigo} â€” {i.nombre}
+                {i.codigo} — {i.nombre}
               </option>
             ))}
           </select>
@@ -227,15 +228,84 @@ function AsignacionFormModal({
       </div>
       {!valido && (
         <p className="text-xs text-muted-foreground">
-          CompletÃ¡ el legajo, el impuesto {necesitaMonto ? "y el monto" : ""} para poder guardar.
+          Completá el legajo, el impuesto {necesitaMonto ? "y el monto" : ""} para poder guardar.
         </p>
       )}
     </FormDialog>
   );
 }
 
+function ImpuestosPorCobrarTab() {
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+
+  const filtrados = useMemo(() => {
+    return MOCK_IMPUESTOS_POR_COBRAR.filter((r) => {
+      if (desde && r.fechaLote < desde) return false;
+      if (hasta && r.fechaLote > hasta) return false;
+      return true;
+    });
+  }, [desde, hasta]);
+
+  const totalPendiente = filtrados.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0);
+  const totalPagado = filtrados.filter(r=>r.estado==="pagado").reduce((a,b)=>a+b.monto,0);
+
+  const columns: Column<ImpuestoPorCobrar>[] = [
+    { key: "usuario", label: "Usuario", filterable:true, render: (r)=> <span className="text-xs font-medium">{r.usuario}</span> },
+    { key: "legajo", label: "Legajo", render: (r)=> <span className="font-mono text-xs">{r.legajo}</span> },
+    { key: "loteId", label: "Lote", filterable:true, render: (r)=> <span className="font-mono text-xs font-semibold">{r.loteId}</span> },
+    { key: "bandera", label: "Bandera", filterable:"enum", filterOptions:["Visa","Mastercard","Amex","Cabal"], render: (r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-muted/50">{r.bandera}</span> },
+    { key: "impuesto", label: "Impuesto", filterable:true, render: (r)=> r.impuesto },
+    { key: "monto", label: "Monto", render: (r)=> <span className="font-mono tabular-nums">{formatImpuestoMonto(r.monto)}</span> },
+    { key: "estado", label: "Estado", filterable:"enum", filterOptions:["pendiente","pagado"], render: (r)=> <Badge tone={r.estado==="pendiente"?"warn":"success"}>{r.estado}</Badge> },
+    { key: "fechaLote", label: "Fecha lote", render: (r)=> <span className="font-mono text-xs">{r.fechaLote}</span> },
+  ];
+
+  const loteActualIds = ["LOTE-2026-09-07-001","LOTE-2026-09-07-002","LOTE-2026-09-07-003","LOTE-2026-09-07-004","LOTE-2026-09-07-005"];
+  const loteActual = filtrados.filter(r=> loteActualIds.includes(r.loteId));
+  const historial = filtrados.filter(r=> !loteActualIds.includes(r.loteId));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <Label htmlFor="f-desde">Fecha desde</Label>
+          <Input id="f-desde" type="date" value={desde} onChange={(e)=> setDesde(e.target.value)} className="h-9" />
+        </div>
+        <div>
+          <Label htmlFor="f-hasta">Fecha hasta</Label>
+          <Input id="f-hasta" type="date" value={hasta} onChange={(e)=> setHasta(e.target.value)} className="h-9" />
+        </div>
+        {(desde || hasta) && (
+          <button type="button" onClick={()=>{setDesde("");setHasta("");}} className="h-9 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-accent">Limpiar</button>
+        )}
+        <span className="text-xs text-muted-foreground">{filtrados.length} registro(s) · pendiente {formatImpuestoMonto(totalPendiente)} · pagado {formatImpuestoMonto(totalPagado)}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos por cobrar lote actual</div><div className="font-mono text-lg font-semibold mt-1">{formatImpuestoMonto(loteActual.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0))}</div><div className="text-[11px] text-muted-foreground">Lote completo al corte y por bandera · {loteActual.length} items</div></Card>
+        <Card className="p-3"><div className="text-xs text-muted-foreground">Historial pagado</div><div className="font-mono text-lg font-semibold mt-1 text-emerald-700">{formatImpuestoMonto(totalPagado)}</div><div className="text-[11px] text-muted-foreground">Cuándo se pagaron · {historial.length} items</div></Card>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Impuestos por cobrar — lote actual (mock)</h4>
+        <DataTable columns={columns} data={loteActual} keyExtractor={(r)=> r.id} />
+      </div>
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historial de lotes — cuándo se pagaron</h4>
+        <DataTable columns={columns} data={historial} keyExtractor={(r)=> r.id} />
+      </div>
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Todos (con filtros por período)</h4>
+        <DataTable columns={columns} data={filtrados} keyExtractor={(r)=> r.id} />
+      </div>
+    </div>
+  );
+}
+
 function Page() {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<"asignaciones" | "por_cobrar">("asignaciones");
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
@@ -312,7 +382,7 @@ function Page() {
       setConfirmAction({
         title: "No se pudo guardar",
         message: esFk
-          ? `El legajo "${form.clienteLegajo.trim()}" no existe en la tabla de clientes. VerificÃ¡ el formato (LPF/LPJ-CUIT).`
+          ? `El legajo "${form.clienteLegajo.trim()}" no existe en la tabla de clientes. Verificá el formato (LPF/LPJ-CUIT).`
           : (e as Error).message,
         confirmLabel: "Cerrar",
         variant: "danger",
@@ -372,7 +442,7 @@ function Page() {
             <div className="text-xs text-muted-foreground font-mono">{r.cliente.cuit}</div>
           </div>
         ) : (
-          "â€”"
+          "—"
         ),
     },
     {
@@ -385,7 +455,7 @@ function Page() {
             <div className="text-xs text-muted-foreground font-mono">{r.impuesto.codigo}</div>
           </div>
         ) : (
-          "â€”"
+          "—"
         ),
     },
     {
@@ -407,7 +477,7 @@ function Page() {
     },
     {
       key: "fechaAsignacion",
-      label: "Fecha de asignaciÃ³n",
+      label: "Fecha de asignación",
       sortable: true,
       render: (r) =>
         r.fechaAsignacion ? (
@@ -415,7 +485,7 @@ function Page() {
             {new Date(r.fechaAsignacion).toLocaleDateString("es-AR")}
           </span>
         ) : (
-          "â€”"
+          "—"
         ),
     },
   ];
@@ -427,11 +497,20 @@ function Page() {
         description="Asignaciones de impuestos a clientes."
         action={
           <BtnPrimary type="button" onClick={() => setShowNew(true)} disabled={!puedeCrear}>
-            <Plus size={14} /> Nueva asignaciÃ³n
+            <Plus size={14} /> Nueva asignación
           </BtnPrimary>
         }
       />
 
+      <div className="flex gap-2 mb-4 border-b">
+        <button onClick={()=> setTab("asignaciones")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab==="asignaciones" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Asignaciones</button>
+        <button onClick={()=> setTab("por_cobrar")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab==="por_cobrar" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Impuestos por cobrar</button>
+      </div>
+
+      {tab==="por_cobrar" ? (
+        <ImpuestosPorCobrarTab />
+      ) : (
+        <>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
           <Label htmlFor="buscar">Buscar</Label>
@@ -442,7 +521,7 @@ function Page() {
               setSearchInput(e.target.value);
               setPage(0);
             }}
-            placeholder="CÃ³digo o nombre del impuestoâ€¦"
+            placeholder="Código o nombre del impuesto…"
           />
         </div>
         <div>
@@ -466,7 +545,7 @@ function Page() {
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
-          Cargando asignacionesâ€¦
+          Cargando asignaciones…
         </div>
       ) : isError ? (
         <MensajeEstado
@@ -488,7 +567,7 @@ function Page() {
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>
-              {total} asignacion(es) Â· pÃ¡gina {page + 1} de {totalPaginas}
+              {total} asignacion(es) · página {page + 1} de {totalPaginas}
             </span>
             <div className="flex gap-2">
               <button
@@ -511,6 +590,8 @@ function Page() {
           </div>
         </>
       )}
+        </>
+      )}
 
       {(showNew || editTarget) && (
         <AsignacionFormModal
@@ -526,8 +607,8 @@ function Page() {
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        title="Eliminar asignaciÃ³n"
-        message={`Â¿Eliminar la asignaciÃ³n de ${confirmDelete?.clienteLegajo ?? ""}? Esta acciÃ³n no se puede deshacer.`}
+        title="Eliminar asignación"
+        message={`¿Eliminar la asignación de ${confirmDelete?.clienteLegajo ?? ""}? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={eliminar}
