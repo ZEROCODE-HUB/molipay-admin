@@ -44,6 +44,16 @@ function persistLocalMetodos(comercioId: string, metodos: unknown) {
     // ignore
   }
 }
+function persistLocalNombre(comercioId: string, nombre: string | null) {
+  try {
+    if (typeof window !== "undefined") {
+      if (nombre) window.localStorage.setItem(`comercio_nombre_${comercioId}`, nombre);
+      else window.localStorage.removeItem(`comercio_nombre_${comercioId}`);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -215,7 +225,17 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
     persistLocalMetodos(id, metodosPayload);
   }
 
+  const nombreForLocal = (payload as any).nombre_comercio as string | null | undefined;
   let { data, error } = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS).single();
+  if (error && isMissingColumnError(error) && /nombre_comercio/i.test((error as any).message ?? "")) {
+    const backupNombre = (payload as any).nombre_comercio;
+    delete (payload as any).nombre_comercio;
+    const colsNoNombre = COLUMNS.replace(", nombre_comercio", "").replace("nombre_comercio, ", "").replace("nombre_comercio", "");
+    const retryNombre = await sb.from("comercios").update(payload).eq("id", id).select(colsNoNombre).single();
+    data = retryNombre.data as typeof data;
+    error = retryNombre.error;
+    if (!error && backupNombre) persistLocalNombre(id, backupNombre as string);
+  }
   if (error && isMissingColumnError(error)) {
     // reintenta sin metodos_config y luego sin flags si la columna no existe aún
     const hasMetodos = "metodos_config" in payload;
@@ -243,6 +263,9 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
     }
   }
   if (error) throw new DataAccessError(error);
+  if (nombreForLocal) {
+    try { persistLocalNombre(id, nombreForLocal as string); } catch {}
+  }
   // merge local fallback if DB didn't store metodos_config
   const result = toComercio(
     data as ComercioRow & {
