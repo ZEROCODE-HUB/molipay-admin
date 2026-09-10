@@ -8,6 +8,9 @@ import {
   XCircle,
   Clock,
   ArrowUpRight,
+  Wallet,
+  Landmark,
+  Percent,
 } from "lucide-react";
 import { PageHeader, Card, Stat, Badge } from "@/components/portal-shell";
 
@@ -37,6 +40,44 @@ function Page() {
         <Stat label="Volumen del dia" value="$ 184,2M" sub="ARS · 12.480 ops" />
         <Stat label="Alertas pendientes" value="7" sub="3 criticas" />
         <Stat label="Altas en revision" value="12" sub="Validacion de legajo" />
+      </div>
+
+      {/* Link de Pago — compact KPIs (resumen general) */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link de Pago — Resumen</h3>
+        <Link to="/admin/comercios/link-pago/resumen" className="text-xs text-primary font-semibold inline-flex items-center gap-1">Ver resumen <ArrowUpRight size={12} /></Link>
+      </div>
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <Card className="p-3">
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Wallet size={11}/> Pendiente acreditar</div>
+          <div className="font-mono text-sm font-semibold mt-1">$ 2,45M</div>
+          <div className="text-[10px] text-muted-foreground">Máx. adelantable</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Landmark size={11}/> Cuenta recaudadora</div>
+          <div className="font-mono text-sm font-semibold mt-1">$ 12,8M</div>
+          <div className="text-[10px] text-muted-foreground">Disponible</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-[11px] text-muted-foreground">Bruto</div>
+          <div className="font-mono text-sm font-semibold mt-1">$ 2,69M</div>
+          <div className="text-[10px] text-muted-foreground">Suma ops</div>
+        </Card>
+        <Card className="p-3 border-primary/20">
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Percent size={11}/> Neto MoliPay</div>
+          <div className="font-mono text-sm font-semibold mt-1 text-emerald-700">$ 85k</div>
+          <div className="text-[10px] text-muted-foreground">Tasa neta</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-[11px] text-muted-foreground">Neto PayWay</div>
+          <div className="font-mono text-sm font-semibold mt-1">$ 110k</div>
+          <div className="text-[10px] text-muted-foreground">Pasarela</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-[11px] text-muted-foreground">Impuestos</div>
+          <div className="font-mono text-sm font-semibold mt-1">$ 45k</div>
+          <div className="text-[10px] text-muted-foreground">Período hoy</div>
+        </Card>
       </div>
 
       {/* Volume chart + system health */}
