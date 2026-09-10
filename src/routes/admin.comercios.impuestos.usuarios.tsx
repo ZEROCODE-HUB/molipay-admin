@@ -9,6 +9,8 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { useImpuestosAsignaciones, useImpuestosForAsignacion } from "@/hooks/useImpuestos";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useClientesForSelect } from "@/hooks/useComercios";
+import { Search } from "lucide-react";
 import {
   createImpuestoAsignacion,
   updateImpuestoAsignacion,
@@ -110,6 +112,11 @@ function AsignacionFormModal({
     monto: asignacion?.monto === null || asignacion?.monto === undefined ? "" : String(asignacion.monto),
     estado: asignacion?.estado ?? "Activo",
   }));
+  const [clienteSearchInput, setClienteSearchInput] = useState(form.clienteLegajo);
+  const debouncedClienteSearch = useDebouncedValue(clienteSearchInput, 350);
+  const { data: clientesFiltrados } = useClientesForSelect(asignacion ? undefined : debouncedClienteSearch);
+  const clientesOptions = clientesFiltrados ?? [];
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const legajoValido = /^[A-Z]{3}-\d{11}$/.test(form.clienteLegajo.trim());
   const montoValido = form.monto.trim() === "" || (!isNaN(Number(form.monto)) && Number(form.monto) >= 0);
@@ -139,7 +146,7 @@ function AsignacionFormModal({
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="as-legajo">Legajo del cliente</Label>
+          <Label htmlFor="as-legajo">Usuario (correo / legajo)</Label>
           {asignacion ? (
             <>
               <Input id="as-legajo" value={form.clienteLegajo} disabled />
@@ -148,20 +155,68 @@ function AsignacionFormModal({
               </p>
             </>
           ) : (
-            <>
-              <Input
-                id="as-legajo"
-                value={form.clienteLegajo}
-                onChange={(e) => setForm({ ...form, clienteLegajo: e.target.value.toUpperCase() })}
-                placeholder="LPF-20111111111"
-              />
+            <div className="relative">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="as-legajo"
+                  value={clienteSearchInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setClienteSearchInput(v);
+                    // si escribe legajo directo, sincroniza form
+                    if (/^[A-Z]{3}-\d{11}$/i.test(v.trim())) {
+                      setForm({ ...form, clienteLegajo: v.toUpperCase() });
+                    } else if (!v.trim()) {
+                      setForm({ ...form, clienteLegajo: "" });
+                    }
+                    setComboboxOpen(true);
+                  }}
+                  onFocus={() => setComboboxOpen(true)}
+                  onBlur={() => setTimeout(() => setComboboxOpen(false), 150)}
+                  placeholder="Buscar por correo o legajo…"
+                  className="pl-9"
+                  autoComplete="off"
+                />
+              </div>
+              {comboboxOpen && (
+                <div className="absolute z-20 mt-1 w-full rounded-md border border-input bg-card shadow-lg max-h-60 overflow-auto">
+                  {(clientesOptions ?? []).length === 0 ? (
+                    <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      {debouncedClienteSearch ? "Sin resultados." : "Escribí correo o legajo para buscar (máx. 20)."}
+                    </div>
+                  ) : (
+                    (clientesOptions ?? []).map((c) => (
+                      <button
+                        key={c.legajo}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setForm({ ...form, clienteLegajo: c.legajo });
+                          setClienteSearchInput(`${c.correo} · ${c.legajo}`);
+                          setComboboxOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-accent flex flex-col ${c.legajo === form.clienteLegajo ? "bg-accent" : ""}`}
+                      >
+                        <span className="font-medium">{c.correo}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{c.legajo} · {c.nombre}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
               <p className="text-[11px] text-muted-foreground mt-1">
-                Formato LPF/LPJ-CUIT (ej: LPF-20111111111). Debe existir en clientes.
+                Buscable por correo o legajo. Seleccioná un usuario de la lista.
               </p>
+              {form.clienteLegajo && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Seleccionado: <span className="font-mono">{form.clienteLegajo}</span>
+                </p>
+              )}
               {form.clienteLegajo.trim() !== "" && !legajoValido && (
                 <p className="text-xs text-red-600 mt-1">Formato inválido. Ej: LPF-20111111111.</p>
               )}
-            </>
+            </div>
           )}
         </div>
         <div>
