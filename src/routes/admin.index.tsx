@@ -42,43 +42,32 @@ function Page() {
         <Stat label="Altas en revision" value="12" sub="Validacion de legajo" />
       </div>
 
-      {/* Link de Pago — compact KPIs (resumen general) */}
+      {/* Acreditaciones — formato operación */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link de Pago — Resumen</h3>
-        <Link to="/admin/comercios/link-pago/resumen" className="text-xs text-primary font-semibold inline-flex items-center gap-1">Ver resumen <ArrowUpRight size={12} /></Link>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Acreditaciones — Link de Pago</h3>
+        <Link to="/admin/comercios/link-pago/resumen" className="text-xs text-primary font-semibold inline-flex items-center gap-1">Ver detalle <ArrowUpRight size={12} /></Link>
       </div>
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <Card className="p-3">
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Wallet size={11}/> Pendiente acreditar</div>
-          <div className="font-mono text-sm font-semibold mt-1">$ 2,45M</div>
-          <div className="text-[10px] text-muted-foreground">Máx. adelantable</div>
-        </Card>
-        <Card className="p-3">
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Landmark size={11}/> Cuenta recaudadora</div>
-          <div className="font-mono text-sm font-semibold mt-1">$ 12,8M</div>
-          <div className="text-[10px] text-muted-foreground">Disponible</div>
-        </Card>
-        <Card className="p-3">
-          <div className="text-[11px] text-muted-foreground">Bruto</div>
-          <div className="font-mono text-sm font-semibold mt-1">$ 2,69M</div>
-          <div className="text-[10px] text-muted-foreground">Suma ops</div>
-        </Card>
-        <Card className="p-3 border-primary/20">
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Percent size={11}/> Neto MoliPay</div>
-          <div className="font-mono text-sm font-semibold mt-1 text-emerald-700">$ 85k</div>
-          <div className="text-[10px] text-muted-foreground">Tasa neta</div>
-        </Card>
-        <Card className="p-3">
-          <div className="text-[11px] text-muted-foreground">Neto PayWay</div>
-          <div className="font-mono text-sm font-semibold mt-1">$ 110k</div>
-          <div className="text-[10px] text-muted-foreground">Pasarela</div>
-        </Card>
-        <Card className="p-3">
-          <div className="text-[11px] text-muted-foreground">Impuestos</div>
-          <div className="font-mono text-sm font-semibold mt-1">$ 45k</div>
-          <div className="text-[10px] text-muted-foreground">Período hoy</div>
-        </Card>
-      </div>
+      <Card className="p-4 mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1.5 text-sm min-w-[180px]">
+            <div className="flex justify-between gap-6"><span className="text-muted-foreground">Bruto</span><span className="font-mono font-semibold">$ 2,69M</span></div>
+            <div className="flex justify-between gap-6 text-xs"><span className="text-muted-foreground">− Impuestos</span><span className="font-mono text-red-600">− $ 45k</span></div>
+            <div className="flex justify-between gap-6 text-xs"><span className="text-muted-foreground">− Comisión PayWay (3%)</span><span className="font-mono text-red-600">− $ 110k</span></div>
+            <div className="flex justify-between gap-6 text-xs"><span className="text-muted-foreground">− Comisión MoliPay (neto)</span><span className="font-mono text-red-600">− $ 85k</span></div>
+            <div className="border-t my-1.5" />
+            <div className="flex justify-between gap-6 font-semibold"><span>Neto MoliPay</span><span className="font-mono text-emerald-700">$ 85k</span></div>
+            <div className="flex justify-between gap-6 text-xs text-muted-foreground"><span>Pendiente de acreditar</span><span className="font-mono">$ 2,45M</span></div>
+          </div>
+          <div className="space-y-1.5 text-sm min-w-[180px] border-l pl-4">
+            <div className="flex justify-between gap-6"><span className="text-muted-foreground">Cuenta recaudadora</span><span className="font-mono font-semibold">$ 12,8M</span></div>
+            <div className="flex justify-between gap-6 text-xs"><span className="text-muted-foreground">Disponible</span><span className="font-mono">$ 12,8M</span></div>
+            <div className="flex justify-between gap-6 text-xs"><span className="text-muted-foreground">+ Pendiente</span><span className="font-mono text-emerald-700">+ $ 2,45M</span></div>
+            <div className="border-t my-1.5" />
+            <div className="flex justify-between gap-6 font-semibold"><span>Total</span><span className="font-mono">$ 15,25M</span></div>
+            <div className="text-[11px] text-muted-foreground">Período hoy</div>
+          </div>
+        </div>
+      </Card>
 
       {/* Volume chart + system health */}
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
