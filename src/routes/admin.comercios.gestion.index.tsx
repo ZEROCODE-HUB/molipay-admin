@@ -328,6 +328,7 @@ function ComercioFormModal({
   categorias,
   onClose,
   onSave,
+  isSaving,
 }: {
   comercio: Comercio | null;
   clientes: ClienteSelect[];

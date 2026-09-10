@@ -191,7 +191,7 @@ function AsignacionFormModal({
       </div>
       {!valido && (
         <p className="text-xs text-muted-foreground">
-          Completá el legajo, el impuesto {necesitaMonto ? "y el monto" : ""} para poder guardar.
+          Completá el legajo y el impuesto para poder guardar.
         </p>
       )}
     </FormDialog>
@@ -219,41 +219,27 @@ function ImpuestosPorCobrarTab() {
   const loteActualIds = ["LOTE-2026-09-07-001","LOTE-2026-09-07-002","LOTE-2026-09-07-003","LOTE-2026-09-07-004","LOTE-2026-09-07-005"];
   const loteActual = filtrados.filter(r=> loteActualIds.includes(r.loteId));
   const historial = filtrados.filter(r=> !loteActualIds.includes(r.loteId));
+  const totalPendiente = filtrados.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0);
+  const totalPagado = filtrados.filter(r=>r.estado==="pagado").reduce((a,b)=>a+b.monto,0);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label htmlFor="f-desde">Fecha desde</Label>
-          <Input id="f-desde" type="date" value={desde} onChange={(e)=> setDesde(e.target.value)} className="h-9" />
-        </div>
-        <div>
-          <Label htmlFor="f-hasta">Fecha hasta</Label>
-          <Input id="f-hasta" type="date" value={hasta} onChange={(e)=> setHasta(e.target.value)} className="h-9" />
-        </div>
-        {(desde || hasta) && (
-          <button type="button" onClick={()=>{setDesde("");setHasta("");}} className="h-9 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-accent">Limpiar</button>
-        )}
-        <span className="text-xs text-muted-foreground">{filtrados.length} registro(s) · pendiente {formatImpuestoMonto(totalPendiente)} · pagado {formatImpuestoMonto(totalPagado)}</span>
+      <div className="flex gap-2 border-b">
+        <button onClick={()=> setSubTab("por_cobrar")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${subTab==="por_cobrar" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Impuestos por cobrar</button>
+        <button onClick={()=> setSubTab("historial")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${subTab==="historial" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Historial</button>
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos por cobrar lote actual</div><div className="font-mono text-lg font-semibold mt-1">{formatImpuestoMonto(loteActual.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0))}</div><div className="text-[11px] text-muted-foreground">Lote completo al corte y por bandera · {loteActual.length} items</div></Card>
-        <Card className="p-3"><div className="text-xs text-muted-foreground">Historial pagado</div><div className="font-mono text-lg font-semibold mt-1 text-emerald-700">{formatImpuestoMonto(totalPagado)}</div><div className="text-[11px] text-muted-foreground">Cuándo se pagaron · {historial.length} items</div></Card>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Impuestos por cobrar — lote actual (mock)</h4>
-        <DataTable columns={columns} data={loteActual} keyExtractor={(r)=> r.id} />
-      </div>
-      <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historial de lotes — cuándo se pagaron</h4>
-        <DataTable columns={columns} data={historial} keyExtractor={(r)=> r.id} />
-      </div>
-      <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Todos (con filtros por período)</h4>
-        <DataTable columns={columns} data={filtrados} keyExtractor={(r)=> r.id} />
-      </div>
+      <div className="text-xs text-muted-foreground">{filtrados.length} registro(s) · pendiente {formatImpuestoMonto(totalPendiente)} · pagado {formatImpuestoMonto(totalPagado)}</div>
+      {subTab==="por_cobrar" ? (
+        <>
+          <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos por cobrar lote actual</div><div className="font-mono text-lg font-semibold mt-1">{formatImpuestoMonto(loteActual.filter(r=>r.estado==="pendiente").reduce((a,b)=>a+b.monto,0))}</div><div className="text-[11px] text-muted-foreground">Lote completo al corte y por bandera · {loteActual.length} items</div></Card>
+          <DataTable columns={columns} data={loteActual} keyExtractor={(r)=> r.id} />
+        </>
+      ) : (
+        <>
+          <Card className="p-3"><div className="text-xs text-muted-foreground">Historial pagado</div><div className="font-mono text-lg font-semibold mt-1 text-emerald-700">{formatImpuestoMonto(totalPagado)}</div><div className="text-[11px] text-muted-foreground">Cuándo se pagaron · {historial.length} items</div></Card>
+          <DataTable columns={columns} data={historial} keyExtractor={(r)=> r.id} />
+        </>
+      )}
     </div>
   );
 }

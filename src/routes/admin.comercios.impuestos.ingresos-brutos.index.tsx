@@ -8,6 +8,7 @@ import { Badge, Input, Label, BtnPrimary, BtnOutline } from "@/components/portal
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { FileDropzone } from "@/components/file-dropzone";
 import { KpiCard } from "@/components/kpi-card";
+import { FormDialog } from "@/components/form-dialog";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useImpuestosForAsignacion } from "@/hooks/useImpuestos";
