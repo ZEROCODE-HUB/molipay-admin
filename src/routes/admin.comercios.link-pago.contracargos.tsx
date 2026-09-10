@@ -173,6 +173,17 @@ function Detalle({ c, onClose, onSave }: { c: Contra; onClose: () => void; onSav
                 <label className="text-xs font-semibold flex items-center gap-1"><FileText size={12}/> Documentación presentada</label>
                 <textarea value={doc} onChange={(e)=> setDoc(e.target.value)} rows={3} placeholder="Comprobante, factura, KYC, entrega..." className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" />
               </div>
+              <div>
+                <label className="text-xs font-semibold flex items-center gap-1"><FileText size={12}/> Adjuntar documentación</label>
+                <input type="file" onChange={(e)=> {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setDoc((prev)=> prev ? `${prev}\n[${f.name}]` : `[${f.name}]`);
+                    toast.success(`Archivo ${f.name} adjuntado`);
+                  }
+                }} className="mt-1 w-full h-10 rounded-md border bg-background px-3 text-sm file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-muted file:text-sm" />
+                <p className="text-[11px] text-muted-foreground mt-1">PDF, JPG o TXT — se adjuntará al ticket PayWay.</p>
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={onClose} className="h-9 px-3 rounded-md border bg-card text-sm">Cancelar</button>
                 <button onClick={guardar} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold">Guardar</button>

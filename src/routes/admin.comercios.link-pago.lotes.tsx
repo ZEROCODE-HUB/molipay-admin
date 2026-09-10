@@ -262,8 +262,7 @@ function ComercioDetalleModal({ data, onClose }: { data: ResumenComercio; onClos
             <Card className="p-3"><div className="text-xs text-muted-foreground">Pendiente de impuestos</div><div className="font-mono font-semibold mt-1">{fmt(data.pendienteImpuestos)}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Comisión total PayWay</div><div className="font-mono font-semibold mt-1">{fmt(data.totalPayWay)}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Neto MoliPay</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalMoliPay)}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Impuestos totales</div><div className="font-mono font-semibold mt-1">{fmt(data.totalImpuestos)}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Total a pagar al comercio</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalFinal)}</div></Card>
+            <Card className="p-3 col-span-2"><div className="text-xs text-muted-foreground">Total a pagar al comercio</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalFinal)}</div></Card>
           </div>
           <Card className="p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Wallet size={12}/> Adelantos</h4>

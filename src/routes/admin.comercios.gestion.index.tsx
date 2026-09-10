@@ -149,6 +149,7 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
                   </span>
                 }
               />
+              <Field label="Nombre del comercio" value={comercio.nombreComercio ?? "—"} />
               <Field label="Cliente" value={comercio.cliente?.nombre ?? "—"} />
               <Field
                 label="CUIT del cliente"
@@ -337,6 +338,7 @@ function ComercioFormModal({
   onSave: (input: {
     clienteLegajo: string;
     usuario: string;
+    nombreComercio: string | null;
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
@@ -348,6 +350,7 @@ function ComercioFormModal({
 }) {
   const [clienteLegajo, setClienteLegajo] = useState(comercio?.legajo ?? "");
   const [usuario, setUsuario] = useState(comercio?.usuario ?? "");
+  const [nombreComercio, setNombreComercio] = useState(comercio?.nombreComercio ?? "");
   const [categoriaId, setCategoriaId] = useState(
     comercio?.categoriaId != null ? String(comercio.categoriaId) : "",
   );
@@ -413,6 +416,7 @@ function ComercioFormModal({
     onSave({
       clienteLegajo,
       usuario: usuario.trim() || (clienteSeleccionado?.correo ?? ""),
+      nombreComercio: nombreComercio.trim() || null,
       categoriaId: categoriaId ? Number(categoriaId) : null,
       nivel,
       estado,
@@ -515,6 +519,16 @@ function ComercioFormModal({
           {!comercio && clienteSeleccionado && (
             <p className="text-[11px] text-muted-foreground mt-1">Correo autocompletado desde el legajo seleccionado (no editable).</p>
           )}
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="gc-nombre-comercio">Nombre del comercio</Label>
+          <Input
+            id="gc-nombre-comercio"
+            value={nombreComercio}
+            onChange={(e) => setNombreComercio(e.target.value)}
+            placeholder="Ej: Kiosco Central, Distribuidora Delta"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Nombre propio del comercio (se verá en Links de Pago y Pagos QR).</p>
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="gc-categoria">Código de categoría</Label>
@@ -709,6 +723,7 @@ function Page() {
   const guardar = async (input: {
     clienteLegajo: string;
     usuario: string;
+    nombreComercio: string | null;
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
@@ -721,24 +736,26 @@ function Page() {
       if (editTarget) {
         await updateComercio(editTarget.id, {
           usuario: input.usuario,
+          nombreComercio: input.nombreComercio,
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
           habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
           habilitadoEnlacesPago: input.habilitadoEnlacesPago,
           metodosConfig: input.metodosConfig,
-        });
+        } as any);
       } else {
         await createComercio({
           legajo: input.clienteLegajo,
           usuario: input.usuario,
+          nombreComercio: input.nombreComercio,
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
           habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
           habilitadoEnlacesPago: input.habilitadoEnlacesPago,
           metodosConfig: input.metodosConfig,
-        });
+        } as any);
       }
       invalidar();
       setShowNew(false);
@@ -826,7 +843,7 @@ function Page() {
       key: "cliente",
       label: "Nombre comercial",
       sortable: true,
-      render: (r) => r.cliente?.nombre ?? <span className="text-muted-foreground">—</span>,
+      render: (r) => r.nombreComercio ?? r.cliente?.nombre ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "categoria",

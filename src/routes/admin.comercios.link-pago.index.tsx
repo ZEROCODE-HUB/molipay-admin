@@ -31,7 +31,7 @@ function tone(e: string): "success" | "neutral" | "warn" | "danger" {
   if (e === "Activado") return "success";
   if (e === "Desactivado") return "neutral";
   if (e === "Contracargo") return "danger";
-  if (e === "Cancelado") return "neutral";
+  if (e === "Expirado" || e === "Cancelado") return "neutral";
   if (e === "Rechazado" || e === "Eliminado" || e === "Suspendido") return "danger";
   return "warn"; // Pendiente de aprobación
 }
@@ -64,7 +64,6 @@ function EnlaceDetalle({ enlace, onClose }: { enlace: EnlacePago; onClose: () =>
               <div className="col-span-2"><span className="text-muted-foreground">URL</span><div className="font-mono text-xs break-all flex items-center gap-2">{enlace.url ?? "—"} {enlace.url && <button onClick={()=>{ navigator.clipboard.writeText(enlace.url!); toast.success("Copiado"); }} className="h-6 px-2 rounded border text-xs shrink-0"><Copy size={12}/></button>}</div></div>
               <div><span className="text-muted-foreground">Comercio</span><div className="font-semibold">{enlace.comercioNombre}</div></div>
               <div><span className="text-muted-foreground">Usuario / Legajo</span><div className="font-semibold break-all">{enlace.usuario ?? enlace.clienteLegajo}</div></div>
-              <div><span className="text-muted-foreground">Cajero</span><div className="font-semibold">{enlace.cajero ?? "—"}</div></div>
               <div><span className="text-muted-foreground">Estado</span><div><Badge tone={tone(enlace.estado)}>{enlace.estado}</Badge></div></div>
               <div><span className="text-muted-foreground">Monto</span><div className="font-mono font-semibold">{fmtMoney(enlace.monto)}</div></div>
               <div><span className="text-muted-foreground">Referencia</span><div className="font-mono text-xs break-all">{enlace.referencia ?? "—"}</div></div>
@@ -75,7 +74,7 @@ function EnlaceDetalle({ enlace, onClose }: { enlace: EnlacePago; onClose: () =>
               <div><span className="text-muted-foreground">Vistas</span><div className="font-mono">{enlace.vistas}</div></div>
               <div><span className="text-muted-foreground">Pagos</span><div className="font-mono">{enlace.pagos}</div></div>
               <div className="col-span-2 text-xs text-muted-foreground border-t pt-3 mt-1">
-                <span className="font-semibold">Ciclo:</span> PayWay crea → Pendiente de aprobación → Activado (sin cobro) → Pagado / Cancelado (24h) / Desactivado (comercio) / Contracargo (desconocimiento)
+                <span className="font-semibold">Ciclo:</span> PayWay crea → Pendiente de aprobación → Activado (sin cobro) → Pagado / Expirado (24h) / Desactivado (comercio) / Contracargo (comprador desconoce)
               </div>
             </div>
           </Card>
@@ -167,14 +166,13 @@ function Page() {
 
   const getActions = (r: EnlacePago): ActionItem[] => {
     const items: ActionItem[] = [{ label:"Ver detalles", icon:Eye, onClick:()=>setDetail(r) }];
-    // Transiciones según spec (6 estados). Mantenemos compat con legacy Rechazado/Suspendido mapeados a Cancelado/Desactivado
     if (r.estado !== "Pendiente de aprobación") items.push({ label:"Marcar pendiente", icon:Ban, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Pendiente de aprobación", message:`¿Marcar ${r.url ?? r.id} como Pendiente de aprobación? (PayWay aún no aprobó)`, confirmLabel:"Pendiente", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Pendiente de aprobación"); } }) });
     if (r.estado !== "Activado") items.push({ label:"Activar", icon:CheckCircle, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Activar enlace", message:`¿Activar ${r.url ?? r.id}? El enlace quedará cobrable (aún no pagado).`, confirmLabel:"Activar", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Activado"); } }) });
     if (r.estado !== "Desactivado") items.push({ label:"Desactivar", icon:Ban, disabled:!puedeModificar, variant:"neutral" as const, onClick:()=>setConfirm({ title:"Desactivar enlace", message:`¿Desactivar ${r.url ?? r.id}? El comercio desactiva el link.`, confirmLabel:"Desactivar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Desactivado"); } }) });
     if (r.estado !== "Pagado") items.push({ label:"Marcar pagado", icon:CheckCircle, disabled:!puedeModificar, onClick:()=>setConfirm({ title:"Marcar como pagado", message:`¿Marcar ${r.url ?? r.id} como Pagado? Se habilitará detalle de método/tarjeta/cuotas.`, confirmLabel:"Pagado", variant:"default" as const, onConfirm:()=>{ setConfirm(null); void cambiar(r,"Pagado"); } }) });
-    if (r.estado !== "Cancelado") items.push({ label:"Cancelar (expirado 24h)", icon:XCircle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Cancelar enlace", message:`¿Cancelar ${r.url ?? r.id}? El comprador no lo usó en 24h y expiró.`, confirmLabel:"Cancelar", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Cancelado"); } }) });
-    if (r.estado !== "Contracargo") items.push({ label:"Marcar contracargo", icon:AlertTriangle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Contracargo", message:`¿Marcar ${r.url ?? r.id} como Contracargo? El pago entra al flujo de gestión. Ver pestaña Contracargos.`, confirmLabel:"Contracargo", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Contracargo"); } }) });
-    if (r.estado !== "Eliminado" && r.estado !== "Cancelado") items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar enlace", message:`¿Eliminar ${r.url ?? r.id}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
+    if (r.estado !== "Expirado" && r.estado !== "Cancelado") items.push({ label:"Marcar expirado (24h)", icon:XCircle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Expirar enlace", message:`¿Marcar ${r.url ?? r.id} como Expirado? El comprador no lo abrió en 24h.`, confirmLabel:"Expirado", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Expirado"); } }) });
+    if (r.estado !== "Contracargo") items.push({ label:"Marcar contracargo", icon:AlertTriangle, disabled:!puedeModificar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Contracargo", message:`¿Marcar ${r.url ?? r.id} como Contracargo? El comprador no acepta el gasto.`, confirmLabel:"Contracargo", variant:"danger", onConfirm:()=>{ setConfirm(null); void cambiar(r,"Contracargo"); } }) });
+    if (r.estado !== "Eliminado" && r.estado !== "Expirado" && r.estado !== "Cancelado") items.push({ label:"Eliminar", icon:Trash2, disabled:!puedeBorrar, variant:"danger" as const, onClick:()=>setConfirm({ title:"Eliminar enlace", message:`¿Eliminar ${r.url ?? r.id}?`, confirmLabel:"Eliminar", variant:"danger", onConfirm:()=>{ setConfirm(null); void eliminar(r); } }) });
     return items;
   };
 
@@ -182,7 +180,6 @@ function Page() {
     { key:"url", label:"Enlace de pago", filterable:true, render:(r)=> <span className="font-mono text-xs break-all flex items-center gap-1"><Link2 size={12}/>{r.url ?? "—"}</span> },
     { key:"comercioNombre", label:"Comercio", filterable:true, render:(r)=> r.comercioNombre },
     { key:"usuario", label:"Usuario", render:(r)=> r.usuario ?? r.clienteLegajo },
-    { key:"cajero", label:"Cajero", render:(r)=> r.cajero ?? "—" },
     { key:"monto", label:"Monto", render:(r)=> <span className="font-mono tabular-nums text-xs">{r.monto != null ? `$ ${Number(r.monto).toLocaleString("es-AR")}` : "—"}</span> },
     { key:"estado", label:"Estado", filterable:"enum", filterOptions:[...ESTADOS_ENLACE], render:(r)=><Badge tone={tone(r.estado)}>{r.estado}</Badge> },
     { key:"createdAt", label:"Fecha", render:(r)=><span className="font-mono text-xs">{new Date(r.createdAt).toLocaleDateString("es-AR")}</span> },

@@ -26,13 +26,13 @@ export type ComercioFilters = Pagination & {
 
 // legajo es FK real a clientes.legajo -> la relación embebida se llama `clientes`.
 const COLUMNS =
-  "id, usuario, legajo, categoria_id, estado, nivel, habilitado_pago_transferencia, habilitado_enlaces_pago, metodos_config, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, habilitado_pago_transferencia, habilitado_enlaces_pago, metodos_config, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
 const COLUMNS_LEGACY =
   "id, usuario, legajo, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
 
 function isMissingColumnError(error: unknown): boolean {
   const msg = (error as { message?: string })?.message ?? String(error);
-  return /habilitado_pago_transferencia|habilitado_enlaces_pago|metodos_config|column.*does not exist|PGRST204|schema cache/i.test(msg);
+  return /nombre_comercio|habilitado_pago_transferencia|habilitado_enlaces_pago|metodos_config|column.*does not exist|PGRST204|schema cache/i.test(msg);
 }
 
 function persistLocalMetodos(comercioId: string, metodos: unknown) {
@@ -142,6 +142,7 @@ export async function createComercio(input: ComercioCreateInput): Promise<Comerc
     const payload: Record<string, unknown> = {
       usuario: input.usuario.trim(),
       legajo: input.legajo.trim(),
+      nombre_comercio: (input as any).nombreComercio?.trim() || null,
       categoria_id: input.categoriaId,
       nivel: input.nivel,
       estado: input.estado,
@@ -193,6 +194,7 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
   const payload: Record<string, unknown> = {};
   if (input.usuario !== undefined) payload.usuario = input.usuario.trim();
   if (input.legajo !== undefined) payload.legajo = input.legajo.trim();
+  if ((input as any).nombreComercio !== undefined) payload.nombre_comercio = (input as any).nombreComercio?.trim() || null;
   if (input.categoriaId !== undefined) payload.categoria_id = input.categoriaId;
   if (input.nivel !== undefined) payload.nivel = input.nivel;
   if (input.estado !== undefined) payload.estado = input.estado;

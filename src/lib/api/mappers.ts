@@ -243,6 +243,7 @@ export function toComercio(
     id: r.id,
     usuario: r.usuario,
     legajo: r.legajo,
+    nombreComercio: (r as unknown as { nombre_comercio?: string | null }).nombre_comercio ?? null,
     cliente: cli
       ? {
           legajo: cli.legajo,

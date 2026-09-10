@@ -8,6 +8,7 @@ export type EstadoEnlace =
   | "Activado"
   | "Desactivado"
   | "Contracargo"
+  | "Expirado"
   | "Cancelado"
   | "Pagado"
   // legacy compat (datos viejos)
@@ -21,7 +22,7 @@ export const ESTADOS_ENLACE: EstadoEnlace[] = [
   "Activado",
   "Desactivado",
   "Contracargo",
-  "Cancelado",
+  "Expirado",
   "Pagado",
 ];
 // Todos los estados para filtro (incluye legacy para compat)
@@ -30,6 +31,7 @@ export const ESTADOS_ENLACE_FILTRO: EstadoEnlace[] = [
   "Activado",
   "Desactivado",
   "Contracargo",
+  "Expirado",
   "Cancelado",
   "Pagado",
   "Rechazado",
@@ -138,9 +140,10 @@ function normalizeEstado(raw: string | null): string {
   if (raw === "Activo") return "Activado";
   if (raw === "Inactivo") return "Desactivado";
   // Legacy → nuevo mapeo (no romper filtros viejos)
-  if (raw === "Rechazado") return "Cancelado";
+  if (raw === "Rechazado") return "Expirado";
+  if (raw === "Cancelado") return "Expirado";
   if (raw === "Suspendido") return "Desactivado";
-  if (raw === "Eliminado") return "Cancelado";
+  if (raw === "Eliminado") return "Expirado";
   return raw;
 }
 

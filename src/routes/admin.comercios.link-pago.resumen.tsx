@@ -68,19 +68,64 @@ function Page() {
       </Card>
 
       <Card className="p-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Impuestos por pagar por comercio</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Impuestos y pagos asociados por comercio</h4>
         {(() => {
-          const data = getImpuestosPorComercio();
-          const cols: Column<ImpuestoPorComercio>[] = [
+          const base = getImpuestosPorComercio();
+          // Mocks para enriquecer la fila con adelantos, comisiones y contracargos
+          const MOCK_COMISIONES: Record<string, {moli:number, payway:number}> = {
+            "LPF-20111111111": {moli: 18500, payway: 14200},
+            "LPJ-30778899001": {moli: 25000, payway: 37500},
+            "LPF-27234567890": {moli: 9800, payway: 11200},
+            "LPJ-30889900112": {moli: 37500, payway: 45000},
+            "LPF-20334455667": {moli: 12300, payway: 15600},
+          };
+          const MOCK_ADELANTOS: Record<string, {monto:number, estado:string} | null> = {
+            "LPF-20111111111": null,
+            "LPJ-30778899001": {monto: 500000, estado: "Pendiente"},
+            "LPF-27234567890": null,
+            "LPJ-30889900112": null,
+            "LPF-20334455667": {monto: 300000, estado: "Aprobado"},
+          };
+          const MOCK_CONTRACARGOS: Record<string, number> = {
+            "LPF-20111111111": 0,
+            "LPJ-30778899001": 89000,
+            "LPF-27234567890": 0,
+            "LPJ-30889900112": 0,
+            "LPF-20334455667": 0,
+          };
+          const MOCK_ACREDITACION: Record<string, number> = {
+            "LPF-20111111111": 1850000,
+            "LPJ-30778899001": 1161250,
+            "LPF-27234567890": 724620,
+            "LPJ-30889900112": 1386000,
+            "LPF-20334455667": 826810,
+          };
+          type RowExt = ImpuestoPorComercio & { comisionMoli:number, comisionPayway:number, adelanto:{monto:number, estado:string}|null, contracargo:number, acreditacion:number, pendienteNeto:number };
+          const data: RowExt[] = base.map(r=> {
+            const com = MOCK_COMISIONES[r.legajo] ?? {moli: 12000, payway: 18000};
+            return {
+              ...r,
+              comisionMoli: com.moli,
+              comisionPayway: com.payway,
+              adelanto: MOCK_ADELANTOS[r.legajo] ?? null,
+              contracargo: MOCK_CONTRACARGOS[r.legajo] ?? 0,
+              acreditacion: MOCK_ACREDITACION[r.legajo] ?? r.pendiente * 6,
+              pendienteNeto: (MOCK_ACREDITACION[r.legajo] ?? r.pendiente * 6) - r.pendiente - com.moli - com.payway,
+            };
+          });
+          const cols: Column<RowExt>[] = [
             { key: "comercio", label: "Comercio / Legajo", filterable:true, render: (r)=> <div><div className="font-semibold text-sm">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
-            { key: "pendiente", label: "Impuesto pendiente", render: (r)=> <span className="font-mono font-semibold text-amber-700">{formatImpuestoMonto(r.pendiente)}</span> },
-            { key: "pagado", label: "Pagado", render: (r)=> <span className="font-mono text-emerald-700">{formatImpuestoMonto(r.pagado)}</span> },
-            { key: "total", label: "Total", render: (r)=> <span className="font-mono font-semibold">{formatImpuestoMonto(r.total)}</span> },
-            { key: "detalle", label: "Detalle", render: (r)=> <span className="text-xs text-muted-foreground">{r.detalle.map(d=> d.impuesto + " " + d.bandera + " " + d.loteId).join(", ").slice(0,80)}...</span> },
+            { key: "pendiente", label: "Impuestos", render: (r)=> <span className="font-mono text-amber-700">{formatImpuestoMonto(r.pendiente)}</span> },
+            { key: "comisionMoli", label: "Comisión Moli", render: (r)=> <span className="font-mono text-emerald-700">{formatImpuestoMonto(r.comisionMoli)}</span> },
+            { key: "comisionPayway", label: "Comisión PayWay", render: (r)=> <span className="font-mono">{formatImpuestoMonto(r.comisionPayway)}</span> },
+            { key: "pendienteNeto", label: "Pendiente neto", render: (r)=> <span className="font-mono font-semibold">{formatImpuestoMonto(r.pendienteNeto)}</span> },
+            { key: "adelanto", label: "Adelanto", render: (r)=> r.adelanto ? <div><div className="font-mono text-xs">{formatImpuestoMonto(r.adelanto.monto)}</div><Badge tone={r.adelanto.estado==="Pendiente"?"warn": r.adelanto.estado==="Aprobado"?"success":"neutral"}>{r.adelanto.estado}</Badge></div> : <span className="text-muted-foreground">—</span> },
+            { key: "acreditacion", label: "Acreditación", render: (r)=> <span className="font-mono font-semibold text-emerald-700">{formatImpuestoMonto(r.acreditacion)}</span> },
+            { key: "contracargo", label: "Contracargo retenido", render: (r)=> r.contracargo ? <span className="font-mono text-red-600">{formatImpuestoMonto(r.contracargo)}</span> : <span className="text-muted-foreground">—</span> },
           ];
           return <DataTable columns={cols} data={data} keyExtractor={(r)=> r.legajo} />;
         })()}
-        <p className="text-[11px] text-muted-foreground mt-2">Mock: misma data que en gestión. Usa tabla por comercio mostrando impuesto pendiente y detalle.</p>
+        <p className="text-[11px] text-muted-foreground mt-2">Una línea por comercio con impuestos, comisiones Moli/PayWay, pendiente neto, adelanto y estado, acreditación y contracargo retenido.</p>
       </Card>
     </PermissionGuard>
   );

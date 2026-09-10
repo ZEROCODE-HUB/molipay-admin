@@ -479,6 +479,7 @@ export type ComercioRow = {
   id: string;
   usuario: string;
   legajo: string;
+  nombre_comercio?: string | null;
   categoria_id: number | null;
   estado: EstadoComercio;
   nivel: NivelComercio;
@@ -504,6 +505,7 @@ export type Comercio = {
   id: string;
   usuario: string;
   legajo: string;
+  nombreComercio?: string | null;
   cliente: {
     legajo: string;
     nombre: string;
@@ -526,6 +528,7 @@ export type Comercio = {
 export type ComercioInput = {
   usuario: string;
   legajo: string;
+  nombreComercio?: string | null;
   categoriaId: number | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
