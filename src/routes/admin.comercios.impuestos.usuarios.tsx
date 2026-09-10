@@ -90,6 +90,7 @@ function MensajeEstado({
 type AsignacionForm = {
   clienteLegajo: string;
   impuestoId: string;
+  monto: string;
   estado: "Activo" | "Inactivo";
 };
 
@@ -106,14 +107,17 @@ function AsignacionFormModal({
   const [form, setForm] = useState<AsignacionForm>(() => ({
     clienteLegajo: asignacion?.clienteLegajo ?? "",
     impuestoId: asignacion?.impuestoId ?? "",
+    monto: asignacion?.monto === null || asignacion?.monto === undefined ? "" : String(asignacion.monto),
     estado: asignacion?.estado ?? "Activo",
   }));
 
   const legajoValido = /^[A-Z]{3}-\d{11}$/.test(form.clienteLegajo.trim());
+  const montoValido = form.monto.trim() === "" || (!isNaN(Number(form.monto)) && Number(form.monto) >= 0);
   const valido =
     form.clienteLegajo.trim() !== "" &&
     (!asignacion ? legajoValido : true) &&
-    form.impuestoId !== "";
+    form.impuestoId !== "" &&
+    montoValido;
 
   const guardar = () => {
     if (!valido) return;
@@ -187,6 +191,19 @@ function AsignacionFormModal({
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
           </select>
+        </div>
+        <div>
+          <Label htmlFor="as-monto">% del impuesto</Label>
+          <Input
+            id="as-monto"
+            type="number"
+            step="any"
+            min="0"
+            value={form.monto}
+            onChange={(e) => setForm({ ...form, monto: e.target.value })}
+            placeholder="Ej: 3.5"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Editable por asignación — sobrescribe el % base del impuesto.</p>
         </div>
       </div>
       {!valido && (
@@ -303,6 +320,8 @@ function Page() {
       if (editTarget) {
         await updateImpuestoAsignacion(editTarget.id, {
           impuesto_id: form.impuestoId || undefined,
+          tipo: "Porcentaje" as any,
+          monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
         } as any);
       } else {
@@ -310,7 +329,7 @@ function Page() {
           cliente_legajo: form.clienteLegajo.trim(),
           impuesto_id: form.impuestoId,
           tipo: "Porcentaje" as any,
-          monto: 0,
+          monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
         } as any);
       }

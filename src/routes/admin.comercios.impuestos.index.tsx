@@ -484,7 +484,6 @@ function DetalleModal({ imp, onClose }: { imp: Impuesto; onClose: () => void }) 
               }
             />
           </div>
-          <AlicuotasSection impuesto={imp} />
         </div>
         <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex justify-end">
           <BtnOutline type="button" onClick={onClose}>

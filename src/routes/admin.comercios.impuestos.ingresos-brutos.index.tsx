@@ -337,13 +337,15 @@ function Page() {
 
   return (
     <PermissionGuard recurso="impuestos">
-      <PageHeader title="Ingresos Brutos" description="Gestión de padrones TXT de Ingresos Brutos." />
-
-            <div className="flex justify-end mb-4">
-        <BtnPrimary onClick={()=> setShowPadronPopup(true)} disabled={!puedeCrear}>
-          Cargar padrón
-        </BtnPrimary>
-      </div>
+      <PageHeader
+        title="Ingresos Brutos"
+        description="Gestión de padrones TXT de Ingresos Brutos."
+        action={
+          <BtnPrimary onClick={()=> setShowPadronPopup(true)} disabled={!puedeCrear}>
+            Cargar padrón
+          </BtnPrimary>
+        }
+      />
 
       {showPadronPopup && (
         <FormDialog

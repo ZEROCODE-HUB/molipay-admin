@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet } from "lucide-react";
+import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet, XCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -38,6 +38,7 @@ type Lote = {
   linksIds: string[];
   cuotas?: number;
   costoPayWayPagoUnico?: number;
+  contracargoMonto?: number;
 };
 
 // Adelanto mock para cruce con resumen
@@ -66,6 +67,7 @@ const MOCK_LOTES: Lote[] = [
     estado: "Contracargo",
     linksIds: ["LP-8841", "LP-8842", "LP-8843", "LP-8844", "LP-8845", "LP-8846", "LP-8847", "LP-8848", "LP-8849", "LP-8850"],
     cuotas: 1,
+    contracargoMonto: 89_000,
   },
   {
     id: "LOTE-2026-09-07-002",
@@ -172,9 +174,11 @@ function fmt(n: number) {
 }
 
 function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
-  const totalDescuentos = lote.impuestos + lote.tasaPayWayMonto + lote.tasaMoliPayMonto + (lote.costoPayWayPagoUnico ?? 0);
+  const contracargo = lote.contracargoMonto ?? (lote.estado === "Contracargo" ? 89_000 : 0);
+  const totalDescuentos = lote.impuestos + lote.tasaPayWayMonto + lote.tasaMoliPayMonto + (lote.costoPayWayPagoUnico ?? 0) + contracargo;
   const menosImpuestos = lote.importeBruto - lote.impuestos;
   const esCuotas = (lote.cuotas ?? 1) > 1;
+  const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -206,12 +210,15 @@ function LoteDetalle({ lote, onClose }: { lote: Lote; onClose: () => void }) {
               {esCuotas && lote.costoPayWayPagoUnico != null && (
                 <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><CreditCard size={12}/> Costo PayWay por pago único ({lote.cuotas} cuotas)</span><span className="font-mono text-red-600">- {fmt(lote.costoPayWayPagoUnico)}</span></div>
               )}
+              {esContracargo && (
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Receipt size={12}/> Contracargo <Badge tone="danger" className="ml-1">retenido</Badge></span><span className="font-mono text-red-600">- {fmt(contracargo)}</span></div>
+              )}
               {esCuotas && <p className="text-[11px] text-muted-foreground">Si el comprador paga en cuotas, PayWay acredita a MoliPay en un solo pago y cobra fee por esa liquidación.</p>}
               <p className="text-[11px] text-muted-foreground">Tasa MoliPay = tasa cobrada al comercio − tasa PayWay a MoliPay (neto).</p>
               <div className="border-t my-2"/>
               <div className="flex justify-between text-xs text-muted-foreground"><span>Total descuentos</span><span className="font-mono">- {fmt(totalDescuentos)}</span></div>
-              <div className="flex justify-between text-base font-semibold"><span>Importe final a acreditar</span><span className="font-mono text-emerald-700">{fmt(lote.importeFinal - (lote.costoPayWayPagoUnico ?? 0))}</span></div>
-              {lote.estado === "Contracargo" && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mt-2">Incluye contracargo: el lote descuenta ese pago. Ver pestaña Contracargos para ticket PayWay.</p>}
+              <div className="flex justify-between text-base font-semibold"><span>Importe final a acreditar</span><span className="font-mono text-emerald-700">{fmt(lote.importeBruto - totalDescuentos)}</span></div>
+              {esContracargo && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mt-2">Incluye contracargo ({fmt(contracargo)} retenido): el lote descuenta ese pago. Ver pestaña Contracargos para ticket PayWay.</p>}
             </div>
           </Card>
 
@@ -238,32 +245,58 @@ type ResumenComercio = {
   totalImpuestos: number;
   totalPayWay: number;
   totalMoliPay: number;
+  totalContracargo: number;
   totalFinal: number;
   pendienteAcreditar: number;
   pendienteImpuestos: number;
 };
 
-function ComercioDetalleModal({ data, onClose }: { data: ResumenComercio; onClose: () => void }) {
+function ComercioDetalleModal({ data, lotes, onClose }: { data: ResumenComercio; lotes: Lote[]; onClose: () => void }) {
   const adelanto = MOCK_ADELANTOS_BY_LEGAJO[data.legajo] ?? null;
+  const lotesDelComercio = lotes.filter(l=> l.legajo === data.legajo);
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div>
             <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Store size={18}/> {data.comercio}</h3>
-            <p className="text-sm font-mono text-muted-foreground">{data.legajo}</p>
+            <p className="text-sm font-mono text-muted-foreground">{data.legajo} · {data.cantidadLotes} lotes · {data.cantidadOps} ops</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">✕</button>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Total pendiente de acreditar</div><div className="font-mono font-semibold mt-1">{fmt(data.pendienteAcreditar)}</div><div className="text-[11px] text-muted-foreground">Máximo adelantable</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Total pendiente de acreditar</div><div className="font-mono font-semibold mt-1">{fmt(data.pendienteAcreditar)}</div><div className="text-[11px] text-muted-foreground">Máximo adelantable {data.totalContracargo ? `— contracargo ${fmt(data.totalContracargo)} descontado` : ""}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Pendiente de impuestos</div><div className="font-mono font-semibold mt-1">{fmt(data.pendienteImpuestos)}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Comisión total PayWay</div><div className="font-mono font-semibold mt-1">{fmt(data.totalPayWay)}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Neto MoliPay</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalMoliPay)}</div></Card>
-            <Card className="p-3 col-span-2"><div className="text-xs text-muted-foreground">Total a pagar al comercio</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalFinal)}</div></Card>
+            {data.totalContracargo > 0 && <Card className="p-3 border-red-200 bg-red-50"><div className="text-xs text-red-700">Contracargo retenido</div><div className="font-mono font-semibold mt-1 text-red-600">- {fmt(data.totalContracargo)}</div><div className="text-[11px] text-red-600">Restado del total a acreditar</div></Card>}
+            <Card className={`p-3 ${data.totalContracargo > 0 ? "" : "col-span-2"}`}><div className="text-xs text-muted-foreground">Total a pagar al comercio</div><div className="font-mono font-semibold mt-1 text-emerald-700">{fmt(data.totalFinal)}</div></Card>
           </div>
+          <Card className="p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Lotes por bandera de este comercio ({lotesDelComercio.length})</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="border-b text-left text-muted-foreground"><th className="px-2 py-1.5">Lote</th><th className="px-2 py-1.5">Bandera</th><th className="px-2 py-1.5">Fecha</th><th className="px-2 py-1.5 text-right">Importe a acreditar</th><th className="px-2 py-1.5">Estado</th>{lotesDelComercio.some(l=> (l.contracargoMonto ?? 0) >0) && <th className="px-2 py-1.5 text-right">Contracargo</th>}</tr></thead>
+                <tbody>
+                  {lotesDelComercio.map(l=> {
+                    const contra = l.contracargoMonto ?? (l.estado==="Contracargo" ? 89000 : 0);
+                    return (
+                      <tr key={l.id} className="border-b last:border-0">
+                        <td className="px-2 py-1.5 font-mono">{l.id}</td>
+                        <td className="px-2 py-1.5"><span className="inline-flex rounded-full border px-2 py-0.5 text-[11px] bg-muted/50">{l.bandera}</span></td>
+                        <td className="px-2 py-1.5 font-mono">{l.fecha}</td>
+                        <td className="px-2 py-1.5 text-right font-mono">{fmt(l.importeBruto - l.impuestos - l.tasaPayWayMonto - l.tasaMoliPayMonto - (l.costoPayWayPagoUnico ?? 0) - contra)}</td>
+                        <td className="px-2 py-1.5"><Badge tone={tone(l.estado)}>{l.estado}</Badge></td>
+                        {lotesDelComercio.some(x=> (x.contracargoMonto ?? 0) >0) && <td className="px-2 py-1.5 text-right font-mono text-red-600">{contra ? `- ${fmt(contra)}` : "—"}</td>}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
           <Card className="p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Wallet size={12}/> Adelantos</h4>
             {!adelanto ? (
@@ -284,20 +317,35 @@ function ComercioDetalleModal({ data, onClose }: { data: ResumenComercio; onClos
 }
 
 function Page() {
+  const [lotes, setLotes] = useState<Lote[]>(MOCK_LOTES);
   const [detail, setDetail] = useState<Lote | null>(null);
   const [comercioDetail, setComercioDetail] = useState<ResumenComercio | null>(null);
   const [confirm, setConfirm] = useState<{title:string;message:string} | null>(null);
+  const [contracargoModal, setContracargoModal] = useState<{lote: Lote, accion: "Acreditar" | "Rechazar", notas: string} | null>(null);
   const [tab, setTab] = useState<"lotes" | "resumen">("lotes");
   const { can } = useCan();
   const puedeGestionar = can("modificar","comercios");
 
-  const getActions = (r: Lote): ActionItem[] => [
-    { label:"Ver detalle", icon: Eye, onClick:()=> setDetail(r) },
-    { label:"Reprocesar", icon: ArrowUpRight, disabled:!puedeGestionar || r.estado==="Acreditado", onClick:()=> {
+  const handleContracargo = (accion: "Acreditar" | "Rechazar") => {
+    if (!contracargoModal) return;
+    const { lote } = contracargoModal;
+    setLotes(prev=> prev.map(x=> x.id===lote.id ? {...x, estado: accion==="Acreditar" ? "Acreditado" as const : "Rechazado" as const} : x));
+    toast.success(`Lote ${lote.id} ${accion==="Acreditar" ? "acreditado" : "rechazado"}${contracargoModal.notas ? ` — ${contracargoModal.notas}` : ""}`);
+    setContracargoModal(null);
+  };
+
+  const getActions = (r: Lote): ActionItem[] => {
+    const base: ActionItem[] = [{ label:"Ver detalle", icon: Eye, onClick:()=> setDetail(r) }];
+    if (r.estado === "Contracargo") {
+      base.push({ label:"Acreditar", icon: ArrowUpRight, disabled:!puedeGestionar, onClick:()=> setContracargoModal({lote: r, accion: "Acreditar", notas: ""}) } as ActionItem);
+      base.push({ label:"Rechazar", icon: XCircle as any, disabled:!puedeGestionar, variant:"danger" as const, onClick:()=> setContracargoModal({lote: r, accion: "Rechazar", notas: ""}) } as ActionItem);
+    }
+    base.push({ label:"Reprocesar", icon: ArrowUpRight, disabled:!puedeGestionar || r.estado==="Acreditado", onClick:()=> {
       toast.info("Reprocesando lote (mock)");
       setConfirm({title:"Lote reprocesado",message:`${r.id} en reproceso mock.`});
-    }},
-  ];
+    }} as ActionItem);
+    return base;
+  };
 
   const columns: Column<Lote>[] = [
     { key:"fecha", label:"Fecha", render:(r)=> <span className="font-mono text-xs tabular-nums">{r.fecha}</span> },
@@ -311,11 +359,13 @@ function Page() {
 
   const resumenData: ResumenComercio[] = useMemo(() => {
     const map = new Map<string, ResumenComercio>();
-    for (const l of MOCK_LOTES) {
+    for (const l of lotes) {
       const key = `${l.comercio}__${l.legajo}`;
       const prev = map.get(key);
       const pay = l.tasaPayWayMonto + (l.costoPayWayPagoUnico ?? 0);
       const moli = l.tasaMoliPayMonto;
+      const contra = l.contracargoMonto ?? (l.estado === "Contracargo" ? 89_000 : 0);
+      const netoFinal = l.importeBruto - l.impuestos - pay - moli - contra;
       if (!prev) {
         map.set(key, {
           comercio: l.comercio,
@@ -326,8 +376,9 @@ function Page() {
           totalImpuestos: l.impuestos,
           totalPayWay: pay,
           totalMoliPay: moli,
-          totalFinal: l.importeFinal - (l.costoPayWayPagoUnico ?? 0),
-          pendienteAcreditar: l.importeFinal - (l.costoPayWayPagoUnico ?? 0),
+          totalContracargo: contra,
+          totalFinal: netoFinal,
+          pendienteAcreditar: netoFinal,
           pendienteImpuestos: l.impuestos,
         });
       } else {
@@ -337,8 +388,9 @@ function Page() {
         prev.totalImpuestos += l.impuestos;
         prev.totalPayWay += pay;
         prev.totalMoliPay += moli;
-        prev.totalFinal += l.importeFinal - (l.costoPayWayPagoUnico ?? 0);
-        prev.pendienteAcreditar += l.importeFinal - (l.costoPayWayPagoUnico ?? 0);
+        prev.totalContracargo += contra;
+        prev.totalFinal += netoFinal;
+        prev.pendienteAcreditar += netoFinal;
         prev.pendienteImpuestos += l.impuestos;
       }
     }
@@ -376,11 +428,11 @@ function Page() {
       {tab === "lotes" ? (
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Acreditados</div><div className="font-mono text-xl font-semibold mt-1 text-emerald-700">{MOCK_LOTES.filter(l=>l.estado==="Acreditado").length}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{MOCK_LOTES.filter(l=>l.estado==="Contracargo").length}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{MOCK_LOTES.filter(l=>l.estado==="Rechazado").length}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Acreditados</div><div className="font-mono text-xl font-semibold mt-1 text-emerald-700">{lotes.filter(l=>l.estado==="Acreditado").length}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{lotes.filter(l=>l.estado==="Contracargo").length}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{lotes.filter(l=>l.estado==="Rechazado").length}</div></Card>
           </div>
-          <DataTable columns={columns} data={MOCK_LOTES} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
+          <DataTable columns={columns} data={lotes} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} />
         </>
       ) : (
         <>
@@ -390,7 +442,24 @@ function Page() {
       )}
 
       {detail && <LoteDetalle lote={detail} onClose={()=> setDetail(null)} />}
-      {comercioDetail && <ComercioDetalleModal data={comercioDetail} onClose={()=> setComercioDetail(null)} />}
+      {comercioDetail && <ComercioDetalleModal data={comercioDetail} lotes={lotes} onClose={()=> setComercioDetail(null)} />}
+      {contracargoModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={()=> setContracargoModal(null)} />
+          <div className="relative bg-card rounded-xl w-full max-w-md shadow-xl p-6 space-y-4">
+            <h3 className="font-display font-semibold text-lg">{contracargoModal.accion} lote {contracargoModal.lote.id}</h3>
+            <p className="text-sm text-muted-foreground">Lote {contracargoModal.lote.bandera} · {contracargoModal.lote.comercio} · Contracargo {fmt(contracargoModal.lote.contracargoMonto ?? 89000)} será {contracargoModal.accion === "Acreditar" ? "acreditado" : "rechazado"}.</p>
+            <div>
+              <label className="text-xs font-semibold">Notas</label>
+              <textarea value={contracargoModal.notas} onChange={(e)=> setContracargoModal({...contracargoModal, notas: e.target.value})} rows={3} placeholder="Motivo, ticket PayWay, notas internas..." className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={()=> setContracargoModal(null)} className="h-9 px-3 rounded-md border bg-card text-sm">Cancelar</button>
+              <button onClick={()=> handleContracargo(contracargoModal.accion)} className={`h-9 px-4 rounded-md text-sm font-semibold ${contracargoModal.accion==="Acreditar" ? "bg-primary text-primary-foreground" : "bg-red-600 text-white"}`}>{contracargoModal.accion}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirm && <ConfirmDialog open={!!confirm} onClose={()=> setConfirm(null)} title={confirm.title} message={confirm.message} confirmLabel="Cerrar" variant="default" onConfirm={()=> setConfirm(null)} />}
     </PermissionGuard>
   );
