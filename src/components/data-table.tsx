@@ -110,7 +110,7 @@ export function DataTable<T>({
   const enumCols = useMemo(() => columns.filter((c) => c.filterable === "enum"), [columns]);
 
   const filterCols = useMemo(() => {
-    if (dateFilterColumns && dateFilterColumns.length > 0) {
+    if (dateFilterColumns !== undefined) {
       return dateFilterColumns
         .map((k) => columns.find((c) => c.key === k))
         .filter((c): c is Column<T> => !!c);

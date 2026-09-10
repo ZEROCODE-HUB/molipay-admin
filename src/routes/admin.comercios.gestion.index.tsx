@@ -240,25 +240,38 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
 
                     <Card className="p-5">
             <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Impuestos totales por pagar
+              Impuestos por pagar — lote de acreditación
             </h4>
             {(() => {
-              const porCobrar = MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.legajo === comercio.legajo);
-              let total = porCobrar.filter((r) => r.estado === "pendiente").reduce((a,b)=>a+b.monto,0);
-              if (porCobrar.length === 0) {
-                const base = (comercio.metodosConfig?.length ?? 0) * 8500;
-                const comisionSum = (comercio.metodosConfig ?? []).reduce((a,c)=> a + c.comisionMolipay * 1000, 0);
-                total = base + comisionSum + 3200;
-                if (total === 3200) total = 12400;
+              const porCobrar = MOCK_IMPUESTOS_POR_COBRAR.filter((r) => r.legajo === comercio.legajo && r.estado === "pendiente");
+              const porLote = new Map<string, {total: number; count: number}>();
+              for (const r of porCobrar) {
+                const cur = porLote.get(r.loteId) ?? {total:0, count:0};
+                cur.total += r.monto;
+                cur.count += 1;
+                porLote.set(r.loteId, cur);
               }
-              const pendientes = porCobrar.filter((r)=> r.estado==="pendiente").length || (comercio.metodosConfig?.length ?? 0);
+              const total = porCobrar.reduce((a,b)=>a+b.monto,0);
+              if (porCobrar.length === 0) {
+                return (
+                  <div className="text-sm text-muted-foreground">Sin impuestos pendientes para este comercio según lotes de acreditación.</div>
+                );
+              }
               return (
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <div className="text-2xl font-mono font-semibold tabular-nums">{formatImpuestoMonto(total)}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Suma mock de impuestos del comercio · {pendientes} concepto(s) pendiente(s) · calculado desde metodosConfig o fijo</div>
+                    <Badge tone="warn">Por pagar</Badge>
                   </div>
-                  <Badge tone="warn">Por pagar</Badge>
+                  <div className="text-xs text-muted-foreground">Suma real de impuestos pendientes agrupada por lote de acreditación</div>
+                  <div className="space-y-1.5">
+                    {Array.from(porLote.entries()).map(([loteId, v])=> (
+                      <div key={loteId} className="flex justify-between text-sm border rounded px-3 py-1.5 bg-muted/30">
+                        <span className="font-mono text-xs">{loteId} · {v.count} impuesto(s)</span>
+                        <span className="font-mono font-semibold">{formatImpuestoMonto(v.total)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}
@@ -330,6 +343,7 @@ function ComercioFormModal({
     habilitadoEnlacesPago: boolean;
     metodosConfig: ComercioMetodoConfig[];
   }) => void;
+  isSaving?: boolean;
 }) {
   const [clienteLegajo, setClienteLegajo] = useState(comercio?.legajo ?? "");
   const [usuario, setUsuario] = useState(comercio?.usuario ?? "");
@@ -350,7 +364,8 @@ function ComercioFormModal({
   const { data: clientesFiltrados } = useClientesForSelect(
     comercio ? undefined : debouncedClienteSearch,
   );
-  const clientesOptions = comercio ? clientes : (clientesFiltrados ?? clientes);
+  const clientesOptionsRaw = comercio ? clientes : (clientesFiltrados ?? clientes);
+  const clientesOptions = [...(clientesOptionsRaw ?? [])].sort((a,b)=> (a.legajo ?? '').localeCompare(b.legajo ?? ''));
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
   // Banderas habilitadas: todos los métodos definidos en Gestión → Métodos de Pago
@@ -417,7 +432,8 @@ function ComercioFormModal({
           : "Asociá un cliente existente a un nuevo comercio."
       }
       onSubmit={guardar}
-      submitLabel={comercio ? "Guardar cambios" : "Crear comercio"}
+      submitLabel={isSaving ? "Guardando…" : comercio ? "Guardar cambios" : "Crear comercio"}
+      isSubmitting={isSaving}
       size="xl"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -493,7 +509,11 @@ function ComercioFormModal({
             value={usuario}
             onChange={(e) => setUsuario(e.target.value)}
             placeholder="email@dominio.com"
+            disabled={!comercio && !!clienteSeleccionado}
           />
+          {!comercio && clienteSeleccionado && (
+            <p className="text-[11px] text-muted-foreground mt-1">Correo autocompletado desde el legajo seleccionado (no editable).</p>
+          )}
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="gc-categoria">Código de categoría</Label>
@@ -659,6 +679,7 @@ function Page() {
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -694,6 +715,7 @@ function Page() {
     habilitadoEnlacesPago: boolean;
     metodosConfig: ComercioMetodoConfig[];
   }) => {
+    setIsSaving(true);
     try {
       if (editTarget) {
         await updateComercio(editTarget.id, {
@@ -728,6 +750,8 @@ function Page() {
         variant: "danger",
         onConfirm: () => setConfirmAction(null),
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1020,6 +1044,7 @@ function Page() {
           comercio={editTarget}
           clientes={clientes ?? []}
           categorias={categorias ?? []}
+          isSaving={isSaving}
           onClose={() => {
             setShowNew(false);
             setEditTarget(null);

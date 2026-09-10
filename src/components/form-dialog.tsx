@@ -13,6 +13,7 @@ export function FormDialog({
   size = "md",
   hideCancel = false,
   cancelLabel = "Cancelar",
+  isSubmitting = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +25,7 @@ export function FormDialog({
   size?: "md" | "lg" | "xl" | "2xl";
   hideCancel?: boolean;
   cancelLabel?: string;
+  isSubmitting?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -60,11 +62,12 @@ export function FormDialog({
           {children}
           <div className="flex gap-2 pt-2">
             {!hideCancel && (
-              <BtnOutline type="button" className="flex-1" onClick={onClose}>
+              <BtnOutline type="button" className="flex-1" onClick={onClose} disabled={isSubmitting}>
                 {cancelLabel}
               </BtnOutline>
             )}
-            <BtnPrimary type="submit" className="flex-1">
+            <BtnPrimary type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting && <span className="inline-block w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />}
               {submitLabel}
             </BtnPrimary>
           </div>
