@@ -835,6 +835,7 @@ function Page() {
       render: (r) => (
         <div>
           <div className="font-semibold">{r.usuario}</div>
+          {r.cliente?.nombre && <div className="text-xs text-muted-foreground">{r.cliente.nombre}</div>}
           <LegajoCell legajo={r.legajo} className="text-xs" />
         </div>
       ),
@@ -843,7 +844,7 @@ function Page() {
       key: "cliente",
       label: "Nombre comercial",
       sortable: true,
-      render: (r) => r.nombreComercio ?? r.cliente?.nombre ?? <span className="text-muted-foreground">—</span>,
+      render: (r) => r.nombreComercio ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "categoria",
