@@ -153,7 +153,7 @@ function MetodoPagoModal({
                       N° de cuota
                     </th>
                     <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                      TEN (%)
+                      TEM (%)
                     </th>
                     <th className="px-3 py-2.5 font-display font-semibold text-foreground">
                       TNA (%)
@@ -184,7 +184,7 @@ function MetodoPagoModal({
                         </td>
                         <td className="px-3 py-2">
                           <Input
-                            aria-label="TEN"
+                            aria-label="TEM"
                             value={c.ten}
                             onChange={(e) => updateCuota(c.key, "ten", e.target.value)}
                             className="w-28 h-9"
