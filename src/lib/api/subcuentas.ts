@@ -112,6 +112,8 @@ export type CvuFilters = {
   pageSize: number;
   search?: string;
   estado?: SubcuentaEstado;
+  fechaDesde?: string;
+  fechaHasta?: string;
 };
 
 export type CvuRow = Subcuenta & {
@@ -123,7 +125,7 @@ const COLUMNS_WITH_CLIENTE = COLUMNS + ", clientes(legajo, correo, nombre, cuit,
 
 export async function listAllCvus(filters: CvuFilters): Promise<{ rows: CvuRow[]; total: number; page: number; pageSize: number }> {
   const sb = requireSupabase();
-  const { page, pageSize, search, estado } = filters;
+  const { page, pageSize, search, estado, fechaDesde, fechaHasta } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
   let query = sb.from("subcuentas").select(COLUMNS_WITH_CLIENTE, { count: "exact" });
@@ -132,6 +134,8 @@ export async function listAllCvus(filters: CvuFilters): Promise<{ rows: CvuRow[]
     query = query.or(`cliente_legajo.ilike.%${q}%,email.ilike.%${q}%,nombre.ilike.%${q}%,cbu.ilike.%${q}%`);
   }
   if (estado) query = query.eq("estado", estado);
+  if (fechaDesde) query = query.gte("created_at", `${fechaDesde}T00:00:00`);
+  if (fechaHasta) query = query.lte("created_at", `${fechaHasta}T23:59:59`);
   query = query.order("created_at", { ascending: false }).range(from, to);
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);

@@ -46,13 +46,11 @@ function estadoBadge(e: string) {
 function CvuPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
   const [estadoFilter, setEstadoFilter] = useState<string>("");
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["cvus", page, search, estadoFilter],
-    queryFn: () => listAllCvus({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estadoFilter as never || undefined }),
+    queryKey: ["cvus", page, estadoFilter],
+    queryFn: () => listAllCvus({ page, pageSize: PAGE_SIZE, estado: (estadoFilter as never) || undefined }),
   });
 
   const rows = (data?.rows ?? []) as CvuRow[];
@@ -186,27 +184,20 @@ function CvuPage() {
               _cbk: r.cbu ? `CBK-${r.cbu.slice(-12)}` : "—",
               _alias: r.cbu ? r.cbu.slice(-6) : "—",
               _estado: r.estado,
+              _fechaAlta: r.createdAt ? new Date(r.createdAt).toLocaleDateString("es-AR") : "—",
+              _fechaAltaRaw: r.createdAt,
             }))}
             keyExtractor={(r: any) => r.id}
             actions={(r: any) => <ActionsDropdown actions={getActions(r as CvuRow)} />}
             hidePagination
             extraFilters={
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="flex-1 min-w-[180px]">
-                  <label className="text-xs font-medium text-muted-foreground">Buscar</label>
-                  <div className="relative">
-                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <Input value={searchInput} onChange={(e) => { setSearchInput(e.target.value); setPage(0); }} placeholder="Legajo, email, nombre, CBU..." className="pl-8 h-8 text-xs" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Estado</label>
-                  <select value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40">
-                    <option value="">Todos</option>
-                    <option value="Activa">Habilitado</option>
-                    <option value="Pausada">Deshabilitado</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                <select value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40">
+                  <option value="">Todos</option>
+                  <option value="Activa">Habilitado</option>
+                  <option value="Pausada">Deshabilitado</option>
+                </select>
               </div>
             }
           />
@@ -270,12 +261,13 @@ function CvuPage() {
 }
 
 const columns: Column<any>[] = [
-  { key: "_legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, render: (r) => <LegajoCell legajo={r._legajo} /> },
-  { key: "_correo", label: "Usuario", render: (r) => r._correo },
-  { key: "_nombre", label: "Nombre", render: (r) => r._nombre },
-  { key: "_apellido", label: "Apellido", render: (r) => r._apellido },
-  { key: "_cvu", label: "CBU / CVU", render: (r) => <span className="font-mono tabular-nums">{r._cvu}</span> },
+  { key: "_legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, filterable: true, render: (r) => <LegajoCell legajo={r._legajo} /> },
+  { key: "_correo", label: "Usuario", filterable: true, render: (r) => r._correo },
+  { key: "_nombre", label: "Nombre", filterable: true, render: (r) => r._nombre },
+  { key: "_apellido", label: "Apellido", filterable: true, render: (r) => r._apellido },
+  { key: "_cvu", label: "CBU / CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r._cvu}</span> },
   { key: "_cbk", label: "CBK", render: (r) => <span className="font-mono tabular-nums">{r._cbk}</span> },
   { key: "_alias", label: "Alias", render: (r) => r._alias },
   { key: "_estado", label: "Estado", render: (row) => estadoBadge(row._estado) },
+  { key: "_fechaAlta", label: "Fecha de alta", render: (r) => <span className="font-mono tabular-nums text-xs">{r._fechaAlta}</span> },
 ];
