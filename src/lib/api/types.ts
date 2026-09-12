@@ -188,6 +188,8 @@ export type MovimientoRow = {
   fecha: string;
   created_at: string;
   estado_id: number;
+  comercio_id?: string | null;
+  bandera?: string | null;
   estados_movimiento?:
     | {
         codigo: string;
@@ -218,6 +220,8 @@ export type Movimiento = {
   fecha: string;
   createdAt: string;
   estadoId: number;
+  comercioId?: string | null;
+  bandera?: string | null;
   estadoCodigo?: string;
   estadoNombre?: string;
   esFinal?: boolean;

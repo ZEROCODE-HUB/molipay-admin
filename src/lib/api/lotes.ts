@@ -87,6 +87,34 @@ export async function listLoteMovimientos(loteId: string): Promise<string[]> {
   return (data ?? []).map((r: { movimiento_id: string }) => r.movimiento_id);
 }
 
+export async function getLotePaywaySnapshotForMovimientos(
+  movimientoIds: string[],
+): Promise<Map<string, { pct: number; monto: number; loteId: string }>> {
+  if (movimientoIds.length === 0) return new Map();
+  const sb = requireSupabase();
+  const { data: links, error: linkErr } = await sb.from("lote_movimientos").select("lote_id, movimiento_id").in("movimiento_id", movimientoIds);
+  if (linkErr) throw new DataAccessError(linkErr);
+  const loteIds = [...new Set((links ?? []).map((r: { lote_id: string }) => r.lote_id))];
+  if (loteIds.length === 0) return new Map();
+  const { data: lotes, error: loteErr } = await sb
+    .from("lotes_acreditacion")
+    .select("id, tasa_payway_pct, tasa_payway_monto, cantidad_operaciones")
+    .in("id", loteIds);
+  if (loteErr) throw new DataAccessError(loteErr);
+  const loteMap = new Map<string, { pct: number; monto: number; cantidad: number }>(
+    (lotes ?? []).map((l: { id: string; tasa_payway_pct: number; tasa_payway_monto: number; cantidad_operaciones: number }) => [
+      l.id,
+      { pct: Number(l.tasa_payway_pct), monto: Number(l.tasa_payway_monto), cantidad: Number(l.cantidad_operaciones) },
+    ]),
+  );
+  const result = new Map<string, { pct: number; monto: number; loteId: string }>();
+  for (const link of links ?? [] as { lote_id: string; movimiento_id: string }[]) {
+    const lote = loteMap.get(link.lote_id);
+    if (lote) result.set(link.movimiento_id, { pct: lote.pct, monto: lote.monto, loteId: link.lote_id });
+  }
+  return result;
+}
+
 export type UpdateLoteInput = {
   estado?: EstadoLote;
   contracargoMonto?: number;

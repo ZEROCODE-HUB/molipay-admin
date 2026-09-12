@@ -22,6 +22,9 @@ import {
 } from "@/lib/api/types";
 import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useCan } from "@/lib/permissions";
+import { useQuery } from "@tanstack/react-query";
+import { listBanderasByComercioIds } from "@/lib/api/comercio-banderas";
+import { getLotePaywaySnapshotForMovimientos } from "@/lib/api/lotes";
 
 const PAGE_SIZE = 25;
 
@@ -65,6 +68,11 @@ export type FilaSubRuta = Movimiento & {
   _comision: number;
   _iva: number;
   _cobrado: number;
+  _montoOperacion: number;
+  _impuesto: number;
+  _comercioId: string | null;
+  _bandera: string | null;
+  _dbId: string;
 };
 
 /**
@@ -151,7 +159,32 @@ export function MovimientosSubRoute({
     _comision: m.comision,
     _iva: m.impuesto,
     _cobrado: m.montoCobrado,
+    _montoOperacion: m.montoOperacion,
+    _impuesto: m.impuesto,
+    _comercioId: m.comercioId ?? null,
+    _bandera: m.bandera ?? null,
+    _dbId: m.id,
   }));
+
+  // PASO 2: Comisión Payway solo para tarjeta — cruce comercio_banderas + snapshot lote
+  const isTarjeta = tipoCode === 'tarjeta';
+  const comercioIds = useMemo(() => [...new Set(data.map((d) => d._comercioId).filter(Boolean) as string[])], [data]);
+  const movimientoIds = useMemo(() => data.map((d) => d._dbId), [data]);
+  const { data: banderasPayway } = useQuery({
+    queryKey: ["banderas-payway", comercioIds],
+    queryFn: () => listBanderasByComercioIds(comercioIds),
+    enabled: isTarjeta && comercioIds.length > 0,
+  });
+  const banderasLookup = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of banderasPayway ?? []) m.set(`${b.comercioId}::${b.bandera}`, b.comisionPayway);
+    return m;
+  }, [banderasPayway]);
+  const { data: loteSnapshotMap } = useQuery({
+    queryKey: ["lote-snapshot-payway", movimientoIds],
+    queryFn: () => getLotePaywaySnapshotForMovimientos(movimientoIds),
+    enabled: isTarjeta && movimientoIds.length > 0,
+  });
 
   const getActions = (row: Movimiento): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
@@ -179,11 +212,39 @@ export function MovimientosSubRoute({
   const err = error instanceof DataAccessError ? error : null;
   const totalPaginas = Math.max(1, Math.ceil((total || 0) / PAGE_SIZE));
 
-  const visibles = columns.filter(
+  const allColumns = useMemo(() => {
+    if (!isTarjeta) return columns;
+    const paywayCol: Column<FilaSubRuta> = {
+      key: "payway",
+      label: "Comisión Payway",
+      render: (r) => {
+        const snapshot = loteSnapshotMap?.get(r._dbId);
+        let pct: number;
+        let monto: number;
+        if (snapshot) {
+          pct = snapshot.pct;
+          monto = r._montoOperacion * pct / 100;
+        } else {
+          const key = `${r._comercioId}::${r._bandera}`;
+          pct = banderasLookup.get(key) ?? 0;
+          monto = r._montoOperacion * pct / 100;
+        }
+        if (!r._bandera || !r._comercioId) return <span className="font-mono tabular-nums text-muted-foreground">—</span>;
+        return <span className="font-mono tabular-nums">{fmtARS(monto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+      },
+    };
+    const idx = columns.findIndex((c) => c.key === "comision");
+    if (idx === -1) return [...columns, paywayCol];
+    const next = [...columns];
+    next.splice(idx + 1, 0, paywayCol);
+    return next;
+  }, [isTarjeta, banderasLookup, loteSnapshotMap]);
+
+  const visibles = allColumns.filter(
     (c) =>
       (tipoCode || c.key !== "tipo") &&
-      (soloConImpuesto || c.key !== "retencion") &&
-      (soloConComision || !["comision", "iva", "cobrado"].includes(c.key)),
+      (soloConComision || !["iva", "cobrado"].includes(c.key)) &&
+      (isTarjeta || c.key !== "payway"),
   );
 
   return (
@@ -390,14 +451,20 @@ const columns: Column<FilaSubRuta>[] = [
     render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
   },
   {
-    key: "retencion",
-    label: "Retención impuesto",
-    render: (r) => <span className="font-mono tabular-nums">{fmtARS(r._iva)}</span>,
+    key: "comision",
+    label: "Comisión",
+    render: (r) => {
+      const pct = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._comision)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+    },
   },
   {
-    key: "comision",
-    label: "Comisión cobrada",
-    render: (r) => <span className="font-mono tabular-nums">{fmtARS(r._comision)}</span>,
+    key: "retencion",
+    label: "Impuesto",
+    render: (r) => {
+      const pct = r._montoOperacion > 0 ? (r._impuesto / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+    },
   },
   {
     key: "iva",

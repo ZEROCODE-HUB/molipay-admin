@@ -70,3 +70,11 @@ export async function deleteBandera(id: string): Promise<void> {
 export async function setBanderaEstado(id: string, estado: ComercioBanderaEstado): Promise<ComercioBandera> {
   return updateBandera(id, { estado });
 }
+
+export async function listBanderasByComercioIds(comercioIds: string[]): Promise<ComercioBandera[]> {
+  if (comercioIds.length === 0) return [];
+  const sb = requireSupabase();
+  const { data, error } = await sb.from("comercio_banderas").select(COLUMNS).in("comercio_id", comercioIds);
+  if (error) throw new DataAccessError(error);
+  return ((data ?? []) as ComercioBanderaRow[]).map(toBandera);
+}

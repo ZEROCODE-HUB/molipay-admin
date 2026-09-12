@@ -155,6 +155,8 @@ export function toMovimiento(
     esFinal: estado?.es_final,
     fecha: r.fecha,
     createdAt: r.created_at,
+    comercioId: (r as MovimientoRow).comercio_id ?? null,
+    bandera: (r as MovimientoRow).bandera ?? null,
     cliente: cli,
   };
 }

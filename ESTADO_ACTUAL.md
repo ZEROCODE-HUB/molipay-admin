@@ -968,3 +968,18 @@ no hay datos de alguna parte, salir vacío, pero **no modificar la estructura de
   luego `supabase/seed/0011_detalle_cliente.sql` en Supabase SQL Editor (agente sin
   credenciales de BD). Tras aplicar, verificar en pantalla.
 
+---
+
+## 17. Movimientos — columnas Comisión/Impuesto/Payway y Dashboard Comisiones (PASOS 1-3)
+
+**PASO 1 — Comisión e Impuesto en todas las vistas (índice + 7 sub-rutas):**
+- `src/components/movimientos-subroute.tsx:354` + `src/routes/admin.general.movimientos.index.tsx:353` agregan columnas `Comisión` e `Impuesto` en **todas** las vistas (no solo en tabs filtradas). Formato `"$X (Y%)"` con `% = comision|impuesto / monto_operacion *100` calculado al vuelo, reusando `comision, impuesto, monto_operacion` ya traídos por `movimientos.ts:COLUMNS`. Tabs `Cobro de comisiones`/`Impuestos cobrados` quedan como atajos (`comision>0`/`impuesto>0`) pero ya no son el único lugar donde se ve el dato. `FilaSubRuta` extendida con `_montoOperacion/_impuesto/_comercioId/_bandera/_dbId`.
+
+**PASO 2 — Comisión Payway solo en Pagos con Tarjeta:**
+- `movimientos` ahora con `comercio_id (FK comercios)` + `bandera (text)` obligatorios para `tipo='tarjeta'` (`movimientos_tarjeta_requiere_comercio_bandera`). `src/lib/api/types.ts:177` `MovimientoRow` con `comercio_id/bandera`, `src/lib/api/mappers.ts:197` y `src/lib/api/movimientos.ts:29` `COLUMNS` actualizados.
+- `src/lib/api/comercio-banderas.ts:73` `listBanderasByComercioIds()` + `src/lib/api/lotes.ts:153` `getLotePaywaySnapshotForMovimientos()` (junction `lote_movimientos` → `lotes_acreditacion.tasa_payway_pct/monto`).
+- `src/components/movimientos-subroute.tsx:156` solo cuando `tipoCode==='tarjeta'`: columna `Comisión Payway` (`$ ( %)`). Lógica: si movimiento ya tiene lote (via `lote_movimientos`), usa snapshot histórico `lote.tasa_payway_pct` aplicado sobre `monto_operacion`; si no, fallback a `comercio_banderas.comision_payway` vivo. Así no cambia si la tarifa se actualiza después. Otras 6 vistas y `deposito/retiro/QR` no muestran esta columna.
+
+**PASO 3 — Dashboard Comisiones (solo Depósito+Retiro):**
+- `src/routes/admin.index.tsx:94` `DashboardComisionesCard` — dos `useMovimientos` (`tipo=deposito|retiro`, `pageSize 1000`) con filtros `fechaDesde/fechaHasta` (default mes en curso, dos inputs date). Cálculos: `Monto transaccionado = Σ monto_operacion`, `Comisión total = Σ comision`, `Remanente = monto - comision`. Drill-down secundario `DataTable` por comercio (`legajo → monto/comision/remanente/count`, ordenado por monto). Texto explícito: "Este cuadro refleja el flujo de transacciones del periodo seleccionado, no el saldo acumulado de la cuenta recaudadora." No incluye `tarjeta/QR` (no es dinero real hasta liquidación Payway del lote).
+

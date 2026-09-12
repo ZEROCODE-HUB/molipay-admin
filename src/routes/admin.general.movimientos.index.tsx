@@ -78,6 +78,8 @@ function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]): Movimi
   };
 }
 
+type FilaIndex = Movimiento & { _comision: number; _impuesto: number; _montoOperacion: number };
+
 function TodosPage() {
   const { legajo } = Route.useSearch();
   const navigate = useNavigate();
@@ -117,7 +119,12 @@ function TodosPage() {
   const puedeModificar = can("modificar", "movimientos");
 
   const byTxn = new Map(rows.map((r) => [r.idTxn, r]));
-  const data: Movimiento[] = rows.map((m) => toViewMovimiento(m, catalogoEstados));
+  const data: FilaIndex[] = rows.map((m) => ({
+    ...toViewMovimiento(m, catalogoEstados),
+    _comision: m.comision,
+    _impuesto: m.impuesto,
+    _montoOperacion: m.montoOperacion,
+  }));
 
   const getActions = (row: Movimiento): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setDetail(row) },
@@ -350,7 +357,7 @@ function TodosPage() {
   );
 }
 
-const columns: Column<Movimiento>[] = [
+const columns: Column<FilaIndex>[] = [
   {
     key: "legajo",
     label: "Legajo",
@@ -399,6 +406,22 @@ const columns: Column<Movimiento>[] = [
     key: "monto",
     label: "Monto",
     render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "comision",
+    label: "Comisión",
+    render: (r) => {
+      const pct = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._comision)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+    },
+  },
+  {
+    key: "impuesto",
+    label: "Impuesto",
+    render: (r) => {
+      const pct = r._montoOperacion > 0 ? (r._impuesto / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+    },
   },
   {
     key: "fecha",
