@@ -326,14 +326,15 @@ function JuridicasPage() {
 }
 
 const columns: Column<JuridicaRow>[] = [
-  { key: "legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, filterable: true, render: (r) => <LegajoCell legajo={r.legajo} /> },
-  { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
-  { key: "razonSocial", label: "Razón Social", filterable: true, render: (r) => r.razonSocial },
-  { key: "tipoLabel", label: "Tipo", render: (r) => r.tipoLabel },
+  { key: "legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, filterable: true, minWidth: 100, render: (r) => <LegajoCell legajo={r.legajo} /> },
+  { key: "correo", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (r) => r.correo },
+  { key: "razonSocial", label: "Razón Social", filterable: true, minWidth: 200, maxWidth: 320, render: (r) => r.razonSocial },
+  { key: "tipoLabel", label: "Tipo", minWidth: 100, render: (r) => r.tipoLabel },
   {
     key: "estadoLabel",
     label: "Estado",
+    minWidth: 120,
     render: (row) => <Badge tone={row.estadoTone}>{row.estadoLabel}</Badge>,
   },
-  { key: "fechaRegistro", label: "Fecha de registro", render: (r) => <span className="font-mono tabular-nums">{r.fechaRegistro}</span> },
+  { key: "fechaRegistro", label: "Fecha de registro", minWidth: 140, render: (r) => <span className="font-mono tabular-nums">{r.fechaRegistro}</span> },
 ];

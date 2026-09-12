@@ -384,18 +384,21 @@ const columns: Column<Usuario>[] = [
     label: "Legajo",
     hint: LEGAJO_TOOLTIP,
     filterable: true,
+    minWidth: 100,
     render: (row) => <LegajoCell legajo={row.legajo} />,
   },
-  { key: "correo", label: "Usuario", filterable: true, render: (row) => row.correo },
-  { key: "nombres", label: "Nombres", filterable: true, render: (row) => row.nombres },
+  { key: "correo", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (row) => row.correo },
+  { key: "nombres", label: "Nombres", filterable: true, minWidth: 180, maxWidth: 320, render: (row) => row.nombres },
   {
     key: "estadoLabel",
     label: "Estado",
+    minWidth: 120,
     render: (row) => <Badge tone={row.estadoTone as "success" | "warn" | "danger" | "neutral"}>{row.estadoLabel}</Badge>,
   },
   {
     key: "fechaRegistro",
     label: "Fecha de registro",
+    minWidth: 140,
     render: (row) => <span className="font-mono tabular-nums">{row.fechaRegistro}</span>,
   },
 ];

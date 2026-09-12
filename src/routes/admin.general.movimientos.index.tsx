@@ -363,53 +363,66 @@ const columns: Column<FilaIndex>[] = [
     label: "Legajo",
     hint: LEGAJO_TOOLTIP,
     filterable: true,
+    minWidth: 100,
     render: (r) => <LegajoCell legajo={r.legajo} />,
   },
   {
     key: "id",
     label: "ID",
     filterable: true,
+    minWidth: 120,
+    maxWidth: 200,
     render: (r) => <span className="font-mono tabular-nums">{r.id}</span>,
   },
   {
     key: "tipo",
     label: "Tipo de movimiento",
     filterable: false,
+    minWidth: 140,
     render: (r) => TIPO_LABEL.get(r.tipo) ?? r.tipo,
   },
   {
     key: "cvu",
     label: "CVU",
     filterable: true,
+    minWidth: 120,
+    maxWidth: 200,
     render: (r) => <span className="font-mono tabular-nums">{r.cvu}</span>,
   },
-  { key: "usuario", label: "Usuario", filterable: true, render: (r) => r.usuario },
+  { key: "usuario", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (r) => r.usuario },
   {
     key: "nombreOrigen",
     label: "Nombre empresa/persona",
     filterable: true,
+    minWidth: 200,
+    maxWidth: 320,
     render: (r) => r.nombreOrigen,
   },
   {
     key: "nombreDestino",
     label: "Nombre destino",
     filterable: true,
+    minWidth: 200,
+    maxWidth: 320,
     render: (r) => r.nombreDestino,
   },
   {
     key: "cuit",
     label: "CUIT",
     filterable: true,
+    minWidth: 120,
     render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span>,
   },
   {
     key: "monto",
     label: "Monto",
+    minWidth: 140,
     render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
   },
   {
     key: "comision",
     label: "Comisión",
+    minWidth: 150,
     render: (r) => {
       const pct = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
       return <span className="font-mono tabular-nums">{fmtARS(r._comision)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
@@ -418,6 +431,7 @@ const columns: Column<FilaIndex>[] = [
   {
     key: "impuesto",
     label: "Impuesto",
+    minWidth: 150,
     render: (r) => {
       const pct = r._montoOperacion > 0 ? (r._impuesto / r._montoOperacion) * 100 : 0;
       return <span className="font-mono tabular-nums">{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
@@ -427,6 +441,7 @@ const columns: Column<FilaIndex>[] = [
     key: "fecha",
     label: "Fecha",
     filterable: "date",
+    minWidth: 160,
     render: (r) => <span className="font-mono tabular-nums">{r.fecha}</span>,
   },
   {
@@ -434,6 +449,7 @@ const columns: Column<FilaIndex>[] = [
     label: "Estado",
     filterable: "enum",
     filterOptions: [...ESTADOS_MOVIMIENTO],
+    minWidth: 120,
     render: (row) => estadoBadge(row.estado),
   },
 ];

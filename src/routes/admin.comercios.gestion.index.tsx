@@ -856,6 +856,8 @@ function Page() {
       key: "usuario",
       label: "Usuario",
       sortable: true,
+      minWidth: 160,
+      maxWidth: 280,
       render: (r) => (
         <div>
           <div className="font-semibold">{r.usuario}</div>
@@ -868,12 +870,15 @@ function Page() {
       key: "cliente",
       label: "Nombre comercial",
       sortable: true,
+      minWidth: 200,
+      maxWidth: 320,
       render: (r) => r.nombreComercio ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "categoria",
       label: "Categoría",
       sortable: true,
+      minWidth: 140,
       render: (r) =>
         r.categoria ? (
           <span className="font-mono tabular-nums">
@@ -887,24 +892,28 @@ function Page() {
       key: "nivel",
       label: "Nivel",
       sortable: true,
+      minWidth: 100,
       render: (r) => r.nivel,
     },
     {
       key: "puntosVenta",
       label: "Puntos de venta",
       sortable: false,
+      minWidth: 120,
       render: (r) => <span className="font-mono tabular-nums text-xs">{r.puntosVenta.length}</span>,
     },
     {
       key: "estado",
       label: "Estado",
       sortable: true,
+      minWidth: 120,
       render: (r) => <Badge tone={estadoBadgeTone(r.estado)}>{r.estado}</Badge>,
     },
     {
       key: "createdAt",
       label: "Registro",
       sortable: true,
+      minWidth: 120,
       render: (r) => (
         <span className="font-mono text-xs tabular-nums">
           {new Date(r.createdAt).toLocaleDateString("es-AR")}

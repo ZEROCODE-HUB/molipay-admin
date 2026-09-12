@@ -25,8 +25,9 @@ export type MovimientoFilters = Pagination & {
 };
 
 // estado_id + join embebido a estados_movimiento (evita N+1). Incluye comercio_id+bandera para tarjeta (PASO 2).
+// Join a comercios(nombre_comercio) para búsqueda por nombre de comercio en Pagos con tarjeta.
 const COLUMNS =
-  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit)";
+  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
 
 export async function listMovimientos(filters: MovimientoFilters): Promise<Page<Movimiento>> {
   const sb = requireSupabase();
@@ -77,7 +78,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
     query = query.or(
-      `id_txn.ilike.%${q}%,legajo.ilike.%${q}%,clientes.correo.ilike.%${q}%,clientes.nombre.ilike.%${q}%`,
+      `id_txn.ilike.%${q}%,legajo.ilike.%${q}%,clientes.correo.ilike.%${q}%,clientes.nombre.ilike.%${q}%,comercios.nombre_comercio.ilike.%${q}%`,
     );
   }
 

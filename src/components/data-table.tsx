@@ -19,6 +19,12 @@ export type Column<T> = {
   filterable?: boolean | FilterType;
   filterOptions?: string[];
   hint?: string;
+  /** Ancho mínimo en píxeles (ej. 120). Si no se define, se calcula según el label. */
+  minWidth?: number;
+  /** Ancho máximo en píxeles (ej. 300). Si el contenido es más largo, se trunca con ellipsis. */
+  maxWidth?: number;
+  /** Texto para tooltip al truncar. Si no se define, usa el contenido renderizado. */
+  tooltip?: (row: T) => string;
   render: (row: T) => ReactNode;
 };
 
@@ -436,11 +442,11 @@ export function DataTable<T>({
       )}
 
       <div className="bg-card border rounded-lg overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" style={{ tableLayout: "auto" }}>
           <thead>
             <tr className="border-b bg-muted/50">
               {selection && (
-                <th className="px-2 py-2 sm:px-4 sm:py-3 w-10">
+                <th className="px-2 py-2 sm:px-4 sm:py-3 w-10" style={{ minWidth: 40 }}>
                   <input
                     type="checkbox"
                     className="accent-primary"
@@ -453,7 +459,11 @@ export function DataTable<T>({
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className="px-2 py-2 sm:px-4 sm:py-3 text-left whitespace-nowrap">
+                <th
+                  key={col.key}
+                  className="px-2 py-2 sm:px-4 sm:py-3 text-left whitespace-nowrap"
+                  style={{ minWidth: col.minWidth ?? 100 }}
+                >
                   <button
                     type="button"
                     className={`font-display font-semibold text-foreground flex items-center gap-1 ${
@@ -473,7 +483,7 @@ export function DataTable<T>({
                 </th>
               ))}
               {actions && (
-                <th className="px-2 py-2 sm:px-4 sm:py-3 w-20 text-right whitespace-nowrap">
+                <th className="px-2 py-2 sm:px-4 sm:py-3 w-20 text-right whitespace-nowrap" style={{ minWidth: 120 }}>
                   Acciones
                 </th>
               )}
@@ -499,7 +509,7 @@ export function DataTable<T>({
                     className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     {selection && (
-                      <td className="px-2 py-2 sm:px-4 sm:py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3" style={{ minWidth: 40 }}>
                         <input
                           type="checkbox"
                           className="accent-primary"
@@ -508,13 +518,33 @@ export function DataTable<T>({
                         />
                       </td>
                     )}
-                    {columns.map((col) => (
-                      <td key={col.key} className="px-2 py-2 sm:px-4 sm:py-3">
-                        {col.render(row)}
-                      </td>
-                    ))}
+                    {columns.map((col) => {
+                      const rendered = col.render(row);
+                      const textContent =
+                        typeof rendered === "string" || typeof rendered === "number"
+                          ? String(rendered)
+                          : "";
+                      return (
+                        <td
+                          key={col.key}
+                          className="px-2 py-2 sm:px-4 sm:py-3"
+                          style={{
+                            minWidth: col.minWidth ?? 100,
+                            maxWidth: col.maxWidth,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={col.tooltip ? col.tooltip(row) : textContent || undefined}
+                        >
+                          {rendered}
+                        </td>
+                      );
+                    })}
                     {actions && (
-                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right">{actions(row)}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right" style={{ minWidth: 120 }}>
+                        {actions(row)}
+                      </td>
                     )}
                   </tr>
                 );

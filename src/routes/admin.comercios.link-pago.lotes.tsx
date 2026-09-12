@@ -316,22 +316,22 @@ function Page() {
   };
 
   const columns: Column<LoteAcreditacion>[] = [
-    { key:"fecha", label:"Fecha", render:(r)=> <span className="font-mono text-xs tabular-nums">{new Date(r.fecha).toLocaleDateString("es-AR")}</span> },
-    { key:"codigo", label:"Lote", render:(r)=> <span className="font-mono text-xs font-semibold">{r.codigo}</span> },
-    { key:"comercio", label:"Comercio / Legajo", filterable:true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
-    { key:"bandera", label:"Bandera", filterable:"enum", filterOptions:["Visa","Mastercard","Amex","Cabal","Diners"], render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
-    { key:"cantidadOperaciones", label:"Ops", render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOperaciones}{r.cuotas && r.cuotas>1 ? ` · ${r.cuotas}c` : ""}</span> },
-    { key:"importeNeto", label:"Importe a acreditar", render:(r)=> <span className={`font-mono tabular-nums font-semibold ${r.estado==="Contracargo" ? "text-red-600" : "text-emerald-700"}`}>{fmt(r.importeNeto)}</span> },
-    { key:"estado", label:"Estado", filterable:"enum", filterOptions:["Acreditado","Rechazado","Contracargo"], render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
+    { key:"fecha", label:"Fecha", minWidth: 120, render:(r)=> <span className="font-mono text-xs tabular-nums">{new Date(r.fecha).toLocaleDateString("es-AR")}</span> },
+    { key:"codigo", label:"Lote", minWidth: 160, maxWidth: 280, render:(r)=> <span className="font-mono text-xs font-semibold">{r.codigo}</span> },
+    { key:"comercio", label:"Comercio / Legajo", filterable:true, minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
+    { key:"bandera", label:"Bandera", filterable:"enum", filterOptions:["Visa","Mastercard","Amex","Cabal","Diners"], minWidth: 100, render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
+    { key:"cantidadOperaciones", label:"Ops", minWidth: 80, render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOperaciones}{r.cuotas && r.cuotas>1 ? ` · ${r.cuotas}c` : ""}</span> },
+    { key:"importeNeto", label:"Importe a acreditar", minWidth: 150, render:(r)=> <span className={`font-mono tabular-nums font-semibold ${r.estado==="Contracargo" ? "text-red-600" : "text-emerald-700"}`}>{fmt(r.importeNeto)}</span> },
+    { key:"estado", label:"Estado", filterable:"enum", filterOptions:["Acreditado","Rechazado","Contracargo"], minWidth: 120, render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
   ];
 
   const resumenColumns: Column<ResumenComercio>[] = [
-    { key:"comercio", label:"Comercio / Legajo", filterable:true, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
-    { key:"pendienteAcreditar", label:"Pendiente de acreditar", render:(r)=> <span className="font-mono text-xs font-semibold">{fmt(r.pendienteAcreditar)}</span> },
-    { key:"pendienteImpuestos", label:"Pendiente de impuestos", render:(r)=> <span className="font-mono text-xs">{fmt(r.pendienteImpuestos)}</span> },
-    { key:"totalPayWay", label:"Comisión PayWay", render:(r)=> <span className="font-mono text-xs">{fmt(r.totalPayWay)}</span> },
-    { key:"totalMoliPay", label:"Neto MoliPay", render:(r)=> <span className="font-mono text-xs text-emerald-700">{fmt(r.totalMoliPay)}</span> },
-    { key:"totalFinal", label:"Total a pagar", render:(r)=> <span className="font-mono font-semibold text-emerald-700">{fmt(r.totalFinal)}</span> },
+    { key:"comercio", label:"Comercio / Legajo", filterable:true, minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"pendienteAcreditar", label:"Pendiente de acreditar", minWidth: 150, render:(r)=> <span className="font-mono text-xs font-semibold">{fmt(r.pendienteAcreditar)}</span> },
+    { key:"pendienteImpuestos", label:"Pendiente de impuestos", minWidth: 150, render:(r)=> <span className="font-mono text-xs">{fmt(r.pendienteImpuestos)}</span> },
+    { key:"totalPayWay", label:"Comisión PayWay", minWidth: 140, render:(r)=> <span className="font-mono text-xs">{fmt(r.totalPayWay)}</span> },
+    { key:"totalMoliPay", label:"Neto MoliPay", minWidth: 140, render:(r)=> <span className="font-mono text-xs text-emerald-700">{fmt(r.totalMoliPay)}</span> },
+    { key:"totalFinal", label:"Total a pagar", minWidth: 140, render:(r)=> <span className="font-mono font-semibold text-emerald-700">{fmt(r.totalFinal)}</span> },
   ];
 
   const err = error instanceof DataAccessError ? error : null;
