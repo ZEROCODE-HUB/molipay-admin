@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, AlertTriangle, Inbox } from "lucide-react";
 import {
   PageHeader,
@@ -33,12 +33,10 @@ import type {
   ClienteSelect,
   CodigoCategoria,
   Comercio,
-  ComercioMetodoConfig,
   EstadoComercio,
   NivelComercio,
 } from "@/lib/api/types";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
-import { metodosPagoIniciales } from "@/data/metodos-pago";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/comercios/gestion/")({
@@ -116,8 +114,214 @@ function formatPct(n: number): string {
   return `${n.toFixed(2)}%`;
 }
 
+function BanderasSection({ comercioId }: { comercioId: string }) {
+  const [banderas, setBanderas] = useState<import("@/lib/api/types").ComercioBandera[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
+  const [formBandera, setFormBandera] = useState("Visa");
+  const [formBanderaCustom, setFormBanderaCustom] = useState("");
+  const [formMolipay, setFormMolipay] = useState("");
+  const [formPayway, setFormPayway] = useState("");
+  const [formEstado, setFormEstado] = useState<import("@/lib/api/types").ComercioBanderaEstado>("Activo");
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
+
+  const BANDERAS_COMUNES = ["Visa", "Mastercard", "Amex", "Cabal", "Diners"] as const;
+
+  const cargar = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { listByComercio } = await import("@/lib/api/comercio-banderas");
+      const data = await listByComercio(comercioId);
+      setBanderas(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comercioId]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormBandera("Visa");
+    setFormBanderaCustom("");
+    setFormMolipay("");
+    setFormPayway("");
+    setFormEstado("Activo");
+    setShowForm(true);
+  };
+
+  const openEdit = (b: import("@/lib/api/types").ComercioBandera) => {
+    setEditing(b);
+    const isCommon = (BANDERAS_COMUNES as readonly string[]).includes(b.bandera);
+    setFormBandera(isCommon ? b.bandera : "__custom__");
+    setFormBanderaCustom(isCommon ? "" : b.bandera);
+    setFormMolipay(String(b.comisionMolipay));
+    setFormPayway(String(b.comisionPayway));
+    setFormEstado(b.estado);
+    setShowForm(true);
+  };
+
+  const guardar = async () => {
+    const banderaFinal = formBandera === "__custom__" ? formBanderaCustom.trim() : formBandera.trim();
+    if (!banderaFinal) return;
+    const molipay = parseFloat(formMolipay.replace(",", ".")) || 0;
+    const payway = parseFloat(formPayway.replace(",", ".")) || 0;
+    setSaving(true);
+    try {
+      const mod = await import("@/lib/api/comercio-banderas");
+      if (editing) {
+        await mod.updateBandera(editing.id, { bandera: banderaFinal, comisionMolipay: molipay, comisionPayway: payway, estado: formEstado });
+      } else {
+        await mod.createBandera(comercioId, { bandera: banderaFinal, comisionMolipay: molipay, comisionPayway: payway, estado: formEstado });
+      }
+      setShowForm(false);
+      setEditing(null);
+      await cargar();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const eliminar = async () => {
+    if (!confirmDelete) return;
+    try {
+      const mod = await import("@/lib/api/comercio-banderas");
+      await mod.deleteBandera(confirmDelete.id);
+      setConfirmDelete(null);
+      await cargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const neto = (() => {
+    const m = parseFloat(formMolipay.replace(",", ".") || "0") || 0;
+    const p = parseFloat(formPayway.replace(",", ".") || "0") || 0;
+    return m - p;
+  })();
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground">Banderas</h4>
+        <BtnPrimary type="button" onClick={openCreate} className="h-8 px-3 text-xs">
+          <Plus size={14} /> Agregar bandera
+        </BtnPrimary>
+      </div>
+      {loading ? (
+        <div className="py-8 text-center text-sm text-muted-foreground">Cargando banderas…</div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <BtnOutline type="button" onClick={cargar} className="h-7 text-xs">Reintentar</BtnOutline>
+        </div>
+      ) : banderas.length === 0 ? (
+        <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">Sin banderas habilitadas para este comercio.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50 text-left">
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground">Bandera</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Comisión MoliPay</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Comisión PayWay</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Neto</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground">Estado</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {banderas.map((b) => (
+                <tr key={b.id} className="border-b last:border-0">
+                  <td className="px-3 py-2.5 font-medium">{b.bandera}</td>
+                  <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(b.comisionMolipay)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(b.comisionPayway)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono tabular-nums font-semibold">{formatPct(b.comisionNeta)}</td>
+                  <td className="px-3 py-2.5"><Badge tone={b.estado === "Activo" ? "success" : "neutral"}>{b.estado}</Badge></td>
+                  <td className="px-3 py-2.5 text-right">
+                    <span className="inline-flex gap-1">
+                      <button type="button" onClick={() => openEdit(b)} className="h-7 px-2 rounded-md border bg-card text-xs hover:bg-accent inline-flex items-center gap-1"><Edit3 size={12} /> Editar</button>
+                      <button type="button" onClick={() => setConfirmDelete(b)} className="h-7 px-2 rounded-md border border-red-200 text-red-600 bg-card text-xs hover:bg-red-50 inline-flex items-center gap-1"><Trash2 size={12} /> Eliminar</button>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {showForm && (
+        <FormDialog
+          open
+          onClose={() => { setShowForm(false); setEditing(null); }}
+          title={editing ? "Editar bandera" : "Agregar bandera"}
+          description={editing ? `Editando ${editing.bandera}` : "Seleccioná una bandera común o ingresá texto libre."}
+          onSubmit={guardar}
+          submitLabel={saving ? "Guardando…" : editing ? "Guardar" : "Agregar"}
+          isSubmitting={saving}
+        >
+          <div className="space-y-4">
+            <div>
+              <Label>Bandera</Label>
+              <select value={formBandera} onChange={(e) => setFormBandera(e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
+                {BANDERAS_COMUNES.map((b) => (<option key={b} value={b}>{b}</option>))}
+                <option value="__custom__">Otra (texto libre)…</option>
+              </select>
+              {formBandera === "__custom__" && (
+                <Input value={formBanderaCustom} onChange={(e) => setFormBanderaCustom(e.target.value)} placeholder="Ej: Naranja, Tarjeta Propia…" className="mt-2" />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>% Comisión MoliPay</Label>
+                <Input value={formMolipay} onChange={(e) => { const v = e.target.value; if (v === "" || /^[0-9]*[.,]?[0-9]*$/.test(v)) setFormMolipay(v); }} placeholder="0.00" className="font-mono" inputMode="decimal" />
+              </div>
+              <div>
+                <Label>% Comisión PayWay</Label>
+                <Input value={formPayway} onChange={(e) => { const v = e.target.value; if (v === "" || /^[0-9]*[.,]?[0-9]*$/.test(v)) setFormPayway(v); }} placeholder="0.00" className="font-mono" inputMode="decimal" />
+              </div>
+            </div>
+            <div className="rounded-md bg-muted px-3 py-2 flex justify-between text-sm">
+              <span className="text-muted-foreground">% Neto (autocalculado)</span>
+              <span className="font-mono font-semibold">{neto.toFixed(2)}%</span>
+            </div>
+            <div>
+              <Label>Estado</Label>
+              <select value={formEstado} onChange={(e) => setFormEstado(e.target.value as import("@/lib/api/types").ComercioBanderaEstado)} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </FormDialog>
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          open
+          onClose={() => setConfirmDelete(null)}
+          title="Eliminar bandera"
+          message={`¿Eliminar la bandera "${confirmDelete.bandera}"? Esta acción no se puede deshacer.`}
+          confirmLabel="Eliminar"
+          variant="danger"
+          onConfirm={eliminar}
+        />
+      )}
+    </Card>
+  );
+}
+
 function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: () => void }) {
-  const habilitados = comercio.metodosConfig ?? [];
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -184,60 +388,10 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
                   </span>
                 }
               />
-              <Field
-                label="Pago con transferencias"
-                value={
-                  <Badge tone={comercio.habilitadoPagoTransferencia ? "success" : "neutral"}>
-                    {comercio.habilitadoPagoTransferencia ? "Habilitado" : "No habilitado"}
-                  </Badge>
-                }
-              />
-              <Field
-                label="Enlaces de pago"
-                value={
-                  <Badge tone={comercio.habilitadoEnlacesPago ? "success" : "neutral"}>
-                    {comercio.habilitadoEnlacesPago ? "Habilitado" : "No habilitado"}
-                  </Badge>
-                }
-              />
             </div>
           </Card>
 
-          <Card className="p-5">
-            <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-              Banderas habilitadas (métodos de pago)
-            </h4>
-            {habilitados.length === 0 ? (
-              <div className="border border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
-                Sin métodos de pago habilitados para este comercio.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50 text-left">
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Método</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground">Tipo</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión MoliPay</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión PayWay (Pasarela)</th>
-                      <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">Comisión neta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {habilitados.map((m) => (
-                      <tr key={m.metodoId} className="border-b last:border-0">
-                        <td className="px-3 py-2.5 font-medium">{m.metodoNombre}</td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{m.tipo}</td>
-                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(m.comisionMolipay)}</td>
-                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(m.comisionPayway)}</td>
-                        <td className="px-3 py-2.5 text-right font-mono tabular-nums font-semibold">{formatPct(m.comisionNeta)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+          <BanderasSection comercioId={comercio.id} />
 
                     <Card className="p-5">
             <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -317,12 +471,6 @@ type ComercioForm = {
   estado: EstadoComercio;
 };
 
-type MetodoFormState = {
-  enabled: boolean;
-  comisionMolipay: string;
-  comisionPayway: string;
-};
-
 function ComercioFormModal({
   comercio,
   clientes,
@@ -342,9 +490,6 @@ function ComercioFormModal({
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
-    habilitadoPagoTransferencia: boolean;
-    habilitadoEnlacesPago: boolean;
-    metodosConfig: ComercioMetodoConfig[];
   }) => void;
   isSaving?: boolean;
 }) {
@@ -358,7 +503,6 @@ function ComercioFormModal({
   const [estado, setEstado] = useState<EstadoComercio>(
     comercio?.estado ?? "Pendiente de aprobación",
   );
-  // habilitadoPagoTransferencia / habilitadoEnlacesPago removidos: gestion de medios de pago movida a secciones especificas
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
@@ -372,47 +516,8 @@ function ComercioFormModal({
   const clientesOptions = [...(clientesOptionsRaw ?? [])].sort((a,b)=> (a.legajo ?? '').localeCompare(b.legajo ?? ''));
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
-  // Banderas habilitadas: todos los métodos definidos en Gestión → Métodos de Pago
-  const metodosDisponibles = metodosPagoIniciales;
-  const [metodosState, setMetodosState] = useState<Record<number, MetodoFormState>>(() => {
-    const init: Record<number, MetodoFormState> = {};
-    for (const m of metodosDisponibles) {
-      const existing = comercio?.metodosConfig?.find((c) => c.metodoId === m.id);
-      init[m.id] = {
-        enabled: !!existing,
-        comisionMolipay: existing ? String(existing.comisionMolipay) : "",
-        comisionPayway: existing ? String(existing.comisionPayway) : "",
-      };
-    }
-    return init;
-  });
-
-  const toggleMetodo = (id: number, enabled: boolean) => {
-    setMetodosState((prev) => ({ ...prev, [id]: { ...prev[id], enabled } }));
-  };
-  const updateComision = (id: number, field: "comisionMolipay" | "comisionPayway", value: string) => {
-    // solo números y punto/coma
-    if (value !== "" && !/^[0-9]*[.,]?[0-9]*$/.test(value)) return;
-    setMetodosState((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
-  };
-
   const guardar = () => {
     if (!clienteLegajo) return;
-    const metodosConfig: ComercioMetodoConfig[] = metodosDisponibles
-      .filter((m) => metodosState[m.id]?.enabled)
-      .map((m) => {
-        const s = metodosState[m.id];
-        const molipay = parseFloat((s.comisionMolipay || "0").replace(",", ".")) || 0;
-        const payway = parseFloat((s.comisionPayway || "0").replace(",", ".")) || 0;
-        return {
-          metodoId: m.id,
-          metodoNombre: m.nombre,
-          tipo: m.tipo,
-          comisionMolipay: molipay,
-          comisionPayway: payway,
-          comisionNeta: molipay - payway,
-        };
-      });
     onSave({
       clienteLegajo,
       usuario: usuario.trim() || (clienteSeleccionado?.correo ?? ""),
@@ -420,9 +525,6 @@ function ComercioFormModal({
       categoriaId: categoriaId ? Number(categoriaId) : null,
       nivel,
       estado,
-      habilitadoPagoTransferencia: false,
-      habilitadoEnlacesPago: false,
-      metodosConfig,
     });
   };
 
@@ -579,85 +681,16 @@ function ComercioFormModal({
 
       </div>
 
-      <div className="mt-6 border-t border-border pt-5">
-        <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Banderas habilitadas (métodos de pago)
-        </h4>
-        <p className="text-xs text-muted-foreground mb-3">
-          Seleccioná los métodos de pago habilitados para este comercio. Al habilitar una bandera se habilitan los campos de comisión. La comisión neta se calcula automáticamente.
-        </p>
-        <div className="overflow-x-auto">
-          <div className="min-w-[680px]">
-            <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground border-b">
-              <span>Bandera / Método de pago</span>
-              <span className="text-right">Comisión MoliPay</span>
-              <span className="text-right">Comisión PayWay (Pasarela)</span>
-              <span className="text-right">Comisión neta</span>
-            </div>
-            <div className="space-y-2 mt-2">
-              {metodosDisponibles.map((m) => {
-                const st = metodosState[m.id];
-                const enabled = st?.enabled ?? false;
-                const molipay = st?.comisionMolipay ?? "";
-                const payway = st?.comisionPayway ?? "";
-                const neta =
-                  molipay !== "" || payway !== ""
-                    ? (parseFloat(molipay.replace(",", ".") || "0") || 0) - (parseFloat(payway.replace(",", ".") || "0") || 0)
-                    : null;
-                return (
-                  <div
-                    key={m.id}
-                    className={`grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 items-center rounded-lg border px-3 py-2.5 ${enabled ? "bg-card border-primary/30" : "bg-muted/30 border-border"}`}
-                  >
-                    <label className="flex items-center gap-2 cursor-pointer min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        onChange={(e) => toggleMetodo(m.id, e.target.checked)}
-                        className="h-4 w-4 rounded border-input accent-primary shrink-0"
-                      />
-                      <span className="font-medium text-sm truncate">{m.nombre}</span>
-                      <span className="text-xs text-muted-foreground truncate">· {m.tipo}</span>
-                    </label>
-                    <Input
-                      id={`mp-molipay-${m.id}`}
-                      aria-label={`Comisión MoliPay ${m.nombre}`}
-                      value={molipay}
-                      onChange={(e) => updateComision(m.id, "comisionMolipay", e.target.value)}
-                      disabled={!enabled}
-                      placeholder="0.00"
-                      className="h-9 text-right font-mono tabular-nums"
-                      inputMode="decimal"
-                    />
-                    <Input
-                      id={`mp-payway-${m.id}`}
-                      aria-label={`Comisión PayWay ${m.nombre}`}
-                      value={payway}
-                      onChange={(e) => updateComision(m.id, "comisionPayway", e.target.value)}
-                      disabled={!enabled}
-                      placeholder="0.00"
-                      className="h-9 text-right font-mono tabular-nums"
-                      inputMode="decimal"
-                    />
-                    <div
-                      className="h-9 rounded-md border border-input bg-muted px-3 flex items-center justify-end text-sm font-mono tabular-nums"
-                      title="MoliPay − PayWay"
-                    >
-                      {enabled && neta !== null ? `${neta.toFixed(2)}%` : "—"}
-                    </div>
-                  </div>
-                );
-              })}
-              {metodosDisponibles.length === 0 && (
-                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
-                  No hay métodos de pago disponibles. Creálos en <span className="font-semibold">Gestión → Métodos de pago</span>.
-                </div>
-              )}
-            </div>
-          </div>
+      {comercio && (
+        <div className="mt-6 border-t border-border pt-5">
+          <BanderasSection comercioId={comercio.id} />
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2">Comisión neta = MoliPay − PayWay</p>
-      </div>
+      )}
+      {!comercio && (
+        <p className="text-xs text-muted-foreground mt-4 border rounded-lg bg-muted/30 px-3 py-2">
+          Las banderas se configuran luego de crear el comercio, desde el detalle o edición.
+        </p>
+      )}
     </FormDialog>
   );
 }
@@ -727,9 +760,6 @@ function Page() {
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
-    habilitadoPagoTransferencia: boolean;
-    habilitadoEnlacesPago: boolean;
-    metodosConfig: ComercioMetodoConfig[];
   }) => {
     setIsSaving(true);
     try {
@@ -740,9 +770,6 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
-          habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
-          habilitadoEnlacesPago: input.habilitadoEnlacesPago,
-          metodosConfig: input.metodosConfig,
         } as any);
       } else {
         await createComercio({
@@ -752,9 +779,6 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
-          habilitadoPagoTransferencia: input.habilitadoPagoTransferencia,
-          habilitadoEnlacesPago: input.habilitadoEnlacesPago,
-          metodosConfig: input.metodosConfig,
         } as any);
       }
       invalidar();

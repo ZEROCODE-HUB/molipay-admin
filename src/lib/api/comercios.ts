@@ -24,36 +24,12 @@ export type ComercioFilters = Pagination & {
   fechaHasta?: string; // YYYY-MM-DD
 };
 
-// legajo es FK real a clientes.legajo -> la relación embebida se llama `clientes`.
+// Tabla real comercios (verificada via information_schema):
+// id, usuario, legajo (FK -> clientes.legajo), nombre_comercio, categoria_id, estado, nivel, created_at, updated_at
+// + relaciones clientes, codigos_categoria, puntos_venta
+// Ya no existe metodos_config ni habilitado_* — migrado a comercio_banderas.
 const COLUMNS =
-  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, habilitado_pago_transferencia, habilitado_enlaces_pago, metodos_config, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
-const COLUMNS_LEGACY =
-  "id, usuario, legajo, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
-
-function isMissingColumnError(error: unknown): boolean {
-  const msg = (error as { message?: string })?.message ?? String(error);
-  return /nombre_comercio|habilitado_pago_transferencia|habilitado_enlaces_pago|metodos_config|column.*does not exist|PGRST204|schema cache/i.test(msg);
-}
-
-function persistLocalMetodos(comercioId: string, metodos: unknown) {
-  try {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(`comercio_metodos_${comercioId}`, JSON.stringify(metodos ?? []));
-    }
-  } catch {
-    // ignore
-  }
-}
-function persistLocalNombre(comercioId: string, nombre: string | null) {
-  try {
-    if (typeof window !== "undefined") {
-      if (nombre) window.localStorage.setItem(`comercio_nombre_${comercioId}`, nombre);
-      else window.localStorage.removeItem(`comercio_nombre_${comercioId}`);
-    }
-  } catch {
-    // ignore
-  }
-}
+  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -65,26 +41,18 @@ export async function listComercios(filters: ComercioFilters): Promise<Page<Come
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  const buildQuery = (cols: string) => {
-    let q = sb.from("comercios").select(cols, { count: "exact" });
-    if (search && search.trim()) {
-      const qq = escapeLike(search);
-      q = q.or(`usuario.ilike.%${qq}%,legajo.ilike.%${qq}%`);
-    }
-    if (estado) q = q.eq("estado", estado);
-    if (nivel) q = q.eq("nivel", nivel);
-    if (filters.fechaDesde) q = q.gte("created_at", filters.fechaDesde);
-    if (filters.fechaHasta) q = q.lte("created_at", filters.fechaHasta + "T23:59:59");
-    return q.order("created_at", { ascending: false }).range(from, to);
-  };
-
-  let { data, error, count } = await buildQuery(COLUMNS);
-  if (error && isMissingColumnError(error)) {
-    const fallback = await buildQuery(COLUMNS_LEGACY);
-    data = fallback.data as typeof data;
-    error = fallback.error;
-    count = fallback.count;
+  let q = sb.from("comercios").select(COLUMNS, { count: "exact" });
+  if (search && search.trim()) {
+    const qq = escapeLike(search);
+    q = q.or(`usuario.ilike.%${qq}%,legajo.ilike.%${qq}%`);
   }
+  if (estado) q = q.eq("estado", estado);
+  if (nivel) q = q.eq("nivel", nivel);
+  if (filters.fechaDesde) q = q.gte("created_at", filters.fechaDesde);
+  if (filters.fechaHasta) q = q.lte("created_at", filters.fechaHasta + "T23:59:59");
+  q = q.order("created_at", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await q;
   if (error) throw new DataAccessError(error);
 
   const rows = (data ?? []) as (ComercioRow & {
@@ -111,12 +79,7 @@ export async function listComercios(filters: ComercioFilters): Promise<Page<Come
 
 export async function getComercio(id: string): Promise<Comercio | null> {
   const sb = requireSupabase();
-  let { data, error } = await sb.from("comercios").select(COLUMNS).eq("id", id).maybeSingle();
-  if (error && isMissingColumnError(error)) {
-    const fb = await sb.from("comercios").select(COLUMNS_LEGACY).eq("id", id).maybeSingle();
-    data = fb.data as typeof data;
-    error = fb.error;
-  }
+  const { data, error } = await sb.from("comercios").select(COLUMNS).eq("id", id).maybeSingle();
   if (error) throw new DataAccessError(error);
   if (!data) return null;
   return toComercio(
@@ -140,45 +103,15 @@ export type ComercioCreateInput = ComercioInput;
 
 export async function createComercio(input: ComercioCreateInput): Promise<Comercio> {
   const sb = requireSupabase();
-  const metodosPayload = (input.metodosConfig ?? []).map((m) => ({
-    metodoId: m.metodoId,
-    metodoNombre: m.metodoNombre,
-    tipo: m.tipo,
-    comisionMolipay: m.comisionMolipay,
-    comisionPayway: m.comisionPayway,
-    comisionNeta: m.comisionMolipay - m.comisionPayway,
-  }));
-  const tryInsert = async (withFlags: boolean, withMetodos: boolean) => {
-    const payload: Record<string, unknown> = {
-      usuario: input.usuario.trim(),
-      legajo: input.legajo.trim(),
-      nombre_comercio: (input as any).nombreComercio?.trim() || null,
-      categoria_id: input.categoriaId,
-      nivel: input.nivel,
-      estado: input.estado,
-    };
-    if (withFlags) {
-      payload.habilitado_pago_transferencia = input.habilitadoPagoTransferencia ?? false;
-      payload.habilitado_enlaces_pago = input.habilitadoEnlacesPago ?? false;
-    }
-    if (withMetodos) payload.metodos_config = metodosPayload;
-    const cols = withMetodos ? COLUMNS : withFlags ? COLUMNS.replace(", metodos_config", "") : COLUMNS_LEGACY;
-    return sb.from("comercios").insert(payload).select(cols).single();
+  const payload: Record<string, unknown> = {
+    usuario: input.usuario.trim(),
+    legajo: input.legajo.trim(),
+    nombre_comercio: (input as { nombreComercio?: string | null }).nombreComercio?.trim() || null,
+    categoria_id: input.categoriaId,
+    nivel: input.nivel,
+    estado: input.estado,
   };
-  let { data, error } = await tryInsert(true, true);
-  if (error && isMissingColumnError(error)) {
-    // reintenta sin metodos_config si no existe columna
-    const retry = await tryInsert(true, false);
-    data = retry.data as typeof data;
-    error = retry.error;
-    if (!error && data) persistLocalMetodos((data as ComercioRow).id, metodosPayload);
-    if (error && isMissingColumnError(error)) {
-      const fb = await tryInsert(false, false);
-      data = fb.data as typeof data;
-      error = fb.error;
-      if (!error && data) persistLocalMetodos((data as ComercioRow).id, metodosPayload);
-    }
-  }
+  const { data, error } = await sb.from("comercios").insert(payload).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
   return toComercio(
     data as ComercioRow & {
@@ -204,70 +137,15 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
   const payload: Record<string, unknown> = {};
   if (input.usuario !== undefined) payload.usuario = input.usuario.trim();
   if (input.legajo !== undefined) payload.legajo = input.legajo.trim();
-  if ((input as any).nombreComercio !== undefined) payload.nombre_comercio = (input as any).nombreComercio?.trim() || null;
+  if ((input as { nombreComercio?: string | null }).nombreComercio !== undefined)
+    payload.nombre_comercio = (input as { nombreComercio?: string | null }).nombreComercio?.trim() || null;
   if (input.categoriaId !== undefined) payload.categoria_id = input.categoriaId;
   if (input.nivel !== undefined) payload.nivel = input.nivel;
   if (input.estado !== undefined) payload.estado = input.estado;
-  if (input.habilitadoPagoTransferencia !== undefined)
-    payload.habilitado_pago_transferencia = input.habilitadoPagoTransferencia;
-  if (input.habilitadoEnlacesPago !== undefined) payload.habilitado_enlaces_pago = input.habilitadoEnlacesPago;
-  if (input.metodosConfig !== undefined) {
-    const metodosPayload = input.metodosConfig.map((m) => ({
-      metodoId: m.metodoId,
-      metodoNombre: m.metodoNombre,
-      tipo: m.tipo,
-      comisionMolipay: m.comisionMolipay,
-      comisionPayway: m.comisionPayway,
-      comisionNeta: m.comisionMolipay - m.comisionPayway,
-    }));
-    payload.metodos_config = metodosPayload;
-    // persist local always as backup
-    persistLocalMetodos(id, metodosPayload);
-  }
 
-  const nombreForLocal = (payload as any).nombre_comercio as string | null | undefined;
-  let { data, error } = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS).single();
-  if (error && isMissingColumnError(error) && /nombre_comercio/i.test((error as any).message ?? "")) {
-    const backupNombre = (payload as any).nombre_comercio;
-    delete (payload as any).nombre_comercio;
-    const colsNoNombre = COLUMNS.replace(", nombre_comercio", "").replace("nombre_comercio, ", "").replace("nombre_comercio", "");
-    const retryNombre = await sb.from("comercios").update(payload).eq("id", id).select(colsNoNombre).single();
-    data = retryNombre.data as typeof data;
-    error = retryNombre.error;
-    if (!error && backupNombre) persistLocalNombre(id, backupNombre as string);
-  }
-  if (error && isMissingColumnError(error)) {
-    // reintenta sin metodos_config y luego sin flags si la columna no existe aún
-    const hasMetodos = "metodos_config" in payload;
-    if (hasMetodos) {
-      const metodosBackup = payload.metodos_config;
-      delete payload.metodos_config;
-      const retry = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS.replace(", metodos_config", "")).single();
-      data = retry.data as typeof data;
-      error = retry.error;
-      if (!error) persistLocalMetodos(id, metodosBackup);
-      else if (isMissingColumnError(error)) {
-        if ("habilitado_pago_transferencia" in payload) delete payload.habilitado_pago_transferencia;
-        if ("habilitado_enlaces_pago" in payload) delete payload.habilitado_enlaces_pago;
-        const fb = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS_LEGACY).single();
-        data = fb.data as typeof data;
-        error = fb.error;
-        if (!error) persistLocalMetodos(id, metodosBackup);
-      }
-    } else {
-      if ("habilitado_pago_transferencia" in payload) delete payload.habilitado_pago_transferencia;
-      if ("habilitado_enlaces_pago" in payload) delete payload.habilitado_enlaces_pago;
-      const fb = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS_LEGACY).single();
-      data = fb.data as typeof data;
-      error = fb.error;
-    }
-  }
+  const { data, error } = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
-  if (nombreForLocal) {
-    try { persistLocalNombre(id, nombreForLocal as string); } catch {}
-  }
-  // merge local fallback if DB didn't store metodos_config
-  const result = toComercio(
+  return toComercio(
     data as ComercioRow & {
       clientes?:
         | {
@@ -282,14 +160,6 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
       puntos_venta?: PuntoVentaRow[] | null;
     },
   );
-  // si input traía metodos y DB no los devolvió, usa input
-  if (input.metodosConfig !== undefined && result.metodosConfig.length === 0 && input.metodosConfig.length > 0) {
-    result.metodosConfig = input.metodosConfig.map((m) => ({
-      ...m,
-      comisionNeta: m.comisionMolipay - m.comisionPayway,
-    }));
-  }
-  return result;
 }
 
 export async function setComercioEstado(id: string, estado: EstadoComercio): Promise<Comercio> {

@@ -466,13 +466,37 @@ export type ComercioClienteRow = {
   correo: string;
 };
 
-export type ComercioMetodoConfig = {
-  metodoId: number;
-  metodoNombre: string;
-  tipo: string;
+export type ComercioBanderaEstado = "Activo" | "Inactivo";
+
+export type ComercioBanderaRow = {
+  id: string;
+  comercio_id: string;
+  bandera: string;
+  comision_molipay: number;
+  comision_payway: number;
+  comision_neta: number;
+  estado: ComercioBanderaEstado;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ComercioBandera = {
+  id: string;
+  comercioId: string;
+  bandera: string;
   comisionMolipay: number;
   comisionPayway: number;
   comisionNeta: number;
+  estado: ComercioBanderaEstado;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ComercioBanderaInput = {
+  bandera: string;
+  comisionMolipay: number;
+  comisionPayway: number;
+  estado?: ComercioBanderaEstado;
 };
 
 export type ComercioRow = {
@@ -483,9 +507,6 @@ export type ComercioRow = {
   categoria_id: number | null;
   estado: EstadoComercio;
   nivel: NivelComercio;
-  habilitado_pago_transferencia: boolean | null;
-  habilitado_enlaces_pago: boolean | null;
-  metodos_config?: ComercioMetodoConfig[] | null;
   created_at: string;
   updated_at: string;
   clientes?:
@@ -517,9 +538,6 @@ export type Comercio = {
   categoria: CodigoCategoria | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
-  habilitadoPagoTransferencia: boolean;
-  habilitadoEnlacesPago: boolean;
-  metodosConfig: ComercioMetodoConfig[];
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -532,9 +550,6 @@ export type ComercioInput = {
   categoriaId: number | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
-  habilitadoPagoTransferencia?: boolean;
-  habilitadoEnlacesPago?: boolean;
-  metodosConfig?: ComercioMetodoConfig[];
 };
 
 export type ClienteSelect = {
