@@ -983,3 +983,27 @@ no hay datos de alguna parte, salir vacío, pero **no modificar la estructura de
 **PASO 3 — Dashboard Comisiones (solo Depósito+Retiro):**
 - `src/routes/admin.index.tsx:94` `DashboardComisionesCard` — dos `useMovimientos` (`tipo=deposito|retiro`, `pageSize 1000`) con filtros `fechaDesde/fechaHasta` (default mes en curso, dos inputs date). Cálculos: `Monto transaccionado = Σ monto_operacion`, `Comisión total = Σ comision`, `Remanente = monto - comision`. Drill-down secundario `DataTable` por comercio (`legajo → monto/comision/remanente/count`, ordenado por monto). Texto explícito: "Este cuadro refleja el flujo de transacciones del periodo seleccionado, no el saldo acumulado de la cuenta recaudadora." No incluye `tarjeta/QR` (no es dinero real hasta liquidación Payway del lote).
 
+---
+
+## 18. Incidente Realtime — canal único fijo rompía Dashboard (2026-09-12)
+
+**Síntoma:** tras login, la app fallaba con `Error: cannot add postgres_changes callbacks for realtime: realtime-movimientos after subscribe()`. El ErrorBoundary no atrapaba la excepción (ocurría en useEffect fuera del render).
+
+**Causa raíz:** commit `174becc` (7 días antes) introdujo realtime en `useMovimientos` y `useClientes` con nombre de canal **fijo** (`realtime-movimientos`, `realtime-clientes`, etc.). Al agregar el Dashboard (PASO 3) que llama `useMovimientos` **dos veces en paralelo** con `tipo='deposito'` y `tipo='retiro'`, ambas instancias intentaban registrar `.on('postgres_changes')` sobre **la misma instancia de canal** ya suscrita → Supabase Realtime lanza error y rompe toda la app.
+
+**Archivos afectados (mismo patrón latente en los 4):**
+- `src/hooks/useMovimientos.ts:22` → canal `realtime-movimientos`
+- `src/hooks/useClientes.ts:22` → canal `realtime-clientes`
+- `src/routes/admin.comercios.link-pago.index.tsx:135` → canal `realtime-enlaces-pago`
+- `src/routes/admin.comercios.transferencia.index.tsx:134` → canal `realtime-puntos_venta`
+
+**Fix aplicado:** nombre de canal determinístico por filtro diferenciador que puede coexistir en pantalla:
+- `useMovimientos` → `realtime-movimientos-${filters.tipo ?? 'all'}` (ej. `realtime-movimientos-deposito`, `realtime-movimientos-retiro`, `realtime-movimientos-tarjeta`…)
+- `useClientes` → `realtime-clientes-${filters.tipoPersona ?? 'all'}` (ej. `realtime-clientes-fisica`, `realtime-clientes-juridica`)
+- `admin.comercios.link-pago.index` → `realtime-enlaces-pago-admin` (único uso, nombre explícito)
+- `admin.comercios.transferencia.index` → `realtime-puntos_venta-admin` (único uso, nombre explícito)
+
+El cleanup `sb.removeChannel(ch)` en el `return` del useEffect sigue funcionando correctamente porque cada efecto crea su propio canal con nombre único y lo remueve al desmontar.
+
+**Verificación:** `tsc --noEmit --skipLibCheck` sin errores nuevos, `vite build` OK. Dashboard carga sin error de consola con sus 2 instancias paralelas.
+

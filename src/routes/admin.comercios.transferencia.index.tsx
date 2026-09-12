@@ -131,7 +131,7 @@ function Page() {
     const sb = requireSupabase();
     if (!sb) return;
     const ch = sb
-      .channel("realtime-puntos_venta")
+      .channel("realtime-puntos_venta-admin")
       .on("postgres_changes", { event: "*", schema: "public", table: "puntos_venta" }, () => {
         qc.invalidateQueries({ queryKey: ["qr-pos"] });
       })

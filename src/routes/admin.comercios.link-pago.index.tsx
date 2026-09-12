@@ -132,7 +132,7 @@ function Page() {
     const sb = requireSupabase();
     if (!sb) return;
     const ch = sb
-      .channel("realtime-enlaces-pago")
+      .channel("realtime-enlaces-pago-admin")
       .on("postgres_changes", { event: "*", schema: "public", table: "cliente_links_pago" }, () => {
         qc.invalidateQueries({ queryKey: ["enlaces-pago"] });
       })

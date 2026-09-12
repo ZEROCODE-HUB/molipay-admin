@@ -18,8 +18,10 @@ export function useMovimientos(filters: MovimientoFilters) {
   useEffect(() => {
     const sb = requireSupabase();
     if (!sb) return;
+    const tipoPart = filters.tipo ?? "all";
+    const channelName = `realtime-movimientos-${tipoPart}`;
     const ch = sb
-      .channel("realtime-movimientos")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "movimientos" }, () => {
         queryClient.invalidateQueries({ queryKey: ["movimientos"] });
       })
@@ -27,7 +29,7 @@ export function useMovimientos(filters: MovimientoFilters) {
     return () => {
       sb.removeChannel(ch);
     };
-  }, [queryClient]);
+  }, [queryClient, filters.tipo]);
 
   const rows = query.data?.rows ?? [];
   const filtrosEstructuradosActivos = Boolean(

@@ -18,8 +18,10 @@ export function useClientes(filters: ClienteFilters) {
   useEffect(() => {
     const sb = requireSupabase();
     if (!sb) return;
+    const tipoPart = filters.tipoPersona ?? "all";
+    const channelName = `realtime-clientes-${tipoPart}`;
     const ch = sb
-      .channel("realtime-clientes")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "clientes" }, () => {
         queryClient.invalidateQueries({ queryKey: ["clientes"] });
       })
@@ -27,7 +29,7 @@ export function useClientes(filters: ClienteFilters) {
     return () => {
       sb.removeChannel(ch);
     };
-  }, [queryClient]);
+  }, [queryClient, filters.tipoPersona]);
 
   const rows = query.data?.rows ?? [];
   return {
