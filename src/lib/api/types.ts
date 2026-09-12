@@ -1193,6 +1193,103 @@ export type DcSyncRetroactivoFilters = Pagination & {
   aplicado?: boolean;
 };
 
+// --- lotes_acreditacion / lote_movimientos / adelantos (real Supabase) -----
+
+export type EstadoLote = "Acreditado" | "Rechazado" | "Contracargo";
+export const ESTADOS_LOTE: EstadoLote[] = ["Acreditado", "Rechazado", "Contracargo"];
+
+export type LoteAcreditacionRow = {
+  id: string;
+  codigo: string;
+  comercio_id: string;
+  bandera: string;
+  fecha: string;
+  cantidad_operaciones: number;
+  importe_bruto: number;
+  impuestos: number;
+  tasa_payway_pct: number;
+  tasa_payway_monto: number;
+  tasa_molipay_pct: number;
+  tasa_molipay_monto: number;
+  cuotas: number | null;
+  costo_payway_pago_unico: number | null;
+  contracargo_monto: number;
+  importe_neto: number;
+  estado: EstadoLote;
+  resuelto_por: string | null;
+  fecha_resolucion: string | null;
+  notas_resolucion: string | null;
+  created_at: string;
+  updated_at: string;
+  comercios?: { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[] | null;
+};
+
+export type LoteAcreditacion = {
+  id: string;
+  codigo: string;
+  comercioId: string;
+  bandera: string;
+  fecha: string;
+  cantidadOperaciones: number;
+  importeBruto: number;
+  impuestos: number;
+  tasaPaywayPct: number;
+  tasaPaywayMonto: number;
+  tasaMolipayPct: number;
+  tasaMolipayMonto: number;
+  cuotas: number | null;
+  costoPaywayPagoUnico: number | null;
+  contracargoMonto: number;
+  importeNeto: number;
+  estado: EstadoLote;
+  resueltoPor: string | null;
+  fechaResolucion: string | null;
+  notasResolucion: string | null;
+  createdAt: string;
+  updatedAt: string;
+  comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null } | null;
+  // compat mock
+  importeFinal?: number;
+};
+
+export type LoteMovimientoRow = {
+  lote_id: string;
+  movimiento_id: string;
+};
+
+export type EstadoAdelanto = "Pendiente" | "Aprobado" | "Rechazado" | "Acreditado";
+export const ESTADOS_ADELANTO: EstadoAdelanto[] = ["Pendiente", "Aprobado", "Rechazado", "Acreditado"];
+
+export type AdelantoRow = {
+  id: string;
+  comercio_id: string;
+  monto_solicitado: number;
+  plazo_original_dias: number;
+  plazo_adelantado_dias: number;
+  tasa_interes_pct: number | null;
+  estado: EstadoAdelanto;
+  fecha_solicitud: string;
+  fecha_resolucion: string | null;
+  resuelto_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Adelanto = {
+  id: string;
+  comercioId: string;
+  montoSolicitado: number;
+  plazoOriginalDias: number;
+  plazoAdelantadoDias: number;
+  tasaInteresPct: number | null;
+  estado: EstadoAdelanto;
+  fechaSolicitud: string;
+  fechaResolucion: string | null;
+  resueltoPor: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // --- util ------------------------------------------------------------------
 
 export type Pagination = {

@@ -262,19 +262,15 @@ Implementado en este turno. Capa de datos en `src/lib/api/comercios.ts` y
   `puede_borrar` sobre el recurso correspondiente.
 - PermissionGuard: recurso `"apis_externas"` en las 3 sub-rutas nuevas.
 
-> ⚠️ Todo `admin.comercios.link-pago.*` sigue consumiendo el contexto mock
-> `src/contexts/comercios.tsx`. El bloque Link de pago (`link-pago.index`,
-> `link-pago.metodos-pago` y el catálogo `metodosPagoIniciales` de tipos de
-> tarjeta/cuotas TEN/TNA/coeficiente) es un modelo de datos distinto y nuevo,
-> **no especificado**, y permanece en mock por instrucción explícita.
-> 
-> **Módulo Comercios (rutas conectables): 100% cerrado.** Rutas conectadas a BD real:
-> `admin.comercios.index`, `admin.comercios.transferencia.index`,
+> ✅ `admin.comercios.link-pago.lotes` **conectado a datos reales**: `lotes_acreditacion` (codigo UNIQUE LOTE-YYYY-MM-DD-NNN, comercio_id FK, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct/monto, tasa_molipay_pct/monto, cuotas, costo_payway_pago_unico, contracargo_monto, importe_neto, estado Acreditado/Rechazado/Contracargo, resuelto_por FK admin_users, fecha_resolucion, notas_resolucion, UNIQUE(comercio_id,bandera,fecha)) + `lote_movimientos` (junction lote_id-movimiento_id) + `adelantos` (comercio_id FK, monto_solicitado, plazo_original/adelantado, tasa_interes_pct, estado Pendiente/Aprobado/Rechazado/Acreditado). API en `src/lib/api/lotes.ts` (`listLotes` paginado server-side con filtros Estado/Bandera/Comercio/rango fecha, `updateLote` con recálculo `importe_neto = bruto - impuestos - tasa_payway_monto - tasa_molipay_monto - contracargo_monto` + `resuelto_por=auth.uid()`), y `src/lib/api/adelantos.ts` (`listAdelantosByComercio`). UI en `link-pago.lotes.tsx` con `PermissionGuard recurso="comercios"`, filtros server-side, paginación, `ComercioDetalleModal` con adelantos reales, acciones `Ver detalle | Acreditar/Rechazar (solo Contracargo) | Reprocesar` que setean estado/notas/resuelto_por/fecha. Resumen por comercio agregado client-side sobre página actual. **Generación automática de lotes desde movimientos (batch por día+bandera) queda fuera de alcance.**
+>
+> ⚠️ Resto de `admin.comercios.link-pago.*` (`link-pago.index`, `link-pago.metodos-pago`, `link-pago.adelantos`, `link-pago.contracargos`, `link-pago.resumen`) sigue en mock `src/contexts/comercios.tsx` / `metodosPagoIniciales` por instrucción.
+>
+> **Módulo Comercios (rutas conectables):** `admin.comercios.index`, `admin.comercios.transferencia.index`,
 > `admin.comercios.transferencia.categorias`,
 > `admin.comercios.apis.resolvers`,
 > `admin.comercios.apis.index`, `admin.comercios.apis.endpoints`,
-> `admin.comercios.apis.restricciones`.
-> Solo `link-pago.*` queda pendiente de especificación de modelo real.
+> `admin.comercios.apis.restricciones`, **`admin.comercios.link-pago.lotes`**.
 
 ---
 
