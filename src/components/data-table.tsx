@@ -28,6 +28,17 @@ export type Column<T> = {
   render: (row: T) => ReactNode;
 };
 
+/** Estado de los filtros de la card. En modo client-side lo maneja el componente;
+ *  en modo server-side (onServerFilterChange) lo maneja el padre y cada cambio
+ *  dispara una re-consulta contra toda la base (no solo la página actual). */
+export type TableServerFilters = {
+  global: string;
+  enums: Record<string, string>;
+  dates: Record<string, { from: string; to: string }>;
+};
+
+export const EMPTY_TABLE_FILTERS: TableServerFilters = { global: "", enums: {}, dates: {} };
+
 type DataTableProps<T> = {
   columns: Column<T>[];
   data: T[];
@@ -50,6 +61,15 @@ type DataTableProps<T> = {
   showGlobalFilter?: boolean;
   extraFilters?: ReactNode;
   hidePagination?: boolean;
+  /**
+   * Filtros server-side controlados: el padre posee el estado (serverFilterState),
+   * recibe cada cambio (onServerFilterChange) y debe re-consultar toda la base
+   * + resetear la paginación. Desactiva el filtrado client-side y muestra
+   * serverResultCount en "N resultados".
+   */
+  serverFilterState?: TableServerFilters;
+  onServerFilterChange?: (filters: TableServerFilters) => void;
+  serverResultCount?: number;
 };
 
 const PAGE_SIZES = [10, 20, 50];
@@ -88,7 +108,19 @@ export function DataTable<T>({
   showGlobalFilter = true,
   extraFilters,
   hidePagination = false,
+  serverFilterState,
+  onServerFilterChange,
+  serverResultCount,
 }: DataTableProps<T>) {
+  // Modo server-side: los filtros viven en el padre (que re-consulta la base).
+  const controlled = !!onServerFilterChange;
+
+  const emitServer = (next: TableServerFilters) => onServerFilterChange?.(next);
+
+  const setEffectiveGlobal = (value: string) => {
+    if (controlled) emitServer({ ...(serverFilterState ?? EMPTY_TABLE_FILTERS), global: value });
+    else setGlobalQuery(value);
+  };
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -96,6 +128,10 @@ export function DataTable<T>({
   const [globalQuery, setGlobalQuery] = useState(initialQuery ?? "");
   const [enumFilters, setEnumFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, { from: string; to: string }>>({});
+
+  const effectiveGlobal = controlled ? serverFilterState?.global ?? "" : globalQuery;
+  const effectiveEnums = controlled ? serverFilterState?.enums ?? {} : enumFilters;
+  const effectiveDates = controlled ? serverFilterState?.dates ?? {} : dateRanges;
 
   useEffect(() => {
     if (initialQuery === undefined) return;
@@ -126,11 +162,11 @@ export function DataTable<T>({
   }, [dateFilterColumns, dateCols, columns]);
 
   const activeDateGroups = filterCols.filter((col) => {
-    const range = dateRanges[col.key];
+    const range = effectiveDates[col.key];
     return !!(range && (range.from || range.to));
   }).length;
 
-  const specificFilterCount = Object.values(enumFilters).filter((v) => v).length + activeDateGroups;
+  const specificFilterCount = Object.values(effectiveEnums).filter((v) => v).length + activeDateGroups;
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -156,6 +192,10 @@ export function DataTable<T>({
       : "Buscar...";
 
   const clearAllFilters = () => {
+    if (controlled) {
+      emitServer(EMPTY_TABLE_FILTERS);
+      return;
+    }
     setGlobalQuery("");
     setDebouncedQuery("");
     setEnumFilters({});
@@ -204,6 +244,7 @@ export function DataTable<T>({
   };
 
   const filteredData = useMemo(() => {
+    if (controlled) return data;
     return data.filter((row) => {
       if (debouncedQuery.trim()) {
         const q = debouncedQuery.toLowerCase();
@@ -258,7 +299,7 @@ export function DataTable<T>({
       if (!dateFilterOk) return false;
       return true;
     });
-  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRanges, filterCols, columns]);
+  }, [data, debouncedQuery, textSearchableCols, enumFilters, dateRanges, filterCols, columns, controlled]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
@@ -313,7 +354,9 @@ export function DataTable<T>({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm text-muted-foreground">{sortedData.length} resultados</span>
+        <span className="text-sm text-muted-foreground">
+          {controlled ? (serverResultCount ?? data.length) : sortedData.length} resultados
+        </span>
         {showDownloadButton && (
           <div className="flex items-center gap-3">
             <BtnOutline onClick={() => (onDownloadCSV ? onDownloadCSV(sortedData) : exportCSV())}>
@@ -340,16 +383,19 @@ export function DataTable<T>({
                 <input
                   type="text"
                   placeholder={searchPlaceholder}
-                  value={globalQuery}
-                  onChange={(e) => setGlobalQuery(e.target.value)}
+                  value={effectiveGlobal}
+                  onChange={(e) => setEffectiveGlobal(e.target.value)}
                   className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 placeholder:text-muted-foreground/50"
                 />
-                {globalQuery && (
+                {effectiveGlobal && (
                   <button
                     type="button"
                     onClick={() => {
-                      setGlobalQuery("");
-                      setDebouncedQuery("");
+                      if (controlled) setEffectiveGlobal("");
+                      else {
+                        setGlobalQuery("");
+                        setDebouncedQuery("");
+                      }
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -365,7 +411,7 @@ export function DataTable<T>({
                 className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors shrink-0"
               >
                 <X size={14} />
-                Limpiar filtros ({specificFilterCount + (debouncedQuery ? 1 : 0)})
+                Limpiar filtros ({specificFilterCount + (effectiveGlobal ? 1 : 0)})
               </button>
             )}
           </div>
@@ -381,16 +427,25 @@ export function DataTable<T>({
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
                     <input
                       type="date"
-                      value={dateRanges[col.key]?.from ?? ""}
-                      onChange={(e) =>
-                        setDateRanges((prev) => ({
-                          ...prev,
-                          [col.key]: {
-                            ...(prev[col.key] ?? { from: "", to: "" }),
-                            from: e.target.value,
-                          },
-                        }))
-                      }
+                      value={effectiveDates[col.key]?.from ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (controlled) {
+                          const prev = serverFilterState ?? EMPTY_TABLE_FILTERS;
+                          const dates = { ...prev.dates };
+                          const cur = dates[col.key] ?? { from: "", to: "" };
+                          dates[col.key] = { ...cur, from: v };
+                          emitServer({ ...prev, dates });
+                        } else {
+                          setDateRanges((prev) => ({
+                            ...prev,
+                            [col.key]: {
+                              ...(prev[col.key] ?? { from: "", to: "" }),
+                              from: v,
+                            },
+                          }));
+                        }
+                      }}
                       className="w-full sm:w-auto sm:flex-1 h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
                     <span className="text-xs text-muted-foreground shrink-0 self-center sm:self-auto">
@@ -398,16 +453,25 @@ export function DataTable<T>({
                     </span>
                     <input
                       type="date"
-                      value={dateRanges[col.key]?.to ?? ""}
-                      onChange={(e) =>
-                        setDateRanges((prev) => ({
-                          ...prev,
-                          [col.key]: {
-                            ...(prev[col.key] ?? { from: "", to: "" }),
-                            to: e.target.value,
-                          },
-                        }))
-                      }
+                      value={effectiveDates[col.key]?.to ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (controlled) {
+                          const prev = serverFilterState ?? EMPTY_TABLE_FILTERS;
+                          const dates = { ...prev.dates };
+                          const cur = dates[col.key] ?? { from: "", to: "" };
+                          dates[col.key] = { ...cur, to: v };
+                          emitServer({ ...prev, dates });
+                        } else {
+                          setDateRanges((prev) => ({
+                            ...prev,
+                            [col.key]: {
+                              ...(prev[col.key] ?? { from: "", to: "" }),
+                              to: v,
+                            },
+                          }));
+                        }
+                      }}
                       className="w-full sm:w-auto sm:flex-1 h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
                     />
                   </div>
@@ -417,14 +481,23 @@ export function DataTable<T>({
                 <div key={col.key} className="space-y-1 min-w-0">
                   <label className="text-xs font-medium text-muted-foreground">{col.label}</label>
                   <select
-                    value={enumFilters[col.key] ?? ""}
-                    onChange={(e) =>
-                      setEnumFilters((prev) => {
-                        const next = { ...prev, [col.key]: e.target.value };
-                        if (!e.target.value) delete next[col.key];
-                        return next;
-                      })
-                    }
+                    value={effectiveEnums[col.key] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (controlled) {
+                        const prev = serverFilterState ?? EMPTY_TABLE_FILTERS;
+                        const enums = { ...prev.enums };
+                        if (v) enums[col.key] = v;
+                        else delete enums[col.key];
+                        emitServer({ ...prev, enums });
+                      } else {
+                        setEnumFilters((prev) => {
+                          const next = { ...prev, [col.key]: v };
+                          if (!v) delete next[col.key];
+                          return next;
+                        });
+                      }
+                    }}
                     className="w-full sm:w-auto sm:min-w-[130px] h-8 px-2 rounded-md border border-input bg-background text-xs outline-none focus:ring-2 focus:ring-ring/40"
                   >
                     {showEnumAllOption && <option value="">Todos</option>}

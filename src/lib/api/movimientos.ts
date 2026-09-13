@@ -4,7 +4,8 @@ import { toMovimiento } from "./mappers";
 import type { Movimiento, MovimientoRow, Page, Pagination } from "./types";
 
 export type MovimientoFilters = Pagination & {
-  /** Búsqueda de texto libre: id_txn, legajo o correo/nombre del cliente (ilike server-side). */
+  /** Búsqueda de texto libre: id_txn, legajo, correo/nombre del cliente y nombre del comercio
+   * (ilike server-side; el nombre de comercio se resuelve vía comercios.id → comercio_id.in). */
   search?: string;
   /** Código de estado (estados_movimiento.codigo), p. ej. "APROBADO". */
   estadoCodigo?: string;
@@ -25,9 +26,27 @@ export type MovimientoFilters = Pagination & {
 };
 
 // estado_id + join embebido a estados_movimiento (evita N+1). Incluye comercio_id+bandera para tarjeta (PASO 2).
-// Join a comercios(nombre_comercio) para búsqueda por nombre de comercio en Pagos con tarjeta.
+// Join a comercios(nombre_comercio) SOLO para MOSTRAR el nombre en la tabla (LEFT JOIN sin !inner,
+// necesario para no excluir Depósitos/Retiros/Pagos QR que tienen comercio_id NULL).
+// La búsqueda por nombre de comercio NO usa este embed: PostgREST ignora filtros de .or() sobre
+// embeds sin !inner, así que se resuelve en una query previa a comercios y se agrega como
+// comercio_id.in.(...) al .or() (ver buscarComercioIdsPorNombre).
 const COLUMNS =
   "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
+
+/** Resuelve los comercio_id cuyo nombre_comercio matchea el texto (ILIKE), para usarlos
+ *  en el .or() de listMovimientos como comercio_id.in.(...). Si ningún comercio matchea
+ *  devuelve [] (y el .or() se arma sin esa condición, para no romper la búsqueda). */
+async function buscarComercioIdsPorNombre(texto: string): Promise<string[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from("comercios")
+    .select("id")
+    .ilike("nombre_comercio", `%${texto}%`)
+    .limit(50);
+  if (error) throw new DataAccessError(error);
+  return (data ?? []).map((r) => r.id);
+}
 
 export async function listMovimientos(filters: MovimientoFilters): Promise<Page<Movimiento>> {
   const sb = requireSupabase();
@@ -77,9 +96,18 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
   if (fechaHasta) query = query.lte("fecha", fechaHasta);
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(
-      `id_txn.ilike.%${q}%,legajo.ilike.%${q}%,clientes.correo.ilike.%${q}%,clientes.nombre.ilike.%${q}%,comercios.nombre_comercio.ilike.%${q}%`,
-    );
+    const oraciones = [
+      `id_txn.ilike.%${q}%`,
+      `legajo.ilike.%${q}%`,
+      `clientes.correo.ilike.%${q}%`,
+      `clientes.nombre.ilike.%${q}%`,
+    ];
+    // Texto que podría ser un nombre de comercio: se resuelve fuera del embed (ver
+    // buscarComercioIdsPorNombre) y se filtra por comercio_id.in. Así el .or() principal
+    // funciona sin depender de joins internos y sin excluir movimientos con comercio_id NULL.
+    const comercioIds = await buscarComercioIdsPorNombre(search.trim());
+    if (comercioIds.length > 0) oraciones.push(`comercio_id.in.(${comercioIds.join(",")})`);
+    query = query.or(oraciones.join(","));
   }
 
   query = query.order("fecha", { ascending: false }).range(from, to);

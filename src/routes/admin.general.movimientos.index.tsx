@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { FormDialog } from "@/components/form-dialog";
 import { Label } from "@/components/portal-shell";
 import { useMovimientos } from "@/hooks/useMovimientos";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
@@ -49,6 +50,7 @@ const TIPO_OPCIONES: { label: string; code: string }[] = [
   { label: "Cobro PCT", code: "cobro_pct" },
 ];
 const TIPO_LABEL = new Map(TIPO_OPCIONES.map((o) => [o.code, o.label]));
+const TIPO_CODE = new Map(TIPO_OPCIONES.map((o) => [o.label, o.code]));
 
 function fmtFecha(iso: string): string {
   const d = new Date(iso);
@@ -85,12 +87,38 @@ function TodosPage() {
 
   const [page, setPage] = useState(0);
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } = useMovimientos({
-    page,
-    pageSize: PAGE_SIZE,
-    legajo,
-    countMode: "estimated",
+  // Filtros de la card: el DataTable los reporta acá y van contra la base
+  // (server-side), no solo contra la página actual de la tabla.
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
   });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
+  const apiFilters = useMemo(() => {
+    const rango = filtrosPanel.dates.fecha;
+    return {
+      page,
+      pageSize: PAGE_SIZE,
+      legajo,
+      countMode: "estimated" as const,
+      search: search || undefined,
+      tipo: filtrosPanel.enums.tipo ? TIPO_CODE.get(filtrosPanel.enums.tipo) : undefined,
+      estadoCodigo: filtrosPanel.enums.estado || undefined,
+      fechaDesde: rango?.from ? `${rango.from}T00:00:00.000` : undefined,
+      fechaHasta: rango?.to ? `${rango.to}T23:59:59.999` : undefined,
+    };
+  }, [page, legajo, search, filtrosPanel.enums, filtrosPanel.dates]);
+
+  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } = useMovimientos(
+    apiFilters,
+  );
 
   const { data: estados = [] } = useEstadosMovimiento();
   const catalogoEstados = estados;
@@ -197,6 +225,9 @@ function TodosPage() {
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span title={isEstimated ? "Conteo estimado" : undefined}>

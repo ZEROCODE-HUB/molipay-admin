@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info } from "lucide-react";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
 import { FormDialog } from "@/components/form-dialog";
@@ -10,6 +10,7 @@ import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
 import { useMovimientos } from "@/hooks/useMovimientos";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento, useEstadosPorTipo } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
@@ -100,17 +101,34 @@ export function MovimientosSubRoute({
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
 
-  const filtros = useMemo(
-    () => ({
+  // Filtros de la card del DataTable: van server-side contra toda la base.
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
+  });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
+  const filtros = useMemo(() => {
+    const rango = filtrosPanel.dates.fecha;
+    return {
       page,
       pageSize: PAGE_SIZE,
       tipo: tipoCode,
       conImpuesto: soloConImpuesto || undefined,
       conComision: soloConComision || undefined,
       countMode: "estimated" as const,
-    }),
-    [page, tipoCode, soloConImpuesto, soloConComision],
-  );
+      search: search || undefined,
+      estadoCodigo: filtrosPanel.enums.estado || undefined,
+      fechaDesde: rango?.from ? `${rango.from}T00:00:00.000` : undefined,
+      fechaHasta: rango?.to ? `${rango.to}T23:59:59.999` : undefined,
+    };
+  }, [page, tipoCode, soloConImpuesto, soloConComision, search, filtrosPanel.enums, filtrosPanel.dates]);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } =
     useMovimientos(filtros);
@@ -276,6 +294,9 @@ export function MovimientosSubRoute({
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span title={isEstimated ? "Conteo estimado" : undefined}>
