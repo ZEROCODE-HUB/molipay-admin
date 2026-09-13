@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BtnPrimary, Badge, Input, Label } from "@/components/portal-shell";
@@ -48,9 +48,30 @@ function CvuPage() {
   const [page, setPage] = useState(0);
   const [estadoFilter, setEstadoFilter] = useState<string>("");
 
+  // Buscar y fecha de la card: server-side contra toda la base.
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
+  });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const rangoFecha = Object.values(filtrosPanel.dates)[0];
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["cvus", page, estadoFilter],
-    queryFn: () => listAllCvus({ page, pageSize: PAGE_SIZE, estado: (estadoFilter as never) || undefined }),
+    queryKey: ["cvus", page, estadoFilter, search, rangoFecha?.from, rangoFecha?.to],
+    queryFn: () =>
+      listAllCvus({
+        page,
+        pageSize: PAGE_SIZE,
+        estado: (estadoFilter as never) || undefined,
+        search: search || undefined,
+        fechaDesde: rangoFecha?.from || undefined,
+        fechaHasta: rangoFecha?.to || undefined,
+      }),
   });
 
   const rows = (data?.rows ?? []) as CvuRow[];
@@ -190,6 +211,9 @@ function CvuPage() {
             keyExtractor={(r: any) => r.id}
             actions={(r: any) => <ActionsDropdown actions={getActions(r as CvuRow)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
             extraFilters={
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Estado</label>

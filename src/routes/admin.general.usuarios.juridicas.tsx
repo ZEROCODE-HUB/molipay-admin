@@ -3,12 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Eye, XCircle, RotateCcw, Trash2, AlertTriangle, Inbox, ShieldCheck, Ban, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { useClientes } from "@/hooks/useClientes";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   aprobarDocumentacionCliente,
   activarCliente,
@@ -94,11 +95,24 @@ function JuridicasPage() {
   const [filtroEstado, setFiltroEstado] = useState("");
   const estadoFiltroDb = filtroEstado ? (LABEL_A_ESTADO[filtroEstado] as EstadoCliente | undefined) : undefined;
 
+  // Buscar de la card: server-side contra toda la base (no solo la página).
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
+  });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useClientes({
     page,
     pageSize: PAGE_SIZE,
     estado: estadoFiltroDb,
     tipoPersona: "juridica",
+    search: search || undefined,
   });
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -273,6 +287,9 @@ function JuridicasPage() {
             keyExtractor={(r) => r.legajo}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
             extraFilters={
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Estado</label>

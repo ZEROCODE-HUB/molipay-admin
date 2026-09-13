@@ -3,12 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Eye, XCircle, RotateCcw, AlertTriangle, Inbox, ShieldCheck, Ban, Trash2, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { useClientes } from "@/hooks/useClientes";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   aprobarDocumentacionCliente,
   activarCliente,
@@ -102,6 +103,18 @@ function UsuariosPage() {
   const [page, setPage] = useState(0);
   const [filtroEstado, setFiltroEstado] = useState<string>("");
 
+  // Buscar de la card: server-side contra toda la base (no solo la página).
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
+  });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
   const estadoFiltroDb = filtroEstado ? (LABEL_A_ESTADO[filtroEstado] as EstadoCliente | undefined) : undefined;
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useClientes({
@@ -109,6 +122,7 @@ function UsuariosPage() {
     pageSize: PAGE_SIZE,
     estado: estadoFiltroDb,
     tipoPersona: "fisica",
+    search: search || undefined,
   });
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -316,6 +330,9 @@ function UsuariosPage() {
             keyExtractor={(r) => r.legajo}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
             extraFilters={
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Estado</label>

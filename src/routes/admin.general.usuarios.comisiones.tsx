@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BtnPrimary, Badge, Input, Label } from "@/components/portal-shell";
@@ -323,17 +323,26 @@ function EstadoMensaje({
 function ComisionesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
-  const [tipo, setTipo] = useState<TipoOperacion | "">("");
-  const [estado, setEstado] = useState<EstadoComision | "">("");
+
+  // Filtros de la card: server-side contra toda la base.
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
+    global: "",
+    enums: {},
+    dates: {},
+  });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComisiones({
     page,
     pageSize: PAGE_SIZE,
-    search,
-    tipo: tipo || undefined,
-    estado: estado || undefined,
+    search: search || undefined,
+    tipo: (filtrosPanel.enums.tipo as TipoOperacion) || undefined,
+    modalidad: (filtrosPanel.enums.modalidad as ModalidadComision) || undefined,
+    estado: (filtrosPanel.enums.estado as EstadoComision) || undefined,
   });
 
   const [viewing, setViewing] = useState<Comision | null>(null);
@@ -558,6 +567,9 @@ function ComisionesPage() {
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>
