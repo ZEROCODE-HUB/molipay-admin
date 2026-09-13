@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert } from "lucide-react";
+import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -90,6 +90,8 @@ function TodosPage() {
   const [estado, setEstado] = useState<(typeof ESTADOS_MOVIMIENTO)[number] | "">("");
   const [tipo, setTipo] = useState<string>("");
   const [legajoInput, setLegajoInput] = useState(legajo ?? "");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   useEffect(() => {
     setLegajoInput(legajo ?? "");
@@ -102,6 +104,8 @@ function TodosPage() {
     estadoCodigo: estado || undefined,
     tipo: tipo || undefined,
     legajo: legajo,
+    fechaDesde: fechaDesde || undefined,
+    fechaHasta: fechaHasta ? fechaHasta + "T23:59:59" : undefined,
     countMode: "estimated",
   });
 
@@ -226,6 +230,51 @@ function TodosPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label htmlFor="f-desde">Fecha desde</Label>
+            <Input
+              id="f-desde"
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => {
+                setFechaDesde(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-hasta">Fecha hasta</Label>
+            <Input
+              id="f-hasta"
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => {
+                setFechaHasta(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchInput("");
+                setLegajoInput("");
+                setEstado("");
+                setTipo("");
+                setFechaDesde("");
+                setFechaHasta("");
+                setPage(0);
+                navigate({ to: "/admin/general/movimientos", search: {} });
+              }}
+              className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+            >
+              <X size={14} />
+              Limpiar
+            </button>
           </div>
         </div>
       </div>

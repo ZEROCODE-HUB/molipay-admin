@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info } from "lucide-react";
+import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
@@ -104,6 +104,8 @@ export function MovimientosSubRoute({
   const search = useDebouncedValue(searchInput, 350);
   const [estadoCodigo, setEstadoCodigo] = useState("");
   const [legajo, setLegajo] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   const filtros = useMemo(
     () => ({
@@ -113,11 +115,13 @@ export function MovimientosSubRoute({
       estadoCodigo: estadoCodigo || undefined,
       tipo: tipoCode,
       legajo: legajo.trim() || undefined,
+      fechaDesde: fechaDesde || undefined,
+      fechaHasta: fechaHasta ? fechaHasta + "T23:59:59" : undefined,
       conImpuesto: soloConImpuesto || undefined,
       conComision: soloConComision || undefined,
       countMode: "estimated" as const,
     }),
-    [page, search, estadoCodigo, legajo, tipoCode, soloConImpuesto, soloConComision],
+    [page, search, estadoCodigo, legajo, fechaDesde, fechaHasta, tipoCode, soloConImpuesto, soloConComision],
   );
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } =
@@ -295,6 +299,49 @@ export function MovimientosSubRoute({
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label htmlFor="f-desde-sub">Fecha desde</Label>
+            <Input
+              id="f-desde-sub"
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => {
+                setFechaDesde(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          <div>
+            <Label htmlFor="f-hasta-sub">Fecha hasta</Label>
+            <Input
+              id="f-hasta-sub"
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => {
+                setFechaHasta(e.target.value);
+                setPage(0);
+              }}
+              className="h-10"
+            />
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchInput("");
+                setLegajo("");
+                setEstadoCodigo("");
+                setFechaDesde("");
+                setFechaHasta("");
+                setPage(0);
+              }}
+              className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+            >
+              <X size={14} />
+              Limpiar
+            </button>
           </div>
         </div>
       </div>
