@@ -336,6 +336,7 @@ export function MovimientosSubRoute({
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             showGlobalFilter={false}
+            hidePagination
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span title={isEstimated ? "Conteo estimado" : undefined}>
