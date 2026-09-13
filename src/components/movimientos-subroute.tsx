@@ -1,16 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info, X } from "lucide-react";
+import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
 import { FormDialog } from "@/components/form-dialog";
-import { Input, Label } from "@/components/portal-shell";
+import { Label } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
 import { useMovimientos } from "@/hooks/useMovimientos";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento, useEstadosPorTipo } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
@@ -100,28 +99,17 @@ export function MovimientosSubRoute({
 }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
-  const [estadoCodigo, setEstadoCodigo] = useState("");
-  const [legajo, setLegajo] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
 
   const filtros = useMemo(
     () => ({
       page,
       pageSize: PAGE_SIZE,
-      search: search || undefined,
-      estadoCodigo: estadoCodigo || undefined,
       tipo: tipoCode,
-      legajo: legajo.trim() || undefined,
-      fechaDesde: fechaDesde || undefined,
-      fechaHasta: fechaHasta ? fechaHasta + "T23:59:59" : undefined,
       conImpuesto: soloConImpuesto || undefined,
       conComision: soloConComision || undefined,
       countMode: "estimated" as const,
     }),
-    [page, search, estadoCodigo, legajo, fechaDesde, fechaHasta, tipoCode, soloConImpuesto, soloConComision],
+    [page, tipoCode, soloConImpuesto, soloConComision],
   );
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } =
@@ -136,10 +124,6 @@ export function MovimientosSubRoute({
     const ids = new Set(estadosDelTipoIds.map((p) => p.estadoId));
     return catalogoEstados.filter((e) => ids.has(e.id));
   }, [tipoCode, catalogoEstados, estadosDelTipoIds]);
-
-  const opcionesEstado: { code: string; label: string }[] = tipoCode
-    ? estadosValidos.map((e) => ({ code: e.codigo, label: e.nombre }))
-    : ESTADOS_MOVIMIENTO.map((s) => ({ code: s, label: s }));
 
   const [detail, setDetail] = useState<Movimiento | null>(null);
   const [estadoTarget, setEstadoTarget] = useState<{
@@ -286,103 +270,11 @@ export function MovimientosSubRoute({
         </div>
       ) : (
         <>
-          <div className="rounded-lg border bg-card p-4 mb-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[220px]">
-                <Label htmlFor="buscar-sub">Buscar</Label>
-                <Input
-                  id="buscar-sub"
-                  value={searchInput}
-                  onChange={(e) => {
-                    setSearchInput(e.target.value);
-                    setPage(0);
-                  }}
-                  placeholder="ID, legajo, correo o nombre…"
-                />
-              </div>
-              <div className="w-[200px]">
-                <Label htmlFor="f-legajo-sub">Legajo</Label>
-                <Input
-                  id="f-legajo-sub"
-                  value={legajo}
-                  onChange={(e) => {
-                    setLegajo(e.target.value);
-                    setPage(0);
-                  }}
-                  placeholder="LPF-… / LPJ-…"
-                />
-              </div>
-              <div>
-                <Label htmlFor="f-estado-sub">Estado</Label>
-                <select
-                  id="f-estado-sub"
-                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-                  value={estadoCodigo}
-                  onChange={(e) => {
-                    setEstadoCodigo(e.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <option value="">Todos</option>
-                  {opcionesEstado.map((o) => (
-                    <option key={o.code} value={o.code}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="f-desde-sub">Fecha desde</Label>
-                <Input
-                  id="f-desde-sub"
-                  type="date"
-                  value={fechaDesde}
-                  onChange={(e) => {
-                    setFechaDesde(e.target.value);
-                    setPage(0);
-                  }}
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <Label htmlFor="f-hasta-sub">Fecha hasta</Label>
-                <Input
-                  id="f-hasta-sub"
-                  type="date"
-                  value={fechaHasta}
-                  onChange={(e) => {
-                    setFechaHasta(e.target.value);
-                    setPage(0);
-                  }}
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchInput("");
-                    setLegajo("");
-                    setEstadoCodigo("");
-                    setFechaDesde("");
-                    setFechaHasta("");
-                    setPage(0);
-                  }}
-                  className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
-                >
-                  <X size={14} />
-                  Limpiar
-                </button>
-              </div>
-            </div>
-          </div>
-
           <DataTable
             columns={visibles}
             data={data}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-            showGlobalFilter={false}
             hidePagination
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">

@@ -1,15 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, X } from "lucide-react";
+import { useState } from "react";
+import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { FormDialog } from "@/components/form-dialog";
-import { Input, Label } from "@/components/portal-shell";
+import { Label } from "@/components/portal-shell";
 import { useMovimientos } from "@/hooks/useMovimientos";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
@@ -85,27 +84,11 @@ function TodosPage() {
   const navigate = useNavigate();
 
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
-  const [estado, setEstado] = useState<(typeof ESTADOS_MOVIMIENTO)[number] | "">("");
-  const [tipo, setTipo] = useState<string>("");
-  const [legajoInput, setLegajoInput] = useState(legajo ?? "");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
-
-  useEffect(() => {
-    setLegajoInput(legajo ?? "");
-  }, [legajo]);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } = useMovimientos({
     page,
     pageSize: PAGE_SIZE,
-    search: search || legajo || undefined,
-    estadoCodigo: estado || undefined,
-    tipo: tipo || undefined,
-    legajo: legajo,
-    fechaDesde: fechaDesde || undefined,
-    fechaHasta: fechaHasta ? fechaHasta + "T23:59:59" : undefined,
+    legajo,
     countMode: "estimated",
   });
 
@@ -208,128 +191,11 @@ function TodosPage() {
         </div>
       ) : (
         <>
-          <div className="rounded-lg border bg-card p-4 mb-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[220px]">
-                <Label htmlFor="buscar">Buscar</Label>
-                <Input
-                  id="buscar"
-                  value={searchInput}
-                  onChange={(e) => {
-                    setSearchInput(e.target.value);
-                    setPage(0);
-                  }}
-                  placeholder="ID, legajo, correo o nombre…"
-                />
-              </div>
-              <div className="w-[200px]">
-                <Label htmlFor="f-legajo">Legajo</Label>
-                <Input
-                  id="f-legajo"
-                  value={legajoInput}
-                  onChange={(e) => {
-                    setLegajoInput(e.target.value);
-                    setPage(0);
-                    navigate({
-                      to: "/admin/general/movimientos",
-                      search: e.target.value ? { legajo: e.target.value } : {},
-                    });
-                  }}
-                  placeholder="LPF-… / LPJ-…"
-                />
-              </div>
-              <div>
-                <Label htmlFor="f-estado">Estado</Label>
-                <select
-                  id="f-estado"
-                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-                  value={estado}
-                  onChange={(e) => {
-                    setEstado(e.target.value as (typeof ESTADOS_MOVIMIENTO)[number] | "");
-                    setPage(0);
-                  }}
-                >
-                  <option value="">Todos</option>
-                  {ESTADOS_MOVIMIENTO.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="f-tipo">Tipo</Label>
-                <select
-                  id="f-tipo"
-                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-                  value={tipo}
-                  onChange={(e) => {
-                    setTipo(e.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <option value="">Todos</option>
-                  {TIPO_OPCIONES.map((o) => (
-                    <option key={o.code} value={o.code}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="f-desde">Fecha desde</Label>
-                <Input
-                  id="f-desde"
-                  type="date"
-                  value={fechaDesde}
-                  onChange={(e) => {
-                    setFechaDesde(e.target.value);
-                    setPage(0);
-                  }}
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <Label htmlFor="f-hasta">Fecha hasta</Label>
-                <Input
-                  id="f-hasta"
-                  type="date"
-                  value={fechaHasta}
-                  onChange={(e) => {
-                    setFechaHasta(e.target.value);
-                    setPage(0);
-                  }}
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchInput("");
-                    setLegajoInput("");
-                    setEstado("");
-                    setTipo("");
-                    setFechaDesde("");
-                    setFechaHasta("");
-                    setPage(0);
-                    navigate({ to: "/admin/general/movimientos", search: {} });
-                  }}
-                  className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
-                >
-                  <X size={14} />
-                  Limpiar
-                </button>
-              </div>
-            </div>
-          </div>
-
           <DataTable
             columns={columns}
             data={data}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-            showGlobalFilter={false}
             hidePagination
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
@@ -427,7 +293,8 @@ const columns: Column<FilaIndex>[] = [
   {
     key: "tipo",
     label: "Tipo de movimiento",
-    filterable: false,
+    filterable: "enum",
+    filterOptions: TIPO_OPCIONES.map((o) => o.label),
     minWidth: 140,
     render: (r) => TIPO_LABEL.get(r.tipo) ?? r.tipo,
   },
