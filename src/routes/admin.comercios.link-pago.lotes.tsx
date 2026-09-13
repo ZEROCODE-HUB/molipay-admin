@@ -318,15 +318,15 @@ function Page() {
   const columns: Column<LoteAcreditacion>[] = [
     { key:"fecha", label:"Fecha", minWidth: 120, render:(r)=> <span className="font-mono text-xs tabular-nums">{new Date(r.fecha).toLocaleDateString("es-AR")}</span> },
     { key:"codigo", label:"Lote", minWidth: 160, maxWidth: 280, render:(r)=> <span className="font-mono text-xs font-semibold">{r.codigo}</span> },
-    { key:"comercio", label:"Comercio / Legajo", filterable:true, minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
-    { key:"bandera", label:"Bandera", filterable:"enum", filterOptions:["Visa","Mastercard","Amex","Cabal","Diners"], minWidth: 100, render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
+    { key:"comercio", label:"Comercio / Legajo", minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
+    { key:"bandera", label:"Bandera", minWidth: 100, render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
     { key:"cantidadOperaciones", label:"Ops", minWidth: 80, render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOperaciones}{r.cuotas && r.cuotas>1 ? ` · ${r.cuotas}c` : ""}</span> },
     { key:"importeNeto", label:"Importe a acreditar", minWidth: 150, render:(r)=> <span className={`font-mono tabular-nums font-semibold ${r.estado==="Contracargo" ? "text-red-600" : "text-emerald-700"}`}>{fmt(r.importeNeto)}</span> },
-    { key:"estado", label:"Estado", filterable:"enum", filterOptions:["Acreditado","Rechazado","Contracargo"], minWidth: 120, render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
+    { key:"estado", label:"Estado", minWidth: 120, render:(r)=> <Badge tone={tone(r.estado)}>{r.estado}</Badge> },
   ];
 
   const resumenColumns: Column<ResumenComercio>[] = [
-    { key:"comercio", label:"Comercio / Legajo", filterable:true, minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
+    { key:"comercio", label:"Comercio / Legajo", minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio}</div><div className="font-mono text-xs text-muted-foreground">{r.legajo}</div></div> },
     { key:"pendienteAcreditar", label:"Pendiente de acreditar", minWidth: 150, render:(r)=> <span className="font-mono text-xs font-semibold">{fmt(r.pendienteAcreditar)}</span> },
     { key:"pendienteImpuestos", label:"Pendiente de impuestos", minWidth: 150, render:(r)=> <span className="font-mono text-xs">{fmt(r.pendienteImpuestos)}</span> },
     { key:"totalPayWay", label:"Comisión PayWay", minWidth: 140, render:(r)=> <span className="font-mono text-xs">{fmt(r.totalPayWay)}</span> },
@@ -417,13 +417,13 @@ function Page() {
             <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{lotes.filter(l=>l.estado==="Contracargo").length}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{lotes.filter(l=>l.estado==="Rechazado").length}</div></Card>
           </div>
-          <DataTable columns={columns} data={lotes} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination />
+          <DataTable columns={columns} data={lotes} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} lotes · página {page + 1} de {totalPages}</span><div className="flex gap-2"><button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
         </>
       ) : (
         <>
           <p className="text-sm text-muted-foreground mb-3">Total consolidado que corresponde pagar a cada comercio (suma de todos sus lotes por bandera). Pendiente de acreditar = máximo adelantable. Agregación client-side sobre página actual; para total global sin paginación usar query separada.</p>
-          <DataTable columns={resumenColumns} data={resumenData} keyExtractor={(r)=> r.comercioId} actions={(r)=> <ActionsDropdown actions={[{ label:"Ver detalle", icon: Eye, onClick:()=> setComercioDetail(r) }]} />} hidePagination />
+          <DataTable columns={resumenColumns} data={resumenData} keyExtractor={(r)=> r.comercioId} actions={(r)=> <ActionsDropdown actions={[{ label:"Ver detalle", icon: Eye, onClick:()=> setComercioDetail(r) }]} />} hidePagination showGlobalFilter={false} />
         </>
       )}
 

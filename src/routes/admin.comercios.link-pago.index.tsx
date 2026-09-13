@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Eye, Ban, XCircle, Trash2, AlertTriangle, Inbox, Link2, Copy, CheckCircle } from "lucide-react";
 import { requireSupabase } from "@/lib/supabase";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PageHeader, Badge, Card } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -120,9 +121,18 @@ function Page() {
   const puedeModificar = can("modificar","comercios");
   const puedeBorrar = can("borrar","comercios");
 
+  // Filtros de la card: server-side contra toda la base.
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({ global: "", enums: {}, dates: {} });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const estadoFiltro = (filtrosPanel.enums["estado"] as string | undefined) ?? "";
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["enlaces-pago", page],
-    queryFn: () => listEnlaces({ page, pageSize: PAGE_SIZE }),
+    queryKey: ["enlaces-pago", page, search, estadoFiltro],
+    queryFn: () => listEnlaces({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estadoFiltro || undefined }),
     staleTime: 15_000,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
@@ -194,7 +204,7 @@ function Page() {
       : isError ? <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700"><AlertTriangle size={28}/><p>{err?.message ?? "Error"}</p><button onClick={()=>refetch()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground">Reintentar</button></div>
       : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay enlaces de pago.</p><p className="text-xs">Crea un enlace en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>
       : <>
-          <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination />
+          <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination serverFilterState={filtrosPanel} onServerFilterChange={aplicarFiltros} serverResultCount={total} />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} enlace(s) · página {page+1} de {totalPages}</span><div className="flex gap-2"><button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
         </>}
       {detail && <EnlaceDetalle enlace={detail} onClose={()=>setDetail(null)} />}

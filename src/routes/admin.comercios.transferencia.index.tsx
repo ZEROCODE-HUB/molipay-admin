@@ -177,11 +177,11 @@ function Page() {
   };
 
   const columns: import("@/components/data-table").Column<PuntoVenta>[] = [
-    { key:"nombre", label:"QR / POS", filterable:true, render:(r)=> <span className="font-semibold flex items-center gap-1.5"><QrCode size={14}/> {r.nombre} <span className="text-xs text-muted-foreground">({r.tipo ?? "QR"})</span></span> },
+    { key:"nombre", label:"QR / POS", render:(r)=> <span className="font-semibold flex items-center gap-1.5"><QrCode size={14}/> {r.nombre} <span className="text-xs text-muted-foreground">({r.tipo ?? "QR"})</span></span> },
     { key:"comercio", label:"Comercio", render:(r)=> <span>{r.comercio?.usuario ?? "—"}</span> },
     { key:"usuario", label:"Usuario", render:(r)=> <span>{r.comercio?.clienteCorreo ?? r.comercio?.usuario ?? "—"}</span> },
     { key:"cajero", label:"Cajero", render:(r)=> <span>{r.cajero ?? "—"}</span> },
-    { key:"estado", label:"Estado", filterable:"enum", filterOptions:[...ESTADOS_QR], render:(r)=><Badge tone={tone(r.estado)}>{r.estado}</Badge> },
+    { key:"estado", label:"Estado", render:(r)=><Badge tone={tone(r.estado)}>{r.estado}</Badge> },
     { key:"createdAt", label:"Fecha", render:(r)=><span className="font-mono text-xs">{new Date(r.createdAt).toLocaleDateString("es-AR")}</span> },
   ];
 
@@ -202,7 +202,7 @@ function Page() {
       : isError ? <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700"><AlertTriangle size={28}/><p>{err?.message ?? "Error"}</p><button onClick={()=>refetch()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground">Reintentar</button></div>
       : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay QRs/POS.</p><p className="text-xs">Crea un QR en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>
       : <>
-          <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination />
+          <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} QR(s) · página {page+1} de {totalPages}</span><div className="flex gap-2"><button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
         </>}
       {detail && <QrDetalle qr={detail} onClose={()=>setDetail(null)} />}
