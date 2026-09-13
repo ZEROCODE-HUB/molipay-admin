@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Eye, Loader2, AlertTriangle, Inbox, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { FormDialog } from "@/components/form-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { Badge, Input, BtnPrimary } from "@/components/portal-shell";
@@ -36,13 +37,20 @@ function Page() {
   const [showNew, setShowNew] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({ global: "", enums: {}, dates: {} });
+  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
+  const aplicarFiltros = (f: TableServerFilters) => {
+    setPage(0);
+    setFiltrosPanel(f);
+  };
+
   const rolesQ = useQuery({ queryKey: ["roles"], queryFn: listRoles });
   const roles = rolesQ.data ?? [];
   const rolNombre = new Map<string, string>(roles.map((r) => [r.id, r.nombre]));
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-    queryKey: ["admin-users", page],
-    queryFn: () => listAdminUsers({ page, pageSize: PAGE_SIZE }),
+    queryKey: ["admin-users", page, search],
+    queryFn: () => listAdminUsers({ page, pageSize: PAGE_SIZE, search: search || undefined }),
   });
 
   const rows: AdminUser[] = data?.rows ?? [];
@@ -157,6 +165,9 @@ function Page() {
             keyExtractor={(r) => r.id}
             pageSize={PAGE_SIZE}
             hidePagination
+            serverFilterState={filtrosPanel}
+            onServerFilterChange={aplicarFiltros}
+            serverResultCount={total}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
