@@ -255,97 +255,6 @@ export function MovimientosSubRoute({
     <PermissionGuard recurso="movimientos">
       <PageHeader title={titulo} description={descripcion} />
 
-      <div className="rounded-lg border bg-card p-4 mb-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[220px]">
-            <Label htmlFor="buscar-sub">Buscar</Label>
-            <Input
-              id="buscar-sub"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                setPage(0);
-              }}
-              placeholder="ID, legajo, correo o nombre…"
-            />
-          </div>
-          <div className="w-[200px]">
-            <Label htmlFor="f-legajo-sub">Legajo</Label>
-            <Input
-              id="f-legajo-sub"
-              value={legajo}
-              onChange={(e) => {
-                setLegajo(e.target.value);
-                setPage(0);
-              }}
-              placeholder="LPF-… / LPJ-…"
-            />
-          </div>
-          <div>
-            <Label htmlFor="f-estado-sub">Estado</Label>
-            <select
-              id="f-estado-sub"
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-              value={estadoCodigo}
-              onChange={(e) => {
-                setEstadoCodigo(e.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="">Todos</option>
-              {opcionesEstado.map((o) => (
-                <option key={o.code} value={o.code}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="f-desde-sub">Fecha desde</Label>
-            <Input
-              id="f-desde-sub"
-              type="date"
-              value={fechaDesde}
-              onChange={(e) => {
-                setFechaDesde(e.target.value);
-                setPage(0);
-              }}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <Label htmlFor="f-hasta-sub">Fecha hasta</Label>
-            <Input
-              id="f-hasta-sub"
-              type="date"
-              value={fechaHasta}
-              onChange={(e) => {
-                setFechaHasta(e.target.value);
-                setPage(0);
-              }}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput("");
-                setLegajo("");
-                setEstadoCodigo("");
-                setFechaDesde("");
-                setFechaHasta("");
-                setPage(0);
-              }}
-              className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
-            >
-              <X size={14} />
-              Limpiar
-            </button>
-          </div>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
@@ -377,6 +286,97 @@ export function MovimientosSubRoute({
         </div>
       ) : (
         <>
+          <div className="rounded-lg border bg-card p-4 mb-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[220px]">
+                <Label htmlFor="buscar-sub">Buscar</Label>
+                <Input
+                  id="buscar-sub"
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="ID, legajo, correo o nombre…"
+                />
+              </div>
+              <div className="w-[200px]">
+                <Label htmlFor="f-legajo-sub">Legajo</Label>
+                <Input
+                  id="f-legajo-sub"
+                  value={legajo}
+                  onChange={(e) => {
+                    setLegajo(e.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="LPF-… / LPJ-…"
+                />
+              </div>
+              <div>
+                <Label htmlFor="f-estado-sub">Estado</Label>
+                <select
+                  id="f-estado-sub"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+                  value={estadoCodigo}
+                  onChange={(e) => {
+                    setEstadoCodigo(e.target.value);
+                    setPage(0);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {opcionesEstado.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="f-desde-sub">Fecha desde</Label>
+                <Input
+                  id="f-desde-sub"
+                  type="date"
+                  value={fechaDesde}
+                  onChange={(e) => {
+                    setFechaDesde(e.target.value);
+                    setPage(0);
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="f-hasta-sub">Fecha hasta</Label>
+                <Input
+                  id="f-hasta-sub"
+                  type="date"
+                  value={fechaHasta}
+                  onChange={(e) => {
+                    setFechaHasta(e.target.value);
+                    setPage(0);
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    setLegajo("");
+                    setEstadoCodigo("");
+                    setFechaDesde("");
+                    setFechaHasta("");
+                    setPage(0);
+                  }}
+                  className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                >
+                  <X size={14} />
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+
           <DataTable
             columns={visibles}
             data={data}

@@ -163,122 +163,6 @@ function TodosPage() {
         description="Historial completo de transacciones (paginación server-side sobre la base de datos)."
       />
 
-      <div className="rounded-lg border bg-card p-4 mb-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[220px]">
-            <Label htmlFor="buscar">Buscar</Label>
-            <Input
-              id="buscar"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                setPage(0);
-              }}
-              placeholder="ID, legajo, correo o nombre…"
-            />
-          </div>
-          <div className="w-[200px]">
-            <Label htmlFor="f-legajo">Legajo</Label>
-            <Input
-              id="f-legajo"
-              value={legajoInput}
-              onChange={(e) => {
-                setLegajoInput(e.target.value);
-                setPage(0);
-                navigate({
-                  to: "/admin/general/movimientos",
-                  search: e.target.value ? { legajo: e.target.value } : {},
-                });
-              }}
-              placeholder="LPF-… / LPJ-…"
-            />
-          </div>
-          <div>
-            <Label htmlFor="f-estado">Estado</Label>
-            <select
-              id="f-estado"
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-              value={estado}
-              onChange={(e) => {
-                setEstado(e.target.value as (typeof ESTADOS_MOVIMIENTO)[number] | "");
-                setPage(0);
-              }}
-            >
-              <option value="">Todos</option>
-              {ESTADOS_MOVIMIENTO.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="f-tipo">Tipo</Label>
-            <select
-              id="f-tipo"
-              className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-              value={tipo}
-              onChange={(e) => {
-                setTipo(e.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="">Todos</option>
-              {TIPO_OPCIONES.map((o) => (
-                <option key={o.code} value={o.code}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="f-desde">Fecha desde</Label>
-            <Input
-              id="f-desde"
-              type="date"
-              value={fechaDesde}
-              onChange={(e) => {
-                setFechaDesde(e.target.value);
-                setPage(0);
-              }}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <Label htmlFor="f-hasta">Fecha hasta</Label>
-            <Input
-              id="f-hasta"
-              type="date"
-              value={fechaHasta}
-              onChange={(e) => {
-                setFechaHasta(e.target.value);
-                setPage(0);
-              }}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput("");
-                setLegajoInput("");
-                setEstado("");
-                setTipo("");
-                setFechaDesde("");
-                setFechaHasta("");
-                setPage(0);
-                navigate({ to: "/admin/general/movimientos", search: {} });
-              }}
-              className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
-            >
-              <X size={14} />
-              Limpiar
-            </button>
-          </div>
-        </div>
-      </div>
-
       {legajo && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm mb-4">
           Mostrando movimientos del cliente con legajo{" "}
@@ -324,6 +208,122 @@ function TodosPage() {
         </div>
       ) : (
         <>
+          <div className="rounded-lg border bg-card p-4 mb-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[220px]">
+                <Label htmlFor="buscar">Buscar</Label>
+                <Input
+                  id="buscar"
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="ID, legajo, correo o nombre…"
+                />
+              </div>
+              <div className="w-[200px]">
+                <Label htmlFor="f-legajo">Legajo</Label>
+                <Input
+                  id="f-legajo"
+                  value={legajoInput}
+                  onChange={(e) => {
+                    setLegajoInput(e.target.value);
+                    setPage(0);
+                    navigate({
+                      to: "/admin/general/movimientos",
+                      search: e.target.value ? { legajo: e.target.value } : {},
+                    });
+                  }}
+                  placeholder="LPF-… / LPJ-…"
+                />
+              </div>
+              <div>
+                <Label htmlFor="f-estado">Estado</Label>
+                <select
+                  id="f-estado"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+                  value={estado}
+                  onChange={(e) => {
+                    setEstado(e.target.value as (typeof ESTADOS_MOVIMIENTO)[number] | "");
+                    setPage(0);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {ESTADOS_MOVIMIENTO.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="f-tipo">Tipo</Label>
+                <select
+                  id="f-tipo"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
+                  value={tipo}
+                  onChange={(e) => {
+                    setTipo(e.target.value);
+                    setPage(0);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {TIPO_OPCIONES.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="f-desde">Fecha desde</Label>
+                <Input
+                  id="f-desde"
+                  type="date"
+                  value={fechaDesde}
+                  onChange={(e) => {
+                    setFechaDesde(e.target.value);
+                    setPage(0);
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="f-hasta">Fecha hasta</Label>
+                <Input
+                  id="f-hasta"
+                  type="date"
+                  value={fechaHasta}
+                  onChange={(e) => {
+                    setFechaHasta(e.target.value);
+                    setPage(0);
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    setLegajoInput("");
+                    setEstado("");
+                    setTipo("");
+                    setFechaDesde("");
+                    setFechaHasta("");
+                    setPage(0);
+                    navigate({ to: "/admin/general/movimientos", search: {} });
+                  }}
+                  className="h-10 px-3 rounded-md border border-input bg-card text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                >
+                  <X size={14} />
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+
           <DataTable
             columns={columns}
             data={data}
