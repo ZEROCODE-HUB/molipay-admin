@@ -136,7 +136,7 @@ function DashboardComisionesCard() {
                 {porComercio.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Sin movimientos en el periodo.</p>
                 ) : (
-                  <DataTable columns={desgloseColumns} data={porComercio} keyExtractor={(r) => r.legajo} hidePagination showGlobalFilter={false} showDownloadButton={false} />
+                  <DataTable columns={desgloseColumns} data={porComercio} keyExtractor={(r) => r.legajo} showGlobalFilter={false} showDownloadButton={false} />
                 )}
               </div>
             )}
