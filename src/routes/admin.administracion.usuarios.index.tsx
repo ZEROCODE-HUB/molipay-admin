@@ -16,7 +16,7 @@ import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 export const Route = createFileRoute("/admin/administracion/usuarios/")({
   head: () => ({ meta: [{ title: "Administración de personal — Admin Panel" }] }),
@@ -33,6 +33,7 @@ function fmtFecha(iso: string): string {
 function Page() {
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [detail, setDetail] = useState<AdminUser | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -49,13 +50,13 @@ function Page() {
   const rolNombre = new Map<string, string>(roles.map((r) => [r.id, r.nombre]));
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-    queryKey: ["admin-users", page, search],
-    queryFn: () => listAdminUsers({ page, pageSize: PAGE_SIZE, search: search || undefined }),
+    queryKey: ["admin-users", page, pageSize, search],
+    queryFn: () => listAdminUsers({ page, pageSize, search: search || undefined }),
   });
 
   const rows: AdminUser[] = data?.rows ?? [];
   const total = data?.total ?? 0;
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
 
   const createMut = useMutation({
     mutationFn: (vars: {
@@ -163,7 +164,7 @@ function Page() {
             columns={columns}
             data={rows}
             keyExtractor={(r) => r.id}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             hidePagination
             serverFilterState={filtrosPanel}
             onServerFilterChange={aplicarFiltros}
@@ -171,26 +172,48 @@ function Page() {
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total > 0 ? `${total} usuario(s) · ` : ""}página {page + 1} de {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="flex items-center gap-2">
+              <span>
+                {total > 0 ? `${total} usuario(s) · ` : ""}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
               >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </>

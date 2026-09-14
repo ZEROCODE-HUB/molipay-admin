@@ -25,7 +25,7 @@ export const Route = createFileRoute("/admin/comercios/link-pago/lotes")({
   }),
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
@@ -205,6 +205,7 @@ function ComercioDetalleModal({ data, lotes, onClose }: { data: ResumenComercio;
 function Page() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState<EstadoLote | "">("");
   const [banderaFilter, setBanderaFilter] = useState("");
@@ -222,10 +223,10 @@ function Page() {
   const { rows: comerciosOptions } = useComercios({ page: 0, pageSize: 100 });
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["lotes", page, search, estadoFilter, banderaFilter, comercioFilter, fechaDesde, fechaHasta],
+    queryKey: ["lotes", page, pageSize, search, estadoFilter, banderaFilter, comercioFilter, fechaDesde, fechaHasta],
     queryFn: () => listLotes({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
       search: search || undefined,
       estado: estadoFilter || undefined,
       bandera: banderaFilter || undefined,
@@ -237,7 +238,7 @@ function Page() {
 
   const lotes = data?.rows ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   // Resumen: agregación client-side sobre página actual (para performance, evita fetch extra)
   // Si necesitás resumen global exacto, cambiar a fetch separado con pageSize 1000 sin paginación.
@@ -418,7 +419,35 @@ function Page() {
             <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{lotes.filter(l=>l.estado==="Rechazado").length}</div></Card>
           </div>
           <DataTable columns={columns} data={lotes} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} lotes · página {page + 1} de {totalPages}</span><div className="flex gap-2"><button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>{total} lotes · </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button>
+                <button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
         </>
       ) : (
         <>

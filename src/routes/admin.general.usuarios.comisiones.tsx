@@ -39,7 +39,7 @@ export const Route = createFileRoute("/admin/general/usuarios/comisiones")({
   component: ComisionesPage,
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 const TIPOS_COMISION_USUARIOS: TipoOperacion[] = ["Depósito", "Retiro"];
 
@@ -323,6 +323,7 @@ function EstadoMensaje({
 function ComisionesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filtros de la card: server-side contra toda la base.
   const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({
@@ -338,7 +339,7 @@ function ComisionesPage() {
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComisiones({
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
     search: search || undefined,
     tipo: (filtrosPanel.enums.tipo as TipoOperacion) || undefined,
     modalidad: (filtrosPanel.enums.modalidad as ModalidadComision) || undefined,
@@ -530,7 +531,7 @@ function ComisionesPage() {
     MONTO_OPERACION_REF,
   );
 
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
   const err = error instanceof DataAccessError ? error : null;
 
   return (
@@ -572,26 +573,48 @@ function ComisionesPage() {
             serverResultCount={total}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total} comisión(es) · página {page + 1} de {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="flex items-center gap-2">
+              <span>
+                {total} comisión(es) ·{" "}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
               >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </>

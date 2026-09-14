@@ -53,7 +53,7 @@ export const Route = createFileRoute("/admin/comercios/gestion/")({
   }),
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 function estadoBadgeTone(estado: EstadoComercio): "success" | "neutral" | "warn" | "danger" {
   if (estado === "Activado") return "success";
@@ -698,6 +698,7 @@ function ComercioFormModal({
 function Page() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput, 350);
   const [estadoFilter, setEstadoFilter] = useState<EstadoComercio | "">("");
@@ -712,7 +713,7 @@ function Page() {
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComercios({
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
     search,
     estado: estadoFilter || undefined,
     nivel: nivelFilter || undefined,
@@ -923,7 +924,7 @@ function Page() {
   ];
 
   const err = error instanceof DataAccessError ? error : null;
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <PermissionGuard recurso="comercios">
@@ -1056,7 +1057,7 @@ function Page() {
             columns={columns}
             data={rows}
             keyExtractor={(r) => r.id}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             showDownloadButton={false}
             showGlobalFilter={false}
             dateFilterColumns={[]}
@@ -1064,26 +1065,48 @@ function Page() {
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>
-              {total} comercio(s) · página {page + 1} de {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="flex items-center gap-2">
+              <span>
+                {total} comercio(s) ·{" "}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
               >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </>

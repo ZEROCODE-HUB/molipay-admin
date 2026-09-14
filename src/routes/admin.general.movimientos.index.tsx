@@ -35,7 +35,7 @@ export const Route = createFileRoute("/admin/general/movimientos/")({
   component: TodosPage,
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 // Tipos de movimiento: label visible en la UI -> código real en BD.
 // Únicos valores que existen en movimientos.tipo (coinciden con
@@ -86,6 +86,7 @@ function TodosPage() {
   const navigate = useNavigate();
 
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filtros de la card: el DataTable los reporta acá y van contra la base
   // (server-side), no solo contra la página actual de la tabla.
@@ -105,7 +106,7 @@ function TodosPage() {
     const rango = filtrosPanel.dates.fecha;
     return {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
       legajo,
       countMode: "estimated" as const,
       search: search || undefined,
@@ -114,7 +115,7 @@ function TodosPage() {
       fechaDesde: rango?.from ? `${rango.from}T00:00:00.000` : undefined,
       fechaHasta: rango?.to ? `${rango.to}T23:59:59.999` : undefined,
     };
-  }, [page, legajo, search, filtrosPanel.enums, filtrosPanel.dates]);
+  }, [page, pageSize, legajo, search, filtrosPanel.enums, filtrosPanel.dates]);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } = useMovimientos(
     apiFilters,
@@ -165,7 +166,7 @@ function TodosPage() {
   ];
 
   const err = error instanceof DataAccessError ? error : null;
-  const totalPaginas = Math.max(1, Math.ceil((total || 0) / PAGE_SIZE));
+  const totalPaginas = Math.max(1, Math.ceil((total || 0) / pageSize));
 
   return (
     <PermissionGuard recurso="movimientos">
@@ -230,27 +231,48 @@ function TodosPage() {
             serverResultCount={total}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span title={isEstimated ? "Conteo estimado" : undefined}>
-              {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}página {page + 1} de{" "}
-              {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="flex items-center gap-2">
+              <span title={isEstimated ? "Conteo estimado" : undefined}>
+                {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
               >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </>

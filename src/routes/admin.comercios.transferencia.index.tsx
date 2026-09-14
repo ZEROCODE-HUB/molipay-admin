@@ -27,7 +27,7 @@ export const Route = createFileRoute("/admin/comercios/transferencia/")({
   }),
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 const ESTADOS_QR: EstadoQr[] = ["Pendiente de aprobación","Activado","Desactivado","Rechazado","Suspendido","Eliminado"];
 
 function tone(estado: string): "success" | "neutral" | "warn" | "danger" {
@@ -113,6 +113,7 @@ function QrDetalle({ qr, onClose }: { qr: PuntoVenta; onClose: () => void }) {
 function Page() {
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [estado, setEstado] = useState<EstadoQr | "">("");
   const { can } = useCan();
@@ -120,8 +121,8 @@ function Page() {
   const puedeBorrar = can("borrar","comercios");
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["qr-pos", page, search, estado],
-    queryFn: () => listQrPos({ page, pageSize: PAGE_SIZE, search: search || undefined, estado: estado || undefined }),
+    queryKey: ["qr-pos", page, pageSize, search, estado],
+    queryFn: () => listQrPos({ page, pageSize, search: search || undefined, estado: estado || undefined }),
     staleTime: 15_000,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
@@ -186,7 +187,7 @@ function Page() {
   ];
 
   const err = error instanceof DataAccessError ? error : null;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <PermissionGuard recurso="comercios">
@@ -203,7 +204,35 @@ function Page() {
       : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay QRs/POS.</p><p className="text-xs">Crea un QR en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>
       : <>
           <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} QR(s) · página {page+1} de {totalPages}</span><div className="flex gap-2"><button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>{total} QR(s) · </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button>
+                <button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
         </>}
       {detail && <QrDetalle qr={detail} onClose={()=>setDetail(null)} />}
       {confirm && <ConfirmDialog open={!!confirm} onClose={()=>setConfirm(null)} title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel} variant={confirm.variant} onConfirm={confirm.onConfirm} />}

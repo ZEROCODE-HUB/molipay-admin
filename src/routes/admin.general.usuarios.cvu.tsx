@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin/general/usuarios/cvu")({
   component: CvuPage,
 });
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50];
 
 function estadoBadge(e: string) {
   const map: Record<string, { label: string; tone: "success" | "danger" | "warn" | "neutral" }> = {
@@ -46,6 +46,7 @@ function estadoBadge(e: string) {
 function CvuPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [estadoFilter, setEstadoFilter] = useState<string>("");
 
   // Buscar y fecha de la card: server-side contra toda la base.
@@ -62,11 +63,11 @@ function CvuPage() {
   };
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["cvus", page, estadoFilter, search, rangoFecha?.from, rangoFecha?.to],
+    queryKey: ["cvus", page, pageSize, estadoFilter, search, rangoFecha?.from, rangoFecha?.to],
     queryFn: () =>
       listAllCvus({
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         estado: (estadoFilter as never) || undefined,
         search: search || undefined,
         fechaDesde: rangoFecha?.from || undefined,
@@ -76,7 +77,7 @@ function CvuPage() {
 
   const rows = (data?.rows ?? []) as CvuRow[];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const [showNuevo, setShowNuevo] = useState(false);
   const [formEmail, setFormEmail] = useState("");
@@ -225,7 +226,35 @@ function CvuPage() {
               </div>
             }
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground"><span>{total} CBU/CVU · página {page + 1} de {totalPages}</span><div className="flex gap-2"><button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button><button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button></div></div>
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>{total} CBU/CVU · </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button>
+                <button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
