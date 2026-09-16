@@ -2,7 +2,7 @@ import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 import type { Adelanto, AdelantoRow, EstadoAdelanto } from "./types";
 
-const COLUMNS = "id, comercio_id, monto_solicitado, plazo_original_dias, plazo_adelantado_dias, tasa_interes_pct, estado, fecha_solicitud, fecha_resolucion, resuelto_por, created_at, updated_at";
+const COLUMNS = "id, comercio_id, monto_solicitado, plazo_original_dias, plazo_adelantado_dias, tasa_interes_pct, estado, motivo, fecha_acreditacion, monto_por_acreditar, fecha_solicitud, fecha_resolucion, resuelto_por, created_at, updated_at";
 
 function toAdelanto(r: AdelantoRow): Adelanto {
   return {
@@ -13,6 +13,9 @@ function toAdelanto(r: AdelantoRow): Adelanto {
     plazoAdelantadoDias: Number(r.plazo_adelantado_dias),
     tasaInteresPct: r.tasa_interes_pct != null ? Number(r.tasa_interes_pct) : null,
     estado: r.estado,
+    motivo: r.motivo ?? null,
+    fechaAcreditacion: r.fecha_acreditacion ?? null,
+    montoPorAcreditar: r.monto_por_acreditar != null ? Number(r.monto_por_acreditar) : null,
     fechaSolicitud: r.fecha_solicitud,
     fechaResolucion: r.fecha_resolucion,
     resueltoPor: r.resuelto_por,
@@ -54,6 +57,9 @@ export async function createAdelanto(input: {
   plazoAdelantadoDias: number;
   tasaInteresPct?: number | null;
   estado?: EstadoAdelanto;
+  motivo?: string | null;
+  fechaAcreditacion?: string | null;
+  montoPorAcreditar?: number | null;
 }): Promise<Adelanto> {
   const sb = requireSupabase();
   const payload = {
@@ -63,6 +69,9 @@ export async function createAdelanto(input: {
     plazo_adelantado_dias: input.plazoAdelantadoDias,
     tasa_interes_pct: input.tasaInteresPct ?? null,
     estado: input.estado ?? "Pendiente",
+    motivo: input.motivo ?? null,
+    fecha_acreditacion: input.fechaAcreditacion ?? null,
+    monto_por_acreditar: input.montoPorAcreditar ?? null,
   };
   const { data, error } = await sb.from("adelantos").insert(payload).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
@@ -71,13 +80,30 @@ export async function createAdelanto(input: {
 
 export async function updateAdelanto(
   id: string,
-  input: Partial<{ montoSolicitado: number; plazoAdelantadoDias: number; tasaInteresPct: number | null; estado: EstadoAdelanto }>,
+  input: Partial<{
+    montoSolicitado: number;
+    plazoAdelantadoDias: number;
+    tasaInteresPct: number | null;
+    estado: EstadoAdelanto;
+    motivo: string | null;
+    fechaAcreditacion: string | null;
+    montoPorAcreditar: number | null;
+  }>,
 ): Promise<Adelanto> {
   const sb = requireSupabase();
+
+  // "Cancelado" es acción exclusiva del comercio — admin no puede setearlo
+  if (input.estado === "Cancelado") {
+    throw new DataAccessError(new Error("El estado 'Cancelado' es una acción exclusiva del comercio y no puede ser seteado por un admin."));
+  }
+
   const payload: Record<string, unknown> = {};
   if (input.montoSolicitado !== undefined) payload.monto_solicitado = input.montoSolicitado;
   if (input.plazoAdelantadoDias !== undefined) payload.plazo_adelantado_dias = input.plazoAdelantadoDias;
   if (input.tasaInteresPct !== undefined) payload.tasa_interes_pct = input.tasaInteresPct;
+  if (input.motivo !== undefined) payload.motivo = input.motivo;
+  if (input.fechaAcreditacion !== undefined) payload.fecha_acreditacion = input.fechaAcreditacion;
+  if (input.montoPorAcreditar !== undefined) payload.monto_por_acreditar = input.montoPorAcreditar;
   if (input.estado !== undefined) {
     payload.estado = input.estado;
     payload.fecha_resolucion = new Date().toISOString();

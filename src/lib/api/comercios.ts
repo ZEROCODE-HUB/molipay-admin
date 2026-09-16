@@ -29,7 +29,7 @@ export type ComercioFilters = Pagination & {
 // + relaciones clientes, codigos_categoria, puntos_venta
 // Ya no existe metodos_config ni habilitado_* — migrado a comercio_banderas.
 const COLUMNS =
-  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, ejecutivo_responsable_id, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -166,10 +166,46 @@ export async function setComercioEstado(id: string, estado: EstadoComercio): Pro
   return updateComercio(id, { estado });
 }
 
-export async function deleteComercio(id: string): Promise<void> {
+/**
+ * Deshabilitar un comercio: cambia estado a 'Desactivado', exige motivo,
+ * y registra en historial_cambios. NO elimina el registro.
+ */
+export async function deshabilitarComercio(id: string, motivo: string): Promise<Comercio> {
   const sb = requireSupabase();
-  const { error } = await sb.from("comercios").delete().eq("id", id);
+
+  // 1. Cambiar estado
+  const { data, error } = await sb
+    .from("comercios")
+    .update({ estado: "Desactivado" })
+    .eq("id", id)
+    .select(COLUMNS)
+    .single();
   if (error) throw new DataAccessError(error);
+
+  // 2. Registrar en historial_cambios
+  try {
+    const { data: auth } = await sb.auth.getUser();
+    const uid = auth?.user?.id ?? null;
+    await sb.from("historial_cambios").insert({
+      tabla: "comercios",
+      registro_id: id,
+      cambio: "Deshabilitación",
+      motivo: motivo.trim(),
+      usuario_id: uid,
+    });
+  } catch {
+    // No falla la operación principal si el historial falla
+  }
+
+  return toComercio(
+    data as ComercioRow & {
+      clientes?:
+        | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
+        | null;
+      codigos_categoria?: { id: number; descripcion: string }[] | null;
+      puntos_venta?: PuntoVentaRow[] | null;
+    },
+  );
 }
 
 // --- catálogos auxiliares ---------------------------------------------------

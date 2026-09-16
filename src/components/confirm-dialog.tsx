@@ -10,6 +10,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirmar",
   variant = "default",
+  extraContent,
 }: {
   open: boolean;
   onClose: () => void;
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   message: string;
   confirmLabel?: string;
   variant?: "default" | "danger";
+  extraContent?: React.ReactNode;
 }) {
   const [loading, setLoading] = useState(false);
   if (!open) return null;
@@ -44,6 +46,7 @@ export function ConfirmDialog({
           </button>
         </div>
         <p className="text-sm text-muted-foreground mb-6">{message}</p>
+        {extraContent}
         <div className="flex gap-2">
           <BtnOutline type="button" className="flex-1" onClick={onClose} disabled={loading}>
             Cancelar

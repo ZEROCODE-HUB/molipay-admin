@@ -18,11 +18,12 @@ import { FormDialog } from "@/components/form-dialog";
 import { LegajoCell } from "@/components/legajo-label";
 import { useComercios, useClientesForSelect } from "@/hooks/useComercios";
 import { useCodigosCategoria } from "@/hooks/useCodigosCategoria";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Search } from "lucide-react";
 import {
   createComercio,
-  deleteComercio,
+  deshabilitarComercio,
   setComercioEstado,
   updateComercio,
 } from "@/lib/api/comercios";
@@ -127,6 +128,15 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
   const [formEstado, setFormEstado] = useState<import("@/lib/api/types").ComercioBanderaEstado>("Activo");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
+  const [cuotasBandera, setCuotasBandera] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
+  const [cuotas, setCuotas] = useState<import("@/lib/api/types").ComercioBanderaCuota[]>([]);
+  const [cuotasLoading, setCuotasLoading] = useState(false);
+  const [showCuotaForm, setShowCuotaForm] = useState(false);
+  const [cuotaValor, setCuotaValor] = useState("1");
+  const [cuotaTasa, setCuotaTasa] = useState("");
+  const [cuotaEstado, setCuotaEstado] = useState<"Activo" | "Inactivo">("Activo");
+  const [savingCuota, setSavingCuota] = useState(false);
+  const [confirmDeleteCuota, setConfirmDeleteCuota] = useState<import("@/lib/api/types").ComercioBanderaCuota | null>(null);
 
   const BANDERAS_COMUNES = ["Visa", "Mastercard", "Amex", "Cabal", "Diners"] as const;
 
@@ -211,6 +221,56 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
     return m - p;
   })();
 
+  // --- Cuotas por bandera ---
+  const cargarCuotas = async (bandera: import("@/lib/api/types").ComercioBandera) => {
+    setCuotasBandera(bandera);
+    setCuotasLoading(true);
+    try {
+      const { listCuotasByComercioBandera } = await import("@/lib/api/comercio-banderas-cuotas");
+      const data = await listCuotasByComercioBandera(bandera.id);
+      setCuotas(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCuotasLoading(false);
+    }
+  };
+
+  const guardarCuota = async () => {
+    if (!cuotasBandera || !cuotaValor.trim()) return;
+    setSavingCuota(true);
+    try {
+      const { createComercioBanderaCuota } = await import("@/lib/api/comercio-banderas-cuotas");
+      await createComercioBanderaCuota({
+        comercioBanderaId: cuotasBandera.id,
+        cuotas: parseInt(cuotaValor) || 1,
+        tasaMensual: parseFloat(cuotaTasa.replace(",", ".")) || 0,
+        estado: cuotaEstado,
+      });
+      setShowCuotaForm(false);
+      setCuotaValor("1");
+      setCuotaTasa("");
+      setCuotaEstado("Activo");
+      await cargarCuotas(cuotasBandera);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingCuota(false);
+    }
+  };
+
+  const eliminarCuota = async () => {
+    if (!confirmDeleteCuota) return;
+    try {
+      const { deleteComercioBanderaCuota } = await import("@/lib/api/comercio-banderas-cuotas");
+      await deleteComercioBanderaCuota(confirmDeleteCuota.id);
+      setConfirmDeleteCuota(null);
+      if (cuotasBandera) await cargarCuotas(cuotasBandera);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -251,6 +311,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
                   <td className="px-3 py-2.5"><Badge tone={b.estado === "Activo" ? "success" : "neutral"}>{b.estado}</Badge></td>
                   <td className="px-3 py-2.5 text-right">
                     <span className="inline-flex gap-1">
+                      <button type="button" onClick={() => cargarCuotas(b)} className="h-7 px-2 rounded-md border bg-card text-xs hover:bg-accent inline-flex items-center gap-1">Cuotas</button>
                       <button type="button" onClick={() => openEdit(b)} className="h-7 px-2 rounded-md border bg-card text-xs hover:bg-accent inline-flex items-center gap-1"><Edit3 size={12} /> Editar</button>
                       <button type="button" onClick={() => setConfirmDelete(b)} className="h-7 px-2 rounded-md border border-red-200 text-red-600 bg-card text-xs hover:bg-red-50 inline-flex items-center gap-1"><Trash2 size={12} /> Eliminar</button>
                     </span>
@@ -317,6 +378,81 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
           onConfirm={eliminar}
         />
       )}
+
+      {/* Panel de cuotas de la bandera seleccionada */}
+      {cuotasBandera && (
+        <Card className="p-5 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-display text-sm font-semibold">Cuotas de {cuotasBandera.bandera} (TEM por cuota)</h4>
+              <p className="text-xs text-muted-foreground">Tasa efectiva mensual que se cobra al comercio por cada cantidad de cuotas.</p>
+            </div>
+            <div className="flex gap-2">
+              <BtnPrimary type="button" onClick={() => { setCuotaValor("1"); setCuotaTasa(""); setCuotaEstado("Activo"); setShowCuotaForm(true); }} className="h-8 text-xs">
+                <Plus size={14} /> Agregar cuota
+              </BtnPrimary>
+              <BtnOutline type="button" onClick={() => setCuotasBandera(null)} className="h-8 text-xs">Cerrar</BtnOutline>
+            </div>
+          </div>
+          {cuotasLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando cuotas…</p>
+          ) : cuotas.length === 0 ? (
+            <p className="text-sm text-muted-foreground border border-dashed rounded-lg py-6 text-center">Sin cuotas configuradas. Agregá la primera.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left">
+                  <th className="px-3 py-2 font-display font-semibold">Cuotas</th>
+                  <th className="px-3 py-2 font-display font-semibold text-right">TEM (%)</th>
+                  <th className="px-3 py-2 font-display font-semibold">Estado</th>
+                  <th className="px-3 py-2 font-display font-semibold text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cuotas.map((c) => (
+                  <tr key={c.id} className="border-b last:border-0">
+                    <td className="px-3 py-2 font-mono font-semibold">{c.cuotas}x</td>
+                    <td className="px-3 py-2 text-right font-mono">{formatPct(c.tasaMensual)}</td>
+                    <td className="px-3 py-2"><Badge tone={c.estado === "Activo" ? "success" : "neutral"}>{c.estado}</Badge></td>
+                    <td className="px-3 py-2 text-right">
+                      <button type="button" onClick={() => setConfirmDeleteCuota(c)} className="h-7 px-2 rounded-md border border-red-200 text-red-600 bg-card text-xs hover:bg-red-50 inline-flex items-center gap-1"><Trash2 size={12} /> Eliminar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
+      {/* Form cuota */}
+      {showCuotaForm && (
+        <FormDialog open onClose={() => setShowCuotaForm(false)} title={`Agregar cuota a ${cuotasBandera?.bandera}`} onSubmit={guardarCuota} submitLabel={savingCuota ? "Guardando…" : "Agregar"} isSubmitting={savingCuota}>
+          <div className="space-y-4">
+            <div>
+              <Label>Número de cuotas</Label>
+              <Input type="number" value={cuotaValor} onChange={(e) => setCuotaValor(e.target.value)} min={1} max={48} />
+              <p className="text-[11px] text-muted-foreground mt-1">Ej: 1 = pago único, 3 = 3 cuotas.</p>
+            </div>
+            <div>
+              <Label>TEM — Tasa Efectiva Mensual (%)</Label>
+              <Input value={cuotaTasa} onChange={(e) => { const v = e.target.value; if (v === "" || /^[0-9]*[.,]?[0-9]*$/.test(v)) setCuotaTasa(v); }} placeholder="0.00" className="font-mono" inputMode="decimal" />
+              <p className="text-[11px] text-muted-foreground mt-1">Tasa mensual que se cobra al comercio. No editar TNA.</p>
+            </div>
+            <div>
+              <Label>Estado</Label>
+              <select value={cuotaEstado} onChange={(e) => setCuotaEstado(e.target.value as "Activo" | "Inactivo")} className="w-full h-10 rounded-md border bg-background px-3 text-sm">
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </FormDialog>
+      )}
+
+      {confirmDeleteCuota && (
+        <ConfirmDialog open onClose={() => setConfirmDeleteCuota(null)} title="Eliminar cuota" message={`¿Eliminar la cuota ${confirmDeleteCuota.cuotas}x de ${cuotasBandera?.bandera}?`} confirmLabel="Eliminar" variant="danger" onConfirm={eliminarCuota} />
+      )}
     </Card>
   );
 }
@@ -339,6 +475,13 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
         </div>
 
         <div className="p-6 space-y-5">
+          {comercio.estado === "Pendiente de aprobación" && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold">Comercio pendiente de aprobación</p>
+              <p className="text-xs mt-1">Este comercio no puede operar hasta que se le asigne CVU y comisión. El estado actual no permite transacciones ni acreditaciones.</p>
+            </div>
+          )}
+
           <Card className="p-5">
             <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
               Información general
@@ -469,12 +612,14 @@ type ComercioForm = {
   categoriaId: string;
   nivel: NivelComercio;
   estado: EstadoComercio;
+  ejecutivoResponsableId: string;
 };
 
 function ComercioFormModal({
   comercio,
   clientes,
   categorias,
+  adminUsers,
   onClose,
   onSave,
   isSaving,
@@ -482,6 +627,7 @@ function ComercioFormModal({
   comercio: Comercio | null;
   clientes: ClienteSelect[];
   categorias: CodigoCategoria[];
+  adminUsers: import("@/lib/api/types").AdminUser[];
   onClose: () => void;
   onSave: (input: {
     clienteLegajo: string;
@@ -490,6 +636,7 @@ function ComercioFormModal({
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
+    ejecutivoResponsableId: string | null;
   }) => void;
   isSaving?: boolean;
 }) {
@@ -503,6 +650,7 @@ function ComercioFormModal({
   const [estado, setEstado] = useState<EstadoComercio>(
     comercio?.estado ?? "Pendiente de aprobación",
   );
+  const [ejecutivoId, setEjecutivoId] = useState(comercio?.ejecutivoResponsableId ?? "");
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
@@ -525,6 +673,7 @@ function ComercioFormModal({
       categoriaId: categoriaId ? Number(categoriaId) : null,
       nivel,
       estado,
+      ejecutivoResponsableId: ejecutivoId || null,
     });
   };
 
@@ -678,6 +827,20 @@ function ComercioFormModal({
             ))}
           </select>
         </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="gc-ejecutivo">Ejecutivo responsable</Label>
+          <select
+            id="gc-ejecutivo"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={ejecutivoId}
+            onChange={(e) => setEjecutivoId(e.target.value)}
+          >
+            <option value="">Sin asignar</option>
+            {adminUsers.filter(u => u.activo).map((u) => (
+              <option key={u.id} value={u.id}>{u.nombre} · {u.email}</option>
+            ))}
+          </select>
+        </div>
 
       </div>
 
@@ -723,11 +886,13 @@ function Page() {
 
   const { rows: categorias } = useCodigosCategoria({ page: 0, pageSize: 1000 });
   const { data: clientes } = useClientesForSelect();
+  const { rows: adminUsers } = useAdminUsers({ page: 0, pageSize: 100 });
 
   const [detail, setDetail] = useState<Comercio | null>(null);
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Comercio | null>(null);
+  const [deshabilitarMotivo, setDeshabilitarMotivo] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -761,6 +926,7 @@ function Page() {
     categoriaId: number | null;
     nivel: NivelComercio;
     estado: EstadoComercio;
+    ejecutivoResponsableId: string | null;
   }) => {
     setIsSaving(true);
     try {
@@ -771,6 +937,7 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
+          ejecutivoResponsableId: input.ejecutivoResponsableId,
         } as any);
       } else {
         await createComercio({
@@ -798,14 +965,14 @@ function Page() {
     }
   };
 
-  const eliminar = async () => {
-    if (!confirmDelete) return;
+  const deshabilitar = async () => {
+    if (!confirmDelete || !deshabilitarMotivo.trim()) return;
     try {
-      await deleteComercio(confirmDelete.id);
+      await deshabilitarComercio(confirmDelete.id, deshabilitarMotivo.trim());
       invalidar();
     } catch (e) {
       setConfirmAction({
-        title: "No se pudo eliminar",
+        title: "No se pudo deshabilitar",
         message: (e as Error).message,
         confirmLabel: "Cerrar",
         variant: "danger",
@@ -813,6 +980,7 @@ function Page() {
       });
     }
     setConfirmDelete(null);
+    setDeshabilitarMotivo("");
   };
 
   const getActions = (row: Comercio): ActionItem[] => {
@@ -843,10 +1011,10 @@ function Page() {
       });
     }
     items.push({
-      label: "Eliminar",
+      label: "Deshabilitar",
       icon: Trash2,
       variant: "danger",
-      disabled: !puedeBorrar,
+      disabled: !puedeModificar,
       onClick: () => setConfirmDelete(row),
     });
     return items;
@@ -1119,6 +1287,7 @@ function Page() {
           comercio={editTarget}
           clientes={clientes ?? []}
           categorias={categorias ?? []}
+          adminUsers={adminUsers ?? []}
           isSaving={isSaving}
           onClose={() => {
             setShowNew(false);
@@ -1130,12 +1299,24 @@ function Page() {
 
       <ConfirmDialog
         open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        title="Eliminar comercio"
-        message={`¿Estás seguro de eliminar el comercio "${confirmDelete?.usuario}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
+        onClose={() => { setConfirmDelete(null); setDeshabilitarMotivo(""); }}
+        title="Deshabilitar comercio"
+        message={`¿Deshabilitar el comercio "${confirmDelete?.usuario}"? El comercio pasará a estado "Desactivado" y no podrá operar. Esta acción queda registrada en el historial.`}
+        confirmLabel="Deshabilitar"
         variant="danger"
-        onConfirm={eliminar}
+        onConfirm={deshabilitar}
+        extraContent={
+          <div className="mt-3">
+            <label className="text-xs font-semibold">Motivo de deshabilitación (requerido)</label>
+            <textarea
+              value={deshabilitarMotivo}
+              onChange={(e) => setDeshabilitarMotivo(e.target.value)}
+              rows={3}
+              placeholder="Motivo de la deshabilitación..."
+              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </div>
+        }
       />
 
       {confirmAction && (

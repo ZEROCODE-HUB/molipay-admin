@@ -3,7 +3,7 @@ import { DataAccessError } from "./errors";
 import type { EstadoLote, LoteAcreditacion, LoteAcreditacionRow, Page, Pagination } from "./types";
 
 const COLUMNS =
-  "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, importe_neto, estado, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, comercios(id, usuario, legajo, nombre_comercio)";
+  "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, comercios(id, usuario, legajo, nombre_comercio)";
 
 function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
   const com = Array.isArray(r.comercios) ? r.comercios[0] : null;
@@ -23,6 +23,8 @@ function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
     cuotas: r.cuotas != null ? Number(r.cuotas) : null,
     costoPaywayPagoUnico: r.costo_payway_pago_unico != null ? Number(r.costo_payway_pago_unico) : null,
     contracargoMonto: Number(r.contracargo_monto ?? 0),
+    comisionCierreLotePct: r.comision_cierre_lote_pct != null ? Number(r.comision_cierre_lote_pct) : null,
+    comisionCierreLoteMonto: r.comision_cierre_lote_monto != null ? Number(r.comision_cierre_lote_monto) : null,
     importeNeto: Number(r.importe_neto),
     estado: r.estado,
     resueltoPor: r.resuelto_por,
@@ -124,7 +126,7 @@ export type UpdateLoteInput = {
 export async function updateLote(id: string, input: UpdateLoteInput): Promise<LoteAcreditacion> {
   const sb = requireSupabase();
 
-  // Need current values for recalc if contracargo changes
+  // Need current values for recalc
   const current = await getLote(id);
   if (!current) throw new DataAccessError(new Error("Lote no encontrado"));
 
@@ -134,18 +136,36 @@ export async function updateLote(id: string, input: UpdateLoteInput): Promise<Lo
   if (input.contracargoMonto !== undefined) payload.contracargo_monto = input.contracargoMonto;
   if (input.notasResolucion !== undefined) payload.notas_resolucion = input.notasResolucion;
 
-  // Recalcular importe_neto si cambia contracargo o estado a Contracargo
-  if (input.contracargoMonto !== undefined || input.estado === "Contracargo") {
+  // Leer comision_cierre_lote_pct desde parametros_globales si no está snapshot
+  let comisionCierreLotePct = current.comisionCierreLotePct;
+  if (comisionCierreLotePct == null) {
+    const { data: param } = await sb
+      .from("parametros_globales")
+      .select("valor")
+      .eq("clave", "comision_cierre_lote_pct")
+      .maybeSingle();
+    comisionCierreLotePct = param?.valor != null ? Number(param.valor) : 0.45;
+    payload.comision_cierre_lote_pct = comisionCierreLotePct;
+  }
+
+  // Calcular comision_cierre_lote_monto = importe_bruto * comision_cierre_lote_pct / 100
+  const comisionCierreLoteMonto = Number(current.importeBruto) * (comisionCierreLotePct ?? 0.45) / 100;
+  payload.comision_cierre_lote_monto = comisionCierreLoteMonto;
+
+  // Recalcular importe_neto: bruto - impuestos - payway - molipay - contracargo - cierre_lote
+  if (input.contracargoMonto !== undefined || input.estado === "Contracargo" || comisionCierreLotePct != null) {
     const contracargo = input.contracargoMonto !== undefined ? input.contracargoMonto : current.contracargoMonto;
-    const importeNeto = Number(current.importeBruto) - Number(current.impuestos) - Number(current.tasaPaywayMonto) - Number(current.tasaMolipayMonto) - Number(contracargo ?? 0);
-    // costo_payway_pago_unico is NOT included per spec (spec says only those 4 components); keep as is
-    // If you want to include costo, uncomment: - Number(current.costoPaywayPagoUnico ?? 0)
+    const importeNeto = Number(current.importeBruto)
+      - Number(current.impuestos)
+      - Number(current.tasaPaywayMonto)
+      - Number(current.tasaMolipayMonto)
+      - Number(contracargo ?? 0)
+      - comisionCierreLoteMonto;
     payload.importe_neto = importeNeto;
   }
 
   // Resolver tracking
   if (input.estado !== undefined) {
-    // resuelto_por = auth.uid(), fecha_resolucion = now()
     try {
       const { data: auth } = await sb.auth.getUser();
       const uid = auth?.user?.id ?? null;
@@ -166,16 +186,10 @@ export async function acreditarLote(id: string, notas?: string): Promise<LoteAcr
   return updateLote(id, { estado: "Acreditado", notasResolucion: notas ?? null });
 }
 
-export async function rechazarLote(id: string, notas?: string): Promise<LoteAcreditacion> {
-  return updateLote(id, { estado: "Rechazado", notasResolucion: notas ?? null });
-}
-
 export async function resolverContracargo(
   id: string,
-  accion: "Acreditar" | "Rechazar",
+  accion: "Acreditar",
   args: { contracargoMonto?: number; notas?: string },
 ): Promise<LoteAcreditacion> {
-  // Si accion es Acreditar/Rechazar sobre un lote en Contracargo, se cambia estado y opcionalmente contracargo
-  const estado = accion === "Acreditar" ? "Acreditado" : "Rechazado";
-  return updateLote(id, { estado, contracargoMonto: args.contracargoMonto, notasResolucion: args.notas ?? null });
+  return updateLote(id, { estado: "Acreditado", contracargoMonto: args.contracargoMonto, notasResolucion: args.notas ?? null });
 }

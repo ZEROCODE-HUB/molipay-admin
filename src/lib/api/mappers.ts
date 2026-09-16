@@ -242,6 +242,7 @@ export function toComercio(
       : null,
     nivel: r.nivel,
     estado: r.estado,
+    ejecutivoResponsableId: (r as unknown as { ejecutivo_responsable_id?: string | null }).ejecutivo_responsable_id ?? null,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -400,30 +401,7 @@ export function toEventoNotificacion(
 function parseAmbitoImpuesto(r: ImpuestoRow): AmbitoImpuesto {
   const raw = (r as unknown as { ambito?: unknown }).ambito;
   if (raw === "Interno" || raw === "Externo") return raw as AmbitoImpuesto;
-  if (typeof r.descripcion === "string") {
-    if (r.descripcion.startsWith("[Interno]")) return "Interno";
-    if (r.descripcion.startsWith("[Externo]")) return "Externo";
-  }
-  if (typeof window !== "undefined") {
-    try {
-      const mapRaw = window.localStorage.getItem("impuestos_ambito_map");
-      if (mapRaw) {
-        const map = JSON.parse(mapRaw) as Record<string, string>;
-        const v = map[r.id];
-        if (v === "Interno" || v === "Externo") return v as AmbitoImpuesto;
-      }
-    } catch {}
-  }
   return "Externo";
-}
-
-function cleanDescripcionImpuesto(r: ImpuestoRow): string | null {
-  if (!r.descripcion) return null;
-  if (r.descripcion.startsWith("[Interno]") || r.descripcion.startsWith("[Externo]")) {
-    const cleaned = r.descripcion.replace(/^\[(Interno|Externo)\]\s*/, "");
-    return cleaned || null;
-  }
-  return r.descripcion;
 }
 
 export function toImpuesto(
@@ -436,7 +414,7 @@ export function toImpuesto(
     id: r.id,
     codigo: r.codigo,
     nombre: r.nombre,
-    descripcion: cleanDescripcionImpuesto(r),
+    descripcion: r.descripcion ?? null,
     tipo: r.tipo,
     monto: r.monto,
     estado: r.estado,
@@ -531,6 +509,7 @@ export function toIbNormalizacionPreview(r: IbNormalizacionPreviewRow): IbNormal
 }
 
 export function toDcExcepcion(r: DcExcepcionRow): DcExcepcion {
+  const imp = Array.isArray(r.impuestos) ? r.impuestos[0] ?? null : null;
   return {
     id: r.id,
     email: r.usuario,
@@ -542,6 +521,9 @@ export function toDcExcepcion(r: DcExcepcionRow): DcExcepcion {
     vigenciaHasta: r.vigencia_hasta,
     autorizacionCodigo: r.autorizacion_codigo,
     estado: r.estado,
+    archivoCertificado: r.archivo_certificado ?? null,
+    impuestoId: r.impuesto_id ?? null,
+    impuestoNombre: imp?.nombre ?? null,
     createdAt: r.fecha_creacion,
     updatedAt: r.fecha_actualizacion,
   };

@@ -18,7 +18,7 @@ export type DcExcepcionFilters = {
 };
 
 const DC_EXCEPCIONES_COLUMNS =
-  "id, usuario, cuit, tipo, direccion, motivo, vigencia_desde, vigencia_hasta, autorizacion_codigo, estado, fecha_creacion, fecha_actualizacion";
+  "id, usuario, cuit, tipo, direccion, motivo, vigencia_desde, vigencia_hasta, autorizacion_codigo, estado, archivo_certificado, impuesto_id, fecha_creacion, fecha_actualizacion, impuestos(codigo, nombre)";
 
 export async function listDcExcepciones(filters: DcExcepcionFilters): Promise<Page<DcExcepcion>> {
   const sb = requireSupabase();
@@ -70,6 +70,8 @@ export type DcExcepcionCreateInput = {
   vigencia_hasta?: string | null;
   autorizacion_codigo?: string | null;
   estado?: "Activo" | "Inactivo";
+  archivo_certificado?: string | null;
+  impuesto_id?: string | null;
 };
 
 function normalizeCuit(cuit: string): string {
@@ -90,6 +92,8 @@ export async function createDcExcepcion(input: DcExcepcionCreateInput): Promise<
       vigencia_hasta: input.vigencia_hasta ?? null,
       autorizacion_codigo: input.autorizacion_codigo?.trim() ?? null,
       estado: input.estado ?? "Activo",
+      archivo_certificado: input.archivo_certificado ?? null,
+      impuesto_id: input.impuesto_id ?? null,
     })
     .select(DC_EXCEPCIONES_COLUMNS)
     .single();
@@ -105,6 +109,8 @@ export type DcExcepcionUpdateInput = Partial<{
   vigencia_hasta: string | null;
   autorizacion_codigo: string | null;
   estado: "Activo" | "Inactivo";
+  archivo_certificado: string | null;
+  impuesto_id: string | null;
 }>;
 
 export async function updateDcExcepcion(
@@ -121,6 +127,8 @@ export async function updateDcExcepcion(
   if (input.autorizacion_codigo !== undefined)
     payload.autorizacion_codigo = input.autorizacion_codigo?.trim() ?? null;
   if (input.estado !== undefined) payload.estado = input.estado;
+  if (input.archivo_certificado !== undefined) payload.archivo_certificado = input.archivo_certificado ?? null;
+  if (input.impuesto_id !== undefined) payload.impuesto_id = input.impuesto_id ?? null;
 
   const { data, error } = await sb
     .from("dc_excepciones")
@@ -160,6 +168,8 @@ export async function createDcExcepcionAmbos(
     vigencia_hasta: input.vigencia_hasta ?? null,
     autorizacion_codigo: input.autorizacion_codigo?.trim() ?? null,
     estado: input.estado ?? ("Activo" as const),
+    archivo_certificado: input.archivo_certificado ?? null,
+    impuesto_id: input.impuesto_id ?? null,
   };
 
   const { data, error } = await sb
@@ -217,7 +227,7 @@ export type DcSyncRetroactivoCreateInput = {
   cuit: string;
   desde: string; // YYYY-MM-DD
   hasta?: string | null; // YYYY-MM-DD
-  preview_json?: Record<string, unknown> | null;
+  preview_json: Record<string, unknown>; // Requerido: el backend o caller debe calcularlo
 };
 
 export async function createDcSyncRetroactivo(
@@ -225,18 +235,9 @@ export async function createDcSyncRetroactivo(
 ): Promise<DcSyncRetroactivo> {
   const sb = requireSupabase();
 
-  // Preview simulado del análisis retroactivo (el backend real lo calculará).
-  const previewJson = input.preview_json ?? {
-    usuariosAnalizados: Math.floor(Math.random() * 1000) + 100,
-    impuestosActualizados: Math.floor(Math.random() * 50) + 10,
-    impuestosCreados: Math.floor(Math.random() * 10) + 1,
-    impuestosDesactivados: Math.floor(Math.random() * 5),
-    cargosAjustados: Math.floor(Math.random() * 500) + 100,
-    registrosOmitidos: Math.floor(Math.random() * 10),
-    errores: Math.floor(Math.random() * 3),
-    diferencias: `$ ${(Math.random() * 10000 + 1000).toFixed(2)}`,
-    timestamp: new Date().toISOString(),
-  };
+  // TODO: cuando exista un RPC o edge function que calcule el preview real,
+  // invocarlo acá en vez de recibirlo del caller.
+  const previewJson = input.preview_json;
 
   const { data, error } = await sb
     .from("dc_sync_retroactivo")

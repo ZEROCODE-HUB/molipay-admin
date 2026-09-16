@@ -19,6 +19,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { useCan } from "@/lib/permissions";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useDcExcepciones } from "@/hooks/useDcExcepciones";
+import { useImpuestos } from "@/hooks/useImpuestos";
 import {
   createDcExcepcion,
   createDcExcepcionAmbos,
@@ -106,6 +107,8 @@ type AltaForm = {
   desde: string;
   hasta: string;
   autorizacion: string;
+  impuesto_id: string;
+  archivo_certificado: string;
 };
 
 const blankAlta: AltaForm = {
@@ -116,6 +119,8 @@ const blankAlta: AltaForm = {
   desde: new Date().toISOString().slice(0, 10),
   hasta: "",
   autorizacion: "",
+  impuesto_id: "",
+  archivo_certificado: "",
 };
 
 // --- Página ------------------------------------------------------------------------
@@ -145,6 +150,8 @@ function Page() {
   const [showAlta, setShowAlta] = useState(false);
   const [alta, setAlta] = useState<AltaForm>(blankAlta);
   const [altaGuardando, setAltaGuardando] = useState(false);
+
+  const { rows: impuestos } = useImpuestos({ page: 0, pageSize: 100, estado: "Activo" });
 
   const err: any = error ?? null;
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -193,8 +200,8 @@ function Page() {
       vigencia_desde: alta.desde,
       vigencia_hasta: alta.hasta || null,
       autorizacion_codigo: alta.autorizacion || null,
-      // Tasa fija 1,2% total (0,6% + 0,6%) - se fuerza internamente, no configurable por el usuario
-      tasa: 1.2,
+      impuesto_id: alta.impuesto_id || null,
+      archivo_certificado: alta.archivo_certificado || null,
     };
     try {
       let cantidad: number;
@@ -266,6 +273,11 @@ function Page() {
       render: (r) => <Badge tone="neutral">{r.direccion}</Badge>,
     },
     {
+      key: "impuestoNombre",
+      label: "Impuesto",
+      render: (r) => r.impuestoNombre ?? <span className="text-muted-foreground">—</span>,
+    },
+    {
       key: "motivo",
       label: "Motivo",
       render: (r) => r.motivo ?? "—",
@@ -283,6 +295,13 @@ function Page() {
       render: (r) => (
         <span className="font-mono tabular-nums text-xs">{formatFecha(r.vigenciaHasta)}</span>
       ),
+    },
+    {
+      key: "archivoCertificado",
+      label: "Certificado",
+      render: (r) => r.archivoCertificado
+        ? <a href={r.archivoCertificado} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Ver certificado</a>
+        : <span className="text-muted-foreground text-xs">—</span>,
     },
     {
       key: "estado",
@@ -490,6 +509,30 @@ function Page() {
                 onChange={(e) => setAlta({ ...alta, hasta: e.target.value })}
               />
               <p className="text-[11px] text-muted-foreground mt-1">Presentación semanal.</p>
+            </div>
+            <div>
+              <Label htmlFor="ex-impuesto">Impuesto vinculado (opcional)</Label>
+              <select
+                id="ex-impuesto"
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                value={alta.impuesto_id}
+                onChange={(e) => setAlta({ ...alta, impuesto_id: e.target.value })}
+              >
+                <option value="">Sin impuesto específico</option>
+                {(impuestos ?? []).map((imp) => (
+                  <option key={imp.id} value={imp.id}>{imp.codigo} · {imp.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="ex-archivo">URL del certificado (opcional)</Label>
+              <Input
+                id="ex-archivo"
+                value={alta.archivo_certificado}
+                onChange={(e) => setAlta({ ...alta, archivo_certificado: e.target.value })}
+                placeholder="https://..."
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Link al certificado de exención o convenio.</p>
             </div>
           </div>
           {!altaValido && (

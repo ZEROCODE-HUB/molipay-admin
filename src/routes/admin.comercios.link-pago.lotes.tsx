@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet, XCircle, Search, AlertTriangle, Inbox } from "lucide-react";
+import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet, Search, AlertTriangle, Inbox } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card, Input, Label, BtnOutline } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -30,7 +30,7 @@ const PAGE_SIZES = [10, 20, 50];
 function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
   if (e === "Contracargo") return "danger";
-  return "warn";
+  return "neutral";
 }
 
 function fmt(n: number) {
@@ -43,7 +43,9 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
     queryFn: () => listLoteMovimientos(lote.id),
   });
   const contracargo = lote.contracargoMonto ?? 0;
-  const totalDescuentos = lote.impuestos + lote.tasaPaywayMonto + lote.tasaMolipayMonto + (lote.costoPaywayPagoUnico ?? 0) + contracargo;
+  const comisionCierre = lote.comisionCierreLoteMonto ?? 0;
+  const comisionCierrePct = lote.comisionCierreLotePct ?? 0.45;
+  const totalDescuentos = lote.impuestos + lote.tasaPaywayMonto + lote.tasaMolipayMonto + (lote.costoPaywayPagoUnico ?? 0) + contracargo + comisionCierre;
   const menosImpuestos = lote.importeBruto - lote.impuestos;
   const esCuotas = (lote.cuotas ?? 1) > 1;
   const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
@@ -79,6 +81,7 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
               {esCuotas && lote.costoPaywayPagoUnico != null && (
                 <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><CreditCard size={12}/> Costo PayWay por pago único ({lote.cuotas} cuotas)</span><span className="font-mono text-red-600">- {fmt(lote.costoPaywayPagoUnico)}</span></div>
               )}
+              <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Percent size={12}/> Comisión cierre de lote ({comisionCierrePct}%)</span><span className="font-mono text-red-600">- {fmt(comisionCierre)}</span></div>
               {esContracargo && (
                 <div className="flex justify-between text-xs"><span className="text-muted-foreground flex items-center gap-1"><Receipt size={12}/> Contracargo <Badge tone="danger" className="ml-1">retenido</Badge></span><span className="font-mono text-red-600">- {fmt(contracargo)}</span></div>
               )}
@@ -216,7 +219,7 @@ function Page() {
   const [detail, setDetail] = useState<LoteAcreditacion | null>(null);
   const [comercioDetail, setComercioDetail] = useState<ResumenComercio | null>(null);
   const [confirm, setConfirm] = useState<{title:string;message:string} | null>(null);
-  const [contracargoModal, setContracargoModal] = useState<{lote: LoteAcreditacion, accion: "Acreditar" | "Rechazar", notas: string, contracargoMonto: string} | null>(null);
+  const [contracargoModal, setContracargoModal] = useState<{lote: LoteAcreditacion, notas: string, contracargoMonto: string} | null>(null);
   const { can } = useCan();
   const puedeGestionar = can("modificar","comercios");
 
@@ -284,18 +287,17 @@ function Page() {
     return Array.from(map.values());
   }, [lotes]);
 
-  const handleContracargo = async (accion: "Acreditar" | "Rechazar") => {
+  const handleContracargo = async () => {
     if (!contracargoModal) return;
     const { lote, notas, contracargoMonto } = contracargoModal;
     const parsedContracargo = contracargoMonto.trim() === "" ? undefined : parseFloat(contracargoMonto.replace(",", ".")) || 0;
     try {
-      // Si se ingresó nuevo contracargo y estado es Contracargo, se recalcula importe_neto en API
       await updateLote(lote.id, {
-        estado: accion === "Acreditar" ? "Acreditado" : "Rechazado",
+        estado: "Acreditado",
         contracargoMonto: parsedContracargo,
         notasResolucion: notas || null,
       });
-      toast.success(`Lote ${lote.codigo} ${accion==="Acreditar" ? "acreditado" : "rechazado"}${notas ? ` — ${notas}` : ""}`);
+      toast.success(`Lote ${lote.codigo} acreditado${notas ? ` — ${notas}` : ""}`);
       queryClient.invalidateQueries({ queryKey: ["lotes"] });
       setContracargoModal(null);
     } catch (e) {
@@ -306,8 +308,7 @@ function Page() {
   const getActions = (r: LoteAcreditacion): ActionItem[] => {
     const base: ActionItem[] = [{ label:"Ver detalle", icon: Eye, onClick:()=> setDetail(r) }];
     if (r.estado === "Contracargo") {
-      base.push({ label:"Acreditar", icon: ArrowUpRight, disabled:!puedeGestionar, onClick:()=> setContracargoModal({lote: r, accion: "Acreditar", notas: "", contracargoMonto: String(r.contracargoMonto ?? "")}) } as ActionItem);
-      base.push({ label:"Rechazar", icon: XCircle as any, disabled:!puedeGestionar, variant:"danger" as const, onClick:()=> setContracargoModal({lote: r, accion: "Rechazar", notas: "", contracargoMonto: String(r.contracargoMonto ?? "")}) } as ActionItem);
+      base.push({ label:"Acreditar", icon: ArrowUpRight, disabled:!puedeGestionar, onClick:()=> setContracargoModal({lote: r, notas: "", contracargoMonto: String(r.contracargoMonto ?? "")}) } as ActionItem);
     }
     base.push({ label:"Reprocesar", icon: ArrowUpRight, disabled:!puedeGestionar || r.estado==="Acreditado", onClick:()=> {
       toast.info("Reprocesando lote");
@@ -355,7 +356,6 @@ function Page() {
             <select value={estadoFilter} onChange={(e)=> { setEstadoFilter(e.target.value as EstadoLote | ""); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border bg-background text-xs">
               <option value="">Todos</option>
               <option value="Acreditado">Acreditado</option>
-              <option value="Rechazado">Rechazado</option>
               <option value="Contracargo">Contracargo</option>
             </select>
           </div>
@@ -413,10 +413,9 @@ function Page() {
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-center text-sm text-muted-foreground"><Inbox size={28} /><p>No hay lotes que coincidan con los filtros.</p></div>
       ) : tab === "lotes" ? (
         <>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
             <Card className="p-3"><div className="text-xs text-muted-foreground">Acreditados</div><div className="font-mono text-xl font-semibold mt-1 text-emerald-700">{lotes.filter(l=>l.estado==="Acreditado").length}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Contracargo</div><div className="font-mono text-xl font-semibold mt-1 text-red-600">{lotes.filter(l=>l.estado==="Contracargo").length}</div></Card>
-            <Card className="p-3"><div className="text-xs text-muted-foreground">Rechazados</div><div className="font-mono text-xl font-semibold mt-1">{lotes.filter(l=>l.estado==="Rechazado").length}</div></Card>
           </div>
           <DataTable columns={columns} data={lotes} keyExtractor={(r)=> r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
@@ -462,12 +461,12 @@ function Page() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={()=> setContracargoModal(null)} />
           <div className="relative bg-card rounded-xl w-full max-w-md shadow-xl p-6 space-y-4">
-            <h3 className="font-display font-semibold text-lg">{contracargoModal.accion} lote {contracargoModal.lote.codigo}</h3>
+            <h3 className="font-display font-semibold text-lg">Resolver contracargo — {contracargoModal.lote.codigo}</h3>
             <p className="text-sm text-muted-foreground">Lote {contracargoModal.lote.bandera} · {contracargoModal.lote.comercio?.nombreComercio ?? contracargoModal.lote.comercio?.usuario} · Contracargo actual {fmt(contracargoModal.lote.contracargoMonto)}.</p>
             <div>
               <Label>Contracargo monto (opcional, recalcula neto)</Label>
               <Input value={contracargoModal.contracargoMonto} onChange={(e)=> { const v=e.target.value; if(v===""||/^[0-9]*[.,]?[0-9]*$/.test(v)) setContracargoModal({...contracargoModal, contracargoMonto: v}); }} placeholder="0.00" className="font-mono" inputMode="decimal" />
-              <p className="text-[11px] text-muted-foreground mt-1">Neto recalculado: {fmt(contracargoModal.lote.importeBruto - contracargoModal.lote.impuestos - contracargoModal.lote.tasaPaywayMonto - contracargoModal.lote.tasaMolipayMonto - (parseFloat(contracargoModal.contracargoMonto.replace(",",".")||"0")||0))}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Neto recalculado: {fmt(contracargoModal.lote.importeBruto - contracargoModal.lote.impuestos - contracargoModal.lote.tasaPaywayMonto - contracargoModal.lote.tasaMolipayMonto - (parseFloat(contracargoModal.contracargoMonto.replace(",",".")||"0")||0) - (contracargoModal.lote.comisionCierreLoteMonto ?? 0))}</p>
             </div>
             <div>
               <label className="text-xs font-semibold">Notas</label>
@@ -475,7 +474,7 @@ function Page() {
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={()=> setContracargoModal(null)} className="h-9 px-3 rounded-md border bg-card text-sm">Cancelar</button>
-              <button onClick={()=> handleContracargo(contracargoModal.accion)} className={`h-9 px-4 rounded-md text-sm font-semibold ${contracargoModal.accion==="Acreditar" ? "bg-primary text-primary-foreground" : "bg-red-600 text-white"}`}>{contracargoModal.accion}</button>
+              <button onClick={()=> handleContracargo()} className="h-9 px-4 rounded-md text-sm font-semibold bg-primary text-primary-foreground">Acreditar</button>
             </div>
           </div>
         </div>

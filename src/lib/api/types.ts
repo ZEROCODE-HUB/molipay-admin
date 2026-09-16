@@ -511,6 +511,7 @@ export type ComercioRow = {
   categoria_id: number | null;
   estado: EstadoComercio;
   nivel: NivelComercio;
+  ejecutivo_responsable_id?: string | null;
   created_at: string;
   updated_at: string;
   clientes?:
@@ -542,6 +543,7 @@ export type Comercio = {
   categoria: CodigoCategoria | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
+  ejecutivoResponsableId?: string | null;
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -1125,8 +1127,11 @@ export type DcExcepcionRow = {
   vigencia_hasta: string | null;
   autorizacion_codigo: string | null;
   estado: EstadoImpuesto;
+  archivo_certificado: string | null;
+  impuesto_id: string | null;
   fecha_creacion: string;
   fecha_actualizacion: string;
+  impuestos?: { codigo: string; nombre: string }[] | null;
 };
 
 export type DcExcepcion = {
@@ -1140,6 +1145,9 @@ export type DcExcepcion = {
   vigenciaHasta: string | null;
   autorizacionCodigo: string | null;
   estado: EstadoImpuesto;
+  archivoCertificado: string | null;
+  impuestoId: string | null;
+  impuestoNombre: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -1197,10 +1205,84 @@ export type DcSyncRetroactivoFilters = Pagination & {
   aplicado?: boolean;
 };
 
+// --- banderas (catálogo) / banderas_cuotas ----------------------------------
+
+export type BanderaCatalogoRow = {
+  id: string;
+  nombre: string;
+  dias_habiles_acreditacion: number;
+  estado: string;
+};
+
+export type BanderaCatalogo = {
+  id: string;
+  nombre: string;
+  diasHabilesAcreditacion: number;
+  estado: "Activo" | "Inactivo";
+};
+
+export type BanderaCuotaRow = {
+  id: string;
+  bandera_id: string;
+  cuotas: number;
+  estado: string;
+};
+
+export type BanderaCuota = {
+  id: string;
+  banderaId: string;
+  cuotas: number;
+  estado: "Activo" | "Inactivo";
+};
+
+// --- comercio_banderas_cuotas -----------------------------------------------
+
+export type ComercioBanderaCuotaRow = {
+  id: string;
+  comercio_bandera_id: string;
+  cuotas: number;
+  tasa_mensual: number;
+  estado: string;
+};
+
+export type ComercioBanderaCuota = {
+  id: string;
+  comercioBanderaId: string;
+  cuotas: number;
+  tasaMensual: number;
+  estado: "Activo" | "Inactivo";
+};
+
+// --- lotes_venta (vista) ----------------------------------------------------
+
+export type LoteVentaRow = {
+  comercio_id: string;
+  bandera: string;
+  fecha: string;
+  cantidad_operaciones: number;
+  importe_bruto: number;
+  impuestos: number;
+  comision: number;
+  importe_neto: number;
+  comercios?: { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[] | null;
+};
+
+export type LoteVenta = {
+  comercioId: string;
+  bandera: string;
+  fecha: string;
+  cantidadOperaciones: number;
+  importeBruto: number;
+  impuestos: number;
+  comision: number;
+  importeNeto: number;
+  comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null } | null;
+};
+
 // --- lotes_acreditacion / lote_movimientos / adelantos (real Supabase) -----
 
-export type EstadoLote = "Acreditado" | "Rechazado" | "Contracargo";
-export const ESTADOS_LOTE: EstadoLote[] = ["Acreditado", "Rechazado", "Contracargo"];
+export type EstadoLote = "Acreditado" | "Contracargo";
+export const ESTADOS_LOTE: EstadoLote[] = ["Acreditado", "Contracargo"];
 
 export type LoteAcreditacionRow = {
   id: string;
@@ -1218,6 +1300,8 @@ export type LoteAcreditacionRow = {
   cuotas: number | null;
   costo_payway_pago_unico: number | null;
   contracargo_monto: number;
+  comision_cierre_lote_pct: number | null;
+  comision_cierre_lote_monto: number | null;
   importe_neto: number;
   estado: EstadoLote;
   resuelto_por: string | null;
@@ -1244,6 +1328,8 @@ export type LoteAcreditacion = {
   cuotas: number | null;
   costoPaywayPagoUnico: number | null;
   contracargoMonto: number;
+  comisionCierreLotePct: number | null;
+  comisionCierreLoteMonto: number | null;
   importeNeto: number;
   estado: EstadoLote;
   resueltoPor: string | null;
@@ -1261,8 +1347,8 @@ export type LoteMovimientoRow = {
   movimiento_id: string;
 };
 
-export type EstadoAdelanto = "Pendiente" | "Aprobado" | "Rechazado" | "Acreditado";
-export const ESTADOS_ADELANTO: EstadoAdelanto[] = ["Pendiente", "Aprobado", "Rechazado", "Acreditado"];
+export type EstadoAdelanto = "Pendiente" | "Aprobado" | "Rechazado" | "Acreditado" | "Cancelado";
+export const ESTADOS_ADELANTO: EstadoAdelanto[] = ["Pendiente", "Aprobado", "Rechazado", "Acreditado", "Cancelado"];
 
 export type AdelantoRow = {
   id: string;
@@ -1272,6 +1358,9 @@ export type AdelantoRow = {
   plazo_adelantado_dias: number;
   tasa_interes_pct: number | null;
   estado: EstadoAdelanto;
+  motivo: string | null;
+  fecha_acreditacion: string | null;
+  monto_por_acreditar: number | null;
   fecha_solicitud: string;
   fecha_resolucion: string | null;
   resuelto_por: string | null;
@@ -1287,6 +1376,9 @@ export type Adelanto = {
   plazoAdelantadoDias: number;
   tasaInteresPct: number | null;
   estado: EstadoAdelanto;
+  motivo: string | null;
+  fechaAcreditacion: string | null;
+  montoPorAcreditar: number | null;
   fechaSolicitud: string;
   fechaResolucion: string | null;
   resueltoPor: string | null;
