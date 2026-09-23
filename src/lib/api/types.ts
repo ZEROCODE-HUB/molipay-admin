@@ -544,6 +544,11 @@ export type Comercio = {
   nivel: NivelComercio;
   estado: EstadoComercio;
   ejecutivoResponsableId?: string | null;
+  ejecutivo: {
+    id: string;
+    nombre: string;
+    email: string;
+  } | null;
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -1309,6 +1314,9 @@ export type LoteAcreditacionRow = {
   notas_resolucion: string | null;
   created_at: string;
   updated_at: string;
+  iva_monto: number | null;
+  iibb_monto: number | null;
+  debito_credito_monto: number | null;
   comercios?: { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[] | null;
 };
 
@@ -1337,6 +1345,9 @@ export type LoteAcreditacion = {
   notasResolucion: string | null;
   createdAt: string;
   updatedAt: string;
+  ivaMonto: number | null;
+  iibbMonto: number | null;
+  debitoCreditoMonto: number | null;
   comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null } | null;
   // compat mock
   importeFinal?: number;

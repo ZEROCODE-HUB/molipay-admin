@@ -29,7 +29,7 @@ export type ComercioFilters = Pagination & {
 // + relaciones clientes, codigos_categoria, puntos_venta
 // Ya no existe metodos_config ni habilitado_* — migrado a comercio_banderas.
 const COLUMNS =
-  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, ejecutivo_responsable_id, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at)";
+  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, ejecutivo_responsable_id, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at), admin_users!left(id, nombre, email)";
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");

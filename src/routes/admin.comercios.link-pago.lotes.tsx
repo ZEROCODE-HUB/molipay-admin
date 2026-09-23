@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet, Search, AlertTriangle, Inbox } from "lucide-react";
+import { Eye, Calendar, Store, Receipt, Percent, ArrowUpRight, CreditCard, Wallet, Search, AlertTriangle, Inbox, Download } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card, Input, Label, BtnOutline } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -11,6 +11,7 @@ import { useCan } from "@/lib/permissions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataAccessError } from "@/lib/api/errors";
 import { listLotes, updateLote, listLoteMovimientos } from "@/lib/api/lotes";
+import * as XLSX from "xlsx";
 import { listAdelantosByComercio } from "@/lib/api/adelantos";
 import type { EstadoLote, LoteAcreditacion } from "@/lib/api/types";
 import { useComercios } from "@/hooks/useComercios";
@@ -50,6 +51,40 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
   const esCuotas = (lote.cuotas ?? 1) > 1;
   const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
   const linkIds = movimientoIds ?? [];
+
+  const exportLote = () => {
+    // Basado en: detalle_reunion_revision_plataforma.md Seccion 3
+    // "Exportable por lote: base imponible, IVA, ingresos brutos, comisiones"
+    const data = [
+      { Campo: "Código", Valor: lote.codigo },
+      { Campo: "Fecha", Valor: new Date(lote.fecha).toLocaleDateString("es-AR") },
+      { Campo: "Comercio", Valor: lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—" },
+      { Campo: "Legajo", Valor: lote.comercio?.legajo ?? lote.comercioId },
+      { Campo: "Bandera", Valor: lote.bandera },
+      { Campo: "Cuotas", Valor: esCuotas ? `${lote.cuotas}` : "Pago único" },
+      { Campo: "Cantidad operaciones", Valor: lote.cantidadOperaciones },
+      { Campo: "Importe bruto", Valor: lote.importeBruto },
+      { Campo: "IVA", Valor: lote.ivaMonto ?? 0 },
+      { Campo: "Ingresos Brutos (IIBB)", Valor: lote.iibbMonto ?? 0 },
+      { Campo: "Impuesto Débito/Crédito", Valor: lote.debitoCreditoMonto ?? 0 },
+      { Campo: "Total Impuestos (legacy)", Valor: lote.impuestos },
+      { Campo: "Tasa PayWay (%)", Valor: lote.tasaPaywayPct },
+      { Campo: "Tasa PayWay ($)", Valor: lote.tasaPaywayMonto },
+      { Campo: "Tasa MoliPay (%)", Valor: lote.tasaMolipayPct },
+      { Campo: "Tasa MoliPay ($)", Valor: lote.tasaMolipayMonto },
+      { Campo: "Comisión cierre lote (%)", Valor: comisionCierrePct },
+      { Campo: "Comisión cierre lote ($)", Valor: comisionCierre },
+      { Campo: "Contracargo", Valor: contracargo },
+      { Campo: "Importe neto", Valor: lote.importeNeto },
+      { Campo: "Estado", Valor: lote.estado },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Detalle Lote");
+    XLSX.writeFile(wb, `lote_${lote.codigo}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -59,7 +94,10 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
             <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Receipt size={18}/> Detalle del lote</h3>
             <p className="text-sm font-mono text-muted-foreground">{lote.codigo} · {new Date(lote.fecha).toLocaleDateString("es-AR")} · {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? lote.comercioId} · {lote.bandera} {esCuotas ? `· ${lote.cuotas} cuotas` : ""}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">✕</button>
+          <div className="flex gap-2">
+            <button onClick={exportLote} className="p-1.5 hover:bg-muted rounded-md" title="Exportar a Excel"><Download size={18} /></button>
+            <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">✕</button>
+          </div>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

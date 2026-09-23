@@ -12,6 +12,7 @@ export type MetodoPago = {
   tipo: string;
   estado: "Activo" | "Inactivo";
   cuotas: Cuota[];
+  diasHabiles: number;
 };
 
 export const TIPOS = [
@@ -29,6 +30,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Tarjeta de débito",
     estado: "Activo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
   {
     id: 2,
@@ -36,6 +38,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Tarjeta prepago",
     estado: "Activo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
   {
     id: 3,
@@ -43,6 +46,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Tarjeta prepago",
     estado: "Inactivo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
   {
     id: 4,
@@ -57,6 +61,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
       { key: 5, numero: "5", ten: "1.4", tna: "16.8", coeficiente: "1.08" },
       { key: 6, numero: "6", ten: "1.7", tna: "20.4", coeficiente: "1.1" },
     ],
+    diasHabiles: 20,
   },
   {
     id: 5,
@@ -68,6 +73,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
       { key: 2, numero: "2", ten: "0.6", tna: "7.2", coeficiente: "1.03" },
       { key: 3, numero: "3", ten: "0.9", tna: "10.8", coeficiente: "1.05" },
     ],
+    diasHabiles: 20,
   },
   {
     id: 6,
@@ -75,6 +81,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Tarjeta de débito",
     estado: "Inactivo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
   {
     id: 7,
@@ -82,6 +89,7 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Pago Fácil",
     estado: "Activo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
   {
     id: 8,
@@ -89,5 +97,6 @@ export const metodosPagoIniciales: MetodoPago[] = [
     tipo: "Rapipago",
     estado: "Inactivo",
     cuotas: [{ key: 1, numero: "1", ten: "0", tna: "0", coeficiente: "1" }],
+    diasHabiles: 1,
   },
 ];

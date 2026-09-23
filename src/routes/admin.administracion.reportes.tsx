@@ -106,7 +106,7 @@ const reports: ReportDef[] = [
     name: "Reporte por Unidad de Negocio",
     icon: BarChart3,
     color: "text-amber-500",
-    description: "Cuánto genera cada unidad: CBU, CBU chica U, QR, Link de Pago, E-commerce.",
+    description: "Cuánto genera cada unidad: CVU, CVU chica U, QR, Link de Pago, E-commerce.",
   },
 ];
 
@@ -2317,8 +2317,8 @@ function ConciliacionesBLP() {
 
 function ReporteUnidadNegocio() {
   const data = [
-    { unidad: "CBU", generaMoliPay: "$ 450.000", payWay: "$ 320.000", neto: "$ 130.000", impuestos: "$ 45.000", total: "$ 945.000" },
-    { unidad: "CBU / CBU chica U", generaMoliPay: "$ 180.000", payWay: "$ 120.000", neto: "$ 60.000", impuestos: "$ 18.000", total: "$ 378.000" },
+    { unidad: "CVU", generaMoliPay: "$ 450.000", payWay: "$ 320.000", neto: "$ 130.000", impuestos: "$ 45.000", total: "$ 945.000" },
+    { unidad: "CVU / CVU chica U", generaMoliPay: "$ 180.000", payWay: "$ 120.000", neto: "$ 60.000", impuestos: "$ 18.000", total: "$ 378.000" },
     { unidad: "Pago por QR", generaMoliPay: "$ 95.000", payWay: "$ 70.000", neto: "$ 25.000", impuestos: "$ 12.000", total: "$ 202.000" },
     { unidad: "Link de Pago", generaMoliPay: "$ 620.000", payWay: "$ 810.000", neto: "$ -190.000", impuestos: "$ 310.000", total: "$ 1.740.000" },
     { unidad: "E-commerce", generaMoliPay: "$ 510.000", payWay: "$ 680.000", neto: "$ -170.000", impuestos: "$ 260.000", total: "$ 1.450.000" },

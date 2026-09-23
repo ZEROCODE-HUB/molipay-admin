@@ -196,7 +196,7 @@ function JuridicasPage() {
         onClick: () =>
           setConfirmAction({
             title: "Activar persona jurídica",
-            message: `¿Activar a ${row.razonSocial}? Requiere CBU y comisión.`,
+            message: `¿Activar a ${row.razonSocial}? Requiere CVU y comisión.`,
             confirmLabel: "Activar",
             variant: "default",
             onConfirm: () => ejecutar(row.legajo, "activar"),
@@ -240,7 +240,7 @@ function JuridicasPage() {
         onClick: () =>
           setConfirmAction({
             title: "Deshabilitar",
-            message: `¿Deshabilitar a ${row.razonSocial}? Se cancelará CBU y se conservará historial.`,
+            message: `¿Deshabilitar a ${row.razonSocial}? Se cancelará CVU y se conservará historial.`,
             confirmLabel: "Deshabilitar",
             variant: "danger",
             onConfirm: () => ejecutar(row.legajo, "deshabilitar"),

@@ -41,7 +41,7 @@ export function TablaSubcuentas({
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
             <th className="px-4 py-3 font-medium">Nombre</th>
             <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">CBU</th>
+            <th className="px-4 py-3 font-medium">CVU</th>
             <th className="px-4 py-3 font-medium">Tipo</th>
             <th className="px-4 py-3 font-medium">Estado</th>
             <th className="px-4 py-3 font-medium text-right">Saldo disp.</th>

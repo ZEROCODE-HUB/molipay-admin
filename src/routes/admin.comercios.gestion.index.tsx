@@ -1065,6 +1065,21 @@ function Page() {
       render: (r) => r.nivel,
     },
     {
+      key: "ejecutivo",
+      label: "Ejecutivo",
+      sortable: true,
+      minWidth: 160,
+      render: (r) =>
+        r.ejecutivo ? (
+          <div className="text-sm">
+            <div className="font-medium truncate max-w-[140px]">{r.ejecutivo.nombre}</div>
+            <div className="text-xs text-muted-foreground truncate max-w-[140px]">{r.ejecutivo.email}</div>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">Sin asignar</span>
+        ),
+    },
+    {
       key: "puntosVenta",
       label: "Puntos de venta",
       sortable: false,

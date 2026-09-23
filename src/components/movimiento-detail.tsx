@@ -111,7 +111,7 @@ export function MovimientoDetail({ m, onClose }: { m: Movimiento; onClose: () =>
         { label: "Nombre completo", value: m.nombreOrigen },
         { label: "Destino", value: m.nombreDestino },
         { label: "CUIT destino", value: <span className="font-mono tabular-nums">{m.cuit}</span> },
-        { label: "CVU/CBU", value: <span className="font-mono text-xs">{m.cvu}</span> },
+        { label: "CVU", value: <span className="font-mono text-xs">{m.cvu}</span> },
         {
           label: "Monto",
           value: <span className="font-mono font-semibold tabular-nums">{m.monto}</span>,

@@ -14,6 +14,8 @@ export const Route = createFileRoute("/admin/comercios/link-pago")({
 const tabs: Tab[] = [
   { label: "Links de Pago", to: "/admin/comercios/link-pago" },
   { label: "Lotes de Acreditación", to: "/admin/comercios/link-pago/lotes" },
+  { label: "Lotes de Venta", to: "/admin/comercios/link-pago/lotes-venta" },
+  { label: "Calendario", to: "/admin/comercios/link-pago/calendario-acreditaciones" },
   { label: "Contracargos", to: "/admin/comercios/link-pago/contracargos" },
   { label: "Adelantos de Dinero", to: "/admin/comercios/link-pago/adelantos" },
   { label: "Resumen general", to: "/admin/comercios/link-pago/resumen" },

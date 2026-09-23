@@ -2543,7 +2543,7 @@ function SubDetailModal({ sub, onClose }: { sub: Subcuenta; onClose: () => void 
                     <Input
                       value={filterSearch}
                       onChange={(e) => setFilterSearch(e.target.value)}
-                      placeholder="TXID, CBU o entidad..."
+                      placeholder="TXID, CVU o entidad..."
                       className="h-9 text-sm w-full"
                     />
                   </div>
@@ -2610,7 +2610,7 @@ function SubDetailModal({ sub, onClose }: { sub: Subcuenta; onClose: () => void 
                         </span>
                       </div>
                       <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
-                        <span>CBU/CVU: {m.cbu}</span>
+                        <span>CVU {m.cbu}</span>
                         <span>{m.entidad}</span>
                         <span>
                           {m.fecha} · {m.hora}

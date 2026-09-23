@@ -209,11 +209,17 @@ export function toComercio(
       | null;
     codigos_categoria?: CodigoCategoriaRow[] | null;
     puntos_venta?: PuntoVentaRow[] | null;
+    admin_users?: {
+      id: string;
+      nombre: string;
+      email: string;
+    }[] | null;
   },
 ): Comercio {
   const cli = firstOrNull(r.clientes);
   const cat = firstOrNull(r.codigos_categoria);
   const pdvs = (r.puntos_venta ?? []) as PuntoVentaRow[];
+  const adminUser = firstOrNull(r.admin_users);
   return {
     id: r.id,
     usuario: r.usuario,
@@ -243,6 +249,13 @@ export function toComercio(
     nivel: r.nivel,
     estado: r.estado,
     ejecutivoResponsableId: (r as unknown as { ejecutivo_responsable_id?: string | null }).ejecutivo_responsable_id ?? null,
+    ejecutivo: adminUser
+      ? {
+          id: adminUser.id,
+          nombre: adminUser.nombre,
+          email: adminUser.email,
+        }
+      : null,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,

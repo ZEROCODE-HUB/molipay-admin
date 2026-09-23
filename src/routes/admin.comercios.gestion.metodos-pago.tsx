@@ -39,6 +39,7 @@ function MetodoPagoModal({
 }) {
   const [nombre, setNombre] = useState(metodo?.nombre ?? "");
   const [tipo, setTipo] = useState(metodo?.tipo ?? TIPOS[0]);
+  const [diasHabiles, setDiasHabiles] = useState(metodo?.diasHabiles ?? 1);
   const [cuotas, setCuotas] = useState<Cuota[]>(
     () => metodo?.cuotas.map((c, i) => ({ ...c, key: i + 1 })) ?? [],
   );
@@ -76,6 +77,7 @@ function MetodoPagoModal({
         tna: c.tna,
         coeficiente: c.coeficiente,
       })),
+      diasHabiles,
     });
   };
 
@@ -104,7 +106,7 @@ function MetodoPagoModal({
             <h4 className="font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
               Información general
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-4">
               <div>
                 <Label htmlFor="mp-id">ID</Label>
                 <Input
@@ -137,6 +139,17 @@ function MetodoPagoModal({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <Label htmlFor="mp-dias">Días hábiles acreditación</Label>
+                <Input
+                  id="mp-dias"
+                  type="number"
+                  min={1}
+                  value={diasHabiles}
+                  onChange={(e) => setDiasHabiles(Number(e.target.value))}
+                  placeholder="Ej: 20"
+                />
               </div>
             </div>
           </Card>
@@ -299,6 +312,12 @@ function Page() {
       filterable: "enum",
       filterOptions: ESTADOS,
       render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "neutral"}>{r.estado}</Badge>,
+    },
+    {
+      key: "diasHabiles",
+      label: "Días háb.",
+      sortable: true,
+      render: (r) => <span className="font-mono">{r.diasHabiles}</span>,
     },
   ];
 

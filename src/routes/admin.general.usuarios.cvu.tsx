@@ -22,8 +22,8 @@ import type { CvuRow } from "@/lib/api/subcuentas";
 export const Route = createFileRoute("/admin/general/usuarios/cvu")({
   head: () => ({
     meta: [
-      { title: "Usuarios con CBU/CVU — Usuarios — Admin Molly" },
-      { name: "description", content: "Usuarios con CBU/CVU (Cuenta Virtual) habilitada." },
+      { title: "Usuarios con CVU — Usuarios — Admin Molly" },
+      { name: "description", content: "Usuarios con CVU (Cuenta Virtual) habilitada." },
     ],
   }),
   component: CvuPage,
@@ -124,7 +124,7 @@ function CvuPage() {
         tipo: "Operativa",
         estado: "Activa",
       });
-      toast.success(`CBU/CVU creado para ${cliente.correo} — se refleja en Subcuentas y CBUs recientes`);
+      toast.success(`CVU creado para ${cliente.correo} — se refleja en Subcuentas y CVUs recientes`);
       queryClient.invalidateQueries({ queryKey: ["cvus"] });
       queryClient.invalidateQueries({ queryKey: ["subcuentas", cliente.legajo] });
       setShowNuevo(false);
@@ -177,21 +177,21 @@ function CvuPage() {
   return (
     <PermissionGuard recurso="usuarios">
       <PageHeader
-        title="Usuarios con CBU / CVU"
-        description="Cuentas Virtuales creadas (subcuentas con CBU) — búsqueda rápida por email, refleja en detalle Subcuentas y CBUs recientes."
+        title="Usuarios con CVU"
+        description="Cuentas Virtuales creadas — búsqueda rápida por email, refleja en detalle Subcuentas y CVUs recientes."
         action={
           <BtnPrimary onClick={() => setShowNuevo(true)} disabled={!puedeCrear}>
-            <Plus size={16} /> Nuevo CBU / CVU
+            <Plus size={16} /> Nuevo CVU
           </BtnPrimary>
         }
       />
 
       {isLoading ? (
-        <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground"><span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />Cargando CBU/CVU…</div>
+        <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground"><span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />Cargando CVU…</div>
       ) : isError ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700"><AlertTriangle size={28} /><p>{err?.message ?? "Error"}</p><button onClick={() => refetch()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground">Reintentar</button></div>
       ) : rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-center text-sm text-muted-foreground"><Inbox size={28} /><p>No hay CBU/CVU que coincidan.</p></div>
+        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-center text-sm text-muted-foreground"><Inbox size={28} /><p>No hay CVU que coincidan.</p></div>
       ) : (
         <>
           <DataTable
@@ -228,7 +228,7 @@ function CvuPage() {
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span>{total} CBU/CVU · </span>
+              <span>{total} CVU · </span>
               <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
               <select
                 className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
@@ -259,26 +259,26 @@ function CvuPage() {
       )}
 
       {viewing && (
-        <FormDialog open={!!viewing} onClose={() => setViewing(null)} title="Detalle de CBU/CVU" description={`CBU de ${viewing.nombre} ${viewing.apellido}`} onSubmit={() => setViewing(null)} submitLabel="Cerrar">
+        <FormDialog open={!!viewing} onClose={() => setViewing(null)} title="Detalle de CVU" description={`CVU de ${viewing.nombre} ${viewing.apellido}`} onSubmit={() => setViewing(null)} submitLabel="Cerrar">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><span className="text-muted-foreground">Legajo:</span> <LegajoCell legajo={viewing.legajo} /></div>
             <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium">{viewing.cliente?.correo ?? viewing.email}</span></div>
             <div><span className="text-muted-foreground">Nombre:</span> <span className="font-medium">{viewing.nombre}</span></div>
             <div><span className="text-muted-foreground">Apellido:</span> <span className="font-medium">{viewing.apellido}</span></div>
-            <div><span className="text-muted-foreground">CBU/CVU:</span> <span className="font-mono font-medium">{viewing.cbu ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">CVU:</span> <span className="font-mono font-medium">{viewing.cbu ?? "—"}</span></div>
             <div><span className="text-muted-foreground">Alias:</span> <span className="font-medium">{viewing.cbu ? viewing.cbu.slice(-6) : "—"}</span></div>
           </div>
         </FormDialog>
       )}
 
       {editTarget && (
-        <FormDialog open={!!editTarget} onClose={() => setEditTarget(null)} title="Editar CBU" description={`Editando CBU de ${editTarget.nombre}`} onSubmit={guardarEdicion} submitLabel="Guardar">
-          <div><Label>Alias (derivado del CBU)</Label><Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} /></div>
-          <p className="text-xs text-muted-foreground">El CBU es inmutable; alias es informativo.</p>
+        <FormDialog open={!!editTarget} onClose={() => setEditTarget(null)} title="Editar CVU" description={`Editando CVU de ${editTarget.nombre}`} onSubmit={guardarEdicion} submitLabel="Guardar">
+          <div><Label>Alias (derivado del CVU)</Label><Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} /></div>
+          <p className="text-xs text-muted-foreground">El CVU es inmutable; alias es informativo.</p>
         </FormDialog>
       )}
 
-      <FormDialog open={showNuevo} onClose={() => setShowNuevo(false)} title="Nuevo CBU / CVU" description="Crear CBU/CVU asociado a un usuario existente (búsqueda rápida por email, funciona con miles)." onSubmit={crear} submitLabel={saving ? "Creando..." : "Crear CBU"}>
+      <FormDialog open={showNuevo} onClose={() => setShowNuevo(false)} title="Nuevo CVU" description="Crear CVU asociado a un usuario existente (búsqueda rápida por email, funciona con miles)." onSubmit={crear} submitLabel={saving ? "Creando..." : "Crear CVU"}>
         <div className="relative">
           <Label>Email del usuario</Label>
           <div className="relative">
@@ -307,7 +307,7 @@ function CvuPage() {
         </div>
         <div><Label>Alias (opcional)</Label><Input value={formAlias} onChange={(e) => setFormAlias(e.target.value)} placeholder="mi.alias (se genera automático si vacío)" /></div>
         <div><Label>Tipo de cuenta</Label><select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={formTipo} onChange={(e) => setFormTipo(e.target.value)}><option>Cuenta individual</option><option>Cuenta compartida</option></select></div>
-        <p className="text-xs text-muted-foreground">Se generará un CBU de 22 dígitos y alias, y se guardará como subcuenta. Aparecerá en el detalle del usuario en Subcuentas y CBUs recientes.</p>
+        <p className="text-xs text-muted-foreground">Se generará un CVU de 22 dígitos y alias, y se guardará como subcuenta. Aparecerá en el detalle del usuario en Subcuentas y CVUs recientes.</p>
       </FormDialog>
     </PermissionGuard>
   );
@@ -318,7 +318,7 @@ const columns: Column<any>[] = [
   { key: "_correo", label: "Usuario", filterable: true, render: (r) => r._correo },
   { key: "_nombre", label: "Nombre", filterable: true, render: (r) => r._nombre },
   { key: "_apellido", label: "Apellido", filterable: true, render: (r) => r._apellido },
-  { key: "_cvu", label: "CBU / CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r._cvu}</span> },
+  { key: "_cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r._cvu}</span> },
   { key: "_cbk", label: "CBK", render: (r) => <span className="font-mono tabular-nums">{r._cbk}</span> },
   { key: "_alias", label: "Alias", render: (r) => r._alias },
   { key: "_estado", label: "Estado", render: (row) => estadoBadge(row._estado) },

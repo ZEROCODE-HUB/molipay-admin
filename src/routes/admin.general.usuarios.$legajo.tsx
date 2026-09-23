@@ -982,7 +982,7 @@ function SubcuentasTab({
           />
           <input
             className="rounded-md border border-input px-3 py-2 text-sm"
-            placeholder="CBU"
+            placeholder="CVU"
             value={form.cbu}
             onChange={(e) => setForm({ ...form, cbu: e.target.value })}
           />
@@ -2566,7 +2566,7 @@ function ClienteDetailPage() {
                       onClick={() =>
                         setConfirmAction({
                           title: "Activar usuario",
-                          message: `¿Activar a ${cliente.nombre}? Requiere CBU y comisión cargados.`,
+                          message: `¿Activar a ${cliente.nombre}? Requiere CVU y comisión cargados.`,
                           confirmLabel: "Activar",
                           variant: "default",
                           onConfirm: () => {
@@ -2626,7 +2626,7 @@ function ClienteDetailPage() {
                       onClick={() =>
                         setConfirmAction({
                           title: "Deshabilitar usuario",
-                          message: `¿Deshabilitar a ${cliente.nombre}? Se cancelará su CBU y se conservará el historial (auditoría BCRA).`,
+                          message: `¿Deshabilitar a ${cliente.nombre}? Se cancelará su CVU y se conservará el historial (auditoría BCRA).`,
                           confirmLabel: "Deshabilitar",
                           variant: "danger",
                           onConfirm: () => {
@@ -2677,10 +2677,10 @@ function ClienteDetailPage() {
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p className="font-semibold">Requisitos para activar</p>
                 <ul className="mt-1 list-disc pl-5">
-                  <li>CBU: {hasCbu ? "✓ cargado" : "✗ pendiente"}</li>
+                  <li>CVU: {hasCbu ? "✓ cargado" : "✗ pendiente"}</li>
                   <li>Comisión: {hasCom ? "✓ cargada" : "✗ pendiente"}</li>
                 </ul>
-                {!hasCbu && <p className="mt-1 text-xs">Cargar CBU en la pestaña Subcuentas y CVUs.</p>}
+                {!hasCbu && <p className="mt-1 text-xs">Cargar CVU en la pestaña Subcuentas y CVUs.</p>}
                 {!hasCom && <p className="mt-1 text-xs">Cargar comisión en Admin → Usuarios → Comisiones.</p>}
               </div>
             );
@@ -2695,7 +2695,7 @@ function ClienteDetailPage() {
           if (norm === "deshabilitado") {
             return (
               <div className="mt-4 rounded-xl border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
-                Usuario deshabilitado — CBU cancelado. Historial conservado para auditoría BCRA.
+                Usuario deshabilitado — CVU cancelado. Historial conservado para auditoría BCRA.
               </div>
             );
           }

@@ -28,13 +28,13 @@ type Fila = {
 const filas: Fila[] = [
   { op: "Transferencias entre cuentas Molly", comPct: null, comFijo: null, comTexto: "Sin cargo" },
   {
-    op: "Transferencias inmediatas a CBU/CVU (hasta $ 500.000)",
+    op: "Transferencias inmediatas a CVU (hasta $ 500.000)",
     comPct: null,
     comFijo: null,
     comTexto: "Sin cargo",
   },
   {
-    op: "Transferencias inmediatas a CBU/CVU (mas de $ 500.000)",
+    op: "Transferencias inmediatas a CVU (más de $ 500.000)",
     comPct: 0.3,
     comFijo: null,
     comTexto: null,
@@ -43,8 +43,8 @@ const filas: Fila[] = [
   { op: "Link de pago (debito / credito)", comPct: 1.9, comFijo: null, comTexto: null },
   { op: "Cobros masivos por lote", comPct: null, comFijo: 45, comTexto: null },
   { op: "Pago de servicios", comPct: null, comFijo: null, comTexto: "Sin cargo" },
-  { op: "Alta de subcuenta con CBU propio", comPct: null, comFijo: null, comTexto: "Sin cargo" },
-  { op: "Emision de constancia de CBU", comPct: null, comFijo: null, comTexto: "Sin cargo" },
+  { op: "Alta de subcuenta con CVU propio", comPct: null, comFijo: null, comTexto: "Sin cargo" },
+  { op: "Emisión de constancia de CVU", comPct: null, comFijo: null, comTexto: "Sin cargo" },
 ];
 
 const comLabel = (f: Fila) =>

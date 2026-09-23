@@ -228,7 +228,7 @@ function UsuariosPage() {
         onClick: () =>
           setConfirmAction({
             title: "Activar usuario",
-            message: `¿Activar a ${row.nombres}? Requiere CBU y comisión cargados.`,
+            message: `¿Activar a ${row.nombres}? Requiere CVU y comisión cargados.`,
             confirmLabel: "Activar",
             variant: "default",
             onConfirm: () => ejecutar(row.legajo, "activar"),
@@ -275,7 +275,7 @@ function UsuariosPage() {
         onClick: () =>
           setConfirmAction({
             title: "Deshabilitar usuario",
-            message: `¿Deshabilitar a ${row.nombres}? Se cancelará su CBU y se conservará el historial (auditoría BCRA).`,
+            message: `¿Deshabilitar a ${row.nombres}? Se cancelará su CVU y se conservará el historial (auditoría BCRA).`,
             confirmLabel: "Deshabilitar",
             variant: "danger",
             onConfirm: () => ejecutar(row.legajo, "deshabilitar"),
