@@ -1,6 +1,7 @@
 import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
-import type { EstadoLote, LoteAcreditacion, LoteAcreditacionRow, Page, Pagination } from "./types";
+import type { EstadoLote, LoteAcreditacion, LoteAcreditacionRow, Movimiento, MovimientoRow, Page, Pagination } from "./types";
+import { toMovimiento } from "./mappers";
 
 const COLUMNS =
   "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto, comercios(id, usuario, legajo, nombre_comercio)";
@@ -85,11 +86,21 @@ export async function getLote(id: string): Promise<LoteAcreditacion | null> {
   return toLote(data as LoteAcreditacionRow);
 }
 
-export async function listLoteMovimientos(loteId: string): Promise<string[]> {
+export async function listLoteMovimientos(loteId: string): Promise<Movimiento[]> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("lote_movimientos").select("movimiento_id").eq("lote_id", loteId);
+  const { data: links, error } = await sb.from("lote_movimientos").select("movimiento_id").eq("lote_id", loteId);
   if (error) throw new DataAccessError(error);
-  return (data ?? []).map((r: { movimiento_id: string }) => r.movimiento_id);
+  const movimientoIds = (links ?? []).map((r: { movimiento_id: string }) => r.movimiento_id);
+  if (movimientoIds.length === 0) return [];
+  const COLUMNS = "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit)";
+  const { data: movimientos, error: movError } = await sb
+    .from("movimientos")
+    .select(COLUMNS)
+    .in("id", movimientoIds);
+  if (movError) throw new DataAccessError(movError);
+  return (movimientos ?? []).map((r) =>
+    toMovimiento(r as MovimientoRow & { clientes?: { correo: string; nombre: string; cuit: string }[] | null }),
+  );
 }
 
 export async function getLotePaywaySnapshotForMovimientos(

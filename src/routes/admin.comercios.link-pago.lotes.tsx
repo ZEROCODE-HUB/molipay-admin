@@ -13,7 +13,7 @@ import { DataAccessError } from "@/lib/api/errors";
 import { listLotes, updateLote, listLoteMovimientos } from "@/lib/api/lotes";
 import * as XLSX from "xlsx";
 import { listAdelantosByComercio } from "@/lib/api/adelantos";
-import type { EstadoLote, LoteAcreditacion } from "@/lib/api/types";
+import type { EstadoLote, LoteAcreditacion, Movimiento } from "@/lib/api/types";
 import { useComercios } from "@/hooks/useComercios";
 
 export const Route = createFileRoute("/admin/comercios/link-pago/lotes")({
@@ -31,6 +31,7 @@ const PAGE_SIZES = [10, 20, 50];
 function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
   if (e === "Contracargo") return "danger";
+  if (e === "Pendiente") return "warn";
   return "neutral";
 }
 
@@ -39,7 +40,7 @@ function fmt(n: number) {
 }
 
 function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () => void }) {
-  const { data: movimientoIds } = useQuery({
+  const { data: movimientos } = useQuery({
     queryKey: ["lote-movimientos", lote.id],
     queryFn: () => listLoteMovimientos(lote.id),
   });
@@ -50,7 +51,7 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
   const menosImpuestos = lote.importeBruto - lote.impuestos;
   const esCuotas = (lote.cuotas ?? 1) > 1;
   const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
-  const linkIds = movimientoIds ?? [];
+  const movs = movimientos ?? [];
 
   const exportLote = () => {
     // Basado en: detalle_reunion_revision_plataforma.md Seccion 3
@@ -135,14 +136,45 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
           </Card>
 
           <Card className="p-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Movimientos incluidos ({lote.cantidadOperaciones})</h4>
-            {linkIds.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin movimientos vinculados (lote_movimientos vacío) — el lote aún no tiene movimientos asignados o no se pudo cargar.</p>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Movimientos incluidos ({movs.length})</h4>
+            {movs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin movimientos vinculados — el lote aún no tiene movimientos asignados o no se pudo cargar.</p>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {linkIds.map((id) => (
-                  <span key={id} className="inline-flex items-center rounded-full border bg-muted/50 px-2.5 py-0.5 text-xs font-mono">{id}</span>
-                ))}
+              <div className="overflow-x-auto max-h-64 overflow-y-auto border rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-muted/50 border-b">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">ID Txn</th>
+                      <th className="px-3 py-2 font-medium">Cliente</th>
+                      <th className="px-3 py-2 font-medium text-right">Importe</th>
+                      <th className="px-3 py-2 font-medium">Fecha</th>
+                      <th className="px-3 py-2 font-medium">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {movs.map((m: Movimiento) => (
+                      <tr key={m.id} className="hover:bg-muted/30">
+                        <td className="px-3 py-2 font-mono text-xs">{m.idTxn}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-medium truncate max-w-[140px]">{m.cliente?.nombre ?? "—"}</div>
+                          <div className="text-muted-foreground text-[10px]">{m.cliente?.correo}</div>
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono font-semibold">{fmt(m.montoOperacion)}</td>
+                        <td className="px-3 py-2 font-mono text-muted-foreground">{new Date(m.fecha).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                            m.estadoCodigo === "APROBADO" ? "border-green-200 bg-green-50 text-green-700" :
+                            m.estadoCodigo === "RECHAZADO" ? "border-red-200 bg-red-50 text-red-700" :
+                            m.estadoCodigo === "EN_PROGRESO" ? "border-yellow-200 bg-yellow-50 text-yellow-700" :
+                            "border-muted bg-muted/50 text-muted-foreground"
+                          }`}>
+                            {m.estadoNombre ?? m.estadoCodigo ?? "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </Card>
@@ -393,6 +425,7 @@ function Page() {
             <Label>Estado</Label>
             <select value={estadoFilter} onChange={(e)=> { setEstadoFilter(e.target.value as EstadoLote | ""); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border bg-background text-xs">
               <option value="">Todos</option>
+              <option value="Pendiente">Pendiente</option>
               <option value="Acreditado">Acreditado</option>
               <option value="Contracargo">Contracargo</option>
             </select>

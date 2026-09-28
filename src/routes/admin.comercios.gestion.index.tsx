@@ -37,6 +37,7 @@ import type {
   EstadoComercio,
   NivelComercio,
 } from "@/lib/api/types";
+import { metodosPagoIniciales } from "@/data/metodos-pago";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
@@ -121,7 +122,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
-  const [formBandera, setFormBandera] = useState("Visa");
+  const [formBandera, setFormBandera] = useState("");
   const [formBanderaCustom, setFormBanderaCustom] = useState("");
   const [formMolipay, setFormMolipay] = useState("");
   const [formPayway, setFormPayway] = useState("");
@@ -138,7 +139,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
   const [savingCuota, setSavingCuota] = useState(false);
   const [confirmDeleteCuota, setConfirmDeleteCuota] = useState<import("@/lib/api/types").ComercioBanderaCuota | null>(null);
 
-  const BANDERAS_COMUNES = ["Visa", "Mastercard", "Amex", "Cabal", "Diners"] as const;
+  const METODOS_PAGO = metodosPagoIniciales.map((m) => m.nombre);
 
   const cargar = async () => {
     setLoading(true);
@@ -161,7 +162,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
 
   const openCreate = () => {
     setEditing(null);
-    setFormBandera("Visa");
+    setFormBandera(METODOS_PAGO[0] || "");
     setFormBanderaCustom("");
     setFormMolipay("");
     setFormPayway("");
@@ -171,7 +172,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
 
   const openEdit = (b: import("@/lib/api/types").ComercioBandera) => {
     setEditing(b);
-    const isCommon = (BANDERAS_COMUNES as readonly string[]).includes(b.bandera);
+    const isCommon = METODOS_PAGO.includes(b.bandera);
     setFormBandera(isCommon ? b.bandera : "__custom__");
     setFormBanderaCustom(isCommon ? "" : b.bandera);
     setFormMolipay(String(b.comisionMolipay));
@@ -336,7 +337,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
             <div>
               <Label>Bandera</Label>
               <select value={formBandera} onChange={(e) => setFormBandera(e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
-                {BANDERAS_COMUNES.map((b) => (<option key={b} value={b}>{b}</option>))}
+                {METODOS_PAGO.map((b) => (<option key={b} value={b}>{b}</option>))}
                 <option value="__custom__">Otra (texto libre)…</option>
               </select>
               {formBandera === "__custom__" && (

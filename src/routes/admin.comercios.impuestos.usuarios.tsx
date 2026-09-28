@@ -93,6 +93,7 @@ type AsignacionForm = {
   clienteLegajo: string;
   impuestoId: string;
   monto: string;
+  tipo: TipoImpuesto;
   estado: "Activo" | "Inactivo";
 };
 
@@ -110,6 +111,7 @@ function AsignacionFormModal({
     clienteLegajo: asignacion?.clienteLegajo ?? "",
     impuestoId: asignacion?.impuestoId ?? "",
     monto: asignacion?.monto === null || asignacion?.monto === undefined ? "" : String(asignacion.monto),
+    tipo: asignacion?.tipo ?? "Porcentaje",
     estado: asignacion?.estado ?? "Activo",
   }));
   const [clienteSearchInput, setClienteSearchInput] = useState(form.clienteLegajo);
@@ -225,7 +227,15 @@ function AsignacionFormModal({
             id="as-impuesto"
             className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
             value={form.impuestoId}
-            onChange={(e) => setForm({ ...form, impuestoId: e.target.value })}
+            onChange={(e) => {
+              const imp = impuestosDisponibles.find((i) => i.id === e.target.value);
+              setForm({
+                ...form,
+                impuestoId: e.target.value,
+                monto: imp ? String(imp.monto ?? "") : form.monto,
+                tipo: imp ? (imp.tipo as TipoImpuesto) : form.tipo,
+              });
+            }}
           >
             <option value="">Seleccionar…</option>
             {impuestosDisponibles.map((i) => (
@@ -375,7 +385,7 @@ function Page() {
       if (editTarget) {
         await updateImpuestoAsignacion(editTarget.id, {
           impuesto_id: form.impuestoId || undefined,
-          tipo: "Porcentaje" as any,
+          tipo: form.tipo as any,
           monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
         } as any);
@@ -383,7 +393,7 @@ function Page() {
         await createImpuestoAsignacion({
           cliente_legajo: form.clienteLegajo.trim(),
           impuesto_id: form.impuestoId,
-          tipo: "Porcentaje" as any,
+          tipo: form.tipo as any,
           monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
         } as any);

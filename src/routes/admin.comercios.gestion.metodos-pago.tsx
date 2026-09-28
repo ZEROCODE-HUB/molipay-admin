@@ -169,9 +169,6 @@ function MetodoPagoModal({
                       TEM (%)
                     </th>
                     <th className="px-3 py-2.5 font-display font-semibold text-foreground">
-                      TNA (%)
-                    </th>
-                    <th className="px-3 py-2.5 font-display font-semibold text-foreground">
                       Coeficiente
                     </th>
                     <th className="px-3 py-2.5 w-10" />
@@ -180,7 +177,7 @@ function MetodoPagoModal({
                 <tbody>
                   {cuotas.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                      <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
                         Sin cuotas cargadas para este método de pago.
                       </td>
                     </tr>
@@ -200,14 +197,6 @@ function MetodoPagoModal({
                             aria-label="TEM"
                             value={c.ten}
                             onChange={(e) => updateCuota(c.key, "ten", e.target.value)}
-                            className="w-28 h-9"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input
-                            aria-label="TNA"
-                            value={c.tna}
-                            onChange={(e) => updateCuota(c.key, "tna", e.target.value)}
                             className="w-28 h-9"
                           />
                         </td>

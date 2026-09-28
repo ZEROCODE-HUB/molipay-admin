@@ -1286,8 +1286,8 @@ export type LoteVenta = {
 
 // --- lotes_acreditacion / lote_movimientos / adelantos (real Supabase) -----
 
-export type EstadoLote = "Acreditado" | "Contracargo";
-export const ESTADOS_LOTE: EstadoLote[] = ["Acreditado", "Contracargo"];
+export type EstadoLote = "Acreditado" | "Contracargo" | "Pendiente";
+export const ESTADOS_LOTE: EstadoLote[] = ["Pendiente", "Acreditado", "Contracargo"];
 
 export type LoteAcreditacionRow = {
   id: string;
