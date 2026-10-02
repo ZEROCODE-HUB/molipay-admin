@@ -476,6 +476,8 @@ export type ComercioBanderaRow = {
   id: string;
   comercio_id: string;
   bandera: string;
+  bandera_id: string | null;
+  metodo_key: string | null;
   comision_molipay: number;
   comision_payway: number;
   comision_neta: number;
@@ -488,6 +490,8 @@ export type ComercioBandera = {
   id: string;
   comercioId: string;
   bandera: string;
+  banderaId: string | null;
+  metodoKey: string | null;
   comisionMolipay: number;
   comisionPayway: number;
   comisionNeta: number;
@@ -1215,21 +1219,29 @@ export type DcSyncRetroactivoFilters = Pagination & {
 export type BanderaCatalogoRow = {
   id: string;
   nombre: string;
+  tipo: string;
   dias_habiles_acreditacion: number;
   estado: string;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type BanderaCatalogo = {
   id: string;
   nombre: string;
+  tipo: string;
   diasHabilesAcreditacion: number;
   estado: "Activo" | "Inactivo";
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type BanderaCuotaRow = {
   id: string;
   bandera_id: string;
   cuotas: number;
+  ten: number;
+  coeficiente: number;
   estado: string;
 };
 
@@ -1237,6 +1249,8 @@ export type BanderaCuota = {
   id: string;
   banderaId: string;
   cuotas: number;
+  ten: number;
+  coeficiente: number;
   estado: "Activo" | "Inactivo";
 };
 
@@ -1260,6 +1274,24 @@ export type ComercioBanderaCuota = {
 
 // --- lotes_venta (vista) ----------------------------------------------------
 
+/**
+ * Join a `comercios` tal como lo devuelve PostgREST.
+ *
+ * Puede ser ARRAY o OBJECT, y no es un detalle menor: PostgREST devuelve
+ * **object** para relaciones to-one (comercio_id -> comercios.id) y **array**
+ * para las one-to-many. El tipo anterior solo declaraba `[]`, asi que
+ * `Array.isArray(...)` siempre daba false, el mapper leia `null` y TypeScript
+ * no se quejaba de nada: la columna quedaba en "—" y el legajo caia al
+ * fallback del uuid, que es exactamente el comportamiento roto de la pagina de
+ * lotes.
+ *
+ * Se tipea aceptando las dos formas para que ningun mapper vuelva a asumir una
+ * sola.
+ */
+export type ComercioJoined =
+  | { id: string; usuario: string; legajo: string; nombre_comercio: string | null }
+  | { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[];
+
 export type LoteVentaRow = {
   comercio_id: string;
   bandera: string;
@@ -1269,7 +1301,7 @@ export type LoteVentaRow = {
   impuestos: number;
   comision: number;
   importe_neto: number;
-  comercios?: { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[] | null;
+  comercios?: ComercioJoined | null;
 };
 
 export type LoteVenta = {
@@ -1286,8 +1318,8 @@ export type LoteVenta = {
 
 // --- lotes_acreditacion / lote_movimientos / adelantos (real Supabase) -----
 
-export type EstadoLote = "Acreditado" | "Contracargo" | "Pendiente";
-export const ESTADOS_LOTE: EstadoLote[] = ["Pendiente", "Acreditado", "Contracargo"];
+export type EstadoLote = "Programado" | "Pendiente" | "Acreditado" | "Contracargo" | "Cancelado";
+export const ESTADOS_LOTE: EstadoLote[] = ["Programado", "Pendiente", "Acreditado", "Contracargo", "Cancelado"];
 
 export type LoteAcreditacionRow = {
   id: string;
@@ -1309,6 +1341,9 @@ export type LoteAcreditacionRow = {
   comision_cierre_lote_monto: number | null;
   importe_neto: number;
   estado: EstadoLote;
+  es_estimado: boolean;
+  dias_habiles_aplicados: number | null;
+  fecha_estimada_recalcular: boolean;
   resuelto_por: string | null;
   fecha_resolucion: string | null;
   notas_resolucion: string | null;
@@ -1317,7 +1352,7 @@ export type LoteAcreditacionRow = {
   iva_monto: number | null;
   iibb_monto: number | null;
   debito_credito_monto: number | null;
-  comercios?: { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[] | null;
+  comercios?: ComercioJoined | null;
 };
 
 export type LoteAcreditacion = {
@@ -1340,6 +1375,9 @@ export type LoteAcreditacion = {
   comisionCierreLoteMonto: number | null;
   importeNeto: number;
   estado: EstadoLote;
+  esEstimado: boolean;
+  diasHabilesAplicados: number | null;
+  fechaEstimadaRecalcular: boolean;
   resueltoPor: string | null;
   fechaResolucion: string | null;
   notasResolucion: string | null;

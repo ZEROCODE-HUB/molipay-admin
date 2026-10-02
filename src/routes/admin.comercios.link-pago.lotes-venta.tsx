@@ -25,6 +25,11 @@ function fmt(n: number) {
   return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function parseDateLocal(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function Page() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -54,7 +59,7 @@ function Page() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const columns: Column<LoteVenta>[] = [
-    { key: "fecha", label: "Fecha", minWidth: 120, render: (r) => <span className="font-mono text-xs tabular-nums">{new Date(r.fecha).toLocaleDateString("es-AR")}</span> },
+    { key: "fecha", label: "Fecha", minWidth: 120, render: (r) => <span className="font-mono text-xs tabular-nums">{parseDateLocal(r.fecha).toLocaleDateString("es-AR")}</span> },
     { key: "comercio", label: "Comercio / Legajo", minWidth: 200, maxWidth: 320, render: (r) => <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
     { key: "bandera", label: "Bandera", minWidth: 100, render: (r) => <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
     { key: "cantidadOperaciones", label: "Ops", minWidth: 80, render: (r) => <span className="font-mono tabular-nums">{r.cantidadOperaciones}</span> },

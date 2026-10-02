@@ -9,6 +9,8 @@ function toBandera(r: ComercioBanderaRow): ComercioBandera {
     id: r.id,
     comercioId: r.comercio_id,
     bandera: r.bandera,
+    banderaId: r.bandera_id ?? null,
+    metodoKey: r.metodo_key ?? null,
     comisionMolipay: Number(r.comision_molipay),
     comisionPayway: Number(r.comision_payway),
     comisionNeta: Number(r.comision_neta),
@@ -31,16 +33,18 @@ export async function listByComercio(comercioId: string): Promise<ComercioBander
 
 export async function createBandera(
   comercioId: string,
-  input: { bandera: string; comisionMolipay: number; comisionPayway: number; estado?: ComercioBanderaEstado },
+  input: { bandera: string; comisionMolipay: number; comisionPayway: number; estado?: ComercioBanderaEstado; banderaId?: string; metodoKey?: string },
 ): Promise<ComercioBandera> {
   const sb = requireSupabase();
-  const payload = {
+  const payload: Record<string, unknown> = {
     comercio_id: comercioId,
     bandera: input.bandera.trim(),
     comision_molipay: input.comisionMolipay,
     comision_payway: input.comisionPayway,
     estado: input.estado ?? "Activo",
   };
+  if (input.banderaId) payload.bandera_id = input.banderaId;
+  if (input.metodoKey) payload.metodo_key = input.metodoKey;
   const { data, error } = await sb.from("comercio_banderas").insert(payload).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
   return toBandera(data as ComercioBanderaRow);
@@ -48,7 +52,7 @@ export async function createBandera(
 
 export async function updateBandera(
   id: string,
-  input: Partial<{ bandera: string; comisionMolipay: number; comisionPayway: number; estado: ComercioBanderaEstado }>,
+  input: Partial<{ bandera: string; comisionMolipay: number; comisionPayway: number; estado: ComercioBanderaEstado; banderaId?: string; metodoKey?: string }>,
 ): Promise<ComercioBandera> {
   const sb = requireSupabase();
   const payload: Record<string, unknown> = {};
@@ -56,6 +60,8 @@ export async function updateBandera(
   if (input.comisionMolipay !== undefined) payload.comision_molipay = input.comisionMolipay;
   if (input.comisionPayway !== undefined) payload.comision_payway = input.comisionPayway;
   if (input.estado !== undefined) payload.estado = input.estado;
+  if (input.banderaId !== undefined) payload.bandera_id = input.banderaId || null;
+  if (input.metodoKey !== undefined) payload.metodo_key = input.metodoKey || null;
   const { data, error } = await sb.from("comercio_banderas").update(payload).eq("id", id).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
   return toBandera(data as ComercioBanderaRow);

@@ -32,11 +32,17 @@ function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
   if (e === "Contracargo") return "danger";
   if (e === "Pendiente") return "warn";
-  return "neutral";
+  if (e === "Cancelado") return "neutral";
+  return "neutral"; // Programado
 }
 
 function fmt(n: number) {
   return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function parseDateLocal(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () => void }) {
@@ -58,7 +64,7 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
     // "Exportable por lote: base imponible, IVA, ingresos brutos, comisiones"
     const data = [
       { Campo: "Código", Valor: lote.codigo },
-      { Campo: "Fecha", Valor: new Date(lote.fecha).toLocaleDateString("es-AR") },
+      { Campo: "Fecha", Valor: parseDateLocal(lote.fecha).toLocaleDateString("es-AR") },
       { Campo: "Comercio", Valor: lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—" },
       { Campo: "Legajo", Valor: lote.comercio?.legajo ?? lote.comercioId },
       { Campo: "Bandera", Valor: lote.bandera },
@@ -93,7 +99,7 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div className="min-w-0">
             <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Receipt size={18}/> Detalle del lote</h3>
-            <p className="text-sm font-mono text-muted-foreground">{lote.codigo} · {new Date(lote.fecha).toLocaleDateString("es-AR")} · {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? lote.comercioId} · {lote.bandera} {esCuotas ? `· ${lote.cuotas} cuotas` : ""}</p>
+            <p className="text-sm font-mono text-muted-foreground">{lote.codigo} · {parseDateLocal(lote.fecha).toLocaleDateString("es-AR")} · {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? lote.comercioId} · {lote.bandera} {esCuotas ? `· ${lote.cuotas} cuotas` : ""}</p>
           </div>
           <div className="flex gap-2">
             <button onClick={exportLote} className="p-1.5 hover:bg-muted rounded-md" title="Exportar a Excel"><Download size={18} /></button>
@@ -102,7 +108,7 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-3"><div className="text-xs text-muted-foreground flex items-center gap-1"><Calendar size={12}/> Fecha</div><div className="font-mono font-semibold mt-1">{new Date(lote.fecha).toLocaleDateString("es-AR")}</div></Card>
+            <Card className="p-3"><div className="text-xs text-muted-foreground flex items-center gap-1"><Calendar size={12}/> Fecha</div><div className="font-mono font-semibold mt-1">{parseDateLocal(lote.fecha).toLocaleDateString("es-AR")}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground flex items-center gap-1"><Store size={12}/> Comercio</div><div className="font-semibold mt-1 truncate">{lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{lote.comercio?.legajo ?? lote.comercioId}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Bandera</div><div className="font-semibold mt-1">{lote.bandera}</div><div className="text-xs text-muted-foreground">{esCuotas ? `${lote.cuotas} cuotas` : "Pago único"}</div></Card>
             <Card className="p-3"><div className="text-xs text-muted-foreground">Estado</div><div className="mt-1"><Badge tone={tone(lote.estado)}>{lote.estado}</Badge></div><div className="font-mono text-xs mt-1">{lote.cantidadOperaciones} ops</div></Card>
@@ -178,6 +184,45 @@ function LoteDetalle({ lote, onClose }: { lote: LoteAcreditacion; onClose: () =>
               </div>
             )}
           </Card>
+
+          <div className="flex justify-end gap-2 pt-2">
+            {(lote.estado === "Programado" || lote.estado === "Pendiente") && (
+              <button
+                onClick={async () => {
+                  try {
+                    await updateLote(lote.id, { estado: "Acreditado" });
+                    toast.success(`Lote ${lote.codigo} acreditado`);
+                    queryClient.invalidateQueries({ queryKey: ["lotes"] });
+                    queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
+                    onClose();
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}
+                className="h-9 px-4 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                Acreditar
+              </button>
+            )}
+            {lote.estado === "Programado" && (
+              <button
+                onClick={async () => {
+                  try {
+                    await updateLote(lote.id, { estado: "Cancelado" });
+                    toast.success(`Lote ${lote.codigo} cancelado`);
+                    queryClient.invalidateQueries({ queryKey: ["lotes"] });
+                    queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
+                    onClose();
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}
+                className="h-9 px-4 rounded-md text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -238,7 +283,7 @@ function ComercioDetalleModal({ data, lotes, onClose }: { data: ResumenComercio;
                       <tr key={l.id} className="border-b last:border-0">
                         <td className="px-2 py-1.5 font-mono">{l.codigo}</td>
                         <td className="px-2 py-1.5"><span className="inline-flex rounded-full border px-2 py-0.5 text-[11px] bg-muted/50">{l.bandera}</span></td>
-                        <td className="px-2 py-1.5 font-mono">{new Date(l.fecha).toLocaleDateString("es-AR")}</td>
+                        <td className="px-2 py-1.5 font-mono">{parseDateLocal(l.fecha).toLocaleDateString("es-AR")}</td>
                         <td className="px-2 py-1.5 text-right font-mono">{fmt(l.importeNeto)}</td>
                         <td className="px-2 py-1.5"><Badge tone={tone(l.estado)}>{l.estado}</Badge></td>
                         {lotesDelComercio.some(x=> (x.contracargoMonto ?? 0) >0) && <td className="px-2 py-1.5 text-right font-mono text-red-600">{contra ? `- ${fmt(contra)}` : "—"}</td>}
@@ -380,16 +425,24 @@ function Page() {
     if (r.estado === "Contracargo") {
       base.push({ label:"Acreditar", icon: ArrowUpRight, disabled:!puedeGestionar, onClick:()=> setContracargoModal({lote: r, notas: "", contracargoMonto: String(r.contracargoMonto ?? "")}) } as ActionItem);
     }
-    base.push({ label:"Reprocesar", icon: ArrowUpRight, disabled:!puedeGestionar || r.estado==="Acreditado", onClick:()=> {
-      toast.info("Reprocesando lote");
-      setConfirm({title:"Lote reprocesado",message:`${r.codigo} en reproceso.`});
-    }} as ActionItem);
+    if (r.estado === "Programado" || r.estado === "Pendiente") {
+      base.push({ label:"Acreditar", icon: ArrowUpRight, disabled:!puedeGestionar, onClick:async ()=> {
+        try {
+          await updateLote(r.id, { estado: "Acreditado" });
+          toast.success(`Lote ${r.codigo} acreditado`);
+          queryClient.invalidateQueries({ queryKey: ["lotes"] });
+          queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
+        } catch (e) {
+          toast.error((e as Error).message);
+        }
+      }} as ActionItem);
+    }
     return base;
   };
 
   const columns: Column<LoteAcreditacion>[] = [
-    { key:"fecha", label:"Fecha", minWidth: 120, render:(r)=> <span className="font-mono text-xs tabular-nums">{new Date(r.fecha).toLocaleDateString("es-AR")}</span> },
-    { key:"codigo", label:"Lote", minWidth: 160, maxWidth: 280, render:(r)=> <span className="font-mono text-xs font-semibold">{r.codigo}</span> },
+    { key:"fecha", label:"Fecha", minWidth: 120, render:(r)=> <span className="font-mono text-xs tabular-nums">{parseDateLocal(r.fecha).toLocaleDateString("es-AR")}</span> },
+    { key:"codigo", label:"Lote", minWidth: 160, maxWidth: 280, render:(r)=> <div className="flex items-center gap-1.5"><span className="font-mono text-xs font-semibold">{r.codigo}</span>{r.esEstimado && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 font-medium">estimado</span>}</div> },
     { key:"comercio", label:"Comercio / Legajo", minWidth: 200, maxWidth: 320, render:(r)=> <div><div className="font-semibold text-sm truncate max-w-[160px]">{r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}</div><div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div></div> },
     { key:"bandera", label:"Bandera", minWidth: 100, render:(r)=> <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span> },
     { key:"cantidadOperaciones", label:"Ops", minWidth: 80, render:(r)=> <span className="font-mono tabular-nums">{r.cantidadOperaciones}{r.cuotas && r.cuotas>1 ? ` · ${r.cuotas}c` : ""}</span> },
@@ -425,9 +478,11 @@ function Page() {
             <Label>Estado</Label>
             <select value={estadoFilter} onChange={(e)=> { setEstadoFilter(e.target.value as EstadoLote | ""); setPage(0); }} className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border bg-background text-xs">
               <option value="">Todos</option>
+              <option value="Programado">Programado</option>
               <option value="Pendiente">Pendiente</option>
               <option value="Acreditado">Acreditado</option>
               <option value="Contracargo">Contracargo</option>
+              <option value="Cancelado">Cancelado</option>
             </select>
           </div>
           <div>

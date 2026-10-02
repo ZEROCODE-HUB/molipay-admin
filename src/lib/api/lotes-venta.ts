@@ -6,7 +6,10 @@ const COLUMNS =
   "comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, comision, importe_neto, comercios(id, usuario, legajo, nombre_comercio)";
 
 function toLoteVenta(r: LoteVentaRow): LoteVenta {
-  const com = Array.isArray(r.comercios) ? r.comercios[0] ?? null : null;
+  // Igual que en lotes.ts: PostgREST devuelve OBJECT para el join to-one, no
+  // array. Con solo `Array.isArray(...) ? [0] : null` el nombre de comercio
+  // quedaba siempre vacio.
+  const com = Array.isArray(r.comercios) ? (r.comercios[0] ?? null) : (r.comercios ?? null);
   return {
     comercioId: r.comercio_id,
     bandera: r.bandera,

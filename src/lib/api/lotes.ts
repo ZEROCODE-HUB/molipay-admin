@@ -4,10 +4,13 @@ import type { EstadoLote, LoteAcreditacion, LoteAcreditacionRow, Movimiento, Mov
 import { toMovimiento } from "./mappers";
 
 const COLUMNS =
-  "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto, comercios(id, usuario, legajo, nombre_comercio)";
+  "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, es_estimado, dias_habiles_aplicados, fecha_estimada_recalcular, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto, comercios(id, usuario, legajo, nombre_comercio)";
 
 function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
-  const com = Array.isArray(r.comercios) ? r.comercios[0] : null;
+  // PostgREST devuelve OBJECT para relaciones to-one (comercio_id -> comercios.id),
+  // no un array. Antes era `Array.isArray(...) ? [0] : null`, que daba null
+  // siempre: la celda mostraba "—" y el legajo caia al fallback del uuid.
+  const com = Array.isArray(r.comercios) ? (r.comercios[0] ?? null) : (r.comercios ?? null);
   return {
     id: r.id,
     codigo: r.codigo,
@@ -28,6 +31,9 @@ function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
     comisionCierreLoteMonto: r.comision_cierre_lote_monto != null ? Number(r.comision_cierre_lote_monto) : null,
     importeNeto: Number(r.importe_neto),
     estado: r.estado,
+    esEstimado: r.es_estimado ?? true,
+    diasHabilesAplicados: r.dias_habiles_aplicados != null ? Number(r.dias_habiles_aplicados) : null,
+    fechaEstimadaRecalcular: r.fecha_estimada_recalcular ?? false,
     resueltoPor: r.resuelto_por,
     fechaResolucion: r.fecha_resolucion,
     notasResolucion: r.notas_resolucion,
@@ -186,6 +192,11 @@ export async function updateLote(id: string, input: UpdateLoteInput): Promise<Lo
       // ignore
     }
     payload.fecha_resolucion = new Date().toISOString();
+    // Al acreditar o contracargo, los valores estimados se confirman (ya no son estimados)
+    if (input.estado === "Acreditado" || input.estado === "Contracargo") {
+      payload.es_estimado = false;
+      payload.fecha_estimada_recalcular = false;
+    }
   }
 
   const { data, error } = await sb.from("lotes_acreditacion").update(payload).eq("id", id).select(COLUMNS).single();

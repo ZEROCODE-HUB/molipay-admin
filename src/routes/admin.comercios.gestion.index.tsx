@@ -37,7 +37,6 @@ import type {
   EstadoComercio,
   NivelComercio,
 } from "@/lib/api/types";
-import { metodosPagoIniciales } from "@/data/metodos-pago";
 import { ESTADOS_COMERCIO, NIVELES_COMERCIO } from "@/lib/api/types";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
@@ -118,15 +117,17 @@ function formatPct(n: number): string {
 
 function BanderasSection({ comercioId }: { comercioId: string }) {
   const [banderas, setBanderas] = useState<import("@/lib/api/types").ComercioBandera[]>([]);
+  const [banderasCatalogo, setBanderasCatalogo] = useState<import("@/lib/api/banderas").Bandera[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
-  const [formBandera, setFormBandera] = useState("");
+  const [formBanderaId, setFormBanderaId] = useState("");
   const [formBanderaCustom, setFormBanderaCustom] = useState("");
   const [formMolipay, setFormMolipay] = useState("");
   const [formPayway, setFormPayway] = useState("");
   const [formEstado, setFormEstado] = useState<import("@/lib/api/types").ComercioBanderaEstado>("Activo");
+  const [formMetodoKey, setFormMetodoKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
   const [cuotasBandera, setCuotasBandera] = useState<import("@/lib/api/types").ComercioBandera | null>(null);
@@ -139,15 +140,20 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
   const [savingCuota, setSavingCuota] = useState(false);
   const [confirmDeleteCuota, setConfirmDeleteCuota] = useState<import("@/lib/api/types").ComercioBanderaCuota | null>(null);
 
-  const METODOS_PAGO = metodosPagoIniciales.map((m) => m.nombre);
-
   const cargar = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { listByComercio } = await import("@/lib/api/comercio-banderas");
-      const data = await listByComercio(comercioId);
+      const [comercioBanderasMod, banderasMod] = await Promise.all([
+        import("@/lib/api/comercio-banderas"),
+        import("@/lib/api/banderas"),
+      ]);
+      const [data, catalog] = await Promise.all([
+        comercioBanderasMod.listByComercio(comercioId),
+        banderasMod.listBanderas(),
+      ]);
       setBanderas(data);
+      setBanderasCatalogo(catalog.filter((b: import("@/lib/api/banderas").Bandera) => b.estado === "Activo"));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -162,27 +168,29 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
 
   const openCreate = () => {
     setEditing(null);
-    setFormBandera(METODOS_PAGO[0] || "");
+    setFormBanderaId(banderasCatalogo[0]?.id || "");
     setFormBanderaCustom("");
     setFormMolipay("");
     setFormPayway("");
     setFormEstado("Activo");
+    setFormMetodoKey(banderasCatalogo[0]?.metodoKey || "");
     setShowForm(true);
   };
 
   const openEdit = (b: import("@/lib/api/types").ComercioBandera) => {
     setEditing(b);
-    const isCommon = METODOS_PAGO.includes(b.bandera);
-    setFormBandera(isCommon ? b.bandera : "__custom__");
-    setFormBanderaCustom(isCommon ? "" : b.bandera);
+    setFormBanderaId(b.bandera_id || "");
+    setFormBanderaCustom("");
     setFormMolipay(String(b.comisionMolipay));
     setFormPayway(String(b.comisionPayway));
     setFormEstado(b.estado);
+    setFormMetodoKey(b.metodoKey || "");
     setShowForm(true);
   };
 
   const guardar = async () => {
-    const banderaFinal = formBandera === "__custom__" ? formBanderaCustom.trim() : formBandera.trim();
+    const selectedBandera = banderasCatalogo.find((b) => b.id === formBanderaId);
+    const banderaFinal = selectedBandera?.nombre || formBanderaCustom.trim();
     if (!banderaFinal) return;
     const molipay = parseFloat(formMolipay.replace(",", ".")) || 0;
     const payway = parseFloat(formPayway.replace(",", ".")) || 0;
@@ -190,12 +198,25 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
     try {
       const mod = await import("@/lib/api/comercio-banderas");
       if (editing) {
-        await mod.updateBandera(editing.id, { bandera: banderaFinal, comisionMolipay: molipay, comisionPayway: payway, estado: formEstado });
+        await mod.updateBandera(editing.id, {
+          bandera: banderaFinal,
+          comisionMolipay: molipay,
+          comisionPayway: payway,
+          estado: formEstado,
+          banderaId: formBanderaId || undefined,
+          metodoKey: formMetodoKey || undefined,
+        });
       } else {
-        await mod.createBandera(comercioId, { bandera: banderaFinal, comisionMolipay: molipay, comisionPayway: payway, estado: formEstado });
+        await mod.createBandera(comercioId, {
+          bandera: banderaFinal,
+          comisionMolipay: molipay,
+          comisionPayway: payway,
+          estado: formEstado,
+          banderaId: formBanderaId || undefined,
+          metodoKey: formMetodoKey || undefined,
+        });
       }
       setShowForm(false);
-      setEditing(null);
       await cargar();
     } catch (e) {
       setError((e as Error).message);
@@ -295,6 +316,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
             <thead>
               <tr className="border-b bg-muted/50 text-left">
                 <th className="px-3 py-2.5 font-display font-semibold text-foreground">Bandera</th>
+                <th className="px-3 py-2.5 font-display font-semibold text-foreground">Método</th>
                 <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Comisión MoliPay</th>
                 <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Comisión PayWay</th>
                 <th className="px-3 py-2.5 font-display font-semibold text-foreground text-right">% Neto</th>
@@ -306,6 +328,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
               {banderas.map((b) => (
                 <tr key={b.id} className="border-b last:border-0">
                   <td className="px-3 py-2.5 font-medium">{b.bandera}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{b.metodoKey || "-"}</td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(b.comisionMolipay)}</td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatPct(b.comisionPayway)}</td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums font-semibold">{formatPct(b.comisionNeta)}</td>
@@ -328,7 +351,7 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
           open
           onClose={() => { setShowForm(false); setEditing(null); }}
           title={editing ? "Editar bandera" : "Agregar bandera"}
-          description={editing ? `Editando ${editing.bandera}` : "Seleccioná una bandera común o ingresá texto libre."}
+          description={editing ? `Editando ${editing.bandera}` : "Seleccioná una bandera o ingresá texto libre."}
           onSubmit={guardar}
           submitLabel={saving ? "Guardando…" : editing ? "Guardar" : "Agregar"}
           isSubmitting={saving}
@@ -336,13 +359,40 @@ function BanderasSection({ comercioId }: { comercioId: string }) {
           <div className="space-y-4">
             <div>
               <Label>Bandera</Label>
-              <select value={formBandera} onChange={(e) => setFormBandera(e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
-                {METODOS_PAGO.map((b) => (<option key={b} value={b}>{b}</option>))}
+              <select
+                value={formBanderaId}
+                onChange={(e) => {
+                  const selected = banderasCatalogo.find((b: import("@/lib/api/banderas").Bandera) => b.id === e.target.value);
+                  setFormBanderaId(e.target.value);
+                  setFormMetodoKey(selected?.metodoKey || "");
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Seleccionar…</option>
+                {banderasCatalogo.map((b) => (
+                  <option key={b.id} value={b.id}>{b.nombre}</option>
+                ))}
                 <option value="__custom__">Otra (texto libre)…</option>
               </select>
-              {formBandera === "__custom__" && (
-                <Input value={formBanderaCustom} onChange={(e) => setFormBanderaCustom(e.target.value)} placeholder="Ej: Naranja, Tarjeta Propia…" className="mt-2" />
+              {formBanderaId === "__custom__" && (
+                <Input
+                  value={formBanderaCustom}
+                  onChange={(e) => setFormBanderaCustom(e.target.value)}
+                  placeholder="Ej: Naranja, Tarjeta Propia…"
+                  className="mt-2"
+                />
               )}
+            </div>
+            <div>
+              <Label>Clave método pago</Label>
+              <Input
+                value={formMetodoKey}
+                onChange={(e) => setFormMetodoKey(e.target.value)}
+                placeholder="Ej: visa-cred, mc-deb, amex…"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Clave única del método de pago (visa-cred, mc-deb, amex, naranja, transferencia, qr)
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
