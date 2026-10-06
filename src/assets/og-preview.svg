@@ -1,0 +1,122 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A1628"/>
+      <stop offset="100%" stop-color="#142438"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#A00D26"/>
+      <stop offset="100%" stop-color="#7A0A1D"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A00D26" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#A00D26" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="rounded">
+      <rect width="1200" height="630" rx="16"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <!-- Background -->
+    <rect width="1200" height="630" fill="url(#bg)"/>
+
+    <!-- Decorative glow -->
+    <circle cx="200" cy="100" r="400" fill="url(#glow)"/>
+    <circle cx="1000" cy="500" r="350" fill="url(#glow)"/>
+
+    <!-- Top accent bar -->
+    <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
+
+    <!-- Decorative geometric elements -->
+    <rect x="50" y="50" width="80" height="80" rx="8" fill="#A00D26" opacity="0.08" stroke="#A00D26" stroke-width="1" stroke-opacity="0.15"/>
+    <rect x="70" y="70" width="80" height="80" rx="8" fill="#A00D26" opacity="0.06" stroke="#A00D26" stroke-width="1" stroke-opacity="0.1"/>
+    
+    <rect x="1020" y="450" width="100" height="100" rx="12" fill="#A00D26" opacity="0.06" stroke="#A00D26" stroke-width="1" stroke-opacity="0.1"/>
+    <rect x="1040" y="470" width="100" height="100" rx="12" fill="#A00D26" opacity="0.04" stroke="#A00D26" stroke-width="1" stroke-opacity="0.08"/>
+
+    <!-- Grid pattern subtle -->
+    <line x1="0" y1="200" x2="1200" y2="200" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+    <line x1="0" y1="400" x2="1200" y2="400" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+    <line x1="300" y1="0" x2="300" y2="630" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+    <line x1="600" y1="0" x2="600" y2="630" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+    <line x1="900" y1="0" x2="900" y2="630" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+
+    <!-- Main Content -->
+    
+    <!-- Logo area -->
+    <circle cx="80" cy="95" r="28" fill="#A00D26"/>
+    <text x="80" y="103" text-anchor="middle" fill="#FFFFFF" font-family="Inter, sans-serif" font-size="26" font-weight="700">M</text>
+
+    <text x="120" y="103" fill="#FFFFFF" font-family="Inter, sans-serif" font-size="20" font-weight="600" letter-spacing="1">MOLLY</text>
+
+    <!-- Divider -->
+    <line x1="60" y1="145" x2="350" y2="145" stroke="#A00D26" stroke-width="2" stroke-opacity="0.5"/>
+
+    <!-- Title -->
+    <text x="60" y="210" fill="#FFFFFF" font-family="Inter, sans-serif" font-size="48" font-weight="700" letter-spacing="-0.5">
+      Admin Console
+    </text>
+
+    <!-- Subtitle -->
+    <text x="60" y="265" fill="#94A3B8" font-family="Inter, sans-serif" font-size="22" font-weight="400" letter-spacing="0.3">
+      Panel de administración
+    </text>
+
+    <!-- Feature tags -->
+    <rect x="60" y="310" width="130" height="32" rx="6" fill="#A00D26" opacity="0.2"/>
+    <text x="125" y="331" text-anchor="middle" fill="#FBEAEC" font-family="Inter, sans-serif" font-size="13" font-weight="500">Usuarios</text>
+
+    <rect x="205" y="310" width="140" height="32" rx="6" fill="#A00D26" opacity="0.2"/>
+    <text x="275" y="331" text-anchor="middle" fill="#FBEAEC" font-family="Inter, sans-serif" font-size="13" font-weight="500">Movimientos</text>
+
+    <rect x="360" y="310" width="120" height="32" rx="6" fill="#A00D26" opacity="0.2"/>
+    <text x="420" y="331" text-anchor="middle" fill="#FBEAEC" font-family="Inter, sans-serif" font-size="13" font-weight="500">Reportes</text>
+
+    <!-- Right side decorative dashboard preview -->
+    <rect x="650" y="120" width="470" height="340" rx="12" fill="#FFFFFF" opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+    
+    <!-- Mini charts -->
+    <rect x="680" y="150" width="200" height="80" rx="6" fill="#FFFFFF" opacity="0.04"/>
+    <rect x="680" y="160" width="60" height="20" rx="3" fill="#A00D26" opacity="0.3"/>
+    <rect x="680" y="185" width="40" height="12" rx="2" fill="#FFFFFF" opacity="0.1"/>
+    <rect x="730" y="185" width="30" height="12" rx="2" fill="#FFFFFF" opacity="0.08"/>
+    
+    <!-- Upward trend line -->
+    <polyline points="690,220 720,210 750,215 780,195 810,200 840,180 860,185" fill="none" stroke="#A00D26" stroke-width="2.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Bar chart mini -->
+    <rect x="900" y="160" width="30" height="60" rx="3" fill="#A00D26" opacity="0.4"/>
+    <rect x="940" y="180" width="30" height="40" rx="3" fill="#A00D26" opacity="0.25"/>
+    <rect x="980" y="150" width="30" height="70" rx="3" fill="#A00D26" opacity="0.35"/>
+    <rect x="1020" y="170" width="30" height="50" rx="3" fill="#A00D26" opacity="0.2"/>
+    <rect x="1060" y="155" width="30" height="65" rx="3" fill="#A00D26" opacity="0.3"/>
+
+    <!-- Stats row mini -->
+    <rect x="680" y="260" width="135" height="60" rx="6" fill="#FFFFFF" opacity="0.04"/>
+    <text x="695" y="282" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="400">Usuarios activos</text>
+    <text x="695" y="305" fill="#FFFFFF" font-family="Inter, sans-serif" font-size="20" font-weight="700">12,458</text>
+
+    <rect x="830" y="260" width="135" height="60" rx="6" fill="#FFFFFF" opacity="0.04"/>
+    <text x="845" y="282" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="400">Volumen hoy</text>
+    <text x="845" y="305" fill="#FFFFFF" font-family="Inter, sans-serif" font-size="20" font-weight="700">$2.4M</text>
+
+    <rect x="980" y="260" width="110" height="60" rx="6" fill="#FFFFFF" opacity="0.04"/>
+    <text x="995" y="282" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="400">Alertas</text>
+    <text x="995" y="305" fill="#FBEAEC" font-family="Inter, sans-serif" font-size="20" font-weight="700">3</text>
+
+    <!-- Bottom tagline -->
+    <text x="60" y="420" fill="#64748B" font-family="Inter, sans-serif" font-size="13" font-weight="400" letter-spacing="2">
+      MOLIPAY · BACKOFFICE
+    </text>
+
+    <!-- URL -->
+    <text x="60" y="575" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="400">
+      molipay.com
+    </text>
+
+    <!-- Bottom accent bar -->
+    <rect x="0" y="626" width="1200" height="4" fill="url(#accent)" opacity="0.6"/>
+  </g>
+</svg>

@@ -1,0 +1,65 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.output
+.vinxi
+.tanstack/**
+.nitro
+*.local
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Exports de trabajo de Supabase (auditoria de schema)
+/csv/
+
+# Cache local de supabase CLI (link/login)
+/supabase/.temp/
+
+# ---------------------------------------------------------------------------
+# Documentacion y binarios pesados (viven en Google Drive, no en el repo)
+# ---------------------------------------------------------------------------
+/IDENTIDAD/
+/DOCS-REPORTES/
+/imágenes/
+/docs/
+src-admin.zip
+*.zip
+*.xlsx
+
+# ---------------------------------------------------------------------------
+# Supabase: migraciones locales / dumps del schema remoto
+# ---------------------------------------------------------------------------
+/supabase/migrations/
+
+# ---------------------------------------------------------------------------
+# Secretos y scripts temporales
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+generarllave*.js
+temp_parse.js
+test.md
+manual_text.txt
