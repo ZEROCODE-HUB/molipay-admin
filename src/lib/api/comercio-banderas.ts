@@ -2,7 +2,7 @@ import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 import type { ComercioBandera, ComercioBanderaEstado, ComercioBanderaRow } from "./types";
 
-const COLUMNS = "id, comercio_id, bandera, comision_molipay, comision_payway, comision_neta, estado, created_at, updated_at";
+const COLUMNS = "id, comercio_id, bandera, bandera_id, metodo_key, comision_molipay, comision_payway, comision_neta, estado, created_at, updated_at";
 
 function toBandera(r: ComercioBanderaRow): ComercioBandera {
   return {

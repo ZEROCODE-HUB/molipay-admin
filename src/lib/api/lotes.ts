@@ -4,7 +4,7 @@ import type { EstadoLote, LoteAcreditacion, LoteAcreditacionRow, Movimiento, Mov
 import { toMovimiento } from "./mappers";
 
 const COLUMNS =
-  "id, codigo, comercio_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, es_estimado, dias_habiles_aplicados, fecha_estimada_recalcular, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto, comercios(id, usuario, legajo, nombre_comercio)";
+  "id, codigo, comercio_id, bandera_id, bandera, fecha, cantidad_operaciones, importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto, tasa_molipay_pct, tasa_molipay_monto, cuotas, costo_payway_pago_unico, contracargo_monto, comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto, estado, es_estimado, dias_habiles_aplicados, fecha_estimada_recalcular, resuelto_por, fecha_resolucion, notas_resolucion, created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto, fecha_cobro_real, comercios(id, usuario, legajo, nombre_comercio, site_id)";
 
 function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
   // PostgREST devuelve OBJECT para relaciones to-one (comercio_id -> comercios.id),
@@ -15,6 +15,8 @@ function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
     id: r.id,
     codigo: r.codigo,
     comercioId: r.comercio_id,
+    /** Texto denormalizado. FK real: banderaId */
+    banderaId: (r as LoteAcreditacionRow).bandera_id ?? null,
     bandera: r.bandera,
     fecha: r.fecha,
     cantidadOperaciones: Number(r.cantidad_operaciones),
@@ -42,7 +44,16 @@ function toLote(r: LoteAcreditacionRow): LoteAcreditacion {
     ivaMonto: r.iva_monto != null ? Number(r.iva_monto) : null,
     iibbMonto: r.iibb_monto != null ? Number(r.iibb_monto) : null,
     debitoCreditoMonto: r.debito_credito_monto != null ? Number(r.debito_credito_monto) : null,
-    comercio: com ? { id: com.id, usuario: com.usuario, legajo: com.legajo, nombreComercio: com.nombre_comercio } : null,
+    fechaCobroReal: r.fecha_cobro_real ?? null,
+    comercio: com
+      ? {
+          id: com.id,
+          usuario: com.usuario,
+          legajo: com.legajo,
+          nombreComercio: com.nombre_comercio,
+          siteId: com.site_id ?? null,
+        }
+      : null,
     importeFinal: Number(r.importe_neto),
   };
 }
@@ -56,6 +67,63 @@ export type LotesFilters = Pagination & {
   fechaHasta?: string;
 };
 
+/**
+ * Resuelve un texto libre a IDs de comercios coincidentes.
+ *
+ * El join `comercios!lotes_acreditacion_comercio_id_fkey` no soporta
+ * `or()` sobre columnas de la relación, así que la búsqueda por texto
+ * se hace en tres pasos:
+ *
+ *   1. Comercios: nombre_comercio, legajo (LPF-/LPJ- + CUIT sin guiones) o usuario.
+ *   2. Clientes: cuit, correo o nombre → legajos.
+ *   3. Comercios por esos legajos (clientes↔comercios comparten legajo).
+ *
+ * El resultado se une y se filtra el listado de lotes con `comercio_id.in.(...)`.
+ * El legajo embebe el CUIT así que el paso 1 ya cubre el caso más común
+ * (búsqueda de dígitos); el paso 2 lo refuerza para CUITs formateados o
+ * nombre del cliente titular del comercio.
+ */
+async function resolverComercioIdsPorTexto(texto: string): Promise<string[]> {
+  const sb = requireSupabase();
+  const qq = texto.trim().replace(/[%_]/g, "\\$&");
+  if (!qq) return [];
+  const ids = new Set<string>();
+
+  try {
+    const { data, error } = await sb
+      .from("comercios")
+      .select("id")
+      .or(`nombre_comercio.ilike.%${qq}%,legajo.ilike.%${qq}%,usuario.ilike.%${qq}%`)
+      .limit(100);
+    if (!error) for (const c of (data ?? []) as { id: string }[]) ids.add(c.id);
+  } catch {
+    // RLS o tabla ausente: se continúa con clientes
+  }
+
+  try {
+    const { data: clientes, error } = await sb
+      .from("clientes")
+      .select("legajo")
+      .or(`cuit.ilike.%${qq}%,correo.ilike.%${qq}%,nombre.ilike.%${qq}%`)
+      .limit(50);
+    if (!error && clientes && clientes.length > 0) {
+      const legajos = Array.from(new Set((clientes as { legajo: string }[]).map((c) => c.legajo).filter(Boolean)));
+      if (legajos.length > 0) {
+        const { data: cs, error: e2 } = await sb
+          .from("comercios")
+          .select("id")
+          .in("legajo", legajos)
+          .limit(100);
+        if (!e2) for (const c of (cs ?? []) as { id: string }[]) ids.add(c.id);
+      }
+    }
+  } catch {
+    // RLS o tabla ausente: se sigue con el set parcial
+  }
+
+  return Array.from(ids);
+}
+
 export async function listLotes(filters: LotesFilters): Promise<Page<LoteAcreditacion>> {
   const sb = requireSupabase();
   const { page, pageSize, search, estado, bandera, comercioId, fechaDesde, fechaHasta } = filters;
@@ -66,9 +134,14 @@ export async function listLotes(filters: LotesFilters): Promise<Page<LoteAcredit
 
   if (search?.trim()) {
     const qq = search.trim().replace(/[%_]/g, "\\$&");
-    // codigo, bandera, comercio legajo/usuario via join not directly filterable via or; fallback to codigo/bandera
-    // For comercio search we filter via comercio_id in client or via ilike on joined field using !inner
-    q = q.or(`codigo.ilike.%${qq}%,bandera.ilike.%${qq}%`);
+    const oraciones: string[] = [`codigo.ilike.%${qq}%`, `bandera.ilike.%${qq}%`];
+    const idsComercio = await resolverComercioIdsPorTexto(search.trim());
+    if (idsComercio.length > 0) {
+      // `in.(uuid1,uuid2,...)` para todos los comercios que matchearon
+      // el texto (incluyendo los matcheados por legajo/CUIT/nombre).
+      oraciones.push(`comercio_id.in.(${idsComercio.join(",")})`);
+    }
+    q = q.or(oraciones.join(","));
   }
   if (estado) q = q.eq("estado", estado);
   if (bandera) q = q.eq("bandera", bandera);
@@ -98,7 +171,7 @@ export async function listLoteMovimientos(loteId: string): Promise<Movimiento[]>
   if (error) throw new DataAccessError(error);
   const movimientoIds = (links ?? []).map((r: { movimiento_id: string }) => r.movimiento_id);
   if (movimientoIds.length === 0) return [];
-  const COLUMNS = "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit)";
+  const COLUMNS = "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit)";
   const { data: movimientos, error: movError } = await sb
     .from("movimientos")
     .select(COLUMNS)
@@ -253,9 +326,155 @@ export async function updateLote(id: string, input: UpdateLoteInput): Promise<Lo
   return toLote(data as LoteAcreditacionRow);
 }
 
-// Convenience wrappers for UI actions
-export async function acreditarLote(id: string, notas?: string): Promise<LoteAcreditacion> {
-  return updateLote(id, { estado: "Acreditado", notasResolucion: notas ?? null });
+// =====================================================================
+// RPCs del flujo Programado → (Subir CSV) → Pendiente → (Acreditar) → Acreditado
+// =====================================================================
+
+export type ResumenKpi = { cantidad: number; monto: number };
+export type ResumenLotesAdmin = {
+  programados: ResumenKpi;
+  pendientes: ResumenKpi;
+  acreditados: ResumenKpi;
+  contracargo: ResumenKpi;
+};
+
+/**
+ * KPIs por estado para las cards de la pantalla.
+ *
+ * Rango de fechas opcional: si no se pasa, se devuelve el universo
+ * completo. Los filtros se aplican en la SQL con la columna `fecha`
+ * (programados/pendientes/contracargo) y con `fecha_resolucion` para
+ * `Acreditado` — el "Mes" del KPI se mide por la fecha de pago, no
+ * por la del lote, así que meses pasados no pierden acreditaciones.
+ */
+export async function resumenLotes(
+  filtros: { fechaDesde?: string; fechaHasta?: string } = {},
+): Promise<ResumenLotesAdmin> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("resumen_lotes_admin", {
+    p_desde: filtros.fechaDesde || null,
+    p_hasta: filtros.fechaHasta || null,
+  });
+  if (error) throw new DataAccessError(error);
+
+  const r = (data ?? {}) as Record<string, { cantidad?: number; monto?: number } | undefined>;
+  const norm = (k: string): ResumenKpi => ({
+    cantidad: Number(r[k]?.cantidad ?? 0),
+    monto: Number(r[k]?.monto ?? 0),
+  });
+  return {
+    programados: norm("programados"),
+    pendientes: norm("pendientes"),
+    acreditados: norm("acreditados"),
+    contracargo: norm("contracargo"),
+  };
+}
+
+/**
+ * Aplica la liquidación de Payway a un lote Programado.
+ *
+ * El frontend envía el snapshot que calculó (mismo `LiquidacionAplicada`
+ * que usa `updateLote`) y la fecha real del cobro si la pudo inferir.
+ * La RPC bloquea el lote, valida estado Programado, graba el snapshot
+ * y lo deja Pendiente sin tocar dinero. La fecha de cobro real se
+ * completa con la del CSV o, si no se pasa, con la fecha estimada
+ * del lote (Payway suele cobrar el mismo día del cierre).
+ */
+export type ResultadoAplicarLiquidacion = {
+  loteId: string;
+  estado: "Pendiente";
+  importeNeto: number;
+  fechaCobroReal: string | null;
+  legajo: string | null;
+};
+
+export async function aplicarLiquidacionLote(
+  id: string,
+  liquidacion: LiquidacionAplicada,
+  fechaCobroReal?: string | null,
+): Promise<ResultadoAplicarLiquidacion> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("aplicar_liquidacion_lote", {
+    p_lote_id: id,
+    p_liquidacion: liquidacion,
+    p_fecha_cobro_real: fechaCobroReal || null,
+  });
+  if (error) throw new DataAccessError(error);
+
+  const r = (data ?? {}) as Record<string, unknown>;
+  return {
+    loteId: String(r.lote_id ?? id),
+    estado: "Pendiente",
+    importeNeto: Number(r.importe_neto ?? 0),
+    fechaCobroReal: (r.fecha_cobro_real as string | null) ?? null,
+    legajo: (r.legajo as string | null) ?? null,
+  };
+}
+
+/**
+ * Acredita un lote Pendiente: lo cierra y mueve el saldo a la subcuenta
+ * Operativa del comercio. La deducción por adelantos se pasa como
+ * monto (el modal lo calculó vía `listAdelantosByComercio`); la RPC lo
+ * descuenta de los adelantos Pendiente/Aprobado del comercio en orden
+ * FIFO para mantener consistente lo que falta devolver.
+ */
+export type ResultadoAcreditarLote = {
+  loteId: string;
+  estado: "Acreditado";
+  importeNeto: number;
+  adelantosDeducidos: number;
+  montoAcreditado: number;
+  subcuentaId: string | null;
+  legajo: string | null;
+};
+
+export async function acreditarLote(
+  id: string,
+  notas?: string,
+  adelantosMonto: number = 0,
+): Promise<ResultadoAcreditarLote> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("acreditar_lote", {
+    p_lote_id: id,
+    p_notas: notas?.trim() || null,
+    p_adelantos_monto: adelantosMonto,
+  });
+  if (error) throw new DataAccessError(error);
+
+  const r = (data ?? {}) as Record<string, unknown>;
+  return {
+    loteId: String(r.lote_id ?? id),
+    estado: "Acreditado",
+    importeNeto: Number(r.importe_neto ?? 0),
+    adelantosDeducidos: Number(r.adelantos_deducidos ?? 0),
+    montoAcreditado: Number(r.monto_acreditado ?? 0),
+    subcuentaId: (r.subcuenta_id as string | null) ?? null,
+    legajo: (r.legajo as string | null) ?? null,
+  };
+}
+
+/**
+ * Exporta todas las filas que matchean los filtros sin paginar.
+ * Recorre páginas de 1000 hasta vaciar; el tamaño evita pegar el tope
+ * de PostgREST de una sola request.
+ */
+export async function exportLotesAcreditacion(
+  filters: Omit<LotesFilters, "page" | "pageSize">,
+): Promise<LoteAcreditacion[]> {
+  const PAGE = 1000;
+  const todas: LoteAcreditacion[] = [];
+  let page = 0;
+  let total = Infinity;
+
+  while (todas.length < total) {
+    const r = await listLotes({ ...filters, page, pageSize: PAGE });
+    todas.push(...r.rows);
+    total = r.total;
+    page += 1;
+    if (r.rows.length === 0) break;
+  }
+
+  return todas;
 }
 
 export async function resolverContracargo(

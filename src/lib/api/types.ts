@@ -190,6 +190,8 @@ export type MovimientoRow = {
   estado_id: number;
   comercio_id?: string | null;
   bandera?: string | null;
+  /** FK a banderas.id (comercio_banderas.id) */
+  bandera_id?: string | null;
   estados_movimiento?:
     | {
         codigo: string;
@@ -221,7 +223,10 @@ export type Movimiento = {
   createdAt: string;
   estadoId: number;
   comercioId?: string | null;
+  /** Texto de la bandera (denormalizado, para display). FK real: bandera_id */
   bandera?: string | null;
+  /** FK a banderas.id (comercio_banderas.id) */
+  banderaId?: string | null;
   estadoCodigo?: string;
   estadoNombre?: string;
   esFinal?: boolean;
@@ -516,6 +521,7 @@ export type ComercioRow = {
   estado: EstadoComercio;
   nivel: NivelComercio;
   ejecutivo_responsable_id?: string | null;
+  site_id?: string | null;
   created_at: string;
   updated_at: string;
   clientes?:
@@ -553,6 +559,7 @@ export type Comercio = {
     nombre: string;
     email: string;
   } | null;
+  siteId?: string | null;
   puntosVenta: PuntoVenta[];
   createdAt: string;
   updatedAt: string;
@@ -565,6 +572,8 @@ export type ComercioInput = {
   categoriaId: number | null;
   nivel: NivelComercio;
   estado: EstadoComercio;
+  ejecutivoResponsableId?: string | null;
+  siteId?: string | null;
 };
 
 export type ClienteSelect = {
@@ -1010,6 +1019,7 @@ export type ImpuestoAsignacionRow = {
   monto: number | null;
   estado: EstadoImpuesto;
   fecha_asignacion: string | null;
+  tipo_operacion: TipoOperacion | null;
   impuestos?: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null }[] | null;
   clientes?:
     | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
@@ -1024,6 +1034,7 @@ export type ImpuestoAsignacion = {
   monto: number | null;
   estado: EstadoImpuesto;
   fechaAsignacion: string | null;
+  tipoOperacion: TipoOperacion | null;
   impuesto: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null } | null;
   cliente: {
     legajo: string;
@@ -1041,6 +1052,7 @@ export type ImpuestoAsignacionInput = {
   monto: number | null;
   estado: EstadoImpuesto;
   fecha_asignacion?: string | null;
+  tipo_operacion?: TipoOperacion | null;
 };
 
 export type ImpuestoAsignacionFilters = Pagination & {
@@ -1289,8 +1301,23 @@ export type ComercioBanderaCuota = {
  * sola.
  */
 export type ComercioJoined =
-  | { id: string; usuario: string; legajo: string; nombre_comercio: string | null }
-  | { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[];
+  | {
+      id: string;
+      usuario: string;
+      legajo: string;
+      nombre_comercio: string | null;
+      /** Identificador del sitio / establecimiento en Payway. Es el
+       *  valor que va en la columna `ESTABLECIMIENTO` del CSV de
+       *  liquidación: el motor de match lo usa para resolver comercio. */
+      site_id?: string | null;
+    }
+  | {
+      id: string;
+      usuario: string;
+      legajo: string;
+      nombre_comercio: string | null;
+      site_id?: string | null;
+    }[];
 
 export type LoteVentaRow = {
   comercio_id: string;
@@ -1301,7 +1328,16 @@ export type LoteVentaRow = {
   impuestos: number;
   comision: number;
   importe_neto: number;
-  comercios?: ComercioJoined | null;
+  /**
+   * La vista `v_lotes_venta` (schema remoto) expone el join a `comercios`
+   * como columnas PLANAS (`comercios_id`, `comercios_usuario`, ...), NO como
+   * embed PostgREST. Intentar `comercios(id, ...)` en el select dejaba el
+   * nombre y el legajo vacíos (la vista no tiene relación embebible).
+   */
+  comercios_id?: string | null;
+  comercios_usuario?: string | null;
+  comercios_legajo?: string | null;
+  comercios_nombre_comercio?: string | null;
 };
 
 export type LoteVenta = {
@@ -1312,7 +1348,11 @@ export type LoteVenta = {
   importeBruto: number;
   impuestos: number;
   comision: number;
+  /** Valor que devuelve la vista (sum(monto_cobrado)). NO es el neto de la
+   *  venta: la spec manda usar netoEstimado = Bruto − Impuestos − Comisión. */
   importeNeto: number;
+  /** Neto estimado = importeBruto − impuestos − comision (fórmula corregida). */
+  netoEstimado: number;
   comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null } | null;
 };
 
@@ -1325,7 +1365,10 @@ export type LoteAcreditacionRow = {
   id: string;
   codigo: string;
   comercio_id: string;
+  /** Texto denormalizado (para display). FK real: bandera_id */
   bandera: string;
+  /** FK a banderas.id */
+  bandera_id?: string | null;
   fecha: string;
   cantidad_operaciones: number;
   importe_bruto: number;
@@ -1352,6 +1395,8 @@ export type LoteAcreditacionRow = {
   iva_monto: number | null;
   iibb_monto: number | null;
   debito_credito_monto: number | null;
+  /** Fecha real del cobro de Payway. null mientras el lote es Programado. */
+  fecha_cobro_real: string | null;
   comercios?: ComercioJoined | null;
 };
 
@@ -1359,7 +1404,10 @@ export type LoteAcreditacion = {
   id: string;
   codigo: string;
   comercioId: string;
+  /** Texto denormalizado (para display). FK real: banderaId */
   bandera: string;
+  /** FK a banderas.id */
+  banderaId?: string | null;
   fecha: string;
   cantidadOperaciones: number;
   importeBruto: number;
@@ -1386,7 +1434,9 @@ export type LoteAcreditacion = {
   ivaMonto: number | null;
   iibbMonto: number | null;
   debitoCreditoMonto: number | null;
-  comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null } | null;
+  /** Fecha real del cobro de Payway. null mientras el lote es Programado. */
+  fechaCobroReal: string | null;
+  comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null; siteId: string | null } | null;
   // compat mock
   importeFinal?: number;
 };

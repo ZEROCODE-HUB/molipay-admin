@@ -245,7 +245,7 @@ export type ImpuestoAsignacionFilters = Pagination & {
 };
 
 const ASIGNACIONES_COLUMNS =
-  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
+  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
 
 type AsignacionRowConEmbed = ImpuestoAsignacionRow & {
   impuestos?:
@@ -309,9 +309,10 @@ export async function createImpuestoAsignacion(
       monto: input.monto,
       estado: input.estado ?? "Activo",
       fecha_asignacion: input.fecha_asignacion ?? new Date().toISOString().slice(0, 10),
+      tipo_operacion: input.tipo_operacion ?? null,
     })
     .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);
@@ -328,13 +329,14 @@ export async function updateImpuestoAsignacion(
   if (input.monto !== undefined) payload.monto = input.monto;
   if (input.estado !== undefined) payload.estado = input.estado;
   if (input.fecha_asignacion !== undefined) payload.fecha_asignacion = input.fecha_asignacion;
+  if (input.tipo_operacion !== undefined) payload.tipo_operacion = input.tipo_operacion;
 
   const { data, error } = await sb
     .from("impuestos_asignaciones")
     .update(payload)
     .eq("id", id)
     .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
+      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
     )
     .single();
   if (error) throw new DataAccessError(error);

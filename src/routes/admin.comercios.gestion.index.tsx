@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, AlertTriangle, Inbox } from "lucide-react";
+import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, AlertTriangle, Inbox, HelpCircle } from "lucide-react";
 import {
   PageHeader,
   Badge,
@@ -570,6 +570,7 @@ function ComercioDetalle({ comercio, onClose }: { comercio: Comercio; onClose: (
                 }
               />
               <Field label="Nivel" value={comercio.nivel} />
+              <Field label="site_id (Payway)" value={<span className="font-mono text-xs">{comercio.siteId ?? "—"}</span>} />
               <Field
                 label="Estado"
                 value={<Badge tone={estadoBadgeTone(comercio.estado)}>{comercio.estado}</Badge>}
@@ -666,6 +667,29 @@ type ComercioForm = {
   ejecutivoResponsableId: string;
 };
 
+/**
+ * Label con un icono "?" a la derecha. Al pasar el mouse muestra la ayuda
+ * en lenguaje simple, pensada para usuarios no técnicos.
+ */
+function LabelAyuda({
+  htmlFor,
+  hint,
+  children,
+}: {
+  htmlFor: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label htmlFor={htmlFor}>{children}</Label>
+      <span title={hint} className="cursor-help inline-flex shrink-0">
+        <HelpCircle size={13} className="text-muted-foreground/70" />
+      </span>
+    </div>
+  );
+}
+
 function ComercioFormModal({
   comercio,
   clientes,
@@ -688,6 +712,7 @@ function ComercioFormModal({
     nivel: NivelComercio;
     estado: EstadoComercio;
     ejecutivoResponsableId: string | null;
+    siteId: string | null;
   }) => void;
   isSaving?: boolean;
 }) {
@@ -702,6 +727,7 @@ function ComercioFormModal({
     comercio?.estado ?? "Pendiente de aprobación",
   );
   const [ejecutivoId, setEjecutivoId] = useState(comercio?.ejecutivoResponsableId ?? "");
+  const [siteId, setSiteId] = useState(comercio?.siteId ?? "");
 
   const clienteSeleccionado = clientes.find((c) => c.legajo === clienteLegajo) ?? null;
 
@@ -725,6 +751,7 @@ function ComercioFormModal({
       nivel,
       estado,
       ejecutivoResponsableId: ejecutivoId || null,
+      siteId: siteId.trim() || null,
     });
   };
 
@@ -745,7 +772,12 @@ function ComercioFormModal({
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <Label htmlFor="gc-cliente">Cliente (legajo)</Label>
+          <LabelAyuda
+            htmlFor="gc-cliente"
+            hint="El cliente se elige de la lista de clientes ya cargada. No se puede escribir uno nuevo a mano."
+          >
+            Cliente (legajo)
+          </LabelAyuda>
           {comercio ? (
             <Input id="gc-cliente" value={`${clienteSeleccionado?.nombre ?? comercio.legajo} · ${comercio.legajo}`} disabled />
           ) : (
@@ -805,12 +837,37 @@ function ComercioFormModal({
               )}
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground mt-1">
-            El legajo es una FK real a <code>clientes.legajo</code>; no se puede cargar texto libre.
-          </p>
         </div>
+        {clienteSeleccionado && (
+          <div className="sm:col-span-2">
+            <div className="rounded-md border border-border bg-muted/30 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Datos del cliente (solo lectura)
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-xs text-muted-foreground">CUIT / CUIL</span>
+                  <Input
+                    value={clienteSeleccionado.cuit ?? "—"}
+                    disabled
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Razón Social / Nombre</span>
+                  <Input value={clienteSeleccionado.nombre} disabled className="text-sm" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="sm:col-span-2">
-          <Label htmlFor="gc-usuario">Usuario (email)</Label>
+          <LabelAyuda
+            htmlFor="gc-usuario"
+            hint="Se completa solo con el correo del cliente elegido."
+          >
+            Usuario (email)
+          </LabelAyuda>
           <Input
             id="gc-usuario"
             value={usuario}
@@ -818,19 +875,35 @@ function ComercioFormModal({
             placeholder="email@dominio.com"
             disabled={!comercio && !!clienteSeleccionado}
           />
-          {!comercio && clienteSeleccionado && (
-            <p className="text-[11px] text-muted-foreground mt-1">Correo autocompletado desde el legajo seleccionado (no editable).</p>
-          )}
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="gc-nombre-comercio">Nombre del comercio</Label>
+          <LabelAyuda
+            htmlFor="gc-nombre-comercio"
+            hint="Es el nombre que ve el cliente cuando paga con Link de Pago o QR."
+          >
+            Nombre del comercio
+          </LabelAyuda>
           <Input
             id="gc-nombre-comercio"
             value={nombreComercio}
             onChange={(e) => setNombreComercio(e.target.value)}
             placeholder="Ej: Kiosco Central, Distribuidora Delta"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">Nombre propio del comercio (se verá en Links de Pago y Pagos QR).</p>
+        </div>
+        <div className="sm:col-span-2">
+          <LabelAyuda
+            htmlFor="gc-site-id"
+            hint="Es el número que Payway le asignó a este comercio (también llamado “site id”) para reconocer sus cobros y liquidaciones. Lo entrega el equipo de Payway al dar de alta el comercio."
+          >
+            Nro. de Establecimiento (Payway)
+          </LabelAyuda>
+          <Input
+            id="gc-site-id"
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+            placeholder="Ej: 12345"
+            className="font-mono"
+          />
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="gc-categoria">Código de categoría</Label>
@@ -978,6 +1051,7 @@ function Page() {
     nivel: NivelComercio;
     estado: EstadoComercio;
     ejecutivoResponsableId: string | null;
+    siteId: string | null;
   }) => {
     setIsSaving(true);
     try {
@@ -989,7 +1063,8 @@ function Page() {
           nivel: input.nivel,
           estado: input.estado,
           ejecutivoResponsableId: input.ejecutivoResponsableId,
-        } as any);
+          siteId: input.siteId,
+        });
       } else {
         await createComercio({
           legajo: input.clienteLegajo,
@@ -998,7 +1073,9 @@ function Page() {
           categoriaId: input.categoriaId,
           nivel: input.nivel,
           estado: input.estado,
-        } as any);
+          ejecutivoResponsableId: input.ejecutivoResponsableId,
+          siteId: input.siteId,
+        });
       }
       invalidar();
       setShowNew(false);

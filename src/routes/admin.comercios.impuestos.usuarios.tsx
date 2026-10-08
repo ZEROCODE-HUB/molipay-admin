@@ -20,7 +20,8 @@ import {
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { ImpuestoAsignacion, TipoImpuesto } from "@/lib/api/types";
+import type { ImpuestoAsignacion, TipoImpuesto, TipoOperacion } from "@/lib/api/types";
+import { TIPOS_OPERACION } from "@/lib/api/types";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto, type ImpuestoPorCobrar } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/usuarios")({
@@ -95,6 +96,7 @@ type AsignacionForm = {
   monto: string;
   tipo: TipoImpuesto;
   estado: "Activo" | "Inactivo";
+  tipoOperacion: TipoOperacion | "";
 };
 
 function AsignacionFormModal({
@@ -113,6 +115,7 @@ function AsignacionFormModal({
     monto: asignacion?.monto === null || asignacion?.monto === undefined ? "" : String(asignacion.monto),
     tipo: asignacion?.tipo ?? "Porcentaje",
     estado: asignacion?.estado ?? "Activo",
+    tipoOperacion: asignacion?.tipoOperacion ?? "",
   }));
   const [clienteSearchInput, setClienteSearchInput] = useState(form.clienteLegajo);
   const debouncedClienteSearch = useDebouncedValue(clienteSearchInput, 350);
@@ -270,6 +273,25 @@ function AsignacionFormModal({
           />
           <p className="text-[11px] text-muted-foreground mt-1">Editable por asignación — sobrescribe el % base del impuesto.</p>
         </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="as-tipo-operacion">Tipo de operación</Label>
+          <select
+            id="as-tipo-operacion"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            value={form.tipoOperacion}
+            onChange={(e) => setForm({ ...form, tipoOperacion: e.target.value as TipoOperacion | "" })}
+          >
+            <option value="">Aplica a todas las operaciones</option>
+            {TIPOS_OPERACION.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Restringe el impuesto a un tipo de operación específico (Link de pago, E-commerce, Depósito o Retiro). Si lo dejás vacío, aplica a todas.
+          </p>
+        </div>
       </div>
       {!valido && (
         <p className="text-xs text-muted-foreground">
@@ -382,12 +404,15 @@ function Page() {
 
   const guardar = async (form: AsignacionForm) => {
     try {
+      const tipoOperacion: TipoOperacion | null =
+        form.tipoOperacion === "" ? null : (form.tipoOperacion as TipoOperacion);
       if (editTarget) {
         await updateImpuestoAsignacion(editTarget.id, {
           impuesto_id: form.impuestoId || undefined,
           tipo: form.tipo as any,
           monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
+          tipo_operacion: tipoOperacion,
         } as any);
       } else {
         await createImpuestoAsignacion({
@@ -396,6 +421,7 @@ function Page() {
           tipo: form.tipo as any,
           monto: form.monto.trim() === "" ? null : Number(form.monto),
           estado: form.estado,
+          tipo_operacion: tipoOperacion,
         } as any);
       }
       invalidar();
@@ -488,6 +514,17 @@ function Page() {
       label: "Tipo",
       sortable: true,
       render: (r) => r.tipo,
+    },
+    {
+      key: "tipoOperacion",
+      label: "Operación",
+      sortable: true,
+      render: (r) =>
+        r.tipoOperacion ? (
+          <Badge tone="neutral">{r.tipoOperacion}</Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">Todas</span>
+        ),
     },
     {
       key: "monto",

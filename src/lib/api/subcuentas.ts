@@ -1,6 +1,32 @@
 import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 
+// Modelo de saldos — referencia rápida:
+//
+//   subcuentas.saldo_disponible  →  columna NUMERIC(18,2) que vive en la
+//                                   subcuenta `Operativa` del legajo del
+//                                   comercio. Es EL saldo líquido real que
+//                                   el comercio ve en su panel: lo que
+//                                   puede retirar o transferir.
+//
+//                                   El único camino que mueve plata ahí
+//                                   es la RPC `acreditar_lote` (estado
+//                                   Pendiente → Acreditado). El resto de
+//                                   las operaciones del backoffice (cobros,
+//                                   retenciones) se registran en la
+//                                   bitácora `movimientos` y la vista
+//                                   `v_lotes_venta`, pero NO tocan
+//                                   saldo_disponible hasta que el lote
+//                                   se acredita.
+//
+//   subcuentas.saldo_retenido    →  contracargos y disputas en disputa.
+//   subcuentas.saldo_conciliado  →  acumulado conciliado contra el banco.
+//
+//   movimientos                  →  tabla inmutable de cada transacción
+//                                   (id_txn UNIQUE). No se escribe desde
+//                                   esta API ni desde la RPC de
+//                                   acreditación; es de los cobros.
+
 export type SubcuentaTipo = "Operativa" | "Recaudacion" | "Garantias" | "Sueldos";
 export type SubcuentaEstado = "Activa" | "Pausada";
 

@@ -156,7 +156,10 @@ export function toMovimiento(
     fecha: r.fecha,
     createdAt: r.created_at,
     comercioId: (r as MovimientoRow).comercio_id ?? null,
+    /** Texto denormalizado. FK real: banderaId */
     bandera: (r as MovimientoRow).bandera ?? null,
+    /** FK a banderas.id */
+    banderaId: (r as MovimientoRow).bandera_id ?? null,
     cliente: cli,
   };
 }
@@ -256,6 +259,7 @@ export function toComercio(
           email: adminUser.email,
         }
       : null,
+    siteId: (r as unknown as { site_id?: string | null }).site_id ?? null,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -476,6 +480,7 @@ export function toImpuestoAsignacion(
     monto: r.monto,
     estado: r.estado,
     fechaAsignacion: r.fecha_asignacion,
+    tipoOperacion: r.tipo_operacion ?? null,
     impuesto: imp
       ? {
           codigo: imp.codigo,

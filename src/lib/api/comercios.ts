@@ -29,7 +29,7 @@ export type ComercioFilters = Pagination & {
 // + relaciones clientes, codigos_categoria, puntos_venta
 // Ya no existe metodos_config ni habilitado_* — migrado a comercio_banderas.
 const COLUMNS =
-  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, ejecutivo_responsable_id, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at), admin_users!left(id, nombre, email)";
+  "id, usuario, legajo, nombre_comercio, categoria_id, estado, nivel, ejecutivo_responsable_id, site_id, created_at, updated_at, clientes(legajo, nombre, cuit, tipo_persona, correo), codigos_categoria(id, codigo, nombre, descripcion, estado), puntos_venta(id, nombre, estado, created_at), admin_users!left(id, nombre, email)";
 
 function escapeLike(q: string): string {
   return q.trim().replace(/[%_]/g, "\\$&");
@@ -110,6 +110,8 @@ export async function createComercio(input: ComercioCreateInput): Promise<Comerc
     categoria_id: input.categoriaId,
     nivel: input.nivel,
     estado: input.estado,
+    ejecutivo_responsable_id: input.ejecutivoResponsableId?.trim() || null,
+    site_id: (input as { siteId?: string | null }).siteId?.trim() || null,
   };
   const { data, error } = await sb.from("comercios").insert(payload).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
@@ -142,6 +144,10 @@ export async function updateComercio(id: string, input: ComercioUpdateInput): Pr
   if (input.categoriaId !== undefined) payload.categoria_id = input.categoriaId;
   if (input.nivel !== undefined) payload.nivel = input.nivel;
   if (input.estado !== undefined) payload.estado = input.estado;
+  if (input.ejecutivoResponsableId !== undefined)
+    payload.ejecutivo_responsable_id = input.ejecutivoResponsableId?.trim() || null;
+  if ((input as { siteId?: string | null }).siteId !== undefined)
+    payload.site_id = (input as { siteId?: string | null }).siteId?.trim() || null;
 
   const { data, error } = await sb.from("comercios").update(payload).eq("id", id).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
