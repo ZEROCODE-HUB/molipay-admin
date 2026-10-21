@@ -13,6 +13,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card, Input, Label, BtnOutline } from "@/components/portal-shell";
 import { ModalDialog } from "@/components/modal-dialog";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Pagination } from "@/components/pagination";
 import { useQuery } from "@tanstack/react-query";
 import { exportLotesVenta, listLotesVenta, listOperacionesLote } from "@/lib/api/lotes-venta";
 import { listBanderas } from "@/lib/api/banderas";
@@ -359,47 +360,20 @@ function Page() {
               </button>
             )}
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>{total} registros · </span>
-              <span className="whitespace-nowrap">Filas por página:</span>
-              <select
-                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(0);
-                }}
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              <span className="text-muted-foreground text-xs sm:text-sm">
-                Pág. {page + 1} de {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page === 0 || isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="h-9 px-3 rounded-md border bg-card disabled:opacity-50"
-                >
-                  Anterior
-                </button>
-                <button
-                  disabled={page + 1 >= totalPages || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="h-9 px-3 rounded-md border bg-card disabled:opacity-50"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            page={page + 1}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            total={total}
+            countLabel="registros"
+            pageSizes={PAGE_SIZES}
+            disabled={isFetching}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(0);
+            }}
+          />
         </>
       )}
 
@@ -575,45 +549,19 @@ function DetalleLoteModal({ lote, onClose }: { lote: LoteVenta; onClose: () => v
               showGlobalFilter={false}
               showDownloadButton={false}
             />
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>{total} operaciones · </span>
-                <span className="whitespace-nowrap">Filas por página:</span>
-                <select
-                  className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(0);
-                  }}
-                >
-                  {PAGE_SIZES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs">
-                  Pág. {page + 1} de {totalPages}
-                </span>
-                <button
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="h-8 px-3 rounded-md border bg-card disabled:opacity-50 text-xs"
-                >
-                  Anterior
-                </button>
-                <button
-                  disabled={page + 1 >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="h-8 px-3 rounded-md border bg-card disabled:opacity-50 text-xs"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
+            <Pagination
+              page={page + 1}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              total={total}
+              countLabel="operaciones"
+              pageSizes={PAGE_SIZES}
+              onPageChange={(p) => setPage(p - 1)}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(0);
+              }}
+            />
           </>
         )}
       </div>

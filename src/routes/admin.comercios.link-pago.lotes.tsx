@@ -31,6 +31,7 @@ import {
 } from "@/components/portal-shell";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Pagination } from "@/components/pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { CargarCsvModal } from "@/components/cargar-csv-modal";
 import { ConfirmarAcreditacionModal } from "@/components/confirmar-acreditacion-modal";
@@ -163,8 +164,17 @@ function round2(n: number): number {
 function totalDescuentos(l: LoteAcreditacion): number {
   const cierre = esLoteEstimado(l) ? 0 : (l.comisionCierreLoteMonto ?? 0);
   const tasas = tasasCalculadas(l);
+  // Si los 3 snapshots están en 0 y el legacy > 0, usamos el legacy
+  // (lotes viejos acreditados con la fórmula hardcoded). Si no, usamos
+  // la suma de los snapshots reales del motor de retenciones.
+  const totalReal =
+    (l.ivaMonto ?? 0) + (l.debitoCreditoMonto ?? 0) + (l.iibbMonto ?? 0);
+  const usarLegacy = totalReal === 0 && (l.impuestos ?? 0) > 0;
+  const impuestos = usarLegacy
+    ? (l.impuestos ?? 0)
+    : totalReal;
   return (
-    (l.impuestos ?? 0) +
+    impuestos +
     tasas.paywayMonto +
     tasas.molipayMonto +
     (l.costoPaywayPagoUnico ?? 0) +
@@ -206,7 +216,14 @@ function LoteDetalle({
   // para que el desglose siempre cuadre con la regla de negocio.
   const { paywayMonto: tasaPaywayMostrar, molipayMonto: tasaMolipayMostrar } = tasasCalculadas(lote);
   const totalDesc = totalDescuentos(lote);
-  const menosImpuestos = lote.importeBruto - lote.impuestos;
+  // "Menos impuestos": usa los snapshots reales (iva + dc + iibb) y
+  // cae al legacy solo si los 3 están en 0 (lotes viejos).
+  const totalImpuestosReal =
+    (lote.ivaMonto ?? 0) + (lote.debitoCreditoMonto ?? 0) + (lote.iibbMonto ?? 0);
+  const menosImpuestos =
+    totalImpuestosReal > 0
+      ? lote.importeBruto - totalImpuestosReal
+      : lote.importeBruto - (lote.impuestos ?? 0);
   const esCuotas = (lote.cuotas ?? 1) > 1;
   const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
   const movs = movimientos ?? [];
@@ -336,22 +353,76 @@ function LoteDetalle({
                   )}
                 </span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Receipt size={12} /> Impuestos
-                </span>
-                <span
-                  className={`font-mono ${loteEstimado ? "text-muted-foreground/60" : "text-red-600"}`}
-                >
-                  - {fmt(lote.impuestos)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Menos impuestos</span>
-                <span className={`font-mono ${loteEstimado ? "text-muted-foreground/70" : ""}`}>
-                  {fmt(menosImpuestos)}
-                </span>
-              </div>
+              {(() => {
+                // Snapshots reales del motor de retenciones (vienen de
+                // la acreditación del lote). Si los 3 están en 0 y el
+                // legacy > 0, caemos al legacy (lotes viejos donde el
+                // cálculo se hacía con la fórmula hardcoded).
+                const iva = lote.ivaMonto ?? 0;
+                const dc = lote.debitoCreditoMonto ?? 0;
+                const iibb = lote.iibbMonto ?? 0;
+                const legacy = lote.impuestos ?? 0;
+                const totalReal = iva + dc + iibb;
+                const usarLegacy = totalReal === 0 && legacy > 0;
+                return (
+                  <>
+                    {iva > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Receipt size={12} /> IVA
+                          {lote.tasaMolipayPct > 0 && (
+                            <span className="text-[10px] text-muted-foreground/70">
+                              ({(iva / Math.max(lote.tasaMolipayMonto, 0.01) * 100).toFixed(0)}% s/comision)
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-mono text-red-600">- {fmt(iva)}</span>
+                      </div>
+                    )}
+                    {dc > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Receipt size={12} /> Débito/Crédito
+                        </span>
+                        <span className="font-mono text-red-600">- {fmt(dc)}</span>
+                      </div>
+                    )}
+                    {iibb > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Receipt size={12} /> Ingresos Brutos
+                        </span>
+                        <span className="font-mono text-red-600">- {fmt(iibb)}</span>
+                      </div>
+                    )}
+                    {usarLegacy && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Receipt size={12} /> Impuestos
+                          <span className="text-[10px] text-muted-foreground/70">
+                            (legacy)
+                          </span>
+                        </span>
+                        <span className="font-mono text-red-600">- {fmt(legacy)}</span>
+                      </div>
+                    )}
+                    {totalReal === 0 && !usarLegacy && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Receipt size={12} /> Impuestos
+                        </span>
+                        <span className="font-mono text-muted-foreground/60">- $ 0,00</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="text-muted-foreground">Menos impuestos</span>
+                      <span className={`font-mono ${loteEstimado ? "text-muted-foreground/70" : ""}`}>
+                        {fmt(lote.importeBruto - (usarLegacy ? legacy : totalReal))}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
               <div className="border-t my-2" />
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1">
@@ -1563,47 +1634,20 @@ function Page() {
             hidePagination
             showGlobalFilter={false}
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>{total} lotes · </span>
-              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
-              <select
-                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(0);
-                }}
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              <span className="text-muted-foreground text-xs sm:text-sm">
-                Pág. {page + 1} de {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page === 0 || isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="h-9 px-3 rounded-md border bg-card disabled:opacity-50"
-                >
-                  Anterior
-                </button>
-                <button
-                  disabled={page + 1 >= totalPages || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="h-9 px-3 rounded-md border bg-card disabled:opacity-50"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            page={page + 1}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            total={total}
+            countLabel="lotes"
+            pageSizes={PAGE_SIZES}
+            disabled={isFetching}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(0);
+            }}
+          />
         </>
       ) : (
         <>

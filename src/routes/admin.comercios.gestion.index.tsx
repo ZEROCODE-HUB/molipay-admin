@@ -16,6 +16,7 @@ import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown"
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { LegajoCell } from "@/components/legajo-label";
+import { Pagination } from "@/components/pagination";
 import { useComercios, useClientesForSelect } from "@/hooks/useComercios";
 import { useCodigosCategoria } from "@/hooks/useCodigosCategoria";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
@@ -1375,51 +1376,20 @@ function Page() {
             hidePagination
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>
-                {total} comercio(s) ·{" "}
-              </span>
-              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
-              <select
-                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(0);
-                }}
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              <span className="text-muted-foreground text-xs sm:text-sm">
-                Pág. {page + 1} de {totalPaginas}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={page === 0 || isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Anterior
-                </button>
-                <button
-                  type="button"
-                  disabled={page + 1 >= totalPaginas || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            page={page + 1}
+            totalPages={totalPaginas}
+            pageSize={pageSize}
+            total={total}
+            countLabel="comercio(s)"
+            pageSizes={PAGE_SIZES}
+            disabled={isFetching}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(0);
+            }}
+          />
         </>
       )}
 

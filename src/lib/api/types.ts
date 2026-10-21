@@ -86,6 +86,9 @@ export type ClienteRow = {
   provincia?: string | null;
   cp?: string | null;
   estado_onboarding?: string | null;
+  limite_transferencia?: number | null;
+  limite_ops_diarias?: number | null;
+  limite_monto_diario?: number | null;
 };
 
 export type Cliente = {
@@ -119,6 +122,9 @@ export type Cliente = {
   provincia?: string | null;
   cp?: string | null;
   estadoOnboarding?: string | null;
+  limiteTransferencia?: number | null;
+  limiteOpsDiarias?: number | null;
+  limiteMontoDiario?: number | null;
 };
 
 // --- comisiones_cliente ----------------------------------------------------

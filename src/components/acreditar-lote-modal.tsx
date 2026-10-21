@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Info, ShieldCheck, ShieldOff } from "lucide-react";
 import { FormDialog } from "@/components/form-dialog";
 import { FileDropzone } from "@/components/file-dropzone";
 import { Badge, Input, Label } from "@/components/portal-shell";
@@ -22,6 +22,7 @@ import {
   EJEMPLO_ARCHIVO,
   type ResultadoParseo,
 } from "@/lib/liquidaciones/parse";
+import { calcularRetencionesLote, type ResultadoRetenciones } from "@/lib/api/retenciones-lote";
 
 // Modal de acreditacion de un lote.
 //
@@ -176,6 +177,21 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
 
   const tablaDisponible = estabQuery.data?.tablaDisponible ?? true;
 
+  // Motor de retenciones automáticas (Débito/Crédito + IVA).
+  // Se dispara apenas se carga el modal (no depende del CSV) porque
+  // solo necesita el id del lote, su comercio y el legajo del cliente.
+  // staleTime corto: si el operador edita una asignación desde otra
+  // pantalla, esto se refresca al volver a abrir.
+  const retencionesQuery = useQuery<ResultadoRetenciones | null>({
+    queryKey: ["retenciones-lote", lote?.id],
+    queryFn: () => (lote ? calcularRetencionesLote(lote.id) : Promise.resolve(null)),
+    enabled: !!lote,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const retenciones = retencionesQuery.data ?? null;
+
   // Siempre se pide la lista: aunque el mapa resuelva todo, el operador puede
   // necesitar forzar el comercio cuando el CSV trae un establecimiento nuevo.
   const comercios = useComercios({ page: 0, pageSize: 200 });
@@ -211,6 +227,37 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
   const setParam = <K extends keyof ParametrosAcreditacion>(k: K, v: ParametrosAcreditacion[K]) =>
     setParametros((p) => ({ ...p, [k]: v }));
 
+  // Importe neto a acreditar: usa el calculo del preview del CSV pero
+  // reemplaza DC/IVA/IIBB con los del motor de retenciones automaticas.
+  // Si el cliente NO tiene IIBB asignado, cae al input manual.
+  const iibbMontoFinal = useMemo(() => {
+    if (retenciones && retenciones.iibb.asignado) {
+      return retenciones.iibb.monto;
+    }
+    return parametros.retencionIibbMonto;
+  }, [retenciones, parametros.retencionIibbMonto]);
+
+  const importeNetoFinal = useMemo(() => {
+    if (!preview) return 0;
+    const totales = preview.totales;
+    if (retenciones) {
+      // Neto CSV - Comision MoliPay - Comision Cierre - DC (motor) -
+      // IVA (motor) - IIBB (motor o manual) - Adelantos (lo descuenta
+      // acreditar_lote en el server, no aca).
+      const neto =
+        totales.netoCsv -
+        totales.comisionMolipay -
+        totales.comisionCierre -
+        retenciones.debitoCredito.monto -
+        retenciones.iva.monto -
+        iibbMontoFinal;
+      return Math.max(0, Math.round((neto + Number.EPSILON) * 100) / 100);
+    }
+    // Fallback: si la RPC fallo, usamos el calculo local (puede no
+    // respetar exenciones, pero al menos acredita algo).
+    return totales.importeNeto;
+  }, [preview, retenciones, iibbMontoFinal]);
+
   const cerrar = useCallback(() => {
     // `parametros` NO se resetea: sus defaults vienen de `parametros_globales` y
     // borrarlos aqui haria que al reabrir el modal el 0.45 vuelva hardcodeado.
@@ -234,15 +281,25 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
     setGuardando(true);
     setErrorGuardado(null);
 
+    // DC e IVA: si la RPC devolvio algo, usamos eso (respeta
+    // exenciones y asignaciones). Si fallo, caemos al calculo local.
+    const debitoCreditoMonto = retenciones
+      ? retenciones.debitoCredito.monto
+      : preview.totales.retencionDebitoCredito;
+    const ivaMonto = retenciones
+      ? retenciones.iva.monto
+      : preview.totales.retencionIva;
+    const iibbMonto = iibbMontoFinal;
+
     const liquidacion: LiquidacionAplicada = {
       comisionMolipayPct: lote.tasaMolipayPct,
       comisionMolipayMonto: preview.totales.comisionMolipay,
       comisionCierreLotePct: parametros.comisionCierreLotePct,
       comisionCierreLoteMonto: preview.totales.comisionCierre,
-      debitoCreditoMonto: preview.totales.retencionDebitoCredito,
-      ivaMonto: preview.totales.retencionIva,
-      iibbMonto: preview.totales.retencionIibb,
-      importeNeto: preview.totales.importeNeto,
+      debitoCreditoMonto,
+      ivaMonto,
+      iibbMonto,
+      importeNeto: importeNetoFinal,
     };
 
     try {
@@ -269,7 +326,7 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
       title={`Acreditar lote${lote ? ` - ${lote.codigo}` : ""}`}
       description="Subi el archivo diario de liquidacion de Payway para confirmar los importes antes de acreditar."
       onSubmit={acreditar}
-      submitLabel={preview ? `Acreditar ${fmt(preview.totales.importeNeto)}` : "Acreditar"}
+      submitLabel={preview ? `Acreditar ${fmt(importeNetoFinal)}` : "Acreditar"}
       size="xl"
       isSubmitting={guardando}
       cancelLabel="Cancelar"
@@ -596,33 +653,106 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
                 tone="subtract"
                 hint={`${parametros.comisionCierreLotePct}% - queda como snapshot en el lote`}
               />
-              <CalcRow
-                label="Retencion debito y credito"
-                value={`- ${fmt(preview.totales.retencionDebitoCredito)}`}
-                tone="subtract"
-                hint={`${parametros.retencionDebitoCreditoPct}% (RG 2111/4172)`}
-              />
-              <CalcRow
-                label="Retencion IVA"
-                value={`- ${fmt(preview.totales.retencionIva)}`}
-                tone="subtract"
-                hint={`${parametros.retencionIvaPct}% sobre la comision MoliPay`}
-              />
-              <CalcRow
-                label="Retencion Ingresos Brutos"
-                value={`- ${fmt(preview.totales.retencionIibb)}`}
-                tone="subtract"
-                hint="a completar por el operador"
-              />
+              {retencionesQuery.isLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                  <span className="inline-block w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                  Calculando retenciones automaticas...
+                </div>
+              ) : retencionesQuery.isError ? (
+                <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                  No se pudieron calcular las retenciones automaticas. Se usan los valores del
+                  calculo local (puede no respetar exenciones). Motivo:{" "}
+                  <span className="font-mono">{(retencionesQuery.error as Error)?.message}</span>
+                </div>
+              ) : retenciones ? (
+                <>
+                  {/* Débito/Crédito: desde la RPC */}
+                  <div className="flex items-start justify-between gap-3 text-sm py-1">
+                    <span className="text-muted-foreground flex-1">
+                      <div className="flex items-center gap-1.5">
+                        Retencion debito y credito
+                        {retenciones.debitoCredito.exento ? (
+                          <Badge tone="success" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldCheck size={10} /> Exento
+                          </Badge>
+                        ) : retenciones.debitoCredito.asignado ? (
+                          <Badge tone="neutral" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldCheck size={10} /> Asignado
+                          </Badge>
+                        ) : (
+                          <Badge tone="warn" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldOff size={10} /> No asignado
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="block text-[11px] opacity-80">
+                        {retenciones.debitoCredito.motivo}
+                      </span>
+                    </span>
+                    <span className="font-mono tabular-nums whitespace-nowrap text-red-600">
+                      - {fmt(retenciones.debitoCredito.monto)}
+                    </span>
+                  </div>
+
+                  {/* IVA: desde la RPC */}
+                  <div className="flex items-start justify-between gap-3 text-sm py-1">
+                    <span className="text-muted-foreground flex-1">
+                      <div className="flex items-center gap-1.5">
+                        Retencion IVA
+                        {retenciones.iva.asignado ? (
+                          <Badge tone="neutral" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldCheck size={10} /> Asignado
+                          </Badge>
+                        ) : (
+                          <Badge tone="warn" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldOff size={10} /> No asignado
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="block text-[11px] opacity-80">
+                        {retenciones.iva.motivo}
+                      </span>
+                    </span>
+                    <span className="font-mono tabular-nums whitespace-nowrap text-red-600">
+                      - {fmt(retenciones.iva.monto)}
+                    </span>
+                  </div>
+
+                  {/* IIBB: si está asignado al cliente, lo calcula el motor.
+                      Si no, queda como input manual. */}
+                  <div className="flex items-start justify-between gap-3 text-sm py-1">
+                    <span className="text-muted-foreground flex-1">
+                      <div className="flex items-center gap-1.5">
+                        Retencion Ingresos Brutos
+                        {retenciones.iibb.asignado ? (
+                          <Badge tone="neutral" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldCheck size={10} /> Asignado
+                          </Badge>
+                        ) : (
+                          <Badge tone="warn" className="inline-flex items-center gap-1 text-[10px]">
+                            <ShieldOff size={10} /> Manual
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="block text-[11px] opacity-80">
+                        {retenciones.iibb.motivo}
+                      </span>
+                    </span>
+                    <span className="font-mono tabular-nums whitespace-nowrap text-red-600">
+                      - {fmt(iibbMontoFinal)}
+                    </span>
+                  </div>
+                </>
+              ) : null}
               <div className="border-t mt-1 pt-1" />
               <CalcRow
                 label="Importe a acreditar"
-                value={fmt(preview.totales.importeNeto)}
+                value={fmt(importeNetoFinal)}
                 tone="total"
                 hint="a depositar en la subcuenta Operativa"
               />
 
-              <div className="mt-3 pt-3 border-t grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="mt-3 pt-3 border-t grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <div>
                   <Label htmlFor="p-cierre">% cierre lote</Label>
                   <Input
@@ -634,39 +764,55 @@ export function AcreditarLoteModal({ lote, onClose, onAcreditado }: Props) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="p-dc">% debito/credito</Label>
-                  <Input
-                    id="p-dc"
-                    value={String(parametros.retencionDebitoCreditoPct)}
-                    onChange={(e) => setParam("retencionDebitoCreditoPct", Number(e.target.value.replace(",", ".")) || 0)}
-                    inputMode="decimal"
-                    className="mt-1 font-mono"
-                  />
+                  <Label htmlFor="p-iibb">
+                    $ IIBB{" "}
+                    {retenciones?.iibb.asignado && (
+                      <span className="text-[10px] text-muted-foreground">(calculado)</span>
+                    )}
+                  </Label>
+                  {retenciones?.iibb.asignado ? (
+                    <div className="mt-1 h-10 px-3 rounded-md border bg-muted/30 text-sm font-mono flex items-center">
+                      {fmt(retenciones.iibb.monto)}
+                    </div>
+                  ) : (
+                    <Input
+                      id="p-iibb"
+                      value={String(parametros.retencionIibbMonto)}
+                      onChange={(e) => setParam("retencionIibbMonto", Number(e.target.value.replace(",", ".")) || 0)}
+                      inputMode="decimal"
+                      className="mt-1 font-mono"
+                    />
+                  )}
                 </div>
                 <div>
-                  <Label htmlFor="p-iva">% IVA</Label>
-                  <Input
-                    id="p-iva"
-                    value={String(parametros.retencionIvaPct)}
-                    onChange={(e) => setParam("retencionIvaPct", Number(e.target.value.replace(",", ".")) || 0)}
-                    inputMode="decimal"
-                    className="mt-1 font-mono"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="p-iibb">$ IIBB</Label>
-                  <Input
-                    id="p-iibb"
-                    value={String(parametros.retencionIibbMonto)}
-                    onChange={(e) => setParam("retencionIibbMonto", Number(e.target.value.replace(",", ".")) || 0)}
-                    inputMode="decimal"
-                    className="mt-1 font-mono"
-                  />
+                  <Label>CUIT</Label>
+                  <div className="mt-1 h-10 px-3 rounded-md border bg-muted/30 text-sm font-mono flex items-center">
+                    {retenciones?.cuit ?? (lote.comercio?.legajo ?? "—")}
+                  </div>
                 </div>
               </div>
+
+              {/* Asignaciones consultadas: auditoría */}
+              {retenciones && retenciones.asignacionesConsultadas.length > 0 && (
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Asignaciones del cliente ({retenciones.asignacionesConsultadas.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1 pl-2 border-l-2 border-muted">
+                    {retenciones.asignacionesConsultadas.map((a) => (
+                      <li key={a.impuestoCodigo} className="font-mono text-[11px]">
+                        <span className="font-semibold">{a.impuestoCodigo}</span> ·{" "}
+                        {a.impuestoNombre} · {a.tipo}{" "}
+                        {a.tipo === "Porcentaje" ? `${a.monto}%` : `$ ${a.monto}`}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
               <p className="text-[11px] text-muted-foreground mt-2">
-                Editables porque el motor de retenciones no esta implementado. Lo que dejes
-                precargado es lo que se guarda.
+                Débito/Crédito e IVA se calculan con el motor de retenciones (impuestos_asignaciones
+                del legajo + dc_excepciones por CUIT). IIBB queda manual hasta Fase 2.
               </p>
             </div>
           )}

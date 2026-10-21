@@ -8,6 +8,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { Label } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Pagination } from "@/components/pagination";
 import { PageHeader } from "@/components/page-header";
 import { useMovimientos } from "@/hooks/useMovimientos";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -298,30 +299,17 @@ export function MovimientosSubRoute({
             onServerFilterChange={aplicarFiltros}
             serverResultCount={total}
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span title={isEstimated ? "Conteo estimado" : undefined}>
-              {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}página {page + 1} de{" "}
-              {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
+          <Pagination
+            variant="compact"
+            page={page + 1}
+            totalPages={totalPaginas}
+            pageSize={PAGE_SIZE}
+            total={total}
+            countLabel="movimiento(s)"
+            disabled={isFetching}
+            estimated={isEstimated}
+            onPageChange={(p) => setPage(p - 1)}
+          />
         </>
       )}
 

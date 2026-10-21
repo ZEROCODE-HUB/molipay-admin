@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import {
   Eye,
   Clock,
@@ -10,6 +11,7 @@ import {
   CheckCircle2,
   XCircle,
   Banknote,
+  X,
 } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { PageHeader, Badge, Card, Input, Label, BtnOutline, BtnPrimary } from "@/components/portal-shell";
@@ -30,7 +32,19 @@ import {
 import { requireSupabase } from "@/lib/supabase";
 import type { Adelanto, EstadoAdelanto } from "@/lib/api/types";
 
+/**
+ * Deep link desde el calendario de acreditaciones:
+ *   ?comercio=<uuid>  → filtra el listado al comercio (se mantiene hasta
+ *                        que el operador lo limpie con "Limpiar")
+ *   ?adelanto=<uuid>  → abre el modal del ticket apenas carga la fila
+ */
+const searchSchema = z.object({
+  comercio: z.string().optional(),
+  adelanto: z.string().optional(),
+});
+
 export const Route = createFileRoute("/admin/comercios/link-pago/adelantos")({
+  validateSearch: searchSchema,
   component: Page,
   head: () => ({
     meta: [
@@ -500,11 +514,20 @@ function Detalle({
 
 function Page() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [estadoFilter, setEstadoFilter] = useState<EstadoAdelanto | "">("");
   const [detail, setDetail] = useState<AdelantoUI | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; message: string } | null>(null);
+
+  // Deep link desde el calendario: ?comercio=<uuid>&adelanto=<uuid>
+  // Si viene `comercio`, lo usamos como filtro hasta que el operador
+  // lo limpie con "Limpiar". Si viene `adelanto`, abrimos el modal
+  // apenas la fila esté disponible en la página actual.
+  const search = useSearch({ from: "/admin/comercios/link-pago/adelantos" });
+  const comercioFromUrl = search?.comercio;
+  const adelantoFromUrl = search?.adelanto;
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["adelantos", page, pageSize, estadoFilter],
@@ -515,6 +538,22 @@ function Page() {
         estado: (estadoFilter as EstadoAdelanto) || undefined,
       }),
   });
+
+  // Si la URL trae `adelanto=<uuid>`, marcamos la intención de abrir
+  // el modal. El render del detalle se hace en base a la grilla: si
+  // la fila está en la página actual, el modal se abre apenas se
+  // arme el `AdelantoUI` con su join a comercios. Si la fila no está
+  // (paginado distinto), igual el operador tiene el deep link
+  // copiable y puede navegar manualmente.
+  useEffect(() => {
+    if (!adelantoFromUrl || detail) return;
+    setPendingDeepLinkAdelantoId(adelantoFromUrl);
+  }, [adelantoFromUrl, detail]);
+
+  // Marker interno: id de adelanto a abrir cuando aparezca en la
+  // grilla. Se limpia cuando el modal se cierra.
+  const [pendingDeepLinkAdelantoId, setPendingDeepLinkAdelantoId] =
+    useState<string | null>(null);
 
   // Pool de Recaudación: KPIs globales que se muestran SIEMPRE en la
   // cabecera de la pantalla. Refresca cada 30s para mantener el saldo
@@ -581,6 +620,40 @@ function Page() {
       fechaResolucion: a.fechaResolucion,
     };
   });
+
+  // Deep link: si la fila del adelanto está en la página actual,
+  // abrimos el modal automáticamente y limpiamos el marker.
+  useEffect(() => {
+    if (!pendingDeepLinkAdelantoId || detail) return;
+    const target = rows.find((r) => r.fullId === pendingDeepLinkAdelantoId);
+    if (target) {
+      setDetail(target);
+      setPendingDeepLinkAdelantoId(null);
+    }
+  }, [pendingDeepLinkAdelantoId, rows, detail]);
+
+  // Si la URL trae `comercio`, filtramos la grilla en cliente. La
+  // query al backend sigue trayendo la página completa (necesitamos
+  // encontrar el `adelantoFromUrl` que viene en otra página) y el
+  // filtro visual se aplica acá.
+  const rowsVisibles = useMemo(() => {
+    if (!comercioFromUrl) return rows;
+    return rows.filter((r) => {
+      const cruda = adelantosCrudos.find((a) => a.id === r.fullId);
+      return cruda?.comercioId === comercioFromUrl;
+    });
+  }, [rows, adelantosCrudos, comercioFromUrl]);
+
+  // Banner contextual: si la URL trae `comercio`, mostramos un chip
+  // arriba explicando que el listado está filtrado.
+  const filtradoPorComercio = !!comercioFromUrl;
+
+  const limpiarFiltroComercio = () => {
+    void navigate({
+      to: "/admin/comercios/link-pago/adelantos",
+      search: {},
+    } as never);
+  };
 
   const guardar = (_u: AdelantoUI) => {
     refetch();
@@ -691,6 +764,23 @@ function Page() {
         title="Adelantos de Dinero"
         description="Solicitudes de comercios para recibir fondos antes del plazo contractual. Se fondean desde la subcuenta Recaudación (pool) hacia la Operativa del comercio."
       />
+
+      {filtradoPorComercio && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 mb-4 flex items-center gap-2">
+          <Building2 size={14} />
+          <span>
+            Viniendo del calendario: listado filtrado al comercio{" "}
+            <span className="font-mono">{comercioFromUrl}</span>.
+          </span>
+          <button
+            type="button"
+            onClick={limpiarFiltroComercio}
+            className="ml-auto h-6 px-2 rounded-md border bg-card text-xs hover:bg-muted inline-flex items-center gap-1"
+          >
+            <X size={12} /> Quitar filtro
+          </button>
+        </div>
+      )}
 
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-end gap-3">
@@ -814,7 +904,7 @@ function Page() {
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
+          data={rowsVisibles}
           keyExtractor={(r) => r.fullId}
           actions={(r) => <ActionsDropdown actions={getActions(r)} />}
         />

@@ -9,6 +9,7 @@ import {
   Plus,
   Pencil,
   ShieldAlert,
+  Activity,
   MoreVertical,
   RefreshCw,
   Landmark,
@@ -44,6 +45,12 @@ import {
   clienteTieneMovimientos,
   clienteTieneComision,
   generarCbuParaCliente,
+  listEvaluacionesRiesgo,
+  registrarEvaluacionRiesgo,
+  updatePerfilTransaccional,
+  formatCuit,
+  type RiesgoPLD,
+  type EvaluacionRiesgoRow,
 } from "@/lib/api/clientes";
 import {
   listSubcuentas,
@@ -2124,6 +2131,270 @@ function DetalleJson({ titulo, data }: { titulo: string; data: unknown }) {
   );
 }
 
+// ============================================================================
+// Modales PLAFT: Nivel de Riesgo + Perfil Transaccional
+// ============================================================================
+
+function PlaftRiesgoModal({
+  open,
+  onClose,
+  legajo,
+  vigente,
+  loading,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  legajo: string;
+  vigente: EvaluacionRiesgoRow | null;
+  loading: boolean;
+  onSubmit: (nivel: RiesgoPLD, motivo: string, vigenteHasta: string | null) => void;
+}) {
+  const [nivel, setNivel] = useState<RiesgoPLD>(vigente?.nivel ?? "bajo");
+  const [motivo, setMotivo] = useState("");
+  const [vigenteHasta, setVigenteHasta] = useState<string>("");
+  const [motivoError, setMotivoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setNivel(vigente?.nivel ?? "bajo");
+      setMotivo("");
+      setVigenteHasta(vigente?.vigente_hasta ? vigente.vigente_hasta.slice(0, 10) : "");
+      setMotivoError(null);
+    }
+  }, [open, vigente]);
+
+  if (!open) return null;
+
+  const submit = () => {
+    if (motivo.trim().length < 10) {
+      setMotivoError("Describí brevemente por qué (mín. 10 caracteres). Queda en la auditoría PLAFT.");
+      return;
+    }
+    onSubmit(nivel, motivo.trim(), vigenteHasta || null);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+      <div className="relative w-full max-w-lg rounded-lg bg-card border shadow-xl p-6 space-y-4">
+        <div>
+          <h3 className="font-display font-semibold text-lg">Nivel de riesgo PLAFT</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Legajo <span className="font-mono">{legajo}</span>. La evaluación vigente anterior se cierra
+            automáticamente; toda la historia queda registrada.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Nivel</label>
+          <div className="grid grid-cols-4 gap-2">
+            {(["bajo", "medio", "alto", "critico"] as RiesgoPLD[]).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setNivel(n)}
+                className={`h-9 rounded-md border text-xs font-semibold transition-colors ${
+                  nivel === n
+                    ? n === "bajo"
+                      ? "bg-emerald-500 text-white border-emerald-500"
+                      : n === "medio"
+                        ? "bg-amber-500 text-white border-amber-500"
+                        : n === "alto"
+                          ? "bg-orange-500 text-white border-orange-500"
+                          : "bg-red-500 text-white border-red-500"
+                    : "bg-card hover:bg-accent text-foreground"
+                }`}
+              >
+                {n.charAt(0).toUpperCase() + n.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Motivo / justificación</label>
+          <textarea
+            value={motivo}
+            onChange={(e) => {
+              setMotivo(e.target.value);
+              if (motivoError) setMotivoError(null);
+            }}
+            placeholder="Ej: Cliente con facturación declarada $X, sin alertas regulatorias. Cumple DDR estándar."
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:ring-2 focus:ring-ring/40 outline-none"
+          />
+          {motivoError && <p className="mt-1 text-xs text-red-600">{motivoError}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Vigente hasta (opcional)</label>
+          <input
+            type="date"
+            value={vigenteHasta}
+            onChange={(e) => setVigenteHasta(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-ring/40 outline-none"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Si lo dejás vacío, la evaluación queda vigente hasta que se reevalúe.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="h-9 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading}
+            className="h-9 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Guardando…" : vigente ? "Reevaluar riesgo" : "Asignar riesgo"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function PlaftPerfilModal({
+  open,
+  onClose,
+  clienteId,
+  cuit,
+  initial,
+  loading,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  clienteId: string;
+  cuit: string;
+  initial: {
+    limiteTransferencia: number | null;
+    limiteOpsDiarias: number | null;
+    limiteMontoDiario: number | null;
+  };
+  loading: boolean;
+  onSubmit: (input: {
+    limiteTransferencia: number | null;
+    limiteOpsDiarias: number | null;
+    limiteMontoDiario: number | null;
+  }) => void;
+}) {
+  const [limiteTransferencia, setLimiteTransferencia] = useState<string>(
+    initial.limiteTransferencia != null ? String(initial.limiteTransferencia) : "",
+  );
+  const [limiteOpsDiarias, setLimiteOpsDiarias] = useState<string>(
+    initial.limiteOpsDiarias != null ? String(initial.limiteOpsDiarias) : "",
+  );
+  const [limiteMontoDiario, setLimiteMontoDiario] = useState<string>(
+    initial.limiteMontoDiario != null ? String(initial.limiteMontoDiario) : "",
+  );
+
+  useEffect(() => {
+    if (open) {
+      setLimiteTransferencia(initial.limiteTransferencia != null ? String(initial.limiteTransferencia) : "");
+      setLimiteOpsDiarias(initial.limiteOpsDiarias != null ? String(initial.limiteOpsDiarias) : "");
+      setLimiteMontoDiario(initial.limiteMontoDiario != null ? String(initial.limiteMontoDiario) : "");
+    }
+  }, [open, initial]);
+
+  if (!open) return null;
+
+  const submit = () => {
+    const parse = (v: string) => (v.trim() === "" ? null : Number(v.replace(/[^\d.-]/g, "")));
+    onSubmit({
+      limiteTransferencia: parse(limiteTransferencia),
+      limiteOpsDiarias: parse(limiteOpsDiarias),
+      limiteMontoDiario: parse(limiteMontoDiario),
+    });
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+      <div className="relative w-full max-w-lg rounded-lg bg-card border shadow-xl p-6 space-y-4">
+        <div>
+          <h3 className="font-display font-semibold text-lg">Perfil transaccional</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Cliente <span className="font-mono">{clienteId.slice(0, 8)}…</span> · CUIT {cuit}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Monto máximo por transferencia (ARS)
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={limiteTransferencia}
+              onChange={(e) => setLimiteTransferencia(e.target.value)}
+              placeholder="Sin límite"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm w-full focus:ring-2 focus:ring-ring/40 outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Operaciones diarias máx.</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={limiteOpsDiarias}
+                onChange={(e) => setLimiteOpsDiarias(e.target.value)}
+                placeholder="Sin límite"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm w-full focus:ring-2 focus:ring-ring/40 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Monto diario máx. (ARS)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={limiteMontoDiario}
+                onChange={(e) => setLimiteMontoDiario(e.target.value)}
+                placeholder="Sin límite"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm w-full focus:ring-2 focus:ring-ring/40 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          El motor de alertas (cuando esté activo) comparará estas cifras con los movimientos del cliente y
+          disparará automáticamente alertas de exceso / variación cuando corresponda.
+        </p>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="h-9 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading}
+            className="h-9 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Guardando…" : "Guardar perfil"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ClienteDetailPage() {
   const { legajo } = Route.useParams();
   const navigate = useNavigate();
@@ -2307,6 +2578,44 @@ function ClienteDetailPage() {
 
   const [editAlertasOpen, setEditAlertasOpen] = useState(false);
   const [editBloqueosOpen, setEditBloqueosOpen] = useState(false);
+  const [editRiesgoOpen, setEditRiesgoOpen] = useState(false);
+  const [editPerfilOpen, setEditPerfilOpen] = useState(false);
+
+  // === PLAFT: evaluaciones de riesgo (append-only) + edición de perfil transaccional ===
+  const evaluacionesQuery = useQuery({
+    queryKey: ["cliente-evaluaciones-riesgo", legajo],
+    queryFn: () => listEvaluacionesRiesgo(legajo),
+    staleTime: 30_000,
+  });
+  const riesgoVigente = (evaluacionesQuery.data ?? []).find((e) => e.vigente_hasta == null);
+  const evaluacionesAnteriores = (evaluacionesQuery.data ?? []).filter((e) => e.vigente_hasta != null);
+
+  const registrarRiesgoMutation = useMutation({
+    mutationFn: registrarEvaluacionRiesgo,
+    onSuccess: () => {
+      toast.success("Nivel de riesgo actualizado");
+      void evaluacionesQuery.refetch();
+      void queryClient.invalidateQueries({ queryKey: ["clientes-enrichment"] });
+      void queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      setEditRiesgoOpen(false);
+    },
+    onError: (e: unknown) => {
+      toast.error((e as Error).message ?? "No se pudo registrar la evaluación");
+    },
+  });
+
+  const updatePerfilMutation = useMutation({
+    mutationFn: updatePerfilTransaccional,
+    onSuccess: () => {
+      toast.success("Perfil transaccional actualizado");
+      void queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      void queryClient.invalidateQueries({ queryKey: ["clientes-enrichment"] });
+      setEditPerfilOpen(false);
+    },
+    onError: (e: unknown) => {
+      toast.error((e as Error).message ?? "No se pudo actualizar el perfil");
+    },
+  });
 
   const [pstOpen, setPstOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
@@ -3177,6 +3486,118 @@ function ClienteDetailPage() {
 
           {activeTab === "riesgo" && (
             <SectionCard title="Riesgo y monitoreo">
+              {/* === PLAFT: Nivel de Riesgo + Perfil Transaccional === */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                {/* Tarjeta 1: Nivel de Riesgo PLAFT */}
+                <div className="rounded-lg border border-border p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ShieldAlert size={13} /> Nivel de riesgo PLAFT
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditRiesgoOpen(true)}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      <Pencil size={12} /> {riesgoVigente ? "Reevaluar" : "Asignar"}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={
+                        riesgoVigente?.nivel === "bajo"
+                          ? "px-2.5 py-1 rounded-md border text-sm font-semibold bg-emerald-100 text-emerald-800 border-emerald-200"
+                          : riesgoVigente?.nivel === "medio"
+                            ? "px-2.5 py-1 rounded-md border text-sm font-semibold bg-amber-100 text-amber-800 border-amber-200"
+                            : riesgoVigente?.nivel === "alto"
+                              ? "px-2.5 py-1 rounded-md border text-sm font-semibold bg-orange-100 text-orange-800 border-orange-200"
+                              : riesgoVigente?.nivel === "critico"
+                                ? "px-2.5 py-1 rounded-md border text-sm font-semibold bg-red-100 text-red-800 border-red-200"
+                                : "px-2.5 py-1 rounded-md border text-sm font-semibold bg-muted text-muted-foreground border-border"
+                      }
+                    >
+                      {riesgoVigente ? riesgoVigente.nivel.toUpperCase() : "Sin evaluar"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Vigente desde: {riesgoVigente ? new Date(riesgoVigente.vigente_desde).toLocaleDateString("es-AR") : "—"}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-foreground">
+                    {riesgoVigente?.motivo ?? "El cliente no tiene evaluación de riesgo vigente. Completá una evaluación inicial."}
+                  </p>
+                  {evaluacionesAnteriores.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                        Historial ({evaluacionesAnteriores.length} evaluación(es) anterior(es))
+                      </summary>
+                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {evaluacionesAnteriores.slice(0, 5).map((e) => (
+                          <li key={e.id}>
+                            <span className="font-medium text-foreground">{e.nivel.toUpperCase()}</span>
+                            {" · "}
+                            {new Date(e.created_at).toLocaleDateString("es-AR")}
+                            {" — "}
+                            {e.motivo.length > 60 ? `${e.motivo.slice(0, 60)}…` : e.motivo}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+
+                {/* Tarjeta 2: Perfil Transaccional */}
+                <div className="rounded-lg border border-border p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Activity size={13} /> Perfil transaccional
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditPerfilOpen(true)}
+                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      <Pencil size={12} /> Editar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Monto máx. transferencia</div>
+                      <div className="text-sm font-semibold tabular-nums">
+                        {cliente.limiteTransferencia != null
+                          ? new Intl.NumberFormat("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                              maximumFractionDigits: 0,
+                            }).format(cliente.limiteTransferencia)
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Ops. diarias máx.</div>
+                      <div className="text-sm font-semibold tabular-nums">
+                        {cliente.limiteOpsDiarias ?? "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Monto diario máx.</div>
+                      <div className="text-sm font-semibold tabular-nums">
+                        {cliente.limiteMontoDiario != null
+                          ? new Intl.NumberFormat("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                              maximumFractionDigits: 0,
+                            }).format(cliente.limiteMontoDiario)
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Editar este perfil sólo lo debería hacer Compliance. Cualquier cambio queda registrado en la
+                    ficha del cliente.
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
                 <div className="rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between gap-2 mb-3">
@@ -3641,6 +4062,33 @@ function ClienteDetailPage() {
           defs={BLOQUEO_PARAM_DEF}
           stored={paramBloqueosQuery.data ?? []}
           kind="bloqueo"
+        />
+
+        {/* PLAFT: Nivel de Riesgo */}
+        <PlaftRiesgoModal
+          open={editRiesgoOpen}
+          onClose={() => setEditRiesgoOpen(false)}
+          legajo={legajo}
+          vigente={riesgoVigente ?? null}
+          loading={registrarRiesgoMutation.isPending}
+          onSubmit={(nivel, motivo, vigenteHasta) =>
+            registrarRiesgoMutation.mutate({ legajo, nivel, motivo, vigenteHasta })
+          }
+        />
+
+        {/* PLAFT: Perfil Transaccional */}
+        <PlaftPerfilModal
+          open={editPerfilOpen}
+          onClose={() => setEditPerfilOpen(false)}
+          clienteId={cliente.id}
+          initial={{
+            limiteTransferencia: cliente.limiteTransferencia ?? null,
+            limiteOpsDiarias: cliente.limiteOpsDiarias ?? null,
+            limiteMontoDiario: cliente.limiteMontoDiario ?? null,
+          }}
+          cuit={formatCuit(cliente.cuit)}
+          loading={updatePerfilMutation.isPending}
+          onSubmit={(input) => updatePerfilMutation.mutate({ clienteId: cliente.id, ...input })}
         />
 
         <AlertaGestionModal

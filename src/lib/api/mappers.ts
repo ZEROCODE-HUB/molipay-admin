@@ -88,6 +88,9 @@ export function toCliente(r: ClienteRow): Cliente {
     provincia: (r.provincia as string | null) ?? null,
     cp: (r.cp as string | null) ?? null,
     estadoOnboarding: (r.estado_onboarding as string | null) ?? null,
+    limiteTransferencia: (r.limite_transferencia as number | null) ?? null,
+    limiteOpsDiarias: (r.limite_ops_diarias as number | null) ?? null,
+    limiteMontoDiario: (r.limite_monto_diario as number | null) ?? null,
   };
 }
 

@@ -9,6 +9,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
+import { Pagination } from "./pagination";
 
 export type FilterType = "text" | "date" | "enum";
 
@@ -628,45 +629,16 @@ export function DataTable<T>({
       </div>
 
       {!hidePagination && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
-            <select
-              className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {PAGE_SIZES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <span className="text-muted-foreground text-xs sm:text-sm">
-              Pág. {safePage} de {totalPages}
-            </span>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        </div>
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          total={sortedData.length}
+          pageSizes={PAGE_SIZES}
+          countLabel={undefined}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(s) => setPageSize(s)}
+        />
       )}
     </div>
   );
