@@ -1,45 +1,22 @@
 import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
+import type { Page, Pagination } from "./types";
 
-// ============================================================================
-// Tipos
-// ============================================================================
-
-/** Estado de la acreditación que la UI muestra. */
-export type EstadoCalendario =
-  | "programado"
-  | "pendiente"
-  | "acreditado"
-  | "contracargo"
-  | "cancelado";
-
-/** Fila devuelta por la RPC `calendario_acreditaciones_v2`. */
 export type CalendarioAcreditacion = {
-  id: string;
-  codigo: string;
+  fechaVenta: string;
+  fechaEstimadaAcreditacion: string;
   comercioId: string;
   comercioNombre: string;
   comercioLegajo: string;
   bandera: string;
-  fechaVenta: string;
-  fechaAcreditacion: string;
-  diasHabilesAplicados: number | null;
-  cantidadOperaciones: number;
+  diasHabiles: number;
+  esEstimado: boolean;
+  fechaEstimadaRecalcular: boolean;
   importeBruto: number;
-  impuestos: number;
-  tasaPaywayPct: number;
-  tasaPaywayMonto: number;
-  tasaMolipayPct: number;
-  tasaMolipayMonto: number;
-  comisionCierreLoteMonto: number;
-  contracargoMonto: number;
-  importeNeto: number;
-  estadoLote: string;
-  estadoCalculado: EstadoCalendario;
-  /** Σ adelantos Pendiente/Aprobado del comercio (totalizador). */
-  adelantosReservadosTotal: number;
-  /** Lo que se imputa contra el día (LEAST entre neto del día y total). */
-  adelantosAplicadosDia: number;
+  cantidadOperaciones: number;
+  estado: "programado" | "pendiente" | "acreditado" | "contracargo" | "cancelado";
+  estadoReal: string;
+  loteIds: string[];
 };
 
 export type CalendarioFilters = {
@@ -47,242 +24,240 @@ export type CalendarioFilters = {
   anio: number;
   comercioId?: string;
   bandera?: string;
-  estado?: EstadoCalendario;
+  estado?: "programado" | "pendiente" | "acreditado" | "contracargo";
 };
 
-/** Fila devuelta por `calendario_adelantos_por_dia`. */
-export type AdelantoParaCalendario = {
+type LoteAcreditacionRow = {
   id: string;
-  montoSolicitado: number;
-  montoPorAcreditar: number | null;
-  plazoOriginalDias: number;
-  plazoAdelantadoDias: number;
-  tasaInteresPct: number | null;
-  estado: "Pendiente" | "Aprobado" | "Acreditado" | "Rechazado" | "Cancelado";
-  fechaSolicitud: string;
-  fechaResolucion: string | null;
-  fechaAcreditacion: string | null;
-  motivo: string | null;
+  codigo: string;
+  comercio_id: string;
+  bandera: string;
+  fecha: string;
+  cantidad_operaciones: number;
+  importe_bruto: number;
+  impuestos: number;
+  tasa_payway_pct: number;
+  tasa_payway_monto: number;
+  tasa_molipay_pct: number;
+  tasa_molipay_monto: number;
+  cuotas: number | null;
+  costo_payway_pago_unico: number | null;
+  contracargo_monto: number;
+  comision_cierre_lote_pct: number | null;
+  comision_cierre_lote_monto: number | null;
+  importe_neto: number;
+  estado: string;
+  resuelto_por: string | null;
+  fecha_resolucion: string | null;
+  notas_resolucion: string | null;
+  created_at: string;
+  updated_at: string;
+  iva_monto: number | null;
+  iibb_monto: number | null;
+  debito_credito_monto: number | null;
+  comercios: unknown;
 };
 
-/** KPIs del header. */
-export type ResumenSaldos = {
-  faltaCobrar: number;
-  porAcreditar: number;
-  adelantosEnCurso: number;
-  disponibleReal: number;
-};
+let diasHabilesCache: Record<string, number> | null = null;
 
-/** Fila para export del día. */
-export type ExportDiaRow = {
+async function obtenerDiasHabilesPorBandera(sb: ReturnType<typeof requireSupabase>): Promise<Record<string, number>> {
+  if (diasHabilesCache) return diasHabilesCache;
+  
+  const { data, error } = await sb
+    .from("banderas")
+    .select("metodo_key, nombre, dias_habiles_acreditacion");
+  
+  if (error) throw new DataAccessError(error);
+  
+  diasHabilesCache = {};
+  for (const b of (data ?? []) as Array<{ metodo_key: string | null; nombre: string; dias_habiles_acreditacion: number }>) {
+    const key = (b.metodo_key ?? b.nombre).toLowerCase();
+    diasHabilesCache[key] = b.dias_habiles_acreditacion ?? 20;
+  }
+  return diasHabilesCache;
+}
+
+function parseDateLocal(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function agregarDiasHabiles(fecha: Date, dias: number): Date {
+  const result = new Date(fecha);
+  let diasAgregados = 0;
+
+  while (diasAgregados < dias) {
+    result.setDate(result.getDate() + 1);
+    const dayOfWeek = result.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      diasAgregados++;
+    }
+  }
+
+  return result;
+}
+
+function calcularEstadoMostrar(
+  estadoLote: string | null,
+  contracargoMonto: number,
+  fechaEstimada: Date,
+  hoy: Date
+): "programado" | "pendiente" | "acreditado" | "contracargo" | "cancelado" {
+  if (estadoLote === "Acreditado") return "acreditado";
+  if (estadoLote === "Contracargo" || contracargoMonto > 0) return "contracargo";
+  if (estadoLote === "Cancelado") return "cancelado";
+  if (estadoLote === "Pendiente") return "pendiente";
+  if (hoy < fechaEstimada) return "programado";
+  return "pendiente";
+}
+
+export async function listCalendarioAcreditaciones(
+  filters: CalendarioFilters
+): Promise<CalendarioAcreditacion[]> {
+  const sb = requireSupabase();
+  const { mes, anio, comercioId, bandera, estado } = filters;
+
+  const primerDia = new Date(anio, mes - 1, 1);
+  const ultimoDia = new Date(anio, mes, 0);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const [lotesVentaData, diasHabilesMap] = await Promise.all([
+    sb
+      .from("v_lotes_venta")
+      .select(
+        "fecha, comercio_id, bandera, cantidad_operaciones, importe_bruto, importe_neto, comercios(id, usuario, legajo, nombre_comercio)"
+      )
+      .gte("fecha", primerDia.toISOString().slice(0, 10))
+      .lte("fecha", ultimoDia.toISOString().slice(0, 10)),
+    obtenerDiasHabilesPorBandera(sb),
+  ]);
+
+  const { data, error } = lotesVentaData;
+  if (error) throw new DataAccessError(error);
+
+  const { data: lotesAcreditacion } = await sb
+    .from("lotes_acreditacion")
+    .select("id, fecha, comercio_id, bandera, estado, contracargo_monto, dias_habiles_aplicados, fecha_estimada_recalcular");
+
+  const loteInfoMap = new Map<string, { estado: string | null; contracargoMonto: number; loteId: string; diasHabilesAplicados: number | null; fechaEstimadaRecalcular: boolean }>();
+  for (const l of (lotesAcreditacion ?? []) as Array<{ id: string; fecha: string; comercio_id: string; bandera: string; estado: string; contracargo_monto: number; dias_habiles_aplicados: number | null; fecha_estimada_recalcular: boolean }>) {
+    const key = `${l.comercio_id}-${l.bandera}-${l.fecha}`;
+    loteInfoMap.set(key, { estado: l.estado, contracargoMonto: l.contracargo_monto ?? 0, loteId: l.id, diasHabilesAplicados: l.dias_habiles_aplicados ?? null, fechaEstimadaRecalcular: l.fecha_estimada_recalcular ?? false });
+  }
+
+  const result: CalendarioAcreditacion[] = [];
+
+  for (const row of data ?? []) {
+    const comercio = (row.comercios as unknown as Array<{ id: string; usuario: string; legajo: string; nombre_comercio: string }>)?.[0] ?? null;
+    // Usar dias_habiles_aplicados de la BD si existe, si no calcular localmente
+    const diasHabilesFallback = diasHabilesMap[row.bandera?.toLowerCase() ?? ""] ?? 20;
+    const diasHabiles = loteInfo?.diasHabilesAplicados ?? diasHabilesFallback;
+    const fechaVenta = parseDateLocal(row.fecha as string);
+    const fechaEstimada = agregarDiasHabiles(fechaVenta, diasHabiles);
+    const fechaEstimadaStr = fechaEstimada.toISOString().slice(0, 10);
+
+    const key = `${row.comercio_id}-${row.bandera}-${fechaEstimadaStr}`;
+    const loteInfo = loteInfoMap.get(key);
+
+    const estadoReal = loteInfo?.estado ?? null;
+    const contracargoMonto = loteInfo?.contracargoMonto ?? 0;
+    const esEstimado = estadoReal === null || estadoReal === 'Programado';
+    const estadoMostrar = calcularEstadoMostrar(estadoReal, contracargoMonto, fechaEstimada, hoy);
+
+    if (estado && estadoMostrar !== estado) continue;
+
+    result.push({
+      fechaVenta: row.fecha as string,
+      fechaEstimadaAcreditacion: fechaEstimadaStr,
+      comercioId: row.comercio_id,
+      comercioNombre: comercio?.nombre_comercio ?? comercio?.usuario ?? "—",
+      comercioLegajo: comercio?.legajo ?? row.comercio_id,
+      bandera: row.bandera ?? "—",
+      diasHabiles,
+      esEstimado,
+      fechaEstimadaRecalcular: loteInfo?.fechaEstimadaRecalcular ?? false,
+      importeBruto: Number(row.importe_bruto),
+      cantidadOperaciones: Number(row.cantidad_operaciones),
+      estado: estadoMostrar,
+      estadoReal: estadoReal ?? "Pendiente",
+      loteIds: loteInfo?.loteId ? [loteInfo.loteId] : [],
+    });
+  }
+
+  return result;
+}
+
+export type LoteAcreditacionParaCalendario = {
   id: string;
   codigo: string;
   comercioId: string;
-  nombreComercio: string | null;
-  legajo: string;
+  comercioNombre: string;
+  comercioLegajo: string;
   bandera: string;
   fecha: string;
   cantidadOperaciones: number;
   importeBruto: number;
+  importeNeto: number;
   impuestos: number;
   tasaPaywayPct: number;
   tasaPaywayMonto: number;
   tasaMolipayPct: number;
   tasaMolipayMonto: number;
-  comisionCierreLoteMonto: number;
+  cuotas: number | null;
   contracargoMonto: number;
-  importeNeto: number;
+  importeNetoReal: number;
   estado: string;
 };
 
-// ============================================================================
-// Helpers
-// ============================================================================
+const LOTE_COLUMNS = `
+  id, codigo, comercio_id, bandera, fecha, cantidad_operaciones,
+  importe_bruto, impuestos, tasa_payway_pct, tasa_payway_monto,
+  tasa_molipay_pct, tasa_molipay_monto, cuotas, contracargo_monto,
+  comision_cierre_lote_pct, comision_cierre_lote_monto, importe_neto,
+  estado, resuelto_por, fecha_resolucion, notas_resolucion,
+  created_at, updated_at, iva_monto, iibb_monto, debito_credito_monto,
+  comercios(id, usuario, legajo, nombre_comercio)
+`;
 
-function parseNumber(v: unknown, fallback = 0): number {
-  if (v == null) return fallback;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function toCalendarioAcreditacion(r: Record<string, unknown>): CalendarioAcreditacion {
-  return {
-    id: String(r.id),
-    codigo: String(r.codigo ?? ""),
-    comercioId: String(r.comercio_id),
-    comercioNombre: String(r.comercio_nombre ?? "—"),
-    comercioLegajo: String(r.comercio_legajo ?? ""),
-    bandera: String(r.bandera ?? "—"),
-    fechaVenta: String(r.fecha_venta ?? ""),
-    fechaAcreditacion: String(r.fecha_acreditacion ?? ""),
-    diasHabilesAplicados: r.dias_habiles_aplicados != null
-      ? Number(r.dias_habiles_aplicados)
-      : null,
-    cantidadOperaciones: parseNumber(r.cantidad_operaciones),
-    importeBruto: parseNumber(r.importe_bruto),
-    impuestos: parseNumber(r.impuestos),
-    tasaPaywayPct: parseNumber(r.tasa_payway_pct),
-    tasaPaywayMonto: parseNumber(r.tasa_payway_monto),
-    tasaMolipayPct: parseNumber(r.tasa_molipay_pct),
-    tasaMolipayMonto: parseNumber(r.tasa_molipay_monto),
-    comisionCierreLoteMonto: parseNumber(r.comision_cierre_lote_monto),
-    contracargoMonto: parseNumber(r.contracargo_monto),
-    importeNeto: parseNumber(r.importe_neto),
-    estadoLote: String(r.estado_lote ?? ""),
-    estadoCalculado: (r.estado_calculado as EstadoCalendario) ?? "pendiente",
-    adelantosReservadosTotal: parseNumber(r.adelantos_reservados_total),
-    adelantosAplicadosDia: parseNumber(r.adelantos_aplicados_dia),
-  };
-}
-
-function toAdelantoParaCalendario(r: Record<string, unknown>): AdelantoParaCalendario {
-  return {
-    id: String(r.id),
-    montoSolicitado: parseNumber(r.monto_solicitado),
-    montoPorAcreditar: r.monto_por_acreditar != null
-      ? parseNumber(r.monto_por_acreditar)
-      : null,
-    plazoOriginalDias: parseNumber(r.plazo_original_dias),
-    plazoAdelantadoDias: parseNumber(r.plazo_adelantado_dias),
-    tasaInteresPct: r.tasa_interes_pct != null
-      ? parseNumber(r.tasa_interes_pct)
-      : null,
-    estado: r.estado as AdelantoParaCalendario["estado"],
-    fechaSolicitud: String(r.fecha_solicitud ?? ""),
-    fechaResolucion: (r.fecha_resolucion as string) ?? null,
-    fechaAcreditacion: (r.fecha_acreditacion as string) ?? null,
-    motivo: (r.motivo as string) ?? null,
-  };
-}
-
-function toExportRow(r: Record<string, unknown>): ExportDiaRow {
-  return {
-    id: String(r.id),
-    codigo: String(r.codigo ?? ""),
-    comercioId: String(r.comercio_id),
-    nombreComercio: (r.nombre_comercio as string) ?? null,
-    legajo: String(r.legajo ?? ""),
-    bandera: String(r.bandera ?? ""),
-    fecha: String(r.fecha ?? ""),
-    cantidadOperaciones: parseNumber(r.cantidad_operaciones),
-    importeBruto: parseNumber(r.importe_bruto),
-    impuestos: parseNumber(r.impuestos),
-    tasaPaywayPct: parseNumber(r.tasa_payway_pct),
-    tasaPaywayMonto: parseNumber(r.tasa_payway_monto),
-    tasaMolipayPct: parseNumber(r.tasa_molipay_pct),
-    tasaMolipayMonto: parseNumber(r.tasa_molipay_monto),
-    comisionCierreLoteMonto: parseNumber(r.comision_cierre_lote_monto),
-    contracargoMonto: parseNumber(r.contracargo_monto),
-    importeNeto: parseNumber(r.importe_neto),
-    estado: String(r.estado ?? ""),
-  };
-}
-
-// ============================================================================
-// RPCs
-// ============================================================================
-
-/**
- * Trae las acreditaciones que caen en el mes pedido. Ahora indexa por
- * fecha de ACREDITACIÓN (no de venta), corrigiendo el bug de la
- * implementación anterior.
- */
-export async function listCalendarioAcreditaciones(
-  filters: CalendarioFilters,
-): Promise<CalendarioAcreditacion[]> {
+export async function getLotesPorFecha(fecha: string): Promise<LoteAcreditacionParaCalendario[]> {
   const sb = requireSupabase();
-  const { data, error } = await sb.rpc("calendario_acreditaciones_v2", {
-    p_mes: filters.mes,
-    p_anio: filters.anio,
-    p_comercio_id: filters.comercioId ?? null,
-    p_bandera: filters.bandera ?? null,
-    p_estado: filters.estado ?? null,
-  });
+  
+  const { data, error } = await sb
+    .from("lotes_acreditacion")
+    .select(LOTE_COLUMNS)
+    .eq("fecha", fecha)
+    .order("created_at", { ascending: false });
+  
   if (error) throw new DataAccessError(error);
-  const arr = Array.isArray(data) ? data : [];
-  return arr.map((r) => toCalendarioAcreditacion(r as Record<string, unknown>));
-}
-
-/**
- * Resumen de saldos del header. Si comercioId es null, agrega a nivel
- * plataforma.
- */
-export async function getResumenSaldosCalendario(
-  comercioId: string | null,
-): Promise<ResumenSaldos> {
-  const sb = requireSupabase();
-  const { data, error } = await sb.rpc("calendario_resumen_saldos", {
-    p_comercio_id: comercioId,
+  
+  return ((data ?? []) as unknown[]).map((r: unknown) => {
+    const row = r as LoteAcreditacionRow & { comercios: unknown };
+    const comArr = row.comercios as unknown as Array<{ id: string; usuario: string; legajo: string; nombre_comercio: string }> | null;
+    const com = comArr?.[0] ?? null;
+    const comisionCierreLoteMonto = Number(row.comision_cierre_lote_monto ?? 0);
+    const importeNetoFinal = Number(row.importe_neto) - comisionCierreLoteMonto;
+    
+    return {
+      id: row.id,
+      codigo: row.codigo,
+      comercioId: row.comercio_id,
+      comercioNombre: com?.nombre_comercio ?? com?.usuario ?? "—",
+      comercioLegajo: com?.legajo ?? row.comercio_id,
+      bandera: row.bandera ?? "—",
+      fecha: row.fecha,
+      cantidadOperaciones: Number(row.cantidad_operaciones),
+      importeBruto: Number(row.importe_bruto),
+      importeNeto: Number(row.importe_neto),
+      impuestos: Number(row.impuestos),
+      tasaPaywayPct: Number(row.tasa_payway_pct),
+      tasaPaywayMonto: Number(row.tasa_payway_monto),
+      tasaMolipayPct: Number(row.tasa_molipay_pct),
+      tasaMolipayMonto: Number(row.tasa_molipay_monto),
+      cuotas: row.cuotas != null ? Number(row.cuotas) : null,
+      contracargoMonto: Number(row.contracargo_monto ?? 0),
+      importeNetoReal: importeNetoFinal,
+      estado: row.estado,
+    };
   });
-  if (error) throw new DataAccessError(error);
-  const r = (data ?? {}) as Record<string, unknown>;
-  const faltaCobrar = parseNumber(r.falta_cobrar);
-  const porAcreditar = parseNumber(r.por_acreditar);
-  const adelantosEnCurso = parseNumber(r.adelantos_en_curso);
-  // Si la RPC devuelve `disponible_real`, lo usamos; si no, lo calculamos acá
-  // para mantener compat con schemas viejos.
-  const disponibleReal = r.disponible_real != null
-    ? parseNumber(r.disponible_real)
-    : Math.max(porAcreditar - adelantosEnCurso, 0);
-  return { faltaCobrar, porAcreditar, adelantosEnCurso, disponibleReal };
-}
-
-/**
- * Adelantos Pendiente/Aprobado/Acreditado del comercio. Si se pasa
- * fecha, prioriza los Acreditados de ese día.
- */
-export async function getAdelantosPorDia(
-  comercioId: string,
-  fecha: string | null,
-): Promise<AdelantoParaCalendario[]> {
-  const sb = requireSupabase();
-  const { data, error } = await sb.rpc("calendario_adelantos_por_dia", {
-    p_comercio_id: comercioId,
-    p_fecha: fecha,
-  });
-  if (error) throw new DataAccessError(error);
-  const arr = Array.isArray(data) ? data : [];
-  return arr.map((r) => toAdelantoParaCalendario(r as Record<string, unknown>));
-}
-
-/**
- * Filas del día para exportación (Excel/PDF). Mismo shape que el
- * modal de detalle.
- */
-export async function getExportDia(
-  fecha: string,
-  comercioId: string | null,
-): Promise<ExportDiaRow[]> {
-  const sb = requireSupabase();
-  const { data, error } = await sb.rpc("calendario_exportar_dia", {
-    p_fecha: fecha,
-    p_comercio_id: comercioId,
-  });
-  if (error) throw new DataAccessError(error);
-  const arr = Array.isArray(data) ? data : [];
-  return arr.map((r) => toExportRow(r as Record<string, unknown>));
-}
-
-/**
- * Monto mínimo de adelanto, configurado en `parametros_globales`. Si
- * no está seteado, devuelve 100 por defecto.
- */
-export async function getMinMontoAdelanto(): Promise<number> {
-  const sb = requireSupabase();
-  try {
-    const { data, error } = await sb
-      .from("parametros_globales")
-      .select("valor")
-      .eq("clave", "min_monto_adelanto")
-      .maybeSingle();
-    if (error) {
-      console.warn("getMinMontoAdelanto: error leyendo parametro_globales:", error.message);
-      return 100;
-    }
-    const n = data?.valor != null ? Number(data.valor) : NaN;
-    return Number.isFinite(n) && n > 0 ? n : 100;
-  } catch (e) {
-    console.warn("getMinMontoAdelanto: fallback a 100:", e);
-    return 100;
-  }
 }

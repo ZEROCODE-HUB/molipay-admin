@@ -12,7 +12,6 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { DataAccessError } from "@/lib/api/errors";
 import { Badge as BadgeComp } from "@/components/portal-shell";
 import { LegajoCell } from "@/components/legajo-label";
-import { Pagination } from "@/components/pagination";
 import { useQuery } from "@tanstack/react-query";
 import { requireSupabase } from "@/lib/supabase";
 import { listQrPos, updateQrEstado, deleteQrPos } from "@/lib/api/qr-pos";
@@ -205,20 +204,35 @@ function Page() {
       : rows.length===0 ? <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-sm text-muted-foreground"><Inbox size={28}/><p>No hay QRs/POS.</p><p className="text-xs">Crea un QR en Enterprise → aparecerá aquí como Pendiente de aprobación.</p></div>
       : <>
           <DataTable columns={columns} data={rows} keyExtractor={(r)=>r.id} actions={(r)=> <ActionsDropdown actions={getActions(r)} />} hidePagination showGlobalFilter={false} />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            total={total}
-            countLabel="QR(s)"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
-            }}
-          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>{total} QR(s) · </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page===0||isFetching} onClick={()=>setPage((p)=>Math.max(0,p-1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button>
+                <button disabled={page+1>=totalPages||isFetching} onClick={()=>setPage((p)=>p+1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
         </>}
       {detail && <QrDetalle qr={detail} onClose={()=>setDetail(null)} />}
       {confirm && <ConfirmDialog open={!!confirm} onClose={()=>setConfirm(null)} title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel} variant={confirm.variant} onConfirm={confirm.onConfirm} />}

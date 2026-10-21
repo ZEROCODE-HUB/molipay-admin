@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Eye, XCircle, RotateCcw, Trash2, AlertTriangle, Inbox, ShieldCheck, Ban, CheckCircle, Building2, Store } from "lucide-react";
+import { Eye, XCircle, RotateCcw, Trash2, AlertTriangle, Inbox, ShieldCheck, Ban, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -18,9 +18,6 @@ import {
   deshabilitarCliente,
   eliminarCliente,
   getClienteByLegajo,
-  getClientesEnrichment,
-  formatCuit,
-  type ClienteEnrichment,
 } from "@/lib/api/clientes";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
@@ -28,7 +25,6 @@ import { PermissionGuard } from "@/components/permission-guard";
 import type { Cliente, EstadoCliente } from "@/lib/api/types";
 import { ESTADO_LABEL, ESTADO_TONE, normalizarEstado, FILTRO_ESTADOS_OPCIONES, LABEL_A_ESTADO } from "@/lib/cliente-estados";
 import { toast } from "sonner";
-import { Pagination } from "@/components/pagination";
 
 export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
   head: () => ({
@@ -42,41 +38,16 @@ export const Route = createFileRoute("/admin/general/usuarios/juridicas")({
 
 const PAGE_SIZES = [10, 20, 50];
 
-/**
- * Etiqueta corta del tipo societario a partir de `clientes.tipo_sociedad`.
- * Si no matchea ninguno conocido, devuelve el texto original truncado.
- */
-function tipoSociedadToLabel(tipo: string | null | undefined): string {
-  if (!tipo) return "—";
-  const t = tipo.trim().toLowerCase();
-  if (t.includes("srl") || t.includes("responsabilidad limitada")) return "SRL";
-  if (t.includes("sas")) return "SAS";
-  if (t.includes(" sa") || t.startsWith("sa") || t.includes("sociedad anonima") || t.includes("sociedad anónima")) return "SA";
-  if (t.includes("sca") || t.includes("colectiva")) return "SCA";
-  if (t.includes("scpa") || t.includes("comandita por acciones")) return "SCpA";
-  if (t.includes("sc") || t.includes("comandita simple")) return "SC";
-  if (t.includes("civil")) return "SCivil";
-  // Fallback: truncar a 6 caracteres para no romper el ancho de la columna.
-  return tipo.length > 6 ? tipo.slice(0, 6) : tipo;
-}
-
 type JuridicaRow = {
   id: string;
   legajo: string;
   correo: string;
-  cuit: string;
-  cuitFormatted: string;
   razonSocial: string;
-  nombreFantasia: string | null;
-  tipoSociedadRaw: string | null;
-  tipoLabel: string;
+  tipoLabel: "SA" | "SRL" | "—";
   estadoRaw: EstadoCliente;
   estadoLabel: string;
   estadoTone: "success" | "warn" | "danger" | "neutral";
   fechaRegistro: string;
-  esPep: boolean;
-  comerciosCount: number;
-  cvuCount: number;
 };
 
 function EstadoMensaje({
@@ -157,36 +128,19 @@ function JuridicasPage() {
   const puedeModificar = can("modificar", "usuarios");
   const puedeBorrar = can("borrar", "usuarios");
 
-  // Enrichment paralelo: comercios y CVUs por legajo (mismo patrón que Personas Físicas).
-  const enrichmentQuery = useQuery<Record<string, ClienteEnrichment>>({
-    queryKey: ["clientes-enrichment-juridicas", rows.map((r) => r.legajo).join("|")],
-    queryFn: async () => getClientesEnrichment(rows.map((r) => r.legajo)),
-    enabled: rows.length > 0,
-    staleTime: 60_000,
-    placeholderData: (prev) => prev,
-  });
-  const enrichmentMap = enrichmentQuery.data ?? {};
-
   const data: JuridicaRow[] = rows.map((c: Cliente) => {
     const norm = normalizarEstado(c.estado);
-    const e = enrichmentMap[c.legajo] ?? {};
+    const tipoLabel = c.nombre.toUpperCase().includes("SRL") ? "SRL" : c.nombre.toUpperCase().includes("SA") ? "SA" : "—";
     return {
       id: c.id,
       legajo: c.legajo,
       correo: c.correo,
-      cuit: c.cuit,
-      cuitFormatted: formatCuit(c.cuit),
       razonSocial: c.nombre,
-      nombreFantasia: c.nombreFantasia ?? null,
-      tipoSociedadRaw: c.tipoSociedad ?? null,
-      tipoLabel: tipoSociedadToLabel(c.tipoSociedad),
+      tipoLabel: tipoLabel as JuridicaRow["tipoLabel"],
       estadoRaw: c.estado,
       estadoLabel: ESTADO_LABEL[norm],
       estadoTone: ESTADO_TONE[norm] as JuridicaRow["estadoTone"],
       fechaRegistro: c.fechaAlta,
-      esPep: Boolean(c.esPep),
-      comerciosCount: e.comerciosCount ?? 0,
-      cvuCount: e.cvuCount ?? 0,
     };
   });
 
@@ -358,20 +312,41 @@ function JuridicasPage() {
               </div>
             }
           />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPaginas}
-            pageSize={pageSize}
-            total={total}
-            countLabel="resultado(s)"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
-            }}
-          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>
+                {total} resultado(s) ·{" "}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button type="button" disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
+                  Anterior
+                </button>
+                <button type="button" disabled={page + 1 >= totalPaginas || isFetching} onClick={() => setPage((p) => p + 1)} className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -391,100 +366,15 @@ function JuridicasPage() {
 }
 
 const columns: Column<JuridicaRow>[] = [
-  {
-    key: "legajo",
-    label: "Legajo",
-    hint: LEGAJO_TOOLTIP,
-    filterable: true,
-    minWidth: 110,
-    render: (r) => <LegajoCell legajo={r.legajo} />,
-  },
-  {
-    key: "cuit",
-    label: "CUIT",
-    filterable: true,
-    minWidth: 130,
-    render: (r) => (
-      <span className="font-mono text-xs tabular-nums" title={`Legajo: ${r.legajo}`}>
-        {r.cuitFormatted}
-      </span>
-    ),
-  },
-  {
-    key: "razonSocial",
-    label: "Razón social / Fantasía",
-    filterable: true,
-    minWidth: 220,
-    maxWidth: 360,
-    render: (r) => (
-      <div className="flex flex-col">
-        <span className="font-medium text-foreground" title={r.razonSocial}>
-          {r.razonSocial}
-        </span>
-        {r.nombreFantasia ? (
-          <span className="text-xs italic text-muted-foreground">*{r.nombreFantasia}*</span>
-        ) : null}
-        <span className="text-xs text-muted-foreground">{r.correo}</span>
-      </div>
-    ),
-  },
-  {
-    key: "tipoLabel",
-    label: "Tipo",
-    minWidth: 80,
-    render: (r) => (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-card text-xs font-semibold">
-        <Building2 size={12} className="text-muted-foreground" />
-        {r.tipoLabel}
-      </span>
-    ),
-  },
+  { key: "legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, filterable: true, minWidth: 100, render: (r) => <LegajoCell legajo={r.legajo} /> },
+  { key: "correo", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (r) => r.correo },
+  { key: "razonSocial", label: "Razón Social", filterable: true, minWidth: 200, maxWidth: 320, render: (r) => r.razonSocial },
+  { key: "tipoLabel", label: "Tipo", minWidth: 100, render: (r) => r.tipoLabel },
   {
     key: "estadoLabel",
     label: "Estado",
     minWidth: 120,
-    render: (r) => <Badge tone={r.estadoTone}>{r.estadoLabel}</Badge>,
+    render: (row) => <Badge tone={row.estadoTone}>{row.estadoLabel}</Badge>,
   },
-  {
-    key: "esPep",
-    label: "PEP",
-    minWidth: 70,
-    render: (r) =>
-      r.esPep ? (
-        <span className="inline-flex items-center justify-center w-7 h-5 rounded-md border text-xs font-semibold bg-red-100 text-red-800 border-red-200">
-          Sí
-        </span>
-      ) : (
-        <span className="text-xs text-muted-foreground text-center w-7 inline-block">No</span>
-      ),
-  },
-  {
-    key: "comerciosCount",
-    label: "Comercios / CVUs",
-    minWidth: 160,
-    render: (r) => (
-      <div className="flex items-center gap-3 text-xs font-medium tabular-nums">
-        <span
-          className={`inline-flex items-center gap-1 ${r.comerciosCount > 0 ? "text-foreground" : "text-muted-foreground"}`}
-          title="Comercios asociados"
-        >
-          <Store size={12} />
-          {r.comerciosCount} {r.comerciosCount === 1 ? "Comercio" : "Comercios"}
-        </span>
-        <span className="text-muted-foreground/50">·</span>
-        <span
-          className={`inline-flex items-center gap-1 ${r.cvuCount > 0 ? "text-foreground" : "text-muted-foreground"}`}
-          title="CVUs / Subcuentas"
-        >
-          {r.cvuCount} {r.cvuCount === 1 ? "CVU" : "CVUs"}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: "fechaRegistro",
-    label: "Fecha de registro",
-    minWidth: 130,
-    render: (r) => <span className="font-mono tabular-nums">{r.fechaRegistro}</span>,
-  },
+  { key: "fechaRegistro", label: "Fecha de registro", minWidth: 140, render: (r) => <span className="font-mono tabular-nums">{r.fechaRegistro}</span> },
 ];

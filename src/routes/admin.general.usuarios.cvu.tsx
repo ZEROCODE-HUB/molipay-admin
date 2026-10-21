@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox, Search, Zap, Wallet, ShieldCheck, Coins } from "lucide-react";
+import { Plus, Eye, Edit3, XCircle, AlertTriangle, Inbox, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
@@ -8,18 +8,16 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BtnPrimary, Badge, Input, Label } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
-import { Pagination } from "@/components/pagination";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import { listAllCvus, updateSubcuenta } from "@/lib/api/subcuentas";
-import { asignarCvuParaNuevo, asignarCvuParaExistente } from "@/lib/api/cvu";
-import { getClienteByCorreo, formatCuit } from "@/lib/api/clientes";
+import { listAllCvus, createSubcuenta, updateSubcuenta, crearCvuEnBanco, generarAlias } from "@/lib/api/subcuentas";
+import { getClienteByCorreo } from "@/lib/api/clientes";
 import { useClientesForSelect } from "@/hooks/useComercios";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { toast } from "sonner";
-import type { CvuRow, SubcuentaTipo } from "@/lib/api/subcuentas";
+import type { CvuRow } from "@/lib/api/subcuentas";
 
 export const Route = createFileRoute("/admin/general/usuarios/cvu")({
   head: () => ({
@@ -43,33 +41,6 @@ function estadoBadge(e: string) {
   };
   const m = map[e] ?? { label: e, tone: "neutral" as const };
   return <Badge tone={m.tone}>{m.label}</Badge>;
-}
-
-/**
- * Mapea el `subcuentas.tipo` (4 valores oficiales: Operativa | Recaudacion | Garantias | Sueldos)
- * a un badge con color e ícono. Etiqueta y "kind" se usan también en el dropdown del modal.
- */
-const TIPO_SUBCUENTA_META: Record<SubcuentaTipo, { label: string; icon: typeof Wallet }> = {
-  Operativa: { label: "Operativa", icon: Wallet },
-  Recaudacion: { label: "Recaudación", icon: Coins },
-  Garantias: { label: "Garantías", icon: ShieldCheck },
-  Sueldos: { label: "Sueldos", icon: Wallet },
-};
-
-function tipoSubcuentaBadge(tipo: SubcuentaTipo) {
-  const meta = TIPO_SUBCUENTA_META[tipo] ?? { label: tipo, icon: Wallet };
-  const Icon = meta.icon;
-  const tone =
-    tipo === "Operativa" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-      : tipo === "Recaudacion" ? "bg-blue-100 text-blue-800 border-blue-200"
-        : tipo === "Garantias" ? "bg-amber-100 text-amber-800 border-amber-200"
-          : "bg-purple-100 text-purple-800 border-purple-200";
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium ${tone}`}>
-      <Icon size={12} />
-      {meta.label}
-    </span>
-  );
 }
 
 function CvuPage() {
@@ -111,7 +82,7 @@ function CvuPage() {
   const [showNuevo, setShowNuevo] = useState(false);
   const [formEmail, setFormEmail] = useState("");
   const [formAlias, setFormAlias] = useState("");
-  const [formTipo, setFormTipo] = useState<SubcuentaTipo>("Operativa");
+  const [formTipo, setFormTipo] = useState("Cuenta individual");
   const [formSearch, setFormSearch] = useState("");
   const debouncedFormSearch = useDebouncedValue(formSearch, 350);
   const { data: clientesOpt } = useClientesForSelect(debouncedFormSearch || undefined);
@@ -140,32 +111,34 @@ function CvuPage() {
         setSaving(false);
         return;
       }
-      // Llamada centralizada: mismo flujo BDC + audit + fallback que el
-      // boton "Generar CVU" del menu. Asi NO se inventan CVUs locales
-      // para el CVU inicial del titular (que es el camino mas importante
-      // regulatoriamente).
-      const result = await asignarCvuParaNuevo({
-        cliente: {
-          id: cliente.id,
-          legajo: cliente.legajo,
-          correo: cliente.correo,
-          cuit: cliente.cuit,
-          nombre: cliente.nombre,
-          tipoPersona: cliente.tipoPersona,
-        },
-        alias: formAlias.trim() || undefined,
-        tipo: formTipo,
-        origin: "admin",
-      });
+      const alias = formAlias.trim() || generarAlias(email);
+      const isJuridica = cliente.tipoPersona === "juridica";
+      const nombre = isJuridica ? cliente.nombre : (cliente.nombre.split(" ")[0] ?? cliente.nombre);
+      const apellido = isJuridica ? "" : cliente.nombre.split(" ").slice(1).join(" ") || "";
 
-      // Si BDC rechazo explicitamente (alias_taken o cuit_invalid), el helper
-      // ya mostro el toast y NO creo la subcuenta. Salimos sin cerrar el modal
-      // para que el operador pueda corregir el alias.
-      if (result.kind === "rechazado") {
+      if (!cliente.cuit) {
+        toast.error("El cliente no tiene CUIT cargado: no se puede crear la subcuenta en el banco");
         setSaving(false);
         return;
       }
 
+      // El CVU lo genera el BANCO (POST /sub-account via nuestro backend).
+      const { cvu } = await crearCvuEnBanco({
+        legajo: cliente.legajo,
+        personId: cliente.cuit,
+        personName: cliente.nombre,
+        alias,
+      });
+
+      await createSubcuenta(cliente.legajo, {
+        nombre,
+        apellido,
+        email: cliente.correo,
+        cbu: cvu,
+        tipo: "Operativa",
+        estado: "Activa",
+      });
+      toast.success(`CVU ${cvu} creado para ${cliente.correo} — se refleja en Subcuentas y CVUs recientes`);
       queryClient.invalidateQueries({ queryKey: ["cvus"] });
       queryClient.invalidateQueries({ queryKey: ["subcuentas", cliente.legajo] });
       setShowNuevo(false);
@@ -193,79 +166,25 @@ function CvuPage() {
     }
   };
 
-  const getActions = (row: CvuRow): ActionItem[] => {
-  const items: ActionItem[] = [
+  const getActions = (row: CvuRow): ActionItem[] => [
     { label: "Ver detalles", icon: Eye, onClick: () => setViewing(row) },
-  ];
-
-  // Acción contextual: si la subcuenta no tiene CVU todavia, el operador
-  // puede pedir la asignacion contra BDC/COELSA. Toda la logica vive en
-  // `asignarCvuParaExistente` (centralizada en `lib/api/cvu.ts`) para que
-  // modal y menu compartan exactamente el mismo flow.
-  if (!row.cbu) {
-    items.push({
-      label: "Generar CVU (BDC/COELSA)",
-      icon: Zap,
+    { label: "Editar", icon: Edit3, disabled: !puedeModificar, onClick: () => { setEditTarget(row); setEditAlias(row.cbu?.slice(-6) ?? ""); } },
+    {
+      label: row.estado === "Activa" ? "Deshabilitar" : "Habilitar",
+      icon: XCircle,
+      variant: row.estado === "Activa" ? "danger" as const : undefined,
       disabled: !puedeModificar,
       onClick: async () => {
-        const cuit = (row.cliente?.cuit ?? "").replace(/\D/g, "");
-        if (!row.legajo || !cuit) {
-          toast.error("No se pudo identificar el titular (legajo o CUIT faltante).");
-          return;
+        try {
+          await updateSubcuenta(row.clienteLegajo, row.id, { estado: row.estado === "Activa" ? "Pausada" : "Activa" });
+          queryClient.invalidateQueries({ queryKey: ["cvus"] });
+          queryClient.invalidateQueries({ queryKey: ["subcuentas", row.clienteLegajo] });
+        } catch (e) {
+          toast.error((e as Error).message);
         }
-        const result = await asignarCvuParaExistente({
-          cliente: {
-            id: row.id,
-            legajo: row.legajo,
-            correo: row.cliente?.correo ?? row.email ?? "",
-            cuit,
-            nombre: `${row.nombre} ${row.apellido}`.trim() || row.nombre,
-            tipoPersona:
-              row.cliente?.tipoPersona === "juridica" ? "juridica" : "fisica",
-          },
-          subcuentaId: row.id,
-          tipo: row.tipo,
-          origin: "admin",
-        });
-        if (result.kind === "rechazado") {
-          return;
-        }
-        queryClient.invalidateQueries({ queryKey: ["cvus"] });
-        queryClient.invalidateQueries({ queryKey: ["subcuentas", row.clienteLegajo] });
       },
-    });
-  }
-
-  items.push({
-    label: "Editar",
-    icon: Edit3,
-    disabled: !puedeModificar,
-    onClick: () => {
-      setEditTarget(row);
-      setEditAlias(row.cbu?.slice(-6) ?? "");
     },
-  });
-
-  items.push({
-    label: row.estado === "Activa" ? "Deshabilitar" : "Habilitar",
-    icon: XCircle,
-    variant: row.estado === "Activa" ? ("danger" as const) : undefined,
-    disabled: !puedeModificar,
-    onClick: async () => {
-      try {
-        await updateSubcuenta(row.clienteLegajo, row.id, {
-          estado: row.estado === "Activa" ? "Pausada" : "Activa",
-        });
-        queryClient.invalidateQueries({ queryKey: ["cvus"] });
-        queryClient.invalidateQueries({ queryKey: ["subcuentas", row.clienteLegajo] });
-      } catch (e) {
-        toast.error((e as Error).message);
-      }
-    },
-  });
-
-  return items;
-};
+  ];
 
   const err = error instanceof DataAccessError ? error : null;
 
@@ -294,12 +213,10 @@ function CvuPage() {
             data={rows.map((r) => ({
               ...r,
               _legajo: r.legajo,
-              _cuit: r.cliente?.cuit ?? "",
               _correo: r.cliente?.correo ?? r.email,
               _nombre: r.nombre,
               _apellido: r.apellido,
-              _tipo: r.tipo,
-              _cvu: r.cbu ?? null,
+              _cvu: r.cbu ?? "—",
               _cbk: r.cbu ? `CBK-${r.cbu.slice(-12)}` : "—",
               _alias: r.cbu ? r.cbu.slice(-6) : "—",
               _estado: r.estado,
@@ -323,20 +240,35 @@ function CvuPage() {
               </div>
             }
           />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            total={total}
-            countLabel="CVU"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
-            }}
-          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>{total} CVU · </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page === 0 || isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Anterior</button>
+                <button disabled={page + 1 >= totalPages || isFetching} onClick={() => setPage((p) => p + 1)} className="h-9 px-3 rounded-md border bg-card disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -388,26 +320,7 @@ function CvuPage() {
           <p className="text-[11px] text-muted-foreground mt-1">Seleccioná un email de la lista (20 resultados, server-side). Funciona para PF y PJ.</p>
         </div>
         <div><Label>Alias (opcional)</Label><Input value={formAlias} onChange={(e) => setFormAlias(e.target.value)} placeholder="mi.alias (se genera automático si vacío)" /></div>
-        <div>
-          <Label>Tipo de cuenta</Label>
-          <select
-            className="w-full h-10 px-3 rounded-md border bg-card text-sm"
-            value={formTipo}
-            onChange={(e) => setFormTipo(e.target.value as SubcuentaTipo)}
-          >
-            {(Object.keys(TIPO_SUBCUENTA_META) as SubcuentaTipo[]).map((t) => (
-              <option key={t} value={t}>
-                {TIPO_SUBCUENTA_META[t].label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Operativa: saldo líquido para retiros y transferencias.
-            Recaudación: cobros / ventas.
-            Garantías: contracargos y retenciones.
-            Sueldos: nómina y pagos a empleados.
-          </p>
-        </div>
+        <div><Label>Tipo de cuenta</Label><select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={formTipo} onChange={(e) => setFormTipo(e.target.value)}><option>Cuenta individual</option><option>Cuenta compartida</option></select></div>
         <p className="text-xs text-muted-foreground">Se generará un CVU de 22 dígitos y alias, y se guardará como subcuenta. Aparecerá en el detalle del usuario en Subcuentas y CVUs recientes.</p>
       </FormDialog>
     </PermissionGuard>
@@ -415,41 +328,11 @@ function CvuPage() {
 }
 
 const columns: Column<any>[] = [
-  {
-    key: "_legajo",
-    label: "Legajo",
-    hint: LEGAJO_TOOLTIP,
-    filterable: true,
-    render: (r) => (
-      <div className="flex flex-col">
-        <LegajoCell legajo={r._legajo} />
-        <span className="text-[11px] text-muted-foreground font-mono">{formatCuit(r._cuit)}</span>
-      </div>
-    ),
-  },
+  { key: "_legajo", label: "Legajo", hint: LEGAJO_TOOLTIP, filterable: true, render: (r) => <LegajoCell legajo={r._legajo} /> },
   { key: "_correo", label: "Usuario", filterable: true, render: (r) => r._correo },
   { key: "_nombre", label: "Nombre", filterable: true, render: (r) => r._nombre },
   { key: "_apellido", label: "Apellido", filterable: true, render: (r) => r._apellido },
-  {
-    key: "_tipo",
-    label: "Tipo",
-    minWidth: 140,
-    filterable: true,
-    render: (r) => tipoSubcuentaBadge(r._tipo),
-  },
-  {
-    key: "_cvu",
-    label: "CVU",
-    filterable: true,
-    render: (r) =>
-      r._cvu && r._cvu !== "—" ? (
-        <span className="font-mono tabular-nums">{r._cvu}</span>
-      ) : (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-[11px] font-medium">
-          Pendiente de asignación
-        </span>
-      ),
-  },
+  { key: "_cvu", label: "CVU", filterable: true, render: (r) => <span className="font-mono tabular-nums">{r._cvu}</span> },
   { key: "_cbk", label: "CBK", render: (r) => <span className="font-mono tabular-nums">{r._cbk}</span> },
   { key: "_alias", label: "Alias", render: (r) => r._alias },
   { key: "_estado", label: "Estado", render: (row) => estadoBadge(row._estado) },

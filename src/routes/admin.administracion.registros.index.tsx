@@ -180,7 +180,7 @@ function Page() {
         keyExtractor={(r) => r.cvu}
         pageSize={10}
         actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-        onDownloadCSV={() => downloadExcel("fondos_filtrados.xlsx", excelRows(mock))}
+        exportFileName="fondos_por_usuario"
       />
 
       {viewing && (

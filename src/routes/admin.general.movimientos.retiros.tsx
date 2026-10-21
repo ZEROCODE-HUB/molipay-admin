@@ -11,8 +11,9 @@ export const Route = createFileRoute("/admin/general/movimientos/retiros")({
   component: () => (
     <MovimientosSubRoute
       titulo="Retiros"
-      descripcion="Transacciones de retiro salidas de la plataforma."
+      descripcion="Transacciones de retiro salidas de la plataforma (incluye las transferencias enviadas)."
       tipoCode="retiro"
+      tipos={["retiro", "transferencia"]}
     />
   ),
 });

@@ -9,7 +9,14 @@ export type MovimientoFilters = Pagination & {
   search?: string;
   /** Código de estado (estados_movimiento.codigo), p. ej. "APROBADO". */
   estadoCodigo?: string;
+  /** Filtro por tipo (uno solo). */
   tipo?: string;
+  /**
+   * Varios tipos a la vez (ej. Retiros = `["retiro","transferencia"]`: una
+   * transferencia saliente es un egreso aunque en la base figure como
+   * `transferencia`). Si se define, manda sobre `tipo`.
+   */
+  tipos?: string[];
   clienteId?: string;
   legajo?: string;
   fechaDesde?: string; // ISO
@@ -32,7 +39,7 @@ export type MovimientoFilters = Pagination & {
 // embeds sin !inner, así que se resuelve en una query previa a comercios y se agrega como
 // comercio_id.in.(...) al .or() (ver buscarComercioIdsPorNombre).
 const COLUMNS =
-  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
+  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, destinatario_nombre, destinatario_cuit, destinatario_banco, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
 
 /** Resuelve los comercio_id cuyo nombre_comercio matchea el texto (ILIKE), para usarlos
  *  en el .or() de listMovimientos como comercio_id.in.(...). Si ningún comercio matchea
@@ -56,6 +63,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
     search,
     estadoCodigo,
     tipo,
+    tipos,
     clienteId,
     legajo,
     fechaDesde,
@@ -70,6 +78,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
   const filtrosEstructuradosActivos = Boolean(
     estadoCodigo ||
       tipo ||
+      tipos?.length ||
       clienteId ||
       legajo ||
       fechaDesde ||
@@ -89,7 +98,8 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
   if (clienteId) query = query.eq("cliente_id", clienteId);
   if (legajo) query = query.eq("legajo", legajo.trim().toUpperCase());
   if (estadoCodigo) query = query.eq("estados_movimiento.codigo", estadoCodigo);
-  if (tipo) query = query.eq("tipo", tipo);
+  if (tipos?.length) query = query.in("tipo", tipos);
+  else if (tipo) query = query.eq("tipo", tipo);
   if (conImpuesto) query = query.gt("impuesto", 0);
   if (conComision) query = query.gt("comision", 0);
   if (fechaDesde) query = query.gte("fecha", fechaDesde);

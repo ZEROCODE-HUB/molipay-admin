@@ -141,27 +141,12 @@ export function marcaCoincide(marcaCsv: string, banderaLote: string): boolean {
   return a.startsWith(b) || b.startsWith(a);
 }
 
-/**
- * Lookup de un comercio por `sitioId` (la columna `site_id` de la
- * tabla `comercios`). Es el fallback cuando el renglón del CSV no
- * matchea contra el mapa de `comercio_establecimientos` (el de
- * marca/establecimiento), pero el número de establecimiento que
- * trae el archivo coincide con el `site_id` del comercio.
- */
-export type SitioLookup = { sitioId: string; comercioId: string; comercioNombre: string };
-
-/** Indice de establecimientos por `ESTABLECIMIENTO|MARCA`, por `ESTABLECIMIENTO` y por `sitioId`. */
+/** Indice de establecimientos por `ESTABLECIMIENTO|MARCA` y por `ESTABLECIMIENTO`. */
 function indexarEstablecimientos(
   filas: { establecimiento: string; marca: string; comercioId: string; comercioNombre: string; vigenteHasta: string | null }[],
-  sitios: SitioLookup[] = [],
-): {
-  porMarca: Map<string, EstablecimientoLookup>;
-  solo: Map<string, EstablecimientoLookup>;
-  porSitio: Map<string, SitioLookup>;
-} {
+): { porMarca: Map<string, EstablecimientoLookup>; solo: Map<string, EstablecimientoLookup> } {
   const porMarca = new Map<string, EstablecimientoLookup>();
   const solo = new Map<string, EstablecimientoLookup>();
-  const porSitio = new Map<string, SitioLookup>();
 
   for (const f of filas) {
     const lookup: EstablecimientoLookup = {
@@ -176,13 +161,7 @@ function indexarEstablecimientos(
     if (!solo.has(e)) solo.set(e, lookup);
   }
 
-  for (const s of sitios) {
-    const k = s.sitioId.trim();
-    if (!k) continue;
-    if (!porSitio.has(k)) porSitio.set(k, s);
-  }
-
-  return { porMarca, solo, porSitio };
+  return { porMarca, solo };
 }
 
 function vigenteEn(lookup: EstablecimientoLookup, fecha: string): boolean {
@@ -198,26 +177,11 @@ function vigenteEn(lookup: EstablecimientoLookup, fecha: string): boolean {
  * El orden importa: primero se ve si el renglon es de este lote. Solo si lo es
  * se exigencia que tenga un comercio mapeado, porque un renglon que es de otro
  * lote no necesita resolverse para poder acreditarse acá.
- *
- * Tres caminos de resolución, en este orden:
- *   1. Mapa de establecimientos (`(establecimiento, marca)` o sólo
- *      `establecimiento`).
- *   2. `comercioManual` que el operador eligió en el modal.
- *   3. **Fallback por `site_id`**: si el `ESTABLECIMIENTO` del CSV
- *      coincide con el `site_id` de un comercio, se considera el
- *      renglón de ese comercio. Esto es lo que permite que el CSV
- *      de prueba funcione sin tener cargado el mapa de
- *      establecimientos, mientras el operador siga usando
- *      `comercios.site_id` como clave.
  */
 export function resolverRenglon(
   renglon: RenglonLiquidacion,
   lote: LoteAcreditacion,
-  idx: {
-    porMarca: Map<string, EstablecimientoLookup>;
-    solo: Map<string, EstablecimientoLookup>;
-    porSitio: Map<string, SitioLookup>;
-  },
+  idx: { porMarca: Map<string, EstablecimientoLookup>; solo: Map<string, EstablecimientoLookup> },
   comercioManual: string | null,
   toleranciaBrutoPct: number,
 ): RenglonMatch {
@@ -238,12 +202,11 @@ export function resolverRenglon(
   if (renglon.sinMovimiento) {
     const lookupCero =
       idx.porMarca.get(`${renglon.establecimiento}|${normalizaMarca(renglon.marca)}`) ??
-      idx.solo.get(renglon.establecimiento) ??
-      idx.porSitio.get(renglon.establecimiento);
+      idx.solo.get(renglon.establecimiento);
     return {
       ...base,
-      comercioId: lookupCero ? (lookupCero as { comercioId: string }).comercioId : null,
-      comercioNombre: lookupCero ? (lookupCero as { comercioNombre: string }).comercioNombre : null,
+      comercioId: lookupCero?.comercioId ?? null,
+      comercioNombre: lookupCero?.comercioNombre ?? null,
       estado: "sin_movimiento",
       acreditable: false,
     };
@@ -267,26 +230,6 @@ export function resolverRenglon(
         acreditable: true,
       };
     }
-
-    // Fallback por site_id: si el número de establecimiento del CSV
-    // coincide con el site_id de un comercio Y ese comercio es el del
-    // lote, el renglón se marca como aplicable. Esto es lo que usa el
-    // CSV de prueba cuando el mapa de establecimientos no está
-    // cargado.
-    const sitioMatch = idx.porSitio.get(renglon.establecimiento);
-    if (sitioMatch && sitioMatch.comercioId === lote.comercioId) {
-      const dif = r2(Math.abs(renglon.totalBruto - lote.importeBruto));
-      const pct = lote.importeBruto !== 0 ? r2((dif / lote.importeBruto) * 100) : 0;
-      return {
-        ...base,
-        comercioId: sitioMatch.comercioId,
-        comercioNombre: sitioMatch.comercioNombre || lote.comercio?.nombreComercio || lote.comercio?.usuario || null,
-        estado: pct > toleranciaBrutoPct ? "diferencia" : "aplicado",
-        diferencia: dif,
-        acreditable: true,
-      };
-    }
-
     return { ...base, estado: "sin_establecimiento", acreditable: false };
   }
 
@@ -370,15 +313,6 @@ export function calcularAcreditacion(args: {
   /** Comercio elegido a mano cuando el mapa no tiene el establecimiento. */
   comercioManual?: string | null;
   /**
-   * Lookups por `site_id` para el fallback de resolución. Si el
-   * renglón del CSV no matchea con el mapa de establecimientos, se
-   * prueba contra este set: si el `ESTABLECIMIENTO` coincide con un
-   * `site_id` y el comercio matchea con el del lote, el renglón se
-   * considera aplicable. Útil para el CSV de prueba cuando todavía
-   * no está cargado el mapa.
-   */
-  sitios?: SitioLookup[];
-  /**
    * Correcciones manuales por numero de linea. Se aplican DESPUES de la
    * resolucion automatica y ganan siempre: si el operador forzo un renglon,
    * la heuristica deja de opinar sobre ese renglon.
@@ -386,7 +320,7 @@ export function calcularAcreditacion(args: {
   overrides?: Record<number, OverrideRenglon>;
 }): PreviewAcreditacion {
   const { lote, renglones, parametros } = args;
-  const idx = indexarEstablecimientos(args.establecimientos, args.sitios ?? []);
+  const idx = indexarEstablecimientos(args.establecimientos);
   const overrides = args.overrides ?? {};
 
   const matches = renglones.map((r) => {

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Eye, XCircle, RotateCcw, AlertTriangle, Inbox, ShieldCheck, Ban, Trash2, CheckCircle, AlertOctagon } from "lucide-react";
+import { Eye, XCircle, RotateCcw, AlertTriangle, Inbox, ShieldCheck, Ban, Trash2, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -18,10 +18,6 @@ import {
   deshabilitarCliente,
   eliminarCliente,
   getClienteByLegajo,
-  getClientesEnrichment,
-  formatCuit,
-  type ClienteEnrichment,
-  type RiesgoPLD,
 } from "@/lib/api/clientes";
 import { DataAccessError } from "@/lib/api/errors";
 import { useCan } from "@/lib/permissions";
@@ -29,8 +25,6 @@ import { PermissionGuard } from "@/components/permission-guard";
 import type { Cliente, EstadoCliente } from "@/lib/api/types";
 import { ESTADO_LABEL, ESTADO_TONE, normalizarEstado, FILTRO_ESTADOS_OPCIONES, LABEL_A_ESTADO } from "@/lib/cliente-estados";
 import { toast } from "sonner";
-import { Pagination } from "@/components/pagination";
-import { SHOW_PLAFT_COLUMNS } from "@/lib/feature-flags";
 
 export const Route = createFileRoute("/admin/general/usuarios/")({
   head: () => ({
@@ -49,20 +43,10 @@ type Usuario = {
   legajo: string;
   correo: string;
   nombres: string;
-  cuit: string;
-  cuitFormatted: string;
   estadoRaw: EstadoCliente;
   estadoLabel: string;
   estadoTone: "success" | "warn" | "danger" | "neutral";
   fechaRegistro: string;
-  // Enrichment
-  esPep: boolean;
-  riesgo: RiesgoPLD | null;
-  riesgoMotivo: string | null;
-  kycCompleto: boolean;
-  cvuCount: number;
-  consumoMensualPct: number | null;
-  limiteTransferencia: number | null;
 };
 
 function EstadoMensaje({
@@ -113,91 +97,6 @@ function EstadoMensaje({
   );
 }
 
-// --- Helpers de presentación para las columnas nuevas ---------------------
-
-function RiesgoBadge({ nivel, motivo }: { nivel: RiesgoPLD | null; motivo?: string | null }) {
-  if (!nivel) {
-    return (
-      <span
-        title="Cliente sin evaluación PLAFT vigente. Pendiente de revisión."
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground italic"
-      >
-        <AlertOctagon size={12} className="text-muted-foreground" />
-        Sin evaluar
-      </span>
-    );
-  }
-  const tone =
-    nivel === "bajo"
-      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-      : nivel === "medio"
-        ? "bg-amber-100 text-amber-800 border-amber-200"
-        : nivel === "alto"
-          ? "bg-orange-100 text-orange-800 border-orange-200"
-          : "bg-red-100 text-red-800 border-red-200";
-  const label = nivel.charAt(0).toUpperCase() + nivel.slice(1);
-  return (
-    <span
-      title={motivo ?? `Nivel de riesgo PLAFT: ${label}`}
-      className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${tone}`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function KycBadge({ completo }: { completo: boolean }) {
-  return completo ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium bg-emerald-100 text-emerald-800 border-emerald-200">
-      ✓ Validado
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium bg-amber-100 text-amber-800 border-amber-200">
-      Pendiente
-    </span>
-  );
-}
-
-function PerfilConsumo({
-  pct,
-  limite,
-}: {
-  pct: number | null;
-  limite: number | null;
-}) {
-  if (pct == null) {
-    return (
-      <span className="text-xs text-muted-foreground italic" title="Sin límite operativo configurado">
-        —
-      </span>
-    );
-  }
-  const tone =
-    pct >= 90
-      ? "bg-red-500"
-      : pct >= 75
-        ? "bg-amber-500"
-        : pct >= 50
-          ? "bg-yellow-500"
-          : "bg-emerald-500";
-  const fmtLimite = limite
-    ? new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(limite)
-    : null;
-  return (
-    <div className="flex flex-col gap-0.5 min-w-[100px]">
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{pct}%</span>
-        {fmtLimite && <span>${fmtLimite}</span>}
-      </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full ${tone} transition-all`} style={{ width: `${Math.min(100, pct)}%` }} />
-      </div>
-    </div>
-  );
-}
-
-// --- Tipos y mapeo de filas con enrichment --------------------------------
-
 function UsuariosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -239,39 +138,17 @@ function UsuariosPage() {
   const puedeModificar = can("modificar", "usuarios");
   const puedeBorrar = can("borrar", "usuarios");
 
-  // Enrichment paralelo: riesgo PLAFT + CVUs + KYC + consumo del mes.
-  // Se cachea por legajos (no por filtros), así no se dispara en cada cambio
-  // de paginación. Se invalida junto con la lista de clientes via queryClient.
-  const enrichmentQuery = useQuery<Record<string, ClienteEnrichment>>({
-    queryKey: ["clientes-enrichment", rows.map((r) => r.legajo).join("|")],
-    queryFn: async () => getClientesEnrichment(rows.map((r) => r.legajo)),
-    enabled: rows.length > 0,
-    staleTime: 60_000,
-    placeholderData: (prev) => prev,
-  });
-  const enrichmentMap = enrichmentQuery.data ?? {};
-
   const data: Usuario[] = rows.map((c: Cliente) => {
     const norm = normalizarEstado(c.estado);
-    const e = enrichmentMap[c.legajo] ?? {};
     return {
       id: c.id,
       legajo: c.legajo,
       correo: c.correo,
       nombres: c.nombre,
-      cuit: c.cuit,
-      cuitFormatted: formatCuit(c.cuit),
       estadoRaw: c.estado,
       estadoLabel: ESTADO_LABEL[norm],
       estadoTone: ESTADO_TONE[norm] as Usuario["estadoTone"],
       fechaRegistro: c.fechaAlta,
-      esPep: Boolean(c.esPep),
-      riesgo: e.riesgo ?? null,
-      riesgoMotivo: e.riesgoMotivo ?? null,
-      kycCompleto: Boolean(e.kycCompleto),
-      cvuCount: e.cvuCount ?? 0,
-      consumoMensualPct: e.consumoMensualPct ?? null,
-      limiteTransferencia: c.limiteTransferencia ?? null,
     };
   });
 
@@ -322,20 +199,9 @@ function UsuariosPage() {
     const norm = normalizarEstado(row.estadoRaw);
     const items: ActionItem[] = [
       {
-        label: "Ver / editar ficha",
+        label: "Ver detalle",
         icon: Eye,
         onClick: () => navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo } }),
-      },
-      {
-        label: "Asignar / gestionar CVU",
-        icon: ShieldCheck,
-        disabled: !puedeModificar,
-        onClick: () => navigate({ to: "/admin/general/usuarios/$legajo", params: { legajo: row.legajo }, search: { tab: "cvu" } }),
-      },
-      {
-        label: "Ver historial de movimientos",
-        icon: Inbox,
-        onClick: () => navigate({ to: "/admin/general/movimientos", search: { legajo: row.legajo } }),
       },
     ];
 
@@ -460,7 +326,7 @@ function UsuariosPage() {
       ) : (
         <>
           <DataTable
-            columns={visibleColumns}
+            columns={columns}
             data={data}
             keyExtractor={(r) => r.legajo}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
@@ -489,20 +355,51 @@ function UsuariosPage() {
               </div>
             }
           />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPaginas}
-            pageSize={pageSize}
-            total={total}
-            countLabel="usuario(s)"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
-            }}
-          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>
+                {total} usuario(s) ·{" "}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -527,33 +424,11 @@ const columns: Column<Usuario>[] = [
     label: "Legajo",
     hint: LEGAJO_TOOLTIP,
     filterable: true,
-    minWidth: 110,
+    minWidth: 100,
     render: (row) => <LegajoCell legajo={row.legajo} />,
   },
-  {
-    key: "cuit",
-    label: "CUIT",
-    filterable: true,
-    minWidth: 130,
-    render: (row) => (
-      <span className="font-mono text-xs tabular-nums" title={`Legajo: ${row.legajo}`}>
-        {row.cuitFormatted}
-      </span>
-    ),
-  },
-  {
-    key: "nombres",
-    label: "Cliente / Usuario",
-    filterable: true,
-    minWidth: 200,
-    maxWidth: 320,
-    render: (row) => (
-      <div className="flex flex-col">
-        <span className="font-medium text-foreground">{row.nombres}</span>
-        <span className="text-xs text-muted-foreground">{row.correo}</span>
-      </div>
-    ),
-  },
+  { key: "correo", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (row) => row.correo },
+  { key: "nombres", label: "Nombres", filterable: true, minWidth: 180, maxWidth: 320, render: (row) => row.nombres },
   {
     key: "estadoLabel",
     label: "Estado",
@@ -561,60 +436,9 @@ const columns: Column<Usuario>[] = [
     render: (row) => <Badge tone={row.estadoTone as "success" | "warn" | "danger" | "neutral"}>{row.estadoLabel}</Badge>,
   },
   {
-    key: "kycCompleto",
-    label: "KYC",
-    minWidth: 110,
-    render: (row) => <KycBadge completo={row.kycCompleto} />,
-  },
-  {
-    key: "riesgo",
-    label: "Riesgo PLAFT",
-    minWidth: 130,
-    render: (row) => <RiesgoBadge nivel={row.riesgo} motivo={row.riesgoMotivo} />,
-  },
-  {
-    key: "esPep",
-    label: "PEP",
-    minWidth: 70,
-    render: (row) =>
-      row.esPep ? (
-        <span className="inline-flex items-center justify-center w-7 h-5 rounded-md border text-xs font-semibold bg-red-100 text-red-800 border-red-200">
-          Sí
-        </span>
-      ) : (
-        <span className="text-xs text-muted-foreground text-center w-7 inline-block">No</span>
-      ),
-  },
-  {
-    key: "cvuCount",
-    label: "CVUs",
-    minWidth: 80,
-    render: (row) => (
-      <span
-        className={`text-xs font-medium tabular-nums ${row.cvuCount > 0 ? "text-foreground" : "text-muted-foreground"}`}
-      >
-        {row.cvuCount} {row.cvuCount === 1 ? "CVU" : "CVUs"}
-      </span>
-    ),
-  },
-  {
-    key: "consumoMensualPct",
-    label: "Perfil",
-    minWidth: 140,
-    render: (row) => <PerfilConsumo pct={row.consumoMensualPct} limite={row.limiteTransferencia} />,
-  },
-  {
     key: "fechaRegistro",
     label: "Fecha de registro",
-    minWidth: 130,
+    minWidth: 140,
     render: (row) => <span className="font-mono tabular-nums">{row.fechaRegistro}</span>,
   },
 ];
-
-// Columnas PLAFT (Riesgo, PEP, Perfil) ocultadas por decisión de Compliance.
-// El nivel de riesgo es 100% manual; mostrar el valor calculado automáticamente
-// carece de sentido regulatorio. Ver src/lib/feature-flags.ts.
-const PLAFT_KEYS = new Set(["riesgo", "esPep", "consumoMensualPct"]);
-const visibleColumns: Column<Usuario>[] = SHOW_PLAFT_COLUMNS
-  ? columns
-  : columns.filter((c) => !PLAFT_KEYS.has(String(c.key)));
