@@ -22,7 +22,6 @@ import {
 import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useCan } from "@/lib/permissions";
 import { PermissionGuard } from "@/components/permission-guard";
-import { Pagination } from "@/components/pagination";
 import { z } from "zod";
 
 export const Route = createFileRoute("/admin/general/movimientos/")({
@@ -71,8 +70,9 @@ function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]): Movimi
     cvu: m.cvu ?? "",
     usuario: m.cliente?.correo ?? "—",
     nombreOrigen: m.cliente?.nombre ?? "—",
-    nombreDestino: "MoliPay",
-    cuit: m.cliente?.cuit ?? "—",
+    nombreDestino: m.destinatarioNombre ?? (m.tipo === "transferencia" ? "—" : "MoliPay"),
+    cuit: m.destinatarioCuit ?? m.cliente?.cuit ?? "—",
+    bancoDestino: m.destinatarioBanco ?? undefined,
     monto: fmtARS(m.montoOperacion),
     fecha: fmtFecha(m.fecha),
     estado,
@@ -80,7 +80,12 @@ function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]): Movimi
   };
 }
 
-type FilaIndex = Movimiento & { _comision: number; _impuesto: number; _montoOperacion: number };
+type FilaIndex = Movimiento & {
+  _comision: number;
+  _impuesto: number;
+  _montoOperacion: number;
+  importes: string;
+};
 
 function TodosPage() {
   const { legajo } = Route.useSearch();
@@ -141,6 +146,7 @@ function TodosPage() {
     _comision: m.comision,
     _impuesto: m.impuesto,
     _montoOperacion: m.montoOperacion,
+    importes: "",
   }));
 
   const getActions = (row: Movimiento): ActionItem[] => [
@@ -231,21 +237,51 @@ function TodosPage() {
             onServerFilterChange={aplicarFiltros}
             serverResultCount={total}
           />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPaginas}
-            pageSize={pageSize}
-            total={total}
-            countLabel="movimiento(s)"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            estimated={isEstimated}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
-            }}
-          />
+          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span title={isEstimated ? "Conteo estimado" : undefined}>
+                {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Pág. {page + 1} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0 || isFetching}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page + 1 >= totalPaginas || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -361,21 +397,19 @@ const columns: Column<FilaIndex>[] = [
     render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
   },
   {
-    key: "comision",
-    label: "Comisión",
-    minWidth: 150,
+    key: "importes",
+    label: "Importes",
+    minWidth: 190,
     render: (r) => {
-      const pct = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
-      return <span className="font-mono tabular-nums">{fmtARS(r._comision)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
-    },
-  },
-  {
-    key: "impuesto",
-    label: "Impuesto",
-    minWidth: 150,
-    render: (r) => {
-      const pct = r._montoOperacion > 0 ? (r._impuesto / r._montoOperacion) * 100 : 0;
-      return <span className="font-mono tabular-nums">{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+      const pctComision = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
+      const pctIva = r._comision > 0 ? (r._impuesto / r._comision) * 100 : 0;
+      return (
+        <div className="space-y-0.5 font-mono text-xs tabular-nums">
+          <div><span className="font-sans text-muted-foreground">Operación: </span>{fmtARS(r._montoOperacion)}</div>
+          <div><span className="font-sans text-muted-foreground">Comisión: </span>{fmtARS(r._comision)} <span className="text-muted-foreground">({pctComision.toFixed(2)}%)</span></div>
+          <div><span className="font-sans text-muted-foreground">IVA: </span>{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pctIva.toFixed(2)}%)</span></div>
+        </div>
+      );
     },
   },
   {
