@@ -160,7 +160,7 @@ export const KB: KbEntry[] = [
   {
     keywords: ["reportes", "reporte", "administración reportes"],
     response:
-      "En Administración → Reportes hay un hub con tarjetas para cada tipo: Conciliaciones Bancarias, Reportes BCRA, Reportes AFIP, Reportes de Comisiones, Reportes de Movimientos, Actividad de Usuarios, Reportes de Impuestos y Conciliaciones BLP. Cada uno abre su propia vista con tablas, filtros y descargas.",
+      "En Administración → Reportes hay un hub con tarjetas para cada tipo: Conciliaciones Bancarias, Reportes BCRA, Reportes AFIP, Reportes de Comisiones, Reportes de Movimientos, Actividad de Usuarios, Reportes de Impuestos, Conciliaciones Payway y Reporte por Unidad de Negocio. Cada uno abre su propia vista con tablas, filtros y descargas.",
   },
   {
     keywords: [
@@ -183,7 +183,7 @@ export const KB: KbEntry[] = [
       "padrón",
     ],
     response:
-      "Reportes BCRA (BSRA): incluye tarjetas de estado (SISCEN presentado, régimen de transparencia, información de clientes) y una tabla con Apartado A (CSV), Apartado B (XLS) y Padrón (XLS) por fecha (primer día de mes). Los botones descargan cada archivo.",
+      "Reportes BCRA: permite generar el Padrón de Clientes Personas Jurídicas exigido por el Régimen Informativo de Proveedores de Servicios de Pago (Comunicación \"A\" 8207 del BCRA, presentado vía SISCEN). Se elige el período, se presiona \"Consultar padrón\" (trae los clientes Persona Jurídica activos de la base) y luego \"Descargar\" para obtener el .xlsx. El archivo se genera sin encabezado y con columnas de ancho fijo. Si algún cliente no tiene código postal cargado, se lo advierte porque el régimen exige ese dato.",
   },
   {
     keywords: [

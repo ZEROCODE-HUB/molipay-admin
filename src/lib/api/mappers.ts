@@ -88,6 +88,9 @@ export function toCliente(r: ClienteRow): Cliente {
     provincia: (r.provincia as string | null) ?? null,
     cp: (r.cp as string | null) ?? null,
     estadoOnboarding: (r.estado_onboarding as string | null) ?? null,
+    limiteTransferencia: (r.limite_transferencia as number | null) ?? null,
+    limiteOpsDiarias: (r.limite_ops_diarias as number | null) ?? null,
+    limiteMontoDiario: (r.limite_monto_diario as number | null) ?? null,
   };
 }
 
@@ -102,16 +105,12 @@ export function toComision(
           tipo_persona: TipoPersona;
         }[]
       | null;
-    subcuentas?: { cbu: string | null; nombre: string | null }[] | null;
   },
 ): ComisionCliente {
   const cli = Array.isArray(r.clientes) ? (r.clientes[0] ?? null) : (r.clientes ?? null);
-  const sub = Array.isArray(r.subcuentas) ? (r.subcuentas[0] ?? null) : (r.subcuentas ?? null);
   return {
     id: r.id,
     clienteId: r.cliente_id,
-    subcuentaId: r.subcuenta_id ?? null,
-    subcuenta: sub ? { cbu: sub.cbu, nombre: sub.nombre } : null,
     operacion: r.operacion,
     tipo: r.tipo,
     modalidad: r.modalidad,
@@ -160,10 +159,10 @@ export function toMovimiento(
     fecha: r.fecha,
     createdAt: r.created_at,
     comercioId: (r as MovimientoRow).comercio_id ?? null,
+    /** Texto denormalizado. FK real: banderaId */
     bandera: (r as MovimientoRow).bandera ?? null,
-    destinatarioNombre: (r as MovimientoRow).destinatario_nombre ?? null,
-    destinatarioCuit: (r as MovimientoRow).destinatario_cuit ?? null,
-    destinatarioBanco: (r as MovimientoRow).destinatario_banco ?? null,
+    /** FK a banderas.id */
+    banderaId: (r as MovimientoRow).bandera_id ?? null,
     cliente: cli,
   };
 }
@@ -263,6 +262,7 @@ export function toComercio(
           email: adminUser.email,
         }
       : null,
+    siteId: (r as unknown as { site_id?: string | null }).site_id ?? null,
     puntosVenta: pdvs.map(toPuntoVenta),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -483,6 +483,7 @@ export function toImpuestoAsignacion(
     monto: r.monto,
     estado: r.estado,
     fechaAsignacion: r.fecha_asignacion,
+    tipoOperacion: r.tipo_operacion ?? null,
     impuesto: imp
       ? {
           codigo: imp.codigo,

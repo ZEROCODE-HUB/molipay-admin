@@ -1,5 +1,32 @@
 import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
+
+// Modelo de saldos — referencia rápida:
+//
+//   subcuentas.saldo_disponible  →  columna NUMERIC(18,2) que vive en la
+//                                   subcuenta `Operativa` del legajo del
+//                                   comercio. Es EL saldo líquido real que
+//                                   el comercio ve en su panel: lo que
+//                                   puede retirar o transferir.
+//
+//                                   El único camino que mueve plata ahí
+//                                   es la RPC `acreditar_lote` (estado
+//                                   Pendiente → Acreditado). El resto de
+//                                   las operaciones del backoffice (cobros,
+//                                   retenciones) se registran en la
+//                                   bitácora `movimientos` y la vista
+//                                   `v_lotes_venta`, pero NO tocan
+//                                   saldo_disponible hasta que el lote
+//                                   se acredita.
+//
+//   subcuentas.saldo_retenido    →  contracargos y disputas en disputa.
+//   subcuentas.saldo_conciliado  →  acumulado conciliado contra el banco.
+//
+//   movimientos                  →  tabla inmutable de cada transacción
+//                                   (id_txn UNIQUE). No se escribe desde
+//                                   esta API ni desde la RPC de
+//                                   acreditación; es de los cobros.
+
 export type SubcuentaTipo = "Operativa" | "Recaudacion" | "Garantias" | "Sueldos";
 export type SubcuentaEstado = "Activa" | "Pausada";
 
@@ -150,51 +177,15 @@ export async function listAllCvus(filters: CvuFilters): Promise<{ rows: CvuRow[]
   return { rows, total: count ?? rows.length, page, pageSize };
 }
 
+export function generarCbu(): string {
+  // 22 dígitos, prefijo 00000031 (banco) + 14 aleatorios
+  const rand = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join("");
+  return `00000031${rand}`;
+}
+
 export function generarAlias(email: string): string {
   const base = email.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, ".") ?? "usuario";
   return `${base}.${Math.floor(100 + Math.random() * 900)}`;
-}
-
-/**
- * Creates the CVU in the bank through our backend (BDC generates it, we never
- * see the bank credentials). Returns the CVU to store in `subcuentas.cbu`.
- */
-export async function crearCvuEnBanco(input: {
-  legajo: string;
-  personId: string;
-  personName?: string;
-  alias?: string;
-}): Promise<{ cvu: string; accountId: string | null; alias: string | null }> {
-  const base = (import.meta.env.VITE_BDC_BACKEND_URL as string | undefined)?.replace(/\/+$/, "");
-  if (!base) throw new Error("Falta VITE_BDC_BACKEND_URL (backend BDC) en el .env del admin");
-
-  // Deterministic originId: a retry does not create a second sub-account.
-  const originId = `SUB${input.legajo.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 22);
-
-  const res = await fetch(`${base}/sub-accounts`, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      originId,
-      personId: input.personId.replace(/\D/g, ""),
-      personName: input.personName,
-      label: input.alias,
-    }),
-  });
-
-  const json = (await res.json().catch(() => null)) as {
-    ok?: boolean;
-    message?: string;
-    cvu?: string;
-    accountId?: string | null;
-    alias?: string | null;
-  } | null;
-
-  if (!res.ok || !json?.ok || !json.cvu) {
-    throw new Error(json?.message ?? `No se pudo crear el CVU en el banco (HTTP ${res.status})`);
-  }
-
-  return { cvu: json.cvu, accountId: json.accountId ?? null, alias: json.alias ?? null };
 }
 
 export type SubcuentaInput = {

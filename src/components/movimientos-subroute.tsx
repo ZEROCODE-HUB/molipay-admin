@@ -1,16 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, useCallback } from "react";
-import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info, ArrowDownToLine } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Eye, FilterX, AlertTriangle, Inbox, ShieldAlert, Info } from "lucide-react";
 import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
 import { MovimientoDetail, estadoBadge, type Movimiento } from "@/components/movimiento-detail";
 import { FormDialog } from "@/components/form-dialog";
-import { Label, Input, BtnPrimary } from "@/components/portal-shell";
+import { Label } from "@/components/portal-shell";
 import { LegajoCell, LEGAJO_TOOLTIP } from "@/components/legajo-label";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Pagination } from "@/components/pagination";
 import { PageHeader } from "@/components/page-header";
 import { useMovimientos } from "@/hooks/useMovimientos";
-import { listMovimientos } from "@/lib/api/movimientos";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
 import { useEstadosMovimiento, useEstadosPorTipo } from "@/hooks/useEstados";
@@ -26,16 +26,12 @@ import { useCan } from "@/lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { listBanderasByComercioIds } from "@/lib/api/comercio-banderas";
 import { getLotePaywaySnapshotForMovimientos } from "@/lib/api/lotes";
-import { listAllCvus } from "@/lib/api/subcuentas";
-import { simularDeposito } from "@/lib/api/payin";
-import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
 
 const TIPO_LABEL: Record<string, string> = {
   deposito: "Depósito",
   retiro: "Retiro",
-  transferencia: "Transferencia",
   tarjeta: "Pago con tarjeta",
   pago_pct: "Pago PCT",
   cobro_pct: "Cobro PCT",
@@ -59,9 +55,8 @@ export function toViewMovimiento(m: MovimientoDB, catalogo: EstadoMovimiento[]):
     cvu: m.cvu ?? "",
     usuario: m.cliente?.correo ?? "—",
     nombreOrigen: m.cliente?.nombre ?? "—",
-    nombreDestino: m.destinatarioNombre ?? (m.tipo === "transferencia" ? "—" : "MoliPay"),
-    cuit: m.destinatarioCuit ?? m.cliente?.cuit ?? "—",
-    bancoDestino: m.destinatarioBanco ?? undefined,
+    nombreDestino: "MoliPay",
+    cuit: m.cliente?.cuit ?? "—",
     monto: fmtARS(m.montoOperacion),
     fecha: fmtFecha(m.fecha),
     estado,
@@ -79,24 +74,7 @@ export type FilaSubRuta = Movimiento & {
   _comercioId: string | null;
   _bandera: string | null;
   _dbId: string;
-  importes: string;
 };
-
-/** Fila de la grilla a partir del movimiento de la base (con los montos reales). */
-export function toFilaSubRuta(m: MovimientoDB, catalogo: EstadoMovimiento[]): FilaSubRuta {
-  return {
-    ...toViewMovimiento(m, catalogo),
-    _comision: m.comision,
-    _iva: m.impuesto,
-    _cobrado: m.montoCobrado,
-    _montoOperacion: m.montoOperacion,
-    _impuesto: m.impuesto,
-    _comercioId: m.comercioId ?? null,
-    _bandera: m.bandera ?? null,
-    _dbId: m.id,
-    importes: "",
-  };
-}
 
 /**
  * Grilla de movimientos compartida por las sub-rutas de Movimientos.
@@ -112,23 +90,14 @@ export function MovimientosSubRoute({
   titulo,
   descripcion,
   tipoCode,
-  tipos,
   soloConImpuesto = false,
   soloConComision = false,
-  demoDeposito = false,
 }: {
   titulo: string;
   descripcion: string;
   tipoCode?: string;
-  /**
-   * Tipos a listar cuando son varios (ej. Retiros incluye `transferencia`, porque
-   * una transferencia saliente es un egreso aunque en la base figure asi).
-   */
-  tipos?: string[];
   soloConImpuesto?: boolean;
   soloConComision?: boolean;
-  /** [DEMO] Muestra el botón para simular un deposito entrante (pay-in). */
-  demoDeposito?: boolean;
 }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
@@ -152,7 +121,6 @@ export function MovimientosSubRoute({
       page,
       pageSize: PAGE_SIZE,
       tipo: tipoCode,
-      tipos: tipos?.length ? tipos : undefined,
       conImpuesto: soloConImpuesto || undefined,
       conComision: soloConComision || undefined,
       countMode: "estimated" as const,
@@ -161,7 +129,7 @@ export function MovimientosSubRoute({
       fechaDesde: rango?.from ? `${rango.from}T00:00:00.000` : undefined,
       fechaHasta: rango?.to ? `${rango.to}T23:59:59.999` : undefined,
     };
-  }, [page, tipoCode, tipos, soloConImpuesto, soloConComision, search, filtrosPanel.enums, filtrosPanel.dates]);
+  }, [page, tipoCode, soloConImpuesto, soloConComision, search, filtrosPanel.enums, filtrosPanel.dates]);
 
   const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch, isEstimated } =
     useMovimientos(filtros);
@@ -177,7 +145,6 @@ export function MovimientosSubRoute({
   }, [tipoCode, catalogoEstados, estadosDelTipoIds]);
 
   const [detail, setDetail] = useState<Movimiento | null>(null);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [estadoTarget, setEstadoTarget] = useState<{
     dbId: string;
     estadoActual: string;
@@ -194,23 +161,17 @@ export function MovimientosSubRoute({
   const destinosEstado = tipoCode ? estadosValidos : catalogoEstados;
 
   const byTxn = new Map(rows.map((r) => [r.idTxn, r]));
-  const data: FilaSubRuta[] = rows.map((m) => toFilaSubRuta(m, catalogoEstados));
-
-  /**
-   * Trae TODAS las filas del filtro actual (no solo la página) para las
-   * exportaciones. Tope de 5.000 filas para no colgar el navegador.
-   */
-  const fetchAllRows = useCallback(async (): Promise<FilaSubRuta[]> => {
-    const TAMANO = 500;
-    const TOPE = 5000;
-    const acumulado: MovimientoDB[] = [];
-    for (let p = 0; acumulado.length < TOPE; p++) {
-      const res = await listMovimientos({ ...filtros, page: p, pageSize: TAMANO });
-      acumulado.push(...res.rows);
-      if (res.rows.length < TAMANO || acumulado.length >= res.total) break;
-    }
-    return acumulado.slice(0, TOPE).map((m) => toFilaSubRuta(m, catalogoEstados));
-  }, [filtros, catalogoEstados]);
+  const data: FilaSubRuta[] = rows.map((m) => ({
+    ...toViewMovimiento(m, catalogoEstados),
+    _comision: m.comision,
+    _iva: m.impuesto,
+    _cobrado: m.montoCobrado,
+    _montoOperacion: m.montoOperacion,
+    _impuesto: m.impuesto,
+    _comercioId: m.comercioId ?? null,
+    _bandera: m.bandera ?? null,
+    _dbId: m.id,
+  }));
 
   // PASO 2: Comisión Payway solo para tarjeta — cruce comercio_banderas + snapshot lote
   const isTarjeta = tipoCode === 'tarjeta';
@@ -279,7 +240,7 @@ export function MovimientosSubRoute({
         return <span className="font-mono tabular-nums">{fmtARS(monto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
       },
     };
-    const idx = columns.findIndex((c) => c.key === "importes");
+    const idx = columns.findIndex((c) => c.key === "comision");
     if (idx === -1) return [...columns, paywayCol];
     const next = [...columns];
     next.splice(idx + 1, 0, paywayCol);
@@ -289,23 +250,13 @@ export function MovimientosSubRoute({
   const visibles = allColumns.filter(
     (c) =>
       (tipoCode || c.key !== "tipo") &&
+      (soloConComision || !["iva", "cobrado"].includes(c.key)) &&
       (isTarjeta || c.key !== "payway"),
   );
 
   return (
     <PermissionGuard recurso="movimientos">
-      <PageHeader
-        title={titulo}
-        description={descripcion}
-        action={
-          demoDeposito ? (
-            <BtnPrimary type="button" onClick={() => setDemoOpen(true)}>
-              <ArrowDownToLine size={16} />
-              Simular depósito entrante
-            </BtnPrimary>
-          ) : undefined
-        }
-      />
+      <PageHeader title={titulo} description={descripcion} />
 
       {isLoading ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
@@ -347,37 +298,18 @@ export function MovimientosSubRoute({
             serverFilterState={filtrosPanel}
             onServerFilterChange={aplicarFiltros}
             serverResultCount={total}
-            fetchAllRows={fetchAllRows}
-            exportFileName={`movimientos-${titulo
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")}`}
           />
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span title={isEstimated ? "Conteo estimado" : undefined}>
-              {total === 0 || total ? `${isEstimated ? `~${total}` : total} movimiento(s) · ` : ""}página {page + 1} de{" "}
-              {totalPaginas}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
+          <Pagination
+            variant="compact"
+            page={page + 1}
+            totalPages={totalPaginas}
+            pageSize={PAGE_SIZE}
+            total={total}
+            countLabel="movimiento(s)"
+            disabled={isFetching}
+            estimated={isEstimated}
+            onPageChange={(p) => setPage(p - 1)}
+          />
         </>
       )}
 
@@ -425,124 +357,7 @@ export function MovimientosSubRoute({
           </div>
         </FormDialog>
       )}
-
-      {demoDeposito && demoOpen && (
-        <SimularDepositoDialog
-          onClose={() => setDemoOpen(false)}
-          onAcreditado={() => refetch()}
-        />
-      )}
     </PermissionGuard>
-  );
-}
-
-/**
- * [DEMO] Simula la notificacion que manda Banco de Comercio cuando entra plata a
- * un CVU: se elige la cuenta, el importe y quien transfiere, y el backend procesa
- * el deposito por el MISMO camino que el webhook real.
- */
-function SimularDepositoDialog({
-  onClose,
-  onAcreditado,
-}: {
-  onClose: () => void;
-  onAcreditado: () => void;
-}) {
-  const [cbu, setCbu] = useState("");
-  const [importe, setImporte] = useState("");
-  const [titular, setTitular] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  // Cuentas disponibles para recibir (se deduplican: en sandbox el banco repite el CVU).
-  const { data: cvus, isLoading: loadingCvus } = useQuery({
-    queryKey: ["cvus-para-simular"],
-    queryFn: () => listAllCvus({ page: 0, pageSize: 200 }),
-  });
-
-  const cuentas = useMemo(() => {
-    const vistas = new Map<string, { cbu: string; label: string }>();
-    for (const c of cvus?.rows ?? []) {
-      if (!c.cbu || vistas.has(c.cbu)) continue;
-      const nombre = `${c.nombre ?? ""} ${c.apellido ?? ""}`.trim() || c.email;
-      vistas.set(c.cbu, { cbu: c.cbu, label: `${nombre} · ${c.legajo}` });
-    }
-    return [...vistas.values()];
-  }, [cvus]);
-
-  const monto = Number(importe.replace(",", "."));
-  const valido = Boolean(cbu) && Number.isFinite(monto) && monto > 0;
-
-  const simular = async () => {
-    if (!valido) return;
-    setSaving(true);
-    try {
-      const r = await simularDeposito({ cbu, importe: monto, titular: titular.trim() || undefined });
-      if (r.acreditado && !r.ya_registrado) {
-        toast.success(
-          `Depósito acreditado: $ ${(r.saldo_nuevo ?? monto).toLocaleString("es-AR", { minimumFractionDigits: 2 })} de saldo`,
-        );
-      } else {
-        toast.info(r.motivo ?? "El depósito ya estaba registrado (no se acreditó de nuevo).");
-      }
-      onAcreditado();
-      onClose();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo simular el depósito");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <FormDialog
-      open
-      onClose={onClose}
-      title="Simular depósito entrante (demo)"
-      description="Hace de cuenta que el banco avisó que entró plata a un CVU. Se procesa igual que el webhook real."
-      onSubmit={simular}
-      submitLabel={saving ? "Acreditando…" : "Simular depósito"}
-      isSubmitting={saving}
-    >
-      <div>
-        <Label>CVU / cuenta que recibe</Label>
-        <select
-          className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
-          value={cbu}
-          onChange={(e) => setCbu(e.target.value)}
-        >
-          <option value="">{loadingCvus ? "Cargando cuentas…" : "Elegí una cuenta…"}</option>
-          {cuentas.map((c) => (
-            <option key={c.cbu} value={c.cbu}>
-              {c.label} — {c.cbu}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <Label>Importe que transfirieron</Label>
-        <Input
-          value={importe}
-          onChange={(e) => setImporte(e.target.value)}
-          inputMode="decimal"
-          placeholder="5000"
-        />
-      </div>
-
-      <div>
-        <Label>Quién transfiere (opcional)</Label>
-        <Input
-          value={titular}
-          onChange={(e) => setTitular(e.target.value)}
-          placeholder="MARIA GOMEZ"
-        />
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        El depósito aparece al instante en esta lista y en el historial del cliente, con el saldo
-        actualizado.
-      </p>
-    </FormDialog>
   );
 }
 
@@ -568,7 +383,6 @@ const columns: Column<FilaSubRuta>[] = [
     label: "Tipo de movimiento",
     filterable: false,
     minWidth: 140,
-    exportValue: (r) => TIPO_LABEL[r.tipo] ?? r.tipo,
     render: (r) => TIPO_LABEL[r.tipo] ?? r.tipo,
   },
   { key: "usuario", label: "Usuario", filterable: true, minWidth: 180, maxWidth: 280, render: (r) => r.usuario },
@@ -588,24 +402,42 @@ const columns: Column<FilaSubRuta>[] = [
     render: (r) => <span className="font-mono tabular-nums">{r.cuit}</span>,
   },
   {
-    key: "importes",
-    label: "Importes",
-    minWidth: 200,
-    exportValue: (r) =>
-      "Operación: " + fmtARS(r._montoOperacion) +
-      " | Comisión: " + fmtARS(r._comision) +
-      " | IVA: " + fmtARS(r._impuesto),
+    key: "monto",
+    label: "Monto operación",
+    minWidth: 140,
+    render: (r) => <span className="font-mono tabular-nums">{r.monto}</span>,
+  },
+  {
+    key: "comision",
+    label: "Comisión",
+    minWidth: 150,
     render: (r) => {
-      const pctComision = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
-      const pctIva = r._comision > 0 ? (r._impuesto / r._comision) * 100 : 0;
-      return (
-        <div className="space-y-0.5 font-mono text-xs tabular-nums">
-          <div><span className="font-sans text-muted-foreground">Operación: </span>{fmtARS(r._montoOperacion)}</div>
-          <div><span className="font-sans text-muted-foreground">Comisión: </span>{fmtARS(r._comision)} <span className="text-muted-foreground">({pctComision.toFixed(2)}%)</span></div>
-          <div><span className="font-sans text-muted-foreground">IVA: </span>{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pctIva.toFixed(2)}%)</span></div>
-        </div>
-      );
+      const pct = r._montoOperacion > 0 ? (r._comision / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._comision)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
     },
+  },
+  {
+    key: "retencion",
+    label: "Impuesto",
+    minWidth: 150,
+    render: (r) => {
+      const pct = r._montoOperacion > 0 ? (r._impuesto / r._montoOperacion) * 100 : 0;
+      return <span className="font-mono tabular-nums">{fmtARS(r._impuesto)} <span className="text-muted-foreground">({pct.toFixed(2)}%)</span></span>;
+    },
+  },
+  {
+    key: "iva",
+    label: "IVA sobre comisión",
+    minWidth: 140,
+    render: (r) => <span className="font-mono tabular-nums">{fmtARS(r._iva)}</span>,
+  },
+  {
+    key: "cobrado",
+    label: "Monto cobrado",
+    minWidth: 150,
+    render: (r) => (
+      <span className="font-mono font-semibold tabular-nums">{fmtARS(r._cobrado)}</span>
+    ),
   },
   {
     key: "fecha",

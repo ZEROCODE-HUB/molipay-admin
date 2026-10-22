@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
-import { toast } from "sonner";
 import {
   ChevronUp,
   ChevronDown,
@@ -10,6 +9,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
+import { Pagination } from "./pagination";
 
 export type FilterType = "text" | "date" | "enum";
 
@@ -27,12 +27,6 @@ export type Column<T> = {
   /** Texto para tooltip al truncar. Si no se define, usa el contenido renderizado. */
   tooltip?: (row: T) => string;
   render: (row: T) => ReactNode;
-  /**
-   * Valor plano de la celda para las exportaciones (CSV/Excel/PDF), porque
-   * `render` devuelve JSX y eso no se puede exportar. Si no se define se usa la
-   * clave de la fila (`row[key]`).
-   */
-  exportValue?: (row: T) => string | number | null | undefined;
 };
 
 /** Estado de los filtros de la card. En modo client-side lo maneja el componente;
@@ -63,15 +57,6 @@ type DataTableProps<T> = {
   downloadExcel?: (rows: T[]) => void;
   showEnumAllOption?: boolean;
   showDownloadButton?: boolean;
-  /** Muestra también el botón de PDF (jsPDF). */
-  showPdfButton?: boolean;
-  /** Nombre base de los archivos exportados (sin extensión). */
-  exportFileName?: string;
-  /**
-   * Trae TODAS las filas del filtro actual (no solo la página visible) para
-   * exportarlas. Si no se define, se exporta lo que ya está cargado.
-   */
-  fetchAllRows?: () => Promise<T[]>;
   dateFilterColumns?: string[];
   initialQuery?: string;
   showGlobalFilter?: boolean;
@@ -119,9 +104,6 @@ export function DataTable<T>({
   downloadExcel,
   showEnumAllOption = true,
   showDownloadButton = true,
-  showPdfButton = true,
-  exportFileName = "datos",
-  fetchAllRows,
   dateFilterColumns,
   initialQuery,
   showGlobalFilter = true,
@@ -222,115 +204,35 @@ export function DataTable<T>({
     setPage(1);
   };
 
-  /** Valor plano de una celda para exportar (nunca JSX). */
-  const valorExport = (c: Column<T>, row: T): string | number => {
-    const directo = c.exportValue ? c.exportValue(row) : (row as Record<string, unknown>)[c.key];
-    if (typeof directo === "string" || typeof directo === "number") return directo;
-    if (directo != null && typeof directo !== "object") return String(directo);
-    const rendered = c.render(row);
-    if (typeof rendered === "string" || typeof rendered === "number") return rendered;
-    return "";
-  };
-
-  const columnasExport = columns.filter((c) => c.key !== "acciones");
-
-  /** Filas a exportar: TODAS las del filtro (si el padre sabe traerlas), no solo la página. */
-  const filasParaExport = async (): Promise<T[]> => {
-    if (!fetchAllRows) return sortedData;
-    toast.info("Preparando la exportación…");
-    try {
-      const todas = await fetchAllRows();
-      return todas.length ? todas : sortedData;
-    } catch (e) {
-      toast.error(`No se pudieron traer todos los registros: ${(e as Error).message}`);
-      return sortedData;
-    }
-  };
-
-  const nombreArchivo = (ext: string) =>
-    `${exportFileName}-${new Date().toISOString().slice(0, 10)}.${ext}`;
-
-  const descargarBlob = (blob: Blob, nombre: string) => {
+  const exportCSV = () => {
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const exportCols = columns.filter((c) => c.key !== "acciones");
+    const header = exportCols.map((c) => escape(c.label));
+    const lines = sortedData.map((row) =>
+      exportCols
+        .map((c) => {
+          let val = (row as Record<string, unknown>)[c.key];
+          if (val === undefined) {
+            const rendered = c.render(row);
+            val = typeof rendered === "string" || typeof rendered === "number" ? rendered : "";
+          }
+          return escape(val);
+        })
+        .join(","),
+    );
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = nombre;
+    a.download = "datos.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  const exportCSV = async () => {
-    const filas = await filasParaExport();
-    if (onDownloadCSV) {
-      onDownloadCSV(filas);
-      return;
-    }
-    const escape = (v: string | number) => {
-      const s = String(v);
-      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const header = columnasExport.map((c) => escape(c.label));
-    const lines = filas.map((row) => columnasExport.map((c) => escape(valorExport(c, row))).join(","));
-    // BOM: para que Excel abra bien los acentos y la ñ.
-    const csv = `\uFEFF${[header.join(","), ...lines].join("\n")}`;
-    descargarBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), nombreArchivo("csv"));
-  };
-
-  const exportExcel = async () => {
-    const filas = await filasParaExport();
-    if (downloadExcel) {
-      downloadExcel(filas);
-      return;
-    }
-    try {
-      const XLSX = await import("xlsx");
-      const ws = XLSX.utils.json_to_sheet(
-        filas.map((row) =>
-          Object.fromEntries(columnasExport.map((c) => [c.label, valorExport(c, row)])),
-        ),
-      );
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Datos");
-      XLSX.writeFile(wb, nombreArchivo("xlsx"));
-    } catch (e) {
-      toast.error(`No se pudo generar el Excel: ${(e as Error).message}`);
-    }
-  };
-
-  const exportPdf = async () => {
-    const filas = await filasParaExport();
-    try {
-      const { default: JsPDF } = await import("jspdf");
-      await import("jspdf-autotable");
-      const doc = new JsPDF({ orientation: "landscape" });
-
-      doc.setFillColor(211, 0, 31);
-      doc.rect(0, 0, 297, 18, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.text("MoliPay", 14, 12);
-      doc.setFontSize(8);
-      doc.text(exportFileName, 283, 12, { align: "right" });
-
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(8);
-      doc.text(`Generado: ${new Date().toLocaleString("es-AR")} · ${filas.length} registros`, 14, 24);
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (doc as any).autoTable({
-        startY: 28,
-        head: [columnasExport.map((c) => c.label)],
-        body: filas.map((row) => columnasExport.map((c) => String(valorExport(c, row)))),
-        styles: { fontSize: 7, cellPadding: 1.5 },
-        headStyles: { fillColor: [211, 0, 31] },
-      });
-
-      doc.save(nombreArchivo("pdf"));
-    } catch (e) {
-      toast.error(`No se pudo generar el PDF: ${(e as Error).message}`);
-    }
   };
 
   const handleSort = (key: string) => {
@@ -457,16 +359,13 @@ export function DataTable<T>({
           {controlled ? (serverResultCount ?? data.length) : sortedData.length} resultados
         </span>
         {showDownloadButton && (
-          <div className="flex flex-wrap items-center gap-2">
-            <BtnOutline onClick={() => void exportCSV()}>
+          <div className="flex items-center gap-3">
+            <BtnOutline onClick={() => (onDownloadCSV ? onDownloadCSV(sortedData) : exportCSV())}>
               <Download size={16} /> Descargar CSV
             </BtnOutline>
-            <BtnOutline onClick={() => void exportExcel()}>
-              <Download size={16} /> Descargar Excel
-            </BtnOutline>
-            {showPdfButton && (
-              <BtnOutline onClick={() => void exportPdf()}>
-                <Download size={16} /> Descargar PDF
+            {downloadExcel && (
+              <BtnOutline onClick={() => downloadExcel(sortedData)}>
+                <Download size={16} /> Descargar Excel
               </BtnOutline>
             )}
           </div>
@@ -730,45 +629,16 @@ export function DataTable<T>({
       </div>
 
       {!hidePagination && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground whitespace-nowrap">Filas por página:</span>
-            <select
-              className="h-8 px-2 rounded-md border border-input bg-card text-foreground text-xs outline-none focus:ring-2 focus:ring-ring/40"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {PAGE_SIZES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <span className="text-muted-foreground text-xs sm:text-sm">
-              Pág. {safePage} de {totalPages}
-            </span>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                className="h-8 px-2 sm:px-3 rounded-md border border-input bg-card text-foreground text-xs font-semibold hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        </div>
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          total={sortedData.length}
+          pageSizes={PAGE_SIZES}
+          countLabel={undefined}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(s) => setPageSize(s)}
+        />
       )}
     </div>
   );
