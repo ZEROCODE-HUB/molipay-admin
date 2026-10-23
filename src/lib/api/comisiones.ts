@@ -19,20 +19,22 @@ export type ComisionFilters = Pagination & {
   modalidad?: ModalidadComision;
   estado?: EstadoComision;
   clienteId?: string;
+  subcuentaId?: string;
 };
 
 const COLUMNS =
-  "id, cliente_id, operacion, tipo, modalidad, porcentaje, monto_fijo, porcentaje_impuesto, estado, descripcion, created_at, updated_at, clientes(legajo, correo, cuit, nombre, tipo_persona)";
+  "id, cliente_id, subcuenta_id, operacion, tipo, modalidad, porcentaje, monto_fijo, porcentaje_impuesto, estado, descripcion, created_at, updated_at, clientes(legajo, correo, cuit, nombre, tipo_persona), subcuentas(cbu, nombre)";
 
 export async function listComisiones(filters: ComisionFilters): Promise<Page<ComisionCliente>> {
   const sb = requireSupabase();
-  const { page, pageSize, search, tipo, modalidad, estado, clienteId } = filters;
+  const { page, pageSize, search, tipo, modalidad, estado, clienteId, subcuentaId } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
   let query = sb.from("comisiones_cliente").select(COLUMNS, { count: "exact" });
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
+  if (subcuentaId) query = query.eq("subcuenta_id", subcuentaId);
   if (tipo) query = query.eq("tipo", tipo);
   if (modalidad) query = query.eq("modalidad", modalidad);
   if (estado) query = query.eq("estado", estado);
@@ -59,6 +61,7 @@ export async function listComisiones(filters: ComisionFilters): Promise<Page<Com
           tipo_persona: TipoPersona;
         }[]
       | null;
+    subcuentas?: { cbu: string | null; nombre: string | null }[] | null;
   })[];
 
   return {
@@ -71,6 +74,8 @@ export async function listComisiones(filters: ComisionFilters): Promise<Page<Com
 
 export type ComisionInput = {
   clienteId: string;
+  /** CVU al que aplica; null/undefined = comisión del cliente (respaldo). */
+  subcuentaId?: string | null;
   operacion: string;
   tipo: TipoOperacion;
   modalidad: ModalidadComision;
@@ -87,6 +92,7 @@ export async function upsertComision(
   const sb = requireSupabase();
   const payload: Record<string, unknown> = {
     cliente_id: input.clienteId,
+    subcuenta_id: input.subcuentaId ?? null,
     operacion: input.operacion,
     tipo: input.tipo,
     modalidad: input.modalidad,
@@ -115,6 +121,7 @@ export async function upsertComision(
             tipo_persona: TipoPersona;
           }[]
         | null;
+      subcuentas?: { cbu: string | null; nombre: string | null }[] | null;
     },
   );
 }
@@ -142,6 +149,7 @@ export async function setComisionEstado(
             tipo_persona: TipoPersona;
           }[]
         | null;
+      subcuentas?: { cbu: string | null; nombre: string | null }[] | null;
     },
   );
 }

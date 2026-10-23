@@ -144,6 +144,8 @@ export const ESTADOS_COMISION: EstadoComision[] = ["Habilitado", "Deshabilitado"
 export type ComisionClienteRow = {
   id: string;
   cliente_id: string;
+  /** CVU/subcuenta a la que aplica; null = comisión del cliente (respaldo). */
+  subcuenta_id: string | null;
   operacion: string;
   tipo: TipoOperacion;
   modalidad: ModalidadComision;
@@ -159,6 +161,9 @@ export type ComisionClienteRow = {
 export type ComisionCliente = {
   id: string;
   clienteId: string;
+  /** CVU al que aplica la comisión (null = comisión del cliente, respaldo). */
+  subcuentaId: string | null;
+  subcuenta?: { cbu: string | null; nombre: string | null } | null;
   operacion: string;
   tipo: TipoOperacion;
   modalidad: ModalidadComision;
@@ -198,6 +203,9 @@ export type MovimientoRow = {
   bandera?: string | null;
   /** FK a banderas.id (comercio_banderas.id) */
   bandera_id?: string | null;
+  destinatario_nombre?: string | null;
+  destinatario_cuit?: string | null;
+  destinatario_banco?: string | null;
   estados_movimiento?:
     | {
         codigo: string;
@@ -233,6 +241,9 @@ export type Movimiento = {
   bandera?: string | null;
   /** FK a banderas.id (comercio_banderas.id) */
   banderaId?: string | null;
+  destinatarioNombre?: string | null;
+  destinatarioCuit?: string | null;
+  destinatarioBanco?: string | null;
   estadoCodigo?: string;
   estadoNombre?: string;
   esFinal?: boolean;

@@ -32,7 +32,7 @@ export type MovimientoFilters = Pagination & {
 // embeds sin !inner, así que se resuelve en una query previa a comercios y se agrega como
 // comercio_id.in.(...) al .or() (ver buscarComercioIdsPorNombre).
 const COLUMNS =
-  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
+  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, destinatario_nombre, destinatario_cuit, destinatario_banco, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
 
 /** Resuelve los comercio_id cuyo nombre_comercio matchea el texto (ILIKE), para usarlos
  *  en el .or() de listMovimientos como comercio_id.in.(...). Si ningún comercio matchea
@@ -99,6 +99,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
     const oraciones = [
       `id_txn.ilike.%${q}%`,
       `legajo.ilike.%${q}%`,
+      `cvu.ilike.%${q}%`,
       `clientes.correo.ilike.%${q}%`,
       `clientes.nombre.ilike.%${q}%`,
     ];

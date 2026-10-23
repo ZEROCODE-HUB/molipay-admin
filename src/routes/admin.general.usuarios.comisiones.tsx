@@ -13,9 +13,11 @@ import { Pagination } from "@/components/pagination";
 import { desgloseDesdeConfig, fmtARS, fmtPct, type Desglose } from "@/lib/aranceles";
 import { useComisiones } from "@/hooks/useComisiones";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { upsertComision, setComisionEstado } from "@/lib/api/comisiones";
+import { upsertComision, setComisionEstado, listComisiones } from "@/lib/api/comisiones";
+import { listSubcuentas } from "@/lib/api/subcuentas";
 import { getClienteByCorreo } from "@/lib/api/clientes";
 import { DataAccessError } from "@/lib/api/errors";
+import { useQuery } from "@tanstack/react-query";
 import {
   TIPOS_OPERACION,
   type TipoOperacion,
@@ -58,6 +60,9 @@ type Comision = {
   montoFijo: number | null;
   porcentajeImpuesto: number;
   descripcion: string;
+  /** CVU al que aplica la comisión (null = comisión del cliente, respaldo). */
+  subcuentaId: string | null;
+  cvu: string | null;
 };
 
 const MONTO_OPERACION_REF = 100000;
@@ -83,13 +88,19 @@ const configLabel = (c: Comision) =>
 type ComisionDraft = {
   id?: string;
   correo: string;
+  /** Legajo del cliente elegido (para listar sus CVUs). */
+  legajo: string;
   cuit: string;
   tipoPersona: "fisica" | "juridica";
+  /** CVU al que aplica; null = comisión del cliente (respaldo de todos sus CVUs). */
+  subcuentaId: string | null;
   tipo: TipoOperacion;
   modalidad: ModalidadComision;
   porcentaje: number | null;
   montoFijo: number | null;
   porcentajeImpuesto: number;
+  /** Solo puede haber una Habilitada por CVU (o por cliente) y tipo. */
+  estado: EstadoComision;
   descripcion: string;
 };
 
@@ -104,6 +115,13 @@ function ComisionFormFields({
   const debounced = useDebouncedValue(searchInput, 350);
   const { data: clientesOpt } = useClientesForSelect(debounced || undefined);
   const [open, setOpen] = useState(false);
+
+  // CVUs del cliente elegido: la comisión se puede atar a uno en particular.
+  const { data: subcuentas, isLoading: cargandoSubs } = useQuery({
+    queryKey: ["subcuentas", draft.legajo],
+    queryFn: () => listSubcuentas(draft.legajo),
+    enabled: Boolean(draft.legajo),
+  });
 
   useEffect(() => {
     if (draft.correo && draft.correo !== searchInput) setSearchInput(draft.correo);
@@ -121,7 +139,8 @@ function ComisionFormFields({
             onChange={(e) => {
               const v = e.target.value;
               setSearchInput(v);
-              onChange({ ...draft, correo: v });
+              // Si cambia el email, la selección de cliente/CVU anterior deja de valer.
+              onChange({ ...draft, correo: v, legajo: "", subcuentaId: null });
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
@@ -140,7 +159,7 @@ function ComisionFormFields({
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setSearchInput(c.correo);
-                  onChange({ ...draft, correo: c.correo, cuit: (c.cuit as string) ?? draft.cuit, tipoPersona: (c.tipoPersona as ComisionDraft["tipoPersona"]) ?? draft.tipoPersona } as ComisionDraft);
+                  onChange({ ...draft, correo: c.correo, legajo: c.legajo, subcuentaId: null, cuit: (c.cuit as string) ?? draft.cuit, tipoPersona: (c.tipoPersona as ComisionDraft["tipoPersona"]) ?? draft.tipoPersona } as ComisionDraft);
                   setOpen(false);
                 }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex flex-col"
@@ -153,6 +172,30 @@ function ComisionFormFields({
         )}
         <p className="text-[11px] text-muted-foreground mt-1">
           Búsqueda rápida (server-side, 20 resultados). Seleccioná un usuario existente de la lista.
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="com-cvu">CVU / cuenta</Label>
+        <select
+          id="com-cvu"
+          className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          value={draft.subcuentaId ?? ""}
+          onChange={(e) => onChange({ ...draft, subcuentaId: e.target.value || null })}
+          disabled={!draft.legajo}
+        >
+          <option value="">
+            {draft.legajo ? "Toda la cuenta (respaldo del cliente)" : "Elegí primero un cliente…"}
+          </option>
+          {(subcuentas ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {`${s.nombre} ${s.apellido}`.trim() || s.email} — {s.cbu ?? "sin CVU"}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          {cargandoSubs
+            ? "Cargando CVUs…"
+            : "La comisión del CVU manda sobre la del cliente. Las transferencias entre CVUs del mismo cliente no pagan comisión ni IVA."}
         </p>
       </div>
       <div>
@@ -240,6 +283,21 @@ function ComisionFormFields({
           onChange={(e) => onChange({ ...draft, porcentajeImpuesto: Number(e.target.value) || 0 })}
           placeholder="Ej: 21"
         />
+      </div>
+      <div>
+        <Label htmlFor="com-estado">Estado</Label>
+        <select
+          id="com-estado"
+          className="w-full h-10 px-3 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          value={draft.estado}
+          onChange={(e) => onChange({ ...draft, estado: e.target.value as EstadoComision })}
+        >
+          <option>Habilitado</option>
+          <option>Deshabilitado</option>
+        </select>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Solo puede haber <strong>una Habilitada</strong> por CVU (o por cliente) y tipo (las deshabilitadas quedan como historial).
+        </p>
       </div>
       <div className="sm:col-span-2">
         <Label htmlFor="com-desc">Descripción</Label>
@@ -378,19 +436,24 @@ function ComisionesPage() {
     montoFijo: c.montoFijo,
     porcentajeImpuesto: c.porcentajeImpuesto,
     descripcion: c.descripcion ?? "",
+    subcuentaId: c.subcuentaId,
+    cvu: c.subcuenta?.cbu ?? null,
   }));
 
   const dataFiltrado = data.filter((c) => c.tipo === "Depósito" || c.tipo === "Retiro");
 
   const [draft, setDraft] = useState<ComisionDraft>({
     correo: "",
+    legajo: "",
     cuit: "",
     tipoPersona: "fisica",
+    subcuentaId: null,
     tipo: "Depósito",
     modalidad: "Porcentaje",
     porcentaje: 1,
     montoFijo: null,
     porcentajeImpuesto: 21,
+    estado: "Habilitado",
     descripcion: "",
   });
 
@@ -434,13 +497,16 @@ function ComisionesPage() {
   const abrirNueva = () => {
     setDraft({
       correo: "",
+      legajo: "",
       cuit: "",
       tipoPersona: "fisica",
+      subcuentaId: null,
       tipo: "Depósito",
       modalidad: "Porcentaje",
       porcentaje: 1,
       montoFijo: null,
       porcentajeImpuesto: 21,
+      estado: "Habilitado",
       descripcion: "",
     });
     setFormError(null);
@@ -451,13 +517,16 @@ function ComisionesPage() {
     setDraft({
       id: c.id,
       correo: c.correo,
+      legajo: c.legajo === "—" ? "" : c.legajo,
       cuit: c.cuit,
       tipoPersona: c.tipoPersona,
+      subcuentaId: c.subcuentaId,
       tipo: c.tipo,
       modalidad: c.modalidad,
       porcentaje: c.porcentaje,
       montoFijo: c.montoFijo,
       porcentajeImpuesto: c.porcentajeImpuesto,
+      estado: c.estado,
       descripcion: c.descripcion,
     });
     setFormError(null);
@@ -466,6 +535,35 @@ function ComisionesPage() {
 
   const cambiarEstado = async (row: Comision, nuevo: EstadoComision) => {
     try {
+      // Solo puede haber UNA comision Habilitada por CVU (o por cliente) y tipo:
+      // antes de activar esta, se verifica que no haya otra activa del mismo alcance.
+      if (nuevo === "Habilitado") {
+        const cliente = await getClienteByCorreo(row.correo.toLowerCase());
+        if (cliente) {
+          const activas = await listComisiones({
+            clienteId: cliente.id,
+            tipo: row.tipo,
+            estado: "Habilitado",
+            page: 0,
+            pageSize: 20,
+          });
+          const otra = activas.rows.find(
+            (c) => c.id !== row.id && (c.subcuentaId ?? null) === (row.subcuentaId ?? null),
+          );
+          if (otra) {
+            const alcance = row.cvu ? `el CVU ${row.cvu}` : "toda la cuenta";
+            setConfirmAction({
+              title: "Ya hay una comisión activa de ese tipo",
+              message: `Ya hay una comisión de "${row.tipo}" habilitada para ${alcance}. Deshabilitá esa antes de activar otra.`,
+              confirmLabel: "Cerrar",
+              variant: "danger",
+              onConfirm: () => setConfirmAction(null),
+            });
+            return;
+          }
+        }
+      }
+
       await setComisionEstado(row.id, nuevo);
       queryClient.invalidateQueries({ queryKey: ["comisiones"] });
     } catch (e) {
@@ -493,9 +591,36 @@ function ComisionesPage() {
         setSaving(false);
         return;
       }
+
+      // Solo puede haber UNA comision HABILITADA por alcance (CVU, o cliente si no
+      // hay CVU) y tipo: se pueden guardar deshabilitadas, pero no dos activas del
+      // mismo alcance a la vez.
+      if (draft.estado === "Habilitado") {
+        const activas = await listComisiones({
+          clienteId: cliente.id,
+          tipo: draft.tipo,
+          estado: "Habilitado",
+          page: 0,
+          pageSize: 20,
+        });
+        const otra = activas.rows.find(
+          (c) => c.id !== draft.id && (c.subcuentaId ?? null) === (draft.subcuentaId ?? null),
+        );
+        if (otra) {
+          const alcance = draft.subcuentaId
+            ? `el CVU elegido`
+            : `toda la cuenta de ${cliente.correo}`;
+          setFormError(
+            `Ya hay una comisión de "${draft.tipo}" activa para ${alcance}. Deshabilitá esa, o guardá esta como "Deshabilitado".`,
+          );
+          setSaving(false);
+          return;
+        }
+      }
       await upsertComision({
         id: draft.id,
         clienteId: cliente.id,
+        subcuentaId: draft.subcuentaId,
         operacion: draft.id
           ? (editTarget?.operacion ?? "")
           : `OP-${Date.now().toString().slice(-6)}`,
@@ -504,6 +629,7 @@ function ComisionesPage() {
         porcentaje: draft.modalidad === "Porcentaje" ? draft.porcentaje : null,
         montoFijo: draft.modalidad === "Fijo" ? draft.montoFijo : null,
         porcentajeImpuesto: draft.porcentajeImpuesto,
+        estado: draft.estado,
         descripcion: draft.descripcion,
       });
       queryClient.invalidateQueries({ queryKey: ["comisiones"] });
@@ -539,7 +665,7 @@ function ComisionesPage() {
     <PermissionGuard recurso="usuarios">
       <PageHeader
         title="Carga de comisiones"
-        description="Comisión y % Impuesto (IVA sobre la comisión) parametrizables por cliente y tipo de operación."
+        description="Comisión y % Impuesto (IVA) por CVU (o por cliente, como respaldo) y tipo de operación. Las transferencias entre CVUs del mismo cliente no cobran comisión ni IVA."
         action={
           <BtnPrimary onClick={abrirNueva} disabled={!puedeCrear}>
             <Plus size={16} />
@@ -612,6 +738,14 @@ function ComisionesPage() {
             <div>
               <span className="text-muted-foreground">CUIT:</span>{" "}
               <span className="font-mono tabular-nums">{viewing.cuit}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">CVU:</span>{" "}
+              {viewing.cvu ? (
+                <span className="font-medium font-mono tabular-nums">{viewing.cvu}</span>
+              ) : (
+                <span className="font-medium">Toda la cuenta (respaldo del cliente)</span>
+              )}
             </div>
             <div>
               <span className="text-muted-foreground">Tipo de operación:</span>{" "}
@@ -708,6 +842,16 @@ const columns: Column<Comision>[] = [
     render: (r) => <LegajoCell legajo={r.legajo} />,
   },
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
+  {
+    key: "cvu",
+    label: "CVU",
+    render: (r) =>
+      r.cvu ? (
+        <span className="font-mono tabular-nums text-xs">{r.cvu}</span>
+      ) : (
+        <span className="text-muted-foreground">Toda la cuenta</span>
+      ),
+  },
   {
     key: "cuit",
     label: "CUIT",

@@ -105,12 +105,16 @@ export function toComision(
           tipo_persona: TipoPersona;
         }[]
       | null;
+    subcuentas?: { cbu: string | null; nombre: string | null }[] | null;
   },
 ): ComisionCliente {
   const cli = Array.isArray(r.clientes) ? (r.clientes[0] ?? null) : (r.clientes ?? null);
+  const sub = Array.isArray(r.subcuentas) ? (r.subcuentas[0] ?? null) : (r.subcuentas ?? null);
   return {
     id: r.id,
     clienteId: r.cliente_id,
+    subcuentaId: r.subcuenta_id ?? null,
+    subcuenta: sub ? { cbu: sub.cbu, nombre: sub.nombre } : null,
     operacion: r.operacion,
     tipo: r.tipo,
     modalidad: r.modalidad,
@@ -163,6 +167,9 @@ export function toMovimiento(
     bandera: (r as MovimientoRow).bandera ?? null,
     /** FK a banderas.id */
     banderaId: (r as MovimientoRow).bandera_id ?? null,
+    destinatarioNombre: (r as MovimientoRow).destinatario_nombre ?? null,
+    destinatarioCuit: (r as MovimientoRow).destinatario_cuit ?? null,
+    destinatarioBanco: (r as MovimientoRow).destinatario_banco ?? null,
     cliente: cli,
   };
 }
