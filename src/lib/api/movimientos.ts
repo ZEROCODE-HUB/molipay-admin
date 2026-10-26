@@ -32,7 +32,7 @@ export type MovimientoFilters = Pagination & {
 // embeds sin !inner, así que se resuelve en una query previa a comercios y se agrega como
 // comercio_id.in.(...) al .or() (ver buscarComercioIdsPorNombre).
 const COLUMNS =
-  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, destinatario_nombre, destinatario_cuit, destinatario_banco, estados_movimiento(codigo, nombre, es_final), clientes!movimientos_cliente_id_fkey(correo, nombre, cuit), comercios!movimientos_comercio_id_fkey(nombre_comercio)";
+  "id, cliente_id, legajo, id_txn, tipo, cvu, monto_operacion, comision, impuesto, monto_cobrado, fecha, created_at, estado_id, comercio_id, bandera, destinatario_nombre, destinatario_cuit, destinatario_banco, estados_movimiento(codigo, nombre, es_final), clientes!transactions_cliente_id_fkey(correo, nombre, cuit), comercios!transactions_comercio_id_fkey(nombre_comercio)";
 
 /** Resuelve los comercio_id cuyo nombre_comercio matchea el texto (ILIKE), para usarlos
  *  en el .or() de listMovimientos como comercio_id.in.(...). Si ningún comercio matchea
@@ -84,7 +84,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("movimientos").select(COLUMNS, { count: countModeEfectivo });
+  let query = sb.from("transactions").select(COLUMNS, { count: countModeEfectivo });
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
   if (legajo) query = query.eq("legajo", legajo.trim().toUpperCase());
@@ -130,7 +130,7 @@ export async function listMovimientos(filters: MovimientoFilters): Promise<Page<
 
 export async function getMovimiento(id: string): Promise<Movimiento | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("movimientos").select(COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await sb.from("transactions").select(COLUMNS).eq("id", id).maybeSingle();
   if (error) throw new DataAccessError(error);
   return data
     ? toMovimiento(

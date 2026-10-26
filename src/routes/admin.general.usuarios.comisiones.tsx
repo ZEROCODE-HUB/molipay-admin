@@ -395,14 +395,24 @@ function ComisionesPage() {
     setPage(0);
     setFiltrosPanel(f);
   };
+  const [alcance, setAlcance] = useState<"" | "cvu" | "cuenta">("");
+  const [legajoFiltro, setLegajoFiltro] = useState("");
+  const [cvuFiltro, setCvuFiltro] = useState("");
+  const legajoQ = useDebouncedValue(legajoFiltro.trim(), 350);
+  const cvuQ = useDebouncedValue(cvuFiltro.trim(), 350);
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useComisiones({
+  // Depósito y Retiro se filtran en la base: así el total y las páginas coinciden.
+  const { rows, total, isLoading, isFetching, isError, error, refetch } = useComisiones({
     page,
     pageSize,
     search: search || undefined,
     tipo: (filtrosPanel.enums.tipo as TipoOperacion) || undefined,
+    tipos: TIPOS_COMISION_USUARIOS,
     modalidad: (filtrosPanel.enums.modalidad as ModalidadComision) || undefined,
     estado: (filtrosPanel.enums.estado as EstadoComision) || undefined,
+    alcance: alcance || undefined,
+    legajo: legajoQ || undefined,
+    cvu: cvuQ || undefined,
   });
 
   const [viewing, setViewing] = useState<Comision | null>(null);
@@ -439,8 +449,6 @@ function ComisionesPage() {
     subcuentaId: c.subcuentaId,
     cvu: c.subcuenta?.cbu ?? null,
   }));
-
-  const dataFiltrado = data.filter((c) => c.tipo === "Depósito" || c.tipo === "Retiro");
 
   const [draft, setDraft] = useState<ComisionDraft>({
     correo: "",
@@ -621,9 +629,10 @@ function ComisionesPage() {
         id: draft.id,
         clienteId: cliente.id,
         subcuentaId: draft.subcuentaId,
+        // Código único por cliente (constraint comision_unica_por_operacion).
         operacion: draft.id
           ? (editTarget?.operacion ?? "")
-          : `OP-${Date.now().toString().slice(-6)}`,
+          : `${draft.tipo === "Retiro" ? "RET" : "DEP"}-${draft.subcuentaId ? "CVU" : "CTA"}-${Date.now()}`,
         tipo: draft.tipo,
         modalidad: draft.modalidad,
         porcentaje: draft.modalidad === "Porcentaje" ? draft.porcentaje : null,
@@ -665,7 +674,7 @@ function ComisionesPage() {
     <PermissionGuard recurso="usuarios">
       <PageHeader
         title="Carga de comisiones"
-        description="Comisión y % Impuesto (IVA) por CVU (o por cliente, como respaldo) y tipo de operación. Las transferencias entre CVUs del mismo cliente no cobran comisión ni IVA."
+        description="Comisión e IVA de Retiro (transferencias salientes) y Depósito (ingresos al CVU), por CVU o para toda la cuenta del cliente como respaldo. La del CVU manda. Entre CVUs del mismo cliente no se cobra."
         action={
           <BtnPrimary onClick={abrirNueva} disabled={!puedeCrear}>
             <Plus size={16} />
@@ -685,19 +694,52 @@ function ComisionesPage() {
           mensaje={err?.message ?? "Error desconocido"}
           onRetry={() => refetch()}
         />
-      ) : isEmpty ? (
-        <EstadoMensaje tipo="vacio" mensaje="" />
       ) : (
         <>
           <DataTable
             columns={columns}
-            data={dataFiltrado}
+            data={data}
             keyExtractor={(r) => r.id}
             actions={(r) => <ActionsDropdown actions={getActions(r)} />}
             hidePagination
+            extraFilters={
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1 min-w-[170px]">
+                  <label className="text-xs font-medium text-muted-foreground">Alcance</label>
+                  <select
+                    value={alcance}
+                    onChange={(e) => { setAlcance(e.target.value as typeof alcance); setPage(0); }}
+                    className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  >
+                    <option value="">Todos</option>
+                    <option value="cvu">Por CVU</option>
+                    <option value="cuenta">Toda la cuenta (respaldo)</option>
+                  </select>
+                </div>
+                <div className="space-y-1 min-w-[170px]">
+                  <label className="text-xs font-medium text-muted-foreground">Legajo</label>
+                  <input
+                    value={legajoFiltro}
+                    onChange={(e) => { setLegajoFiltro(e.target.value); setPage(0); }}
+                    placeholder="LPJ-30..."
+                    className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm font-mono"
+                  />
+                </div>
+                <div className="space-y-1 min-w-[220px]">
+                  <label className="text-xs font-medium text-muted-foreground">CVU</label>
+                  <input
+                    value={cvuFiltro}
+                    onChange={(e) => { setCvuFiltro(e.target.value); setPage(0); }}
+                    placeholder="0000003100..."
+                    className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm font-mono"
+                  />
+                </div>
+              </div>
+            }
             serverFilterState={filtrosPanel}
             onServerFilterChange={aplicarFiltros}
             serverResultCount={total}
+            emptyMessage="No hay comisiones que coincidan con los filtros."
           />
           <Pagination
             page={page + 1}
@@ -844,12 +886,19 @@ const columns: Column<Comision>[] = [
   { key: "correo", label: "Usuario", filterable: true, render: (r) => r.correo },
   {
     key: "cvu",
-    label: "CVU",
+    label: "Alcance / CVU",
+    minWidth: 220,
     render: (r) =>
-      r.cvu ? (
-        <span className="font-mono tabular-nums text-xs">{r.cvu}</span>
+      r.subcuentaId ? (
+        <div className="flex flex-col gap-0.5">
+          <Badge tone="warn">CVU</Badge>
+          <span className="font-mono tabular-nums text-xs">{r.cvu ?? "CVU sin número"}</span>
+        </div>
       ) : (
-        <span className="text-muted-foreground">Toda la cuenta</span>
+        <div className="flex flex-col gap-0.5">
+          <Badge tone="neutral">Toda la cuenta</Badge>
+          <span className="text-[11px] text-muted-foreground">Respaldo de todos sus CVU</span>
+        </div>
       ),
   },
   {

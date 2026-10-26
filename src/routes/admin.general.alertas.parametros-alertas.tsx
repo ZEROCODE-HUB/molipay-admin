@@ -1,37 +1,230 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Save, Info } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, Info, AlertTriangle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-
-type SwitchParam = { label: string; key: string; enabled: boolean };
-type NumberParam = { label: string; key: string; value: string };
-type SelectParam = { label: string; key: string; value: string; options: string[] };
-type ScheduleParam = {
-  name: string;
-  key: string;
-  enabled: boolean;
-  inicio: string;
-  fin: string;
-};
-type Group = {
-  title: string;
-  switches?: SwitchParam[];
-  numbers?: NumberParam[];
-  selects?: SelectParam[];
-  schedule?: ScheduleParam[];
-};
-
-const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+import {
+  listAlertRules,
+  saveAlertRules,
+  type AlertRule,
+  type AlertRuleCode,
+  type MinorsPolicy,
+  type ScheduleDay,
+} from "@/lib/api/alert-rules";
 
 export const Route = createFileRoute("/admin/general/alertas/parametros-alertas")({
   head: () => ({ meta: [{ title: "Parámetros de alertas — Admin Panel" }] }),
   component: Page,
 });
 
-function Toggle({ enabled, onClick }: { enabled: boolean; onClick: () => void }) {
+const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+type NumberField = { key: string; label: string; integer?: boolean };
+
+/**
+ * Presentacion de cada regla: titulo del grupo, etiqueta del switch y campos.
+ * Los VALORES salen de la base (alert_rules); aca solo vive como se muestran.
+ */
+type RuleView = { code: AlertRuleCode; switchLabel: string; numbers?: NumberField[] };
+type GroupView = { title: string; rules: RuleView[]; full?: boolean };
+
+const GROUPS: GroupView[] = [
+  {
+    title: "Límite de depósitos excedidos",
+    rules: [
+      {
+        code: "deposit_company_max",
+        switchLabel: "Depósito por empresa",
+        numbers: [{ key: "max_amount", label: "Depósito por empresa (monto máx.)" }],
+      },
+      {
+        code: "deposit_min_wages",
+        switchLabel: "Límite de depósito excedido",
+        numbers: [
+          { key: "min_wages_count", label: "Salario mínimo (cantidad)", integer: true },
+          { key: "min_wage_deposits_per_transfer", label: "Depósitos de salario mínimo por transferencia", integer: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Límite de depósito mensual",
+    rules: [
+      {
+        code: "deposit_monthly_limit",
+        switchLabel: "Límite de depósito mensual",
+        numbers: [
+          { key: "monthly_amount", label: "Monto del límite de depósito mensual" },
+          { key: "same_origin_monthly_amount", label: "Depósito de un mismo origen por mes" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Máximo de intentos fallidos por retiro",
+    rules: [
+      {
+        code: "withdrawal_failed_attempts",
+        switchLabel: "Control de intentos fallidos",
+        numbers: [
+          { key: "max_attempts", label: "Intentos fallidos permitidos", integer: true },
+          { key: "window_seconds", label: "Tiempo de evaluación de retiros fallidos (segundos)", integer: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Transferencias repetidas",
+    rules: [
+      {
+        code: "repeated_transfers",
+        switchLabel: "Operaciones repetitivas",
+        numbers: [
+          { key: "threshold", label: "Umbral de operaciones repetidas (mismo destino)", integer: true },
+          { key: "window_minutes", label: "Ventana de evaluación (minutos)", integer: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Transferencias por hora",
+    rules: [
+      {
+        code: "transfers_per_hour",
+        switchLabel: "Límite de transferencias por hora",
+        numbers: [{ key: "max_per_hour", label: "Transferencias por hora (máximo)", integer: true }],
+      },
+    ],
+  },
+  {
+    title: "Afinidad entre cuentas (solo transferencias entre cuentas empresa)",
+    rules: [
+      {
+        code: "company_account_affinity",
+        switchLabel: "Afinidad entre cuentas",
+        numbers: [
+          { key: "threshold", label: "Afinidad entre cuentas (umbral)", integer: true },
+          { key: "window_days", label: "Ventana de evaluación (días)", integer: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Volumen anormal de operación",
+    rules: [
+      {
+        code: "abnormal_volume",
+        switchLabel: "Alerta de volumen habilitada",
+        numbers: [
+          { key: "min_amount", label: "Monto mínimo por operación" },
+          { key: "max_amount", label: "Monto máximo por operación" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Política de transferencia a menores",
+    rules: [{ code: "minors_transfer_policy", switchLabel: "Transferencia a menor" }],
+  },
+  {
+    title: "Screening PLAFT (REPET)",
+    rules: [
+      {
+        code: "plaft_screening",
+        switchLabel: "Alertar coincidencias del screening",
+        numbers: [{ key: "threshold", label: "Similitud mínima para alertar (%)" }],
+      },
+    ],
+  },
+  {
+    title: "Movimiento en horario inusual",
+    full: true,
+    rules: [{ code: "unusual_hours", switchLabel: "Regla de horario inusual habilitada" }],
+  },
+];
+
+const POLITICAS: { value: MinorsPolicy; label: string }[] = [
+  { value: "allow", label: "Permitir" },
+  { value: "alert", label: "Alertar" },
+  { value: "block", label: "Bloquear" },
+];
+
+const CODES = GROUPS.flatMap((g) => g.rules.map((r) => r.code));
+
+/** Estado editable: numeros como texto para no perder lo que se esta tipeando. */
+type Draft = Record<string, { isEnabled: boolean; values: Record<string, string>; policy?: MinorsPolicy; days?: ScheduleDay[] }>;
+
+function toDraft(rules: AlertRule[]): Draft {
+  const d: Draft = {};
+  for (const r of rules) {
+    if (!CODES.includes(r.code)) continue;
+    const values: Record<string, string> = {};
+    for (const [k, v] of Object.entries(r.parameters)) if (typeof v === "number") values[k] = String(v);
+    d[r.code] = {
+      isEnabled: r.isEnabled,
+      values,
+      policy: (r.parameters.policy as MinorsPolicy | undefined) ?? undefined,
+      days: Array.isArray(r.parameters.days) ? (r.parameters.days as ScheduleDay[]).map((x) => ({ ...x })) : undefined,
+    };
+  }
+  return d;
+}
+
+/** Valida y arma los parametros a guardar; devuelve errores por campo. */
+function construir(draft: Draft): { rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown> }[]; errores: Record<string, string> } {
+  const errores: Record<string, string> = {};
+  const rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown> }[] = [];
+  for (const g of GROUPS) {
+    for (const rv of g.rules) {
+      const d = draft[rv.code];
+      if (!d) continue;
+      const parameters: Record<string, unknown> = {};
+      for (const f of rv.numbers ?? []) {
+        const raw = (d.values[f.key] ?? "").trim();
+        const n = Number(raw);
+        const id = `${rv.code}.${f.key}`;
+        if (raw === "" || !Number.isFinite(n)) errores[id] = "Ingresá un número";
+        else if (n < 0) errores[id] = "No puede ser negativo";
+        else if (f.integer && !Number.isInteger(n)) errores[id] = "Debe ser un número entero";
+        else parameters[f.key] = n;
+      }
+      if (rv.code === "abnormal_volume" && typeof parameters.min_amount === "number" && typeof parameters.max_amount === "number"
+          && parameters.min_amount > parameters.max_amount) {
+        errores["abnormal_volume.min_amount"] = "El mínimo no puede superar al máximo";
+      }
+      if (rv.code === "withdrawal_failed_attempts" && parameters.window_seconds === 0) {
+        errores["withdrawal_failed_attempts.window_seconds"] = "Debe ser mayor a 0";
+      }
+      if (rv.code === "repeated_transfers" && parameters.window_minutes === 0) {
+        errores["repeated_transfers.window_minutes"] = "Debe ser mayor a 0";
+      }
+      if (rv.code === "company_account_affinity" && parameters.window_days === 0) {
+        errores["company_account_affinity.window_days"] = "Debe ser mayor a 0";
+      }
+      if (rv.code === "plaft_screening" && typeof parameters.threshold === "number" && parameters.threshold > 100) {
+        errores["plaft_screening.threshold"] = "Va de 0 a 100";
+      }
+      if (rv.code === "minors_transfer_policy") parameters.policy = d.policy ?? "block";
+      if (rv.code === "unusual_hours") {
+        parameters.days = d.days ?? [];
+        (d.days ?? []).forEach((day) => {
+          if (day.enabled && day.start >= day.end) errores[`unusual_hours.day${day.day}`] = "El inicio debe ser anterior al fin";
+        });
+      }
+      rules.push({ code: rv.code, isEnabled: d.isEnabled, parameters });
+    }
+  }
+  return { rules, errores };
+}
+
+function Toggle({ enabled, onClick, label }: { enabled: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={label}
       onClick={onClick}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
         enabled ? "bg-moli-blue" : "bg-gray-300 dark:bg-gray-600"
@@ -46,174 +239,52 @@ function Toggle({ enabled, onClick }: { enabled: boolean; onClick: () => void })
   );
 }
 
+const ErrorCampo = ({ msg }: { msg?: string }) =>
+  msg ? <p className="mt-1 text-[11px] font-medium text-red-600">{msg}</p> : null;
+
 function Page() {
-  const [groups, setGroups] = useState<Group[]>([
-    {
-      title: "Límite de depósitos excedidos",
-      switches: [
-        { label: "Depósito por empresa", key: "limite_deposito_empresa_activo", enabled: true },
-        {
-          label: "Límite de depósito excedido",
-          key: "limite_deposito_excedido_activo",
-          enabled: true,
-        },
-      ],
-      numbers: [
-        {
-          label: "Depósito por empresa (monto máx.)",
-          key: "limite_deposito_empresa",
-          value: "500000",
-        },
-        { label: "Salario mínimo (cantidad)", key: "limite_deposito_salmin", value: "10" },
-        {
-          label: "Depósitos de salario mínimo por transferencia",
-          key: "depositos_salmin_transf",
-          value: "5",
-        },
-      ],
-    },
-    {
-      title: "Límite de depósito mensual",
-      switches: [
-        {
-          label: "Límite de depósito mensual",
-          key: "limite_deposito_mensual_activo",
-          enabled: true,
-        },
-      ],
-      numbers: [
-        {
-          label: "Monto del límite de depósito mensual",
-          key: "limite_deposito_mensual",
-          value: "2000000",
-        },
-        {
-          label: "Depósito de un mismo origen por mes",
-          key: "deposito_mismo_origen_mes",
-          value: "500000",
-        },
-      ],
-    },
-    {
-      title: "Máximo intentos fallidos por retiro",
-      numbers: [
-        { label: "Intentos fallidos permitidos", key: "max_intentos_fallidos", value: "3" },
-        {
-          label: "Tiempo de evaluación de retiros fallidos (segundos)",
-          key: "tiempo_eval_retiros_fallidos",
-          value: "300",
-        },
-      ],
-    },
-    {
-      title: "Transferencias repetidas",
-      switches: [
-        { label: "Operaciones repetitivas", key: "transferencias_repetidas_activo", enabled: true },
-      ],
-      numbers: [
-        { label: "Umbral de operaciones repetidas", key: "transferencias_repetidas", value: "5" },
-      ],
-    },
-    {
-      title: "Transferencias por hora",
-      switches: [
-        { label: "Límite de depósito horario", key: "limite_horario_activo", enabled: true },
-      ],
-      numbers: [{ label: "Transferencias por hora", key: "transferencias_hora", value: "10" }],
-    },
-    {
-      title: "Afinidad entre cuentas (solo transferencias entre cuentas empresa)",
-      switches: [
-        { label: "Afinidad entre cuentas", key: "afinidad_cuentas_activo", enabled: true },
-      ],
-      numbers: [{ label: "Afinidad entre cuentas (umbral)", key: "afinidad_cuentas", value: "3" }],
-    },
-    {
-      title: "Volumen anormal de operación",
-      switches: [
-        { label: "Alerta de volumen habilitada", key: "volumen_anormal_activo", enabled: true },
-      ],
-      numbers: [
-        { label: "Monto mínimo por operación", key: "volumen_anormal_min", value: "1000000" },
-        { label: "Monto máximo por operación", key: "volumen_anormal_max", value: "5000000" },
-      ],
-    },
-    {
-      title: "Política de transferencia a menores",
-      switches: [
-        { label: "Transferencia a menor", key: "politica_menores_activo", enabled: false },
-      ],
-      selects: [
-        {
-          label: "Política",
-          key: "politica_menores",
-          value: "bloquear",
-          options: ["bloquear", "BLOCKED"],
-        },
-      ],
-    },
-    {
-      title: "Movimiento en horario inusual",
-      switches: [
-        {
-          label: "Regla de horario inusual habilitada",
-          key: "horario_inusual_activo",
-          enabled: true,
-        },
-      ],
-      schedule: dayNames.map((name, i) => ({
-        name,
-        key: `horario_inusual_${i}`,
-        enabled: i < 5,
-        inicio: "09:00",
-        fin: "18:00",
-      })),
-    },
-  ]);
+  const queryClient = useQueryClient();
+  const { data: rules, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["alert_rules"],
+    queryFn: listAlertRules,
+  });
 
-  const toggleSwitch = (gIdx: number, sIdx: number) => {
-    setGroups((prev) => {
+  const [draft, setDraft] = useState<Draft>({});
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [guardando, setGuardando] = useState(false);
+
+  const original = useMemo(() => (rules ? toDraft(rules) : null), [rules]);
+  useEffect(() => {
+    if (original) setDraft(structuredClone(original));
+  }, [original]);
+
+  const sinCambios = useMemo(() => JSON.stringify(original) === JSON.stringify(draft), [original, draft]);
+  const faltantes = original ? CODES.filter((c) => !original[c]) : [];
+
+  const patch = (code: string, fn: (d: Draft[string]) => void) =>
+    setDraft((prev) => {
       const next = structuredClone(prev);
-      const sw = next[gIdx].switches?.[sIdx];
-      if (sw) sw.enabled = !sw.enabled;
+      if (next[code]) fn(next[code]);
       return next;
     });
-  };
 
-  const updateNumber = (gIdx: number, nIdx: number, value: string) => {
-    setGroups((prev) => {
-      const next = structuredClone(prev);
-      const num = next[gIdx].numbers?.[nIdx];
-      if (num) num.value = value;
-      return next;
-    });
-  };
-
-  const updateSelect = (gIdx: number, selIdx: number, value: string) => {
-    setGroups((prev) => {
-      const next = structuredClone(prev);
-      const sel = next[gIdx].selects?.[selIdx];
-      if (sel) sel.value = value;
-      return next;
-    });
-  };
-
-  const toggleSchedule = (gIdx: number, sIdx: number) => {
-    setGroups((prev) => {
-      const next = structuredClone(prev);
-      const sch = next[gIdx].schedule?.[sIdx];
-      if (sch) sch.enabled = !sch.enabled;
-      return next;
-    });
-  };
-
-  const updateSchedule = (gIdx: number, sIdx: number, field: "inicio" | "fin", value: string) => {
-    setGroups((prev) => {
-      const next = structuredClone(prev);
-      const sch = next[gIdx].schedule?.[sIdx];
-      if (sch) sch[field] = value;
-      return next;
-    });
+  const guardar = async () => {
+    const { rules: aGuardar, errores: errs } = construir(draft);
+    setErrores(errs);
+    if (Object.keys(errs).length > 0) {
+      toast.error("Revisá los campos marcados antes de guardar");
+      return;
+    }
+    setGuardando(true);
+    try {
+      await saveAlertRules(aGuardar);
+      await queryClient.invalidateQueries({ queryKey: ["alert_rules"] });
+      toast.success("Configuración de alertas guardada");
+    } catch (e) {
+      toast.error(`No se pudo guardar: ${(e as Error).message}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -231,103 +302,128 @@ function Page() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg p-4 md:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groups.map((g, gIdx) => (
-            <div
-              key={g.title}
-              className={
-                g.schedule
-                  ? "break-inside-avoid md:col-span-2 lg:col-span-full"
-                  : "break-inside-avoid"
-              }
-            >
-              <h4 className="font-display text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">
-                {g.title}
-              </h4>
-              <div className="space-y-3">
-                {g.switches?.map((s, sIdx) => (
-                  <div key={s.key} className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-muted-foreground">{s.label}</span>
-                    <Toggle enabled={s.enabled} onClick={() => toggleSwitch(gIdx, sIdx)} />
-                  </div>
-                ))}
-                {g.numbers?.map((n, nIdx) => (
-                  <div key={n.key}>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                      {n.label}
-                    </label>
-                    <input
-                      type="number"
-                      value={n.value}
-                      onChange={(e) => updateNumber(gIdx, nIdx, e.target.value)}
-                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                    />
-                  </div>
-                ))}
-                {g.selects?.map((sel, selIdx) => (
-                  <div key={sel.key}>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                      {sel.label}
-                    </label>
-                    <select
-                      value={sel.value}
-                      onChange={(e) => updateSelect(gIdx, selIdx, e.target.value)}
-                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                    >
-                      {sel.options.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-                {g.schedule?.map((sch, sIdx) => (
-                  <div
-                    key={sch.key}
-                    className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-medium text-foreground w-24">{sch.name}</span>
-                      <Toggle enabled={sch.enabled} onClick={() => toggleSchedule(gIdx, sIdx)} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] font-semibold text-muted-foreground">
-                        Inicio
-                      </label>
-                      <input
-                        type="time"
-                        value={sch.inicio}
-                        disabled={!sch.enabled}
-                        onChange={(e) => updateSchedule(gIdx, sIdx, "inicio", e.target.value)}
-                        className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground">→</span>
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] font-semibold text-muted-foreground">Fin</label>
-                      <input
-                        type="time"
-                        value={sch.fin}
-                        disabled={!sch.enabled}
-                        onChange={(e) => updateSchedule(gIdx, sIdx, "fin", e.target.value)}
-                        className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+      {isLoading ? (
+        <div className="flex items-center justify-center rounded-lg border bg-card py-16 text-sm text-muted-foreground">
+          <Loader2 size={16} className="animate-spin mr-2" /> Cargando configuración…
         </div>
-
-        <div className="flex justify-end pt-6 mt-6 border-t border-border">
-          <button className="inline-flex items-center gap-2 h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition">
-            <Save size={14} /> Guardar configuración
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-center text-sm text-red-700">
+          <AlertTriangle size={24} />
+          <p>No se pudo cargar la configuración: {(error as Error)?.message}</p>
+          <button type="button" onClick={() => refetch()} className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+            Reintentar
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-card border rounded-lg p-4 md:p-6">
+          {faltantes.length > 0 && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              Faltan reglas en la base ({faltantes.join(", ")}). Aplicá la migración de configuración de alertas.
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {GROUPS.map((g) => (
+              <div key={g.title} className={g.full ? "break-inside-avoid md:col-span-2 lg:col-span-full" : "break-inside-avoid"}>
+                <h4 className="font-display text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">{g.title}</h4>
+                <div className="space-y-3">
+                  {g.rules.map((rv) => {
+                    const d = draft[rv.code];
+                    if (!d) return null;
+                    return (
+                      <div key={rv.code} className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs text-muted-foreground">{rv.switchLabel}</span>
+                          <Toggle label={rv.switchLabel} enabled={d.isEnabled} onClick={() => patch(rv.code, (x) => { x.isEnabled = !x.isEnabled; })} />
+                        </div>
+
+                        {rv.numbers?.map((f) => {
+                          const id = `${rv.code}.${f.key}`;
+                          return (
+                            <div key={id}>
+                              <label htmlFor={id} className="block text-xs font-semibold text-muted-foreground mb-1">{f.label}</label>
+                              <input
+                                id={id}
+                                type="number"
+                                min={0}
+                                step={f.integer ? 1 : "any"}
+                                value={d.values[f.key] ?? ""}
+                                onChange={(e) => patch(rv.code, (x) => { x.values[f.key] = e.target.value; })}
+                                aria-invalid={Boolean(errores[id])}
+                                className={`w-full h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 ${errores[id] ? "border-red-400" : "border-input"}`}
+                              />
+                              <ErrorCampo msg={errores[id]} />
+                            </div>
+                          );
+                        })}
+
+                        {rv.code === "minors_transfer_policy" && (
+                          <div>
+                            <label htmlFor="politica-menores" className="block text-xs font-semibold text-muted-foreground mb-1">Política</label>
+                            <select
+                              id="politica-menores"
+                              value={d.policy ?? "block"}
+                              onChange={(e) => patch(rv.code, (x) => { x.policy = e.target.value as MinorsPolicy; })}
+                              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                            >
+                              {POLITICAS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                            </select>
+                          </div>
+                        )}
+
+                        {rv.code === "unusual_hours" && (d.days ?? []).map((day, i) => (
+                          <div key={day.day}>
+                            <div className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-medium text-foreground w-24">{dayNames[day.day - 1]}</span>
+                                <Toggle label={dayNames[day.day - 1]} enabled={day.enabled} onClick={() => patch(rv.code, (x) => { x.days![i].enabled = !x.days![i].enabled; })} />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="text-[10px] font-semibold text-muted-foreground">Inicio</label>
+                                <input
+                                  type="time"
+                                  value={day.start}
+                                  disabled={!day.enabled}
+                                  onChange={(e) => patch(rv.code, (x) => { x.days![i].start = e.target.value; })}
+                                  className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground">→</span>
+                              <div className="flex items-center gap-2">
+                                <label className="text-[10px] font-semibold text-muted-foreground">Fin</label>
+                                <input
+                                  type="time"
+                                  value={day.end}
+                                  disabled={!day.enabled}
+                                  onChange={(e) => patch(rv.code, (x) => { x.days![i].end = e.target.value; })}
+                                  className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                                />
+                              </div>
+                            </div>
+                            <ErrorCampo msg={errores[`unusual_hours.day${day.day}`]} />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-border">
+            {!sinCambios && <span className="text-xs text-muted-foreground">Hay cambios sin guardar</span>}
+            <button
+              type="button"
+              onClick={() => void guardar()}
+              disabled={guardando || sinCambios}
+              className="inline-flex items-center gap-2 h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+            >
+              {guardando ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {guardando ? "Guardando…" : "Guardar configuración"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

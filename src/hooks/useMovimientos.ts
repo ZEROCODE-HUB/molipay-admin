@@ -22,7 +22,7 @@ export function useMovimientos(filters: MovimientoFilters) {
     const channelName = `realtime-movimientos-${tipoPart}`;
     const ch = sb
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "movimientos" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => {
         queryClient.invalidateQueries({ queryKey: ["movimientos"] });
       })
       .subscribe();

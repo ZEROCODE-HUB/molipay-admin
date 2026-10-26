@@ -85,19 +85,22 @@ type ValidacionRow = {
   fecha: string;
 };
 
-type AlertaRow = {
-  id: string;
-  cliente_legajo: string;
-  tipo: string;
-  fecha: string;
-  estado: string;
-};
+// Alertas y bloqueos reales del cliente (vistas v_alerts / v_account_blocks).
+type AlertaRow = { id: string; type: string; created_at: string; status: string };
 
 type BloqueoRow = {
   id: string;
-  cliente_legajo: string;
-  parametro: string;
-  valor: string | null;
+  reason: string;
+  scope: "client" | "subaccount";
+  subcuenta_nombre: string | null;
+  block_status: "active" | "released";
+};
+
+const ESTADO_ALERTA: Record<string, string> = {
+  pending: "Pendiente",
+  in_review: "En revisión",
+  resolved: "Resuelta",
+  dismissed: "Descartada",
 };
 
 type ClienteModuloRow = {
@@ -138,8 +141,8 @@ type LinkPagoRow = {
 const HISTORIAL_COLUMNS =
   "id, cliente_legajo, campo, valor_anterior, valor_nuevo, fecha, hora, usuario";
 const VALIDACIONES_COLUMNS = "id, cliente_legajo, proveedor, estado, fecha";
-const ALERTAS_COLUMNS = "id, cliente_legajo, tipo, fecha, estado";
-const BLOQUEOS_COLUMNS = "id, cliente_legajo, parametro, valor";
+const ALERTAS_COLUMNS = "id, type, created_at, status";
+const BLOQUEOS_COLUMNS = "id, reason, scope, subcuenta_nombre, block_status";
 const MODULOS_COLUMNS = "id, cliente_legajo, clave, titulo, cantidad, detalle";
 const PARAM_ALERTAS_COLUMNS = "id, cliente_legajo, clave, habilitado, valor, periodo";
 const PARAM_BLOQUEOS_COLUMNS = "id, cliente_legajo, clave, habilitado, valor, periodo";
@@ -186,33 +189,36 @@ export async function listValidaciones(clienteLegajo: string): Promise<Validacio
 export async function listAlertas(clienteLegajo: string): Promise<Alerta[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("alertas")
+    .from("v_alerts")
     .select(ALERTAS_COLUMNS)
-    .eq("cliente_legajo", clienteLegajo)
-    .order("fecha", { ascending: false });
+    .eq("legajo", clienteLegajo)
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (error) throw new DataAccessError(error);
   const rows = (data as AlertaRow[] | null) ?? [];
   return rows.map((r) => ({
     id: r.id,
-    tipo: r.tipo,
-    fecha: r.fecha,
-    estado: r.estado,
+    tipo: r.type,
+    fecha: r.created_at,
+    estado: ESTADO_ALERTA[r.status] ?? r.status,
   }));
 }
 
 export async function listBloqueos(clienteLegajo: string): Promise<Bloqueo[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("bloqueos")
+    .from("v_account_blocks")
     .select(BLOQUEOS_COLUMNS)
-    .eq("cliente_legajo", clienteLegajo)
-    .order("parametro", { ascending: true });
+    .eq("legajo", clienteLegajo)
+    .order("blocked_at", { ascending: false })
+    .limit(100);
   if (error) throw new DataAccessError(error);
   const rows = (data as BloqueoRow[] | null) ?? [];
   return rows.map((r) => ({
     id: r.id,
-    parametro: r.parametro,
-    valor: r.valor,
+    parametro: r.reason,
+    valor: r.scope === "client" ? "Toda la cuenta" : `Subcuenta ${r.subcuenta_nombre ?? ""}`.trim(),
+    estado: r.block_status === "active" ? "Bloqueado" : "Desbloqueado",
   }));
 }
 

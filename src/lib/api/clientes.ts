@@ -177,7 +177,7 @@ export async function updateClienteEstado(id: string, estado: EstadoCliente): Pr
 export async function clienteTieneMovimientos(legajo: string): Promise<boolean> {
   const sb = requireSupabase();
   const { count, error } = await sb
-    .from("movimientos")
+    .from("transactions")
     .select("id", { count: "exact", head: true })
     .eq("legajo", legajo.trim().toUpperCase());
   if (error) throw new DataAccessError(error);
@@ -202,7 +202,7 @@ export async function clienteTieneCbu(cliente: Cliente): Promise<boolean> {
   try {
     const sb = requireSupabase();
     const { count } = await sb
-      .from("subcuentas")
+      .from("subaccounts")
       .select("id", { count: "exact", head: true })
       .eq("cliente_legajo", cliente.legajo);
     return (count ?? 0) > 0;
@@ -277,7 +277,7 @@ export async function getClientesEnrichment(
   // 2. Conteo de subcuentas/CVUs por legajo.
   try {
     const { data } = await sb
-      .from("subcuentas")
+      .from("subaccounts")
       .select("cliente_legajo")
       .in("cliente_legajo", legajos);
     if (data) {
@@ -350,7 +350,7 @@ export async function getConsumoMensualPorLegajo(
   inicio.setHours(0, 0, 0, 0);
   try {
     const { data } = await sb
-      .from("movimientos")
+      .from("transactions")
       .select("monto_operacion")
       .eq("legajo", legajo)
       .gte("fecha", inicio.toISOString());
@@ -567,7 +567,7 @@ export async function hardDeleteCliente(id: string): Promise<void> {
   const legajo = cliente.legajo;
   const cid = cliente.id;
   const tablasLegajo = [
-    "subcuentas",
+    "subaccounts",
     "documentos",
     "historial_cambios",
     "validaciones",

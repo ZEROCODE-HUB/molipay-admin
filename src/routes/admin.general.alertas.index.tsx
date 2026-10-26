@@ -1,12 +1,31 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Eye, Edit3, XCircle, CheckCircle, ChevronDown } from "lucide-react";
-import { DataTable, type Column } from "@/components/data-table";
-import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, CheckCircle, XCircle, FileWarning, ShieldCheck, ArrowRightLeft, RefreshCw, Loader2, AlertTriangle, Landmark } from "lucide-react";
+import { toast } from "sonner";
+import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { Badge, PageHeader } from "@/components/portal-shell";
+import { Badge, BtnOutline } from "@/components/portal-shell";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
+import { LegajoCell } from "@/components/legajo-label";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { descargarCsv } from "@/lib/api/alert-rules";
+import {
+  ALERT_RESOLUTION_LABEL,
+  ALERT_STATUS_LABEL,
+  acceptAlert,
+  listAlerts,
+  listAllAlerts,
+  resolveAlert,
+  runComplianceSweep,
+  simulateDeposit,
+  type AlertFilters,
+  type AlertItem,
+  type AlertResolution,
+  type AlertStatus,
+} from "@/lib/api/compliance";
 
 export const Route = createFileRoute("/admin/general/alertas/")({
   head: () => ({
@@ -15,770 +34,399 @@ export const Route = createFileRoute("/admin/general/alertas/")({
   component: ListadoAlertas,
 });
 
-type TransaccionOrigen = {
-  email: string;
-  cvu: string;
-  legajo: string;
+const PAGE_SIZES = [10, 20, 50];
+const STATUS_OPTIONS = Object.values(ALERT_STATUS_LABEL);
+const STATUS_BY_LABEL = new Map(Object.entries(ALERT_STATUS_LABEL).map(([k, v]) => [v, k as AlertStatus]));
+const STATUS_TONE: Record<AlertStatus, "warn" | "neutral" | "success" | "danger"> = {
+  pending: "warn",
+  in_review: "neutral",
+  resolved: "success",
+  dismissed: "neutral",
 };
 
-type TransaccionDestino = {
-  nombreCompleto: string;
-  cuitCuil: string;
-  cvu: string;
-};
+const fmtFecha = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtMonto = (n: number | null) =>
+  n == null ? "—" : `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-type Transaccion = {
-  tipo: string;
-  monto: string;
-  codigo: string;
-  origen: TransaccionOrigen;
-  destino: TransaccionDestino;
-};
-
-type Alerta = {
-  legajo: string;
-  correo: string;
-  nombre: string;
-  tipo: string;
-  estado: string;
-  activo: string;
-  fechaAlerta: string;
-  fechaAceptacion?: string;
-  transacciones: Transaccion[];
-};
-
-const todayISO = new Date().toISOString().slice(0, 10);
-
-const initialData: Alerta[] = [
-  {
-    legajo: "LPF-20123456789",
-    correo: "jperez@empresa.com",
-    nombre: "Juan Pérez",
-    tipo: "Depósito excedido",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-15",
-    transacciones: [
-      {
-        tipo: "Depósito",
-        monto: "$ 520,000.00",
-        codigo: "Z4K6DVNOP1YRZXVE95J8LQ",
-        origen: {
-          email: "jperez@empresa.com",
-          cvu: "0000003100012345678901",
-          legajo: "LPF-20123456789",
-        },
-        destino: {
-          nombreCompleto: "Juan Pérez",
-          cuitCuil: "20-30123456-7",
-          cvu: "0000003100012345678901",
-        },
-      },
-      {
-        tipo: "Depósito",
-        monto: "$ 180,000.00",
-        codigo: "A1B2C3D4E5F6G7H8I9J0K",
-        origen: {
-          email: "jperez@empresa.com",
-          cvu: "0000003100012345678901",
-          legajo: "LPF-20123456789",
-        },
-        destino: {
-          nombreCompleto: "Juan Pérez",
-          cuitCuil: "20-30123456-7",
-          cvu: "0000003100012345678901",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-27234567890",
-    correo: "mgarcia@corp.com",
-    nombre: "María García",
-    tipo: "Intento fallido",
-    estado: "Revisado",
-    activo: "Sí",
-    fechaAlerta: "2026-07-14",
-    fechaAceptacion: "2026-07-15",
-    transacciones: [
-      {
-        tipo: "Retiro",
-        monto: "$ 0.00",
-        codigo: "K8Q7W6E5R4T3Y2U1I0O9P",
-        origen: {
-          email: "mgarcia@corp.com",
-          cvu: "0000003100019876543210",
-          legajo: "LPF-27234567890",
-        },
-        destino: {
-          nombreCompleto: "María García",
-          cuitCuil: "27-28987654-3",
-          cvu: "0000003100015566778899",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-20345678901",
-    correo: "clopez@firm.com",
-    nombre: "Carlos López",
-    tipo: "Transferencia repetida",
-    estado: "Pendiente",
-    activo: "No",
-    fechaAlerta: "2026-07-13",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 45,000.00",
-        codigo: "PLOKIJUHGYFTFRDESWAQ",
-        origen: {
-          email: "clopez@firm.com",
-          cvu: "0000003100011122334455",
-          legajo: "LPF-20345678901",
-        },
-        destino: {
-          nombreCompleto: "Inversiones López SA",
-          cuitCuil: "30-71112223-4",
-          cvu: "0000003100019988776655",
-        },
-      },
-      {
-        tipo: "Transferencia",
-        monto: "$ 45,000.00",
-        codigo: "MNBVCXZASDFGHJKLPOIU",
-        origen: {
-          email: "clopez@firm.com",
-          cvu: "0000003100011122334455",
-          legajo: "LPF-20345678901",
-        },
-        destino: {
-          nombreCompleto: "Inversiones López SA",
-          cuitCuil: "30-71112223-4",
-          cvu: "0000003100019988776655",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-27456789012",
-    correo: "lrodriguez@sa.com",
-    nombre: "Laura Rodríguez",
-    tipo: "Horario inusual",
-    estado: "Resuelto",
-    activo: "Sí",
-    fechaAlerta: "2026-07-12",
-    fechaAceptacion: "2026-07-13",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 789,749.00",
-        codigo: "QWERTYUIOPASDFGHJKLZ",
-        origen: {
-          email: "lrodriguez@sa.com",
-          cvu: "0000003100013344556677",
-          legajo: "LPF-27456789012",
-        },
-        destino: {
-          nombreCompleto: "Ricardo Gómez",
-          cuitCuil: "20-33445566-8",
-          cvu: "0000003100018877665544",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-20567890123",
-    correo: "mfernandez@corp.com",
-    nombre: "Martín Fernández",
-    tipo: "Volumen anormal",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-11",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 1,250,000.00",
-        codigo: "ZXCVBNMLKJHGFDSAPOIU",
-        origen: {
-          email: "mfernandez@corp.com",
-          cvu: "0000003100017766554433",
-          legajo: "LPF-20567890123",
-        },
-        destino: {
-          nombreCompleto: "Fernández Holding SA",
-          cuitCuil: "30-71665544-2",
-          cvu: "0000003100012233445566",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-27678901234",
-    correo: "gmartinez@firm.com",
-    nombre: "Gabriela Martínez",
-    tipo: "Intento fallido",
-    estado: "Revisado",
-    activo: "No",
-    fechaAlerta: "2026-07-10",
-    fechaAceptacion: "2026-07-11",
-    transacciones: [
-      {
-        tipo: "Retiro",
-        monto: "$ 0.00",
-        codigo: "LKJHGFDSAPOIUYTREWQ",
-        origen: {
-          email: "gmartinez@firm.com",
-          cvu: "0000003100016655443322",
-          legajo: "LPF-27678901234",
-        },
-        destino: {
-          nombreCompleto: "Gabriela Martínez",
-          cuitCuil: "27-29221122-5",
-          cvu: "0000003100011122112233",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-20789012345",
-    correo: "dperez@sa.com",
-    nombre: "Diego Pérez",
-    tipo: "Transferencia repetida",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-09",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 12,500.00",
-        codigo: "POIUYTREWQASDFGHJKL",
-        origen: {
-          email: "dperez@sa.com",
-          cvu: "0000003100015544332211",
-          legajo: "LPF-20789012345",
-        },
-        destino: {
-          nombreCompleto: "Diego Pérez",
-          cuitCuil: "20-29556677-1",
-          cvu: "0000003100014433221100",
-        },
-      },
-      {
-        tipo: "Transferencia",
-        monto: "$ 12,500.00",
-        codigo: "MJUYTREWQZXCVBNMASD",
-        origen: {
-          email: "dperez@sa.com",
-          cvu: "0000003100015544332211",
-          legajo: "LPF-20789012345",
-        },
-        destino: {
-          nombreCompleto: "Diego Pérez",
-          cuitCuil: "20-29556677-1",
-          cvu: "0000003100014433221100",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-27890123456",
-    correo: "agonzalez@corp.com",
-    nombre: "Ana González",
-    tipo: "Horario inusual",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-08",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 25,000.00",
-        codigo: "NBVCXZLKJHGFDSAQWER",
-        origen: {
-          email: "agonzalez@corp.com",
-          cvu: "0000003100010099887766",
-          legajo: "LPF-27890123456",
-        },
-        destino: {
-          nombreCompleto: "Ana González",
-          cuitCuil: "27-28112233-9",
-          cvu: "0000003100015566112233",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-27901234567",
-    correo: "rmendoza@firm.com",
-    nombre: "Roberto Mendoza",
-    tipo: "Intento fallido",
-    estado: "Revisado",
-    activo: "Sí",
-    fechaAlerta: "2026-07-07",
-    fechaAceptacion: "2026-07-08",
-    transacciones: [
-      {
-        tipo: "Retiro",
-        monto: "$ 0.00",
-        codigo: "ASDFGHJKLZXCVBNMQWE",
-        origen: {
-          email: "rmendoza@firm.com",
-          cvu: "0000003100015566778899",
-          legajo: "LPF-27901234567",
-        },
-        destino: {
-          nombreCompleto: "Roberto Mendoza",
-          cuitCuil: "20-27223344-0",
-          cvu: "0000003100019988776655",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPF-20998877665",
-    correo: "csuarez@empresa.com",
-    nombre: "Camila Suárez",
-    tipo: "Depósito excedido",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-06",
-    transacciones: [
-      {
-        tipo: "Depósito",
-        monto: "$ 610,000.00",
-        codigo: "QAZXSWEDCVFRTGBNHYU",
-        origen: {
-          email: "csuarez@empresa.com",
-          cvu: "0000003100011234432112",
-          legajo: "LPF-20998877665",
-        },
-        destino: {
-          nombreCompleto: "Camila Suárez",
-          cuitCuil: "27-26998877-6",
-          cvu: "0000003100011234432112",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPJ-30678901234",
-    correo: "fcastro@corp.com",
-    nombre: "Federico Castro",
-    tipo: "Transferencia repetida",
-    estado: "Pendiente",
-    activo: "Sí",
-    fechaAlerta: "2026-07-05",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 8,900.00",
-        codigo: "WSXEDCRFVTGBYHNUJMI",
-        origen: {
-          email: "fcastro@corp.com",
-          cvu: "0000003100016677889900",
-          legajo: "LPJ-30678901234",
-        },
-        destino: {
-          nombreCompleto: "Federico Castro",
-          cuitCuil: "20-26556644-2",
-          cvu: "0000003100012233445566",
-        },
-      },
-      {
-        tipo: "Transferencia",
-        monto: "$ 8,900.00",
-        codigo: "EDCRFVTGBYHNUJMIKOL",
-        origen: {
-          email: "fcastro@corp.com",
-          cvu: "0000003100016677889900",
-          legajo: "LPJ-30678901234",
-        },
-        destino: {
-          nombreCompleto: "Federico Castro",
-          cuitCuil: "20-26556644-2",
-          cvu: "0000003100012233445566",
-        },
-      },
-    ],
-  },
-  {
-    legajo: "LPJ-30789012345",
-    correo: "vmolina@firm.com",
-    nombre: "Valentina Molina",
-    tipo: "Horario inusual",
-    estado: "Resuelto",
-    activo: "No",
-    fechaAlerta: "2026-07-04",
-    fechaAceptacion: "2026-07-05",
-    transacciones: [
-      {
-        tipo: "Transferencia",
-        monto: "$ 32,000.00",
-        codigo: "RFVTGBYHNUJMIKOLPZA",
-        origen: {
-          email: "vmolina@firm.com",
-          cvu: "0000003100017788990011",
-          legajo: "LPJ-30789012345",
-        },
-        destino: {
-          nombreCompleto: "Valentina Molina",
-          cuitCuil: "27-27881199-4",
-          cvu: "0000003100014455667788",
-        },
-      },
-    ],
-  },
-];
-
-function AlertaFields({ alerta, onChange }: { alerta: Alerta; onChange: (a: Alerta) => void }) {
-  const set = (patch: Partial<Alerta>) => onChange({ ...alerta, ...patch });
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Legajo</label>
-        <input
-          value={alerta.legajo}
-          onChange={(e) => set({ legajo: e.target.value })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Correo</label>
-        <input
-          value={alerta.correo}
-          onChange={(e) => set({ correo: e.target.value })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Nombre</label>
-        <input
-          value={alerta.nombre}
-          onChange={(e) => set({ nombre: e.target.value })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Tipo de alerta</label>
-        <input
-          value={alerta.tipo}
-          onChange={(e) => set({ tipo: e.target.value })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Estado</label>
-        <select
-          className="w-full h-9 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40"
-          value={alerta.estado}
-          onChange={(e) => set({ estado: e.target.value })}
-        >
-          <option>Pendiente</option>
-          <option>Revisado</option>
-          <option>Resuelto</option>
-        </select>
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">Activo</label>
-        <select
-          className="w-full h-9 rounded-md border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-ring/40"
-          value={alerta.activo}
-          onChange={(e) => set({ activo: e.target.value })}
-        >
-          <option>Sí</option>
-          <option>No</option>
-        </select>
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">
-          Fecha de la alerta
-        </label>
-        <input
-          type="date"
-          value={alerta.fechaAlerta}
-          onChange={(e) => set({ fechaAlerta: e.target.value })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1.5 block">
-          Fecha de aceptación
-        </label>
-        <input
-          type="date"
-          value={alerta.fechaAceptacion ?? ""}
-          onChange={(e) => set({ fechaAceptacion: e.target.value || undefined })}
-          className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-        />
-      </div>
-    </div>
-  );
-}
-
-function TransaccionRow({ t }: { t: Transaccion }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-md border border-border overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition-colors"
-      >
-        <ChevronDown
-          size={14}
-          className={`shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
-        />
-        <span className="font-medium text-foreground">{t.tipo}</span>
-        <span className="font-mono tabular-nums font-semibold">{t.monto}</span>
-        <span className="text-muted-foreground text-xs ml-auto truncate">Código: {t.codigo}</span>
-      </button>
-      {open && (
-        <div className="px-4 pb-3 pt-1 border-t border-border/60 space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Código</span>
-            <span className="font-mono tabular-nums font-medium">{t.codigo}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="rounded-md bg-muted/40 p-3">
-              <h5 className="text-xs font-semibold text-muted-foreground mb-2">Origen</h5>
-              <dl className="space-y-1.5 text-xs">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">Email</dt>
-                  <dd className="font-medium text-right break-all">{t.origen.email}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">CVU</dt>
-                  <dd className="font-mono tabular-nums text-right">{t.origen.cvu}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">Legajo</dt>
-                  <dd className="font-mono tabular-nums font-medium">{t.origen.legajo}</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="rounded-md bg-muted/40 p-3">
-              <h5 className="text-xs font-semibold text-muted-foreground mb-2">Destino</h5>
-              <dl className="space-y-1.5 text-xs">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">Nombre completo</dt>
-                  <dd className="font-medium text-right">{t.destino.nombreCompleto}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">CUIT/CUIL</dt>
-                  <dd className="font-mono tabular-nums text-right">{t.destino.cuitCuil}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">CVU</dt>
-                  <dd className="font-mono tabular-nums text-right">{t.destino.cvu}</dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-          <div className="flex justify-between pt-2 border-t border-border/60">
-            <span className="text-sm text-muted-foreground">Monto</span>
-            <span className="font-mono tabular-nums font-semibold">{t.monto}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+type Dictamen = { alert: AlertItem; resolution: AlertResolution };
 
 function ListadoAlertas() {
-  const [data, setData] = useState(initialData);
-  const [viewing, setViewing] = useState<Alerta | null>(null);
-  const [editTarget, setEditTarget] = useState<Alerta | null>(null);
-  const [gestionTarget, setGestionTarget] = useState<Alerta | null>(null);
-  const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
-  const [confirmAction, setConfirmAction] = useState<{
-    title: string;
-    message: string;
-    confirmLabel: string;
-    variant: "default" | "danger";
-    onConfirm: () => void;
-  } | null>(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const getActions = (row: Alerta): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => setViewing({ ...row }) },
-    { label: "Editar", icon: Edit3, onClick: () => setEditTarget({ ...row }) },
-    {
-      label: "Gestionar",
-      icon: Edit3,
-      onClick: () => setGestionTarget(row),
-    },
-    ...(!row.fechaAceptacion
-      ? [
-          {
-            label: "Aceptar alerta",
-            icon: CheckCircle,
-            onClick: () =>
-              setConfirmAction({
-                title: "Aceptar alerta",
-                message: `¿Estás seguro de aceptar la alerta de ${row.nombre}? Se registrará la fecha de aceptación.`,
-                confirmLabel: "Aceptar alerta",
-                variant: "default" as const,
-                onConfirm: () =>
-                  setData((prev) =>
-                    prev.map((a) =>
-                      a.legajo === row.legajo
-                        ? { ...a, estado: "Revisado", fechaAceptacion: todayISO }
-                        : a,
-                    ),
-                  ),
-              }),
-          },
-        ]
-      : []),
-    {
-      label: row.activo === "Sí" ? "Desactivar" : "Activar",
-      icon: row.activo === "Sí" ? XCircle : CheckCircle,
-      onClick: () =>
-        setConfirmAction({
-          title: row.activo === "Sí" ? "Desactivar alerta" : "Activar alerta",
-          message: `¿Estás seguro de ${row.activo === "Sí" ? "desactivar" : "activar"} la alerta de ${row.nombre}?`,
-          confirmLabel: row.activo === "Sí" ? "Desactivar" : "Activar",
-          variant: row.activo === "Sí" ? "danger" : "default",
-          onConfirm: () =>
-            setData((prev) =>
-              prev.map((a) =>
-                a.legajo === row.legajo ? { ...a, activo: row.activo === "Sí" ? "No" : "Sí" } : a,
-              ),
-            ),
-        }),
-    },
-  ];
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [panel, setPanel] = useState<TableServerFilters>({ global: "", enums: {}, dates: {} });
+  const search = useDebouncedValue(panel.global.trim(), 350);
 
-  const columns: Column<Alerta>[] = [
-    {
-      key: "legajo",
-      label: "Legajo",
-      filterable: true,
-      render: (r) => <span className="font-mono tabular-nums">{r.legajo}</span>,
-    },
-    { key: "correo", label: "Correo", filterable: true, render: (r) => r.correo },
-    { key: "nombre", label: "Nombre", filterable: true, render: (r) => r.nombre },
-    { key: "tipo", label: "Tipo de alerta", filterable: true, render: (r) => r.tipo },
+  const filtros: AlertFilters = useMemo(() => {
+    const activo = panel.enums.activo;
+    return {
+      search: search || undefined,
+      status: panel.enums.estado ? STATUS_BY_LABEL.get(panel.enums.estado) : undefined,
+      active: activo === "Sí" ? true : activo === "No" ? false : undefined,
+      createdFrom: panel.dates.createdAt?.from || undefined,
+      createdTo: panel.dates.createdAt?.to || undefined,
+      acceptedFrom: panel.dates.acceptedAt?.from || undefined,
+      acceptedTo: panel.dates.acceptedAt?.to || undefined,
+    };
+  }, [search, panel.enums, panel.dates]);
+
+  const lista = useQuery({
+    queryKey: ["alerts", filtros, page, pageSize],
+    queryFn: () => listAlerts({ ...filtros, page, pageSize }),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+  const rows = lista.data?.rows ?? [];
+  const total = lista.data?.total ?? 0;
+
+  const [detalle, setDetalle] = useState<AlertItem | null>(null);
+  const [dictamen, setDictamen] = useState<Dictamen | null>(null);
+  const [notas, setNotas] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [barriendo, setBarriendo] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
+
+  const refrescar = () => queryClient.invalidateQueries({ queryKey: ["alerts"] });
+
+  const aceptar = async (a: AlertItem) => {
+    try {
+      await acceptAlert(a.id);
+      toast.success("Alerta aceptada: queda en revisión");
+      await refrescar();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const confirmarDictamen = async () => {
+    if (!dictamen) return;
+    if (notas.trim().length < 5) {
+      toast.error("Escribí el dictamen (al menos 5 caracteres)");
+      return;
+    }
+    setEnviando(true);
+    try {
+      await resolveAlert(dictamen.alert.id, dictamen.resolution, notas.trim());
+      toast.success(`Alerta cerrada: ${ALERT_RESOLUTION_LABEL[dictamen.resolution]}`);
+      setDictamen(null);
+      setNotas("");
+      setDetalle(null);
+      await refrescar();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const barrer = async () => {
+    setBarriendo(true);
+    try {
+      const r = await runComplianceSweep();
+      toast.success(
+        `Barrido ejecutado: ${r.coincidencias_revisadas} coincidencias PLAFT revisadas, ${r.alertas_nuevas} alertas nuevas.` +
+          (r.ultima_corrida_plaft ? ` Última corrida PLAFT: ${fmtFecha(r.ultima_corrida_plaft)}.` : " No hay corridas PLAFT registradas."),
+      );
+      await refrescar();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBarriendo(false);
+    }
+  };
+
+  const exportar = async () => {
+    try {
+      const todas = await listAllAlerts(filtros);
+      descargarCsv(
+        `alertas-${new Date().toISOString().slice(0, 10)}.csv`,
+        ["Legajo", "Correo", "Nombre", "Tipo", "Estado", "Activo", "Fecha de alerta", "Fecha de aceptación", "Vence", "Resolución", "Dictamen", "TXID", "Descripción"],
+        todas.map((a) => [
+          a.legajo, a.correo, a.nombre, a.type, ALERT_STATUS_LABEL[a.status], a.isActive ? "Sí" : "No",
+          a.createdAt, a.acceptedAt ?? "", a.dueAt, a.resolution ? ALERT_RESOLUTION_LABEL[a.resolution] : "",
+          a.resolutionNotes ?? "", a.idTxn ?? "", a.description,
+        ]),
+      );
+    } catch (e) {
+      toast.error(`No se pudo exportar: ${(e as Error).message}`);
+    }
+  };
+
+  const abrirDictamen = (alert: AlertItem, resolution: AlertResolution) => {
+    setNotas("");
+    setDictamen({ alert, resolution });
+  };
+
+  const getActions = (a: AlertItem): ActionItem[] => {
+    const abierta = a.status === "pending" || a.status === "in_review";
+    return [
+      { label: "Ver detalle", icon: Eye, onClick: () => setDetalle(a) },
+      ...(a.status === "pending" ? [{ label: "Aceptar (iniciar revisión)", icon: CheckCircle, onClick: () => void aceptar(a) }] : []),
+      ...(abierta
+        ? [
+            { label: "Resolver: operación justificada", icon: ShieldCheck, onClick: () => abrirDictamen(a, "justified") },
+            { label: "Registrar ROS", icon: FileWarning, variant: "danger" as const, onClick: () => abrirDictamen(a, "ros") },
+            { label: "Descartar: falso positivo", icon: XCircle, onClick: () => abrirDictamen(a, "false_positive") },
+          ]
+        : []),
+      ...(a.idTxn
+        ? [{ label: "Ver operación", icon: ArrowRightLeft, onClick: () => navigate({ to: "/admin/general/movimientos", search: { txid: a.idTxn! } }) }]
+        : []),
+    ];
+  };
+
+  const columns: Column<AlertItem>[] = [
+    { key: "legajo", label: "Legajo", minWidth: 130, render: (r) => <LegajoCell legajo={r.legajo} /> },
+    { key: "correo", label: "Correo", minWidth: 180, maxWidth: 260, render: (r) => r.correo },
+    { key: "nombre", label: "Nombre", minWidth: 160, maxWidth: 240, render: (r) => r.nombre },
+    { key: "type", label: "Tipo de alerta", minWidth: 200, maxWidth: 280, tooltip: (r) => r.description, render: (r) => r.type },
     {
       key: "estado",
       label: "Estado",
       filterable: "enum",
-      filterOptions: ["Pendiente", "Revisado", "Resuelto"],
-      render: (row) => {
-        const tone =
-          row.estado === "Resuelto" ? "success" : row.estado === "Revisado" ? "neutral" : "warn";
-        return <Badge tone={tone}>{row.estado}</Badge>;
-      },
+      filterOptions: STATUS_OPTIONS,
+      minWidth: 120,
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <Badge tone={STATUS_TONE[r.status]}>{ALERT_STATUS_LABEL[r.status]}</Badge>
+          {r.resolution && <span className="text-[11px] text-muted-foreground">{ALERT_RESOLUTION_LABEL[r.resolution]}</span>}
+        </div>
+      ),
     },
     {
       key: "activo",
       label: "Activo",
       filterable: "enum",
       filterOptions: ["Sí", "No"],
-      render: (row) => (
-        <Badge tone={row.activo === "Sí" ? "success" : "danger"}>{row.activo}</Badge>
-      ),
+      minWidth: 80,
+      render: (r) => <Badge tone={r.isActive ? "warn" : "neutral"}>{r.isActive ? "Sí" : "No"}</Badge>,
     },
-    {
-      key: "fechaAlerta",
-      label: "Fecha de la alerta",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.fechaAlerta}</span>,
-    },
-    {
-      key: "fechaAceptacion",
-      label: "Fecha de aceptación",
-      sortable: true,
-      filterable: "date",
-      render: (r) => <span className="font-mono tabular-nums">{r.fechaAceptacion ?? "—"}</span>,
-    },
+    { key: "createdAt", label: "Fecha de alerta", filterable: "date", minWidth: 150, render: (r) => <span className="font-mono tabular-nums text-xs">{fmtFecha(r.createdAt)}</span> },
+    { key: "acceptedAt", label: "Fecha de aceptación", filterable: "date", minWidth: 150, render: (r) => <span className="font-mono tabular-nums text-xs">{fmtFecha(r.acceptedAt)}</span> },
   ];
 
   return (
-    <div>
+    <>
       <PageHeader
         title="Listado de alertas"
-        description="Alertas generadas por el sistema de monitoreo."
-      />
-      <DataTable
-        columns={columns}
-        data={data}
-        keyExtractor={(r) => r.legajo}
-        actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-        dateFilterColumns={["fechaAlerta", "fechaAceptacion"]}
-      />
-
-      {viewing && (
-        <FormDialog
-          open={!!viewing}
-          onClose={() => setViewing(null)}
-          title="Detalle de alerta"
-          description={`Alerta de ${viewing.nombre}`}
-          onSubmit={() => {
-            setData((prev) => prev.map((a) => (a.legajo === viewing.legajo ? viewing : a)));
-            setViewing(null);
-          }}
-          submitLabel="Guardar cambios"
-          size="lg"
-        >
-          <AlertaFields alerta={viewing} onChange={setViewing} />
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-2">
-              Detalles de transacciones que gatillaron la alerta
-            </h4>
-            <div className="space-y-2">
-              {viewing.transacciones.map((t, i) => (
-                <TransaccionRow key={i} t={t} />
-              ))}
-            </div>
+        description="Alertas generadas por el motor de monitoreo y el screening PLAFT."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <BtnOutline onClick={() => setSimOpen(true)}>
+              <Landmark size={14} /> Simular depósito
+            </BtnOutline>
+            <BtnOutline onClick={() => void barrer()} disabled={barriendo}>
+              {barriendo ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Ejecutar barrido de compliance
+            </BtnOutline>
           </div>
-        </FormDialog>
-      )}
-
-      {editTarget && (
-        <FormDialog
-          open={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          title="Editar alerta"
-          description={`Editando alerta de ${editTarget.nombre}`}
-          onSubmit={() => {
-            setData((prev) => prev.map((a) => (a.legajo === editTarget.legajo ? editTarget : a)));
-            setEditTarget(null);
-          }}
-          submitLabel="Guardar cambios"
-        >
-          <AlertaFields alerta={editTarget} onChange={setEditTarget} />
-        </FormDialog>
-      )}
-
-      {confirmAction && (
-        <ConfirmDialog
-          open={!!confirmAction}
-          onClose={() => setConfirmAction(null)}
-          title={confirmAction.title}
-          message={confirmAction.message}
-          confirmLabel={confirmAction.confirmLabel}
-          variant={confirmAction.variant}
-          onConfirm={confirmAction.onConfirm}
-        />
-      )}
-
-      <AlertaGestionModal
-        open={!!gestionTarget}
-        onClose={() => setGestionTarget(null)}
-        resumen={gestionTarget ? `${gestionTarget.tipo} · ${gestionTarget.nombre}` : ""}
-        onGuardar={(g) => {
-          if (gestionTarget) {
-            setGestiones((prev) => ({ ...prev, [gestionTarget.legajo]: g }));
-            setData((prev) =>
-              prev.map((a) =>
-                a.legajo === gestionTarget.legajo
-                  ? { ...a, estado: "Resuelto", fechaAceptacion: g.fecha }
-                  : a,
-              ),
-            );
-          }
-        }}
+        }
       />
+
+      {lista.isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-center text-sm text-red-700">
+          <AlertTriangle size={24} />
+          <p>No se pudieron cargar las alertas: {(lista.error as Error).message}</p>
+          <button type="button" onClick={() => lista.refetch()} className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+            Reintentar
+          </button>
+        </div>
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={rows}
+            keyExtractor={(r) => r.id}
+            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            loading={lista.isLoading}
+            hidePagination
+            serverFilterState={panel}
+            onServerFilterChange={(f) => {
+              setPage(0);
+              setPanel(f);
+            }}
+            serverResultCount={total}
+            onDownloadCSV={() => void exportar()}
+            emptyMessage="No hay alertas que coincidan con los filtros."
+          />
+          <Pagination
+            page={page + 1}
+            totalPages={Math.max(1, Math.ceil(total / pageSize))}
+            pageSize={pageSize}
+            total={total}
+            countLabel="alerta(s)"
+            pageSizes={PAGE_SIZES}
+            disabled={lista.isFetching}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(0);
+            }}
+          />
+        </>
+      )}
+
+      {detalle && (
+        <FormDialog open onClose={() => setDetalle(null)} title="Detalle de alerta" description={detalle.type} onSubmit={() => setDetalle(null)} submitLabel="Cerrar" size="lg">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <Campo label="Legajo" value={detalle.legajo} mono />
+            <Campo label="Cliente" value={`${detalle.nombre} · ${detalle.correo}`} />
+            <Campo label="Estado" value={ALERT_STATUS_LABEL[detalle.status]} />
+            <Campo label="Regla" value={detalle.ruleCode ?? "—"} mono />
+            <Campo label="Fecha de alerta" value={fmtFecha(detalle.createdAt)} />
+            <Campo label="Vencimiento normativo" value={fmtFecha(detalle.dueAt)} />
+            <Campo label="Aceptada" value={detalle.acceptedAt ? `${fmtFecha(detalle.acceptedAt)} · ${detalle.acceptedByName ?? "—"}` : "—"} />
+            <Campo label="Cerrada" value={detalle.resolvedAt ? `${fmtFecha(detalle.resolvedAt)} · ${detalle.resolvedByName ?? "—"}` : "—"} />
+            {detalle.resolution && <Campo label="Resolución" value={ALERT_RESOLUTION_LABEL[detalle.resolution]} />}
+            {detalle.resolutionNotes && <Campo label="Dictamen" value={detalle.resolutionNotes} full />}
+            <Campo label="Descripción" value={detalle.description} full />
+            {detalle.idTxn && (
+              <>
+                <Campo label="Operación (TXID)" value={detalle.idTxn} mono />
+                <Campo label="Monto / tipo" value={`${fmtMonto(detalle.montoOperacion)} · ${detalle.tipoOperacion ?? "—"}`} />
+              </>
+            )}
+            {detalle.plaftMatchId != null && <Campo label="Coincidencia PLAFT" value={`#${detalle.plaftMatchId}`} mono />}
+            {Object.keys(detalle.details).length > 0 && (
+              <div className="col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Datos del evento</div>
+                <pre className="rounded-md bg-muted/50 p-3 text-xs overflow-x-auto">{JSON.stringify(detalle.details, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+          {(detalle.status === "pending" || detalle.status === "in_review") && (
+            <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+              {detalle.status === "pending" && (
+                <BtnOutline onClick={() => void aceptar(detalle).then(() => setDetalle(null))}><CheckCircle size={14} /> Aceptar</BtnOutline>
+              )}
+              <BtnOutline onClick={() => abrirDictamen(detalle, "justified")}><ShieldCheck size={14} /> Justificada</BtnOutline>
+              <BtnOutline onClick={() => abrirDictamen(detalle, "ros")}><FileWarning size={14} /> ROS</BtnOutline>
+              <BtnOutline onClick={() => abrirDictamen(detalle, "false_positive")}><XCircle size={14} /> Falso positivo</BtnOutline>
+            </div>
+          )}
+        </FormDialog>
+      )}
+
+      {dictamen && (
+        <FormDialog
+          open
+          onClose={() => setDictamen(null)}
+          title={ALERT_RESOLUTION_LABEL[dictamen.resolution]}
+          description={`${dictamen.alert.type} · ${dictamen.alert.legajo}`}
+          onSubmit={() => void confirmarDictamen()}
+          submitLabel={enviando ? "Guardando…" : "Confirmar resolución"}
+        >
+          {dictamen.resolution === "ros" && (
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              Registra que la operatoria no tiene justificación económica ni legal y corresponde un Reporte de Operación Sospechosa ante la UIF.
+            </div>
+          )}
+          {dictamen.resolution === "false_positive" && dictamen.alert.plaftMatchId != null && (
+            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Esta coincidencia REPET queda descartada y no vuelve a generar alertas. Otras coincidencias del cliente sí.
+            </div>
+          )}
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">Dictamen del analista</label>
+          <textarea
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            placeholder="Fundamento de la resolución, documentación revisada…"
+            className="w-full h-28 rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 resize-none"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Cerrar la alerta no desbloquea la cuenta: los bloqueos se liberan desde el listado de bloqueos.</p>
+        </FormDialog>
+      )}
+
+      {simOpen && <SimularDepositoDialog onClose={() => setSimOpen(false)} onDone={refrescar} />}
+    </>
+  );
+}
+
+function Campo({ label, value, mono, full }: { label: string; value: string; mono?: boolean; full?: boolean }) {
+  return (
+    <div className={full ? "col-span-2" : undefined}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`font-medium break-words ${mono ? "font-mono text-xs" : ""}`}>{value}</div>
     </div>
+  );
+}
+
+/** Depósito entrante de prueba: pasa por el mismo motor que un PAY-IN real. */
+function SimularDepositoDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [form, setForm] = useState({ cbu: "", importe: "", cuit: "", titular: "", cbuOrigen: "" });
+  const [enviando, setEnviando] = useState(false);
+  const inputCls = "w-full h-9 rounded-md border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
+
+  const enviar = async () => {
+    const importe = Number(form.importe);
+    if (!/^\d{22}$/.test(form.cbu.trim())) {
+      toast.error("El CVU destino debe tener 22 dígitos");
+      return;
+    }
+    if (!(importe > 0)) {
+      toast.error("Ingresá un importe mayor a 0");
+      return;
+    }
+    setEnviando(true);
+    try {
+      const r = await simulateDeposit({
+        cbuDestino: form.cbu.trim(),
+        importe: Math.round(importe * 100) / 100,
+        cuitOrigen: form.cuit.replace(/\D/g, ""),
+        titularOrigen: form.titular.trim(),
+        cbuOrigen: form.cbuOrigen.trim(),
+      });
+      if (r.estado === "acreditado") {
+        toast.success(
+          r.retenido
+            ? `Depósito ${r.idCoelsa} acreditado RETENIDO (bloqueo preventivo).`
+            : `Depósito ${r.idCoelsa} acreditado (${r.decision === "alert" ? "con alertas" : "sin alertas"}).`,
+        );
+        onDone();
+        onClose();
+      } else {
+        toast.error(r.estado === "sin_subcuenta" ? "No hay ninguna subcuenta con ese CVU" : `Resultado: ${r.estado}`);
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title="Simular depósito entrante"
+      description="Registra un PAY-IN de prueba que pasa por las reglas de depósitos (solo desarrollo)."
+      onSubmit={() => void enviar()}
+      submitLabel={enviando ? "Enviando…" : "Simular"}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="text-xs font-semibold mb-1.5 block">CVU destino (subcuenta del cliente)</label>
+          <input className={`${inputCls} font-mono`} value={form.cbu} onChange={(e) => setForm({ ...form, cbu: e.target.value })} placeholder="0000003100..." />
+        </div>
+        <div>
+          <label className="text-xs font-semibold mb-1.5 block">Importe (ARS)</label>
+          <input className={inputCls} type="number" min={0} step="0.01" value={form.importe} onChange={(e) => setForm({ ...form, importe: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-xs font-semibold mb-1.5 block">CUIT del depositante</label>
+          <input className={`${inputCls} font-mono`} value={form.cuit} onChange={(e) => setForm({ ...form, cuit: e.target.value })} placeholder="20123456789" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold mb-1.5 block">Titular del depositante</label>
+          <input className={inputCls} value={form.titular} onChange={(e) => setForm({ ...form, titular: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-xs font-semibold mb-1.5 block">CBU de origen</label>
+          <input className={`${inputCls} font-mono`} value={form.cbuOrigen} onChange={(e) => setForm({ ...form, cbuOrigen: e.target.value })} />
+        </div>
+      </div>
+    </FormDialog>
   );
 }

@@ -3,7 +3,13 @@ import { DataAccessError } from "./errors";
 
 // Modelo de saldos — referencia rápida:
 //
-//   subcuentas.saldo_disponible  →  columna NUMERIC(18,2) que vive en la
+//   subaccounts                  →  identidad de la subcuenta (CBU, tipo,
+//                                   estado, configuración). Sin saldos.
+//   subaccount_balances          →  saldos 1:1 por subcuenta. La fila se
+//                                   crea por trigger al insertar la
+//                                   subcuenta; solo admins y RPCs la editan.
+//
+//   saldo_disponible             →  columna NUMERIC(18,2) que vive en la
 //                                   subcuenta `Operativa` del legajo del
 //                                   comercio. Es EL saldo líquido real que
 //                                   el comercio ve en su panel: lo que
@@ -19,8 +25,8 @@ import { DataAccessError } from "./errors";
 //                                   saldo_disponible hasta que el lote
 //                                   se acredita.
 //
-//   subcuentas.saldo_retenido    →  contracargos y disputas en disputa.
-//   subcuentas.saldo_conciliado  →  acumulado conciliado contra el banco.
+//   saldo_retenido               →  contracargos y disputas en disputa.
+//   saldo_conciliado             →  acumulado conciliado contra el banco.
 //
 //   movimientos                  →  tabla inmutable de cada transacción
 //                                   (id_txn UNIQUE). No se escribe desde
@@ -67,6 +73,12 @@ export type Subcuenta = {
   updatedAt: string;
 };
 
+type BalanceRow = {
+  saldo_disponible: number;
+  saldo_retenido: number;
+  saldo_conciliado: number;
+};
+
 type SubcuentaRow = {
   id: string;
   cliente_legajo: string;
@@ -76,9 +88,8 @@ type SubcuentaRow = {
   cbu: string | null;
   tipo: SubcuentaTipo;
   estado: SubcuentaEstado;
-  saldo_disponible: number;
-  saldo_retenido: number;
-  saldo_conciliado: number;
+  // Relación 1:1: PostgREST la devuelve como objeto (array en versiones viejas).
+  subaccount_balances: BalanceRow | BalanceRow[] | null;
   ingresos: string | null;
   egresos: string | null;
   responsable: string | null;
@@ -91,9 +102,15 @@ type SubcuentaRow = {
 };
 
 const COLUMNS =
-  "id, cliente_legajo, nombre, apellido, email, cbu, tipo, estado, saldo_disponible, saldo_retenido, saldo_conciliado, ingresos, egresos, responsable, limite, retiros_habilitados, validada, configuracion, created_at, updated_at";
+  "id, cliente_legajo, nombre, apellido, email, cbu, tipo, estado, ingresos, egresos, responsable, limite, retiros_habilitados, validada, configuracion, created_at, updated_at, subaccount_balances(saldo_disponible, saldo_retenido, saldo_conciliado)";
+
+function balanceOf(r: SubcuentaRow): BalanceRow | null {
+  const b = r.subaccount_balances;
+  return (Array.isArray(b) ? b[0] : b) ?? null;
+}
 
 function toSubcuenta(r: SubcuentaRow): Subcuenta {
+  const bal = balanceOf(r);
   return {
     id: r.id,
     clienteLegajo: r.cliente_legajo,
@@ -103,9 +120,9 @@ function toSubcuenta(r: SubcuentaRow): Subcuenta {
     cbu: r.cbu,
     tipo: r.tipo,
     estado: r.estado,
-    saldoDisponible: Number(r.saldo_disponible),
-    saldoRetenido: Number(r.saldo_retenido),
-    saldoConciliado: Number(r.saldo_conciliado),
+    saldoDisponible: Number(bal?.saldo_disponible ?? 0),
+    saldoRetenido: Number(bal?.saldo_retenido ?? 0),
+    saldoConciliado: Number(bal?.saldo_conciliado ?? 0),
     ingresos: r.ingresos,
     egresos: r.egresos,
     responsable: r.responsable,
@@ -125,7 +142,7 @@ function toSubcuenta(r: SubcuentaRow): Subcuenta {
 export async function listSubcuentas(clienteLegajo: string): Promise<Subcuenta[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("subcuentas")
+    .from("subaccounts")
     .select(COLUMNS)
     .eq("cliente_legajo", clienteLegajo)
     .order("created_at", { ascending: false });
@@ -154,7 +171,7 @@ export async function listAllCvus(filters: CvuFilters): Promise<{ rows: CvuRow[]
   const { page, pageSize, search, estado, fechaDesde, fechaHasta } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  let query = sb.from("subcuentas").select(COLUMNS_WITH_CLIENTE, { count: "exact" });
+  let query = sb.from("subaccounts").select(COLUMNS_WITH_CLIENTE, { count: "exact" });
   if (search?.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
     query = query.or(`cliente_legajo.ilike.%${q}%,email.ilike.%${q}%,nombre.ilike.%${q}%,cbu.ilike.%${q}%`);
@@ -195,9 +212,6 @@ export type SubcuentaInput = {
   cbu?: string;
   tipo?: SubcuentaTipo;
   estado?: SubcuentaEstado;
-  saldoDisponible?: number;
-  saldoRetenido?: number;
-  saldoConciliado?: number;
   responsable?: string;
   limite?: string;
   retirosHabilitados?: boolean;
@@ -209,7 +223,7 @@ export async function createSubcuenta(
 ): Promise<Subcuenta> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("subcuentas")
+    .from("subaccounts")
     .insert({
       cliente_legajo: clienteLegajo,
       nombre: input.nombre,
@@ -218,9 +232,6 @@ export async function createSubcuenta(
       cbu: input.cbu ?? null,
       tipo: input.tipo ?? "Operativa",
       estado: input.estado ?? "Activa",
-      saldo_disponible: input.saldoDisponible ?? 0,
-      saldo_retenido: input.saldoRetenido ?? 0,
-      saldo_conciliado: input.saldoConciliado ?? 0,
       responsable: input.responsable ?? null,
       limite: input.limite ?? null,
       retiros_habilitados: input.retirosHabilitados ?? true,
@@ -228,7 +239,31 @@ export async function createSubcuenta(
     .select(COLUMNS)
     .single();
   if (error) throw new DataAccessError(error);
+  // La fila de saldos nace en 0 (trigger); los fondos entran con ajustarSaldoSubcuenta.
   return toSubcuenta(data as SubcuentaRow);
+}
+
+/**
+ * Ajuste manual de saldo desde backoffice. Los saldos solo cambian
+ * contabilizando en el ledger: la RPC registra una operación ADJ- con su motivo
+ * (contra AJUSTES_MANUALES) y actualiza el saldo en la misma transacción.
+ * `monto` con signo: positivo acredita, negativo debita (nunca deja < 0).
+ */
+export async function ajustarSaldoSubcuenta(
+  subaccountId: string,
+  monto: number,
+  motivo: string,
+  bucket: "disponible" | "retenido" = "disponible",
+): Promise<{ idTxn: string }> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("ajustar_saldo_subcuenta", {
+    p_subaccount_id: subaccountId,
+    p_monto: monto,
+    p_motivo: motivo,
+    p_bucket: bucket,
+  });
+  if (error) throw new DataAccessError(error);
+  return { idTxn: (data as { id_txn: string }).id_txn };
 }
 
 export type SubcuentaUpdate = {
@@ -238,9 +273,6 @@ export type SubcuentaUpdate = {
   cbu?: string | null;
   tipo?: SubcuentaTipo;
   estado?: SubcuentaEstado;
-  saldoDisponible?: number;
-  saldoRetenido?: number;
-  saldoConciliado?: number;
   responsable?: string | null;
   limite?: string | null;
   retirosHabilitados?: boolean;
@@ -254,9 +286,13 @@ export async function updateSubcuenta(
   input: SubcuentaUpdate,
 ): Promise<Subcuenta> {
   const sb = requireSupabase();
+  const { retirosHabilitados, ...rest } = input;
+  const datos: Record<string, unknown> = { ...rest };
+  if (retirosHabilitados !== undefined) datos.retiros_habilitados = retirosHabilitados;
+
   const { data, error } = await sb
-    .from("subcuentas")
-    .update({ ...input })
+    .from("subaccounts")
+    .update(datos)
     .eq("id", id)
     .eq("cliente_legajo", clienteLegajo)
     .select(COLUMNS)
@@ -271,7 +307,7 @@ export async function deleteSubcuenta(
 ): Promise<void> {
   const sb = requireSupabase();
   const { error } = await sb
-    .from("subcuentas")
+    .from("subaccounts")
     .delete()
     .eq("id", id)
     .eq("cliente_legajo", clienteLegajo);

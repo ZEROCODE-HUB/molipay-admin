@@ -122,7 +122,7 @@ const OPS_COLUMNS = [
   "legajo",
   "bandera",
   "estados_movimiento(codigo, nombre, es_final)",
-  "clientes!movimientos_cliente_id_fkey(correo, nombre, cuit)",
+  "clientes!transactions_cliente_id_fkey(correo, nombre, cuit)",
 ].join(", ");
 
 export async function listOperacionesLote(
@@ -136,7 +136,7 @@ export async function listOperacionesLote(
   const inicio = `${fecha}T00:00:00`;
   const fin = `${fecha}T23:59:59.999`;
 
-  let q = sb.from("movimientos").select(OPS_COLUMNS, { count: "exact" });
+  let q = sb.from("transactions").select(OPS_COLUMNS, { count: "exact" });
 
   q = q
     .eq("comercio_id", comercioId)
