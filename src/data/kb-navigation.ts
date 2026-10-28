@@ -48,11 +48,9 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Parámetros de alertas — Admin Panel  (/admin/general/alertas/parametros-alertas)
    - Parámetros de bloqueos — Admin Panel  (/admin/general/alertas/parametros-bloqueos)
    - Movimientos — Admin Molly  (/admin/general/movimientos)
-   - Cobros QR — Movimientos — Admin Molly  (/admin/general/movimientos/cobros-qr)
    - Cobro de comisiones — Movimientos — Admin Molly  (/admin/general/movimientos/comisiones)
    - Depósitos — Movimientos — Admin Molly  (/admin/general/movimientos/depositos)
    - Impuestos cobrados — Movimientos — Admin Molly  (/admin/general/movimientos/impuestos)
-   - Pagos QR — Movimientos — Admin Molly  (/admin/general/movimientos/pagos-qr)
    - Pagos con tarjeta — Movimientos — Admin Molly  (/admin/general/movimientos/pagos-tarjeta)
    - Retiros — Movimientos — Admin Molly  (/admin/general/movimientos/retiros)
    - Usuarios — Admin Molly  (/admin/general/usuarios)
@@ -226,10 +224,6 @@ export const KB_ROUTES: { path: string; title: string }[] = [
     "title": "Movimientos — Admin Molly"
   },
   {
-    "path": "/admin/general/movimientos/cobros-qr",
-    "title": "Cobros QR — Movimientos — Admin Molly"
-  },
-  {
     "path": "/admin/general/movimientos/comisiones",
     "title": "Cobro de comisiones — Movimientos — Admin Molly"
   },
@@ -240,10 +234,6 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   {
     "path": "/admin/general/movimientos/impuestos",
     "title": "Impuestos cobrados — Movimientos — Admin Molly"
-  },
-  {
-    "path": "/admin/general/movimientos/pagos-qr",
-    "title": "Pagos QR — Movimientos — Admin Molly"
   },
   {
     "path": "/admin/general/movimientos/pagos-tarjeta",

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Info } from "lucide-react";
-import { MovimientosSubRoute } from "@/components/movimientos-subroute";
+import { PageHeader } from "@/components/page-header";
+import { PermissionGuard } from "@/components/permission-guard";
+import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
 
 export const Route = createFileRoute("/admin/general/movimientos/comisiones")({
   head: () => ({
@@ -9,26 +10,13 @@ export const Route = createFileRoute("/admin/general/movimientos/comisiones")({
       { name: "description", content: "Comisiones cobradas por la plataforma Moli." },
     ],
   }),
-  component: ComisionesPage,
-});
-
-function ComisionesPage() {
-  return (
-    <>
-      <div className="flex items-start gap-2 rounded-lg border border-muted bg-muted/30 px-4 py-3 text-sm text-muted-foreground mb-4">
-        <Info size={16} className="shrink-0 mt-0.5" />
-        <p>
-          Vista transversal: movimientos de <strong>todos los tipos</strong> con comisión cobrada
-          (columna <strong>comision</strong> de la tabla). La modalidad (Porcentaje/Fijo) del mock
-          es configuración arancelaria (<em>comisiones_cliente</em>) y no se muestra por movimiento;
-          el IVA sobre la comisión corresponde a la columna <strong>impuesto</strong>.
-        </p>
-      </div>
-      <MovimientosSubRoute
-        titulo="Cobro de comisiones"
-        descripcion="Comisiones debitadas a clientes por operaciones, con desglose real Comisión / IVA / Monto cobrado."
-        soloConComision
+  component: () => (
+    <PermissionGuard recurso="movimientos">
+      <PageHeader
+        title="Cobro de comisiones"
+        description="Solo las líneas de comisión de todas las operaciones. Clic en el TXID para ver la operación completa."
       />
-    </>
-  );
-}
+      <MovimientosLineasTable tipoLinea="comision" />
+    </PermissionGuard>
+  ),
+});

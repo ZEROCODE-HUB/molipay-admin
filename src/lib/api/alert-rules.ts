@@ -3,7 +3,7 @@ import { DataAccessError } from "./errors";
 import type { Page, Pagination } from "./types";
 
 // Configuracion de reglas de monitoreo (tabla public.alert_rules).
-// Fase 1: solo configuracion; el motor que las evalua llega despues.
+// El motor (evaluar_reglas_operacion) las lee en cada retiro y deposito.
 
 export type AlertRuleCode =
   | "deposit_company_max"
@@ -17,7 +17,16 @@ export type AlertRuleCode =
   | "minors_transfer_policy"
   | "unusual_hours"
   | "deposit_min_wages_block"
-  | "plaft_screening";
+  | "plaft_screening"
+  | "transaction_profile_excess"
+  | "monthly_volume_variation"
+  | "high_risk_jurisdiction"
+  | "single_operation_amount";
+
+/** Campos de la ficha que pueden limitar una regla. Lista vacía o ausente = todos los clientes. */
+export type RuleConditionKey = "tipo_persona" | "estado" | "actividad" | "provincia" | "riesgo" | "es_pep";
+export type RuleConditions = Partial<Record<RuleConditionKey, string[]>>;
+export type ActivityAmount = { activity: string; amount: number };
 
 export type ScheduleDay = { day: number; enabled: boolean; start: string; end: string };
 export type MinorsPolicy = "allow" | "alert" | "block";
@@ -30,6 +39,7 @@ export type AlertRule = {
   description: string | null;
   action: "alert" | "block";
   parameters: Record<string, unknown>;
+  conditions: RuleConditions;
   isEnabled: boolean;
   sortOrder: number;
   updatedAt: string;
@@ -43,6 +53,7 @@ type AlertRuleRow = {
   description: string | null;
   action: "alert" | "block";
   parameters: Record<string, unknown>;
+  conditions: RuleConditions | null;
   is_enabled: boolean;
   sort_order: number;
   updated_at: string;
@@ -52,7 +63,7 @@ export async function listAlertRules(): Promise<AlertRule[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
     .from("alert_rules")
-    .select("id, code, name, category, description, action, parameters, is_enabled, sort_order, updated_at")
+    .select("id, code, name, category, description, action, parameters, conditions, is_enabled, sort_order, updated_at")
     .order("sort_order", { ascending: true });
   if (error) throw new DataAccessError(error);
   return ((data ?? []) as AlertRuleRow[]).map((r) => ({
@@ -63,6 +74,7 @@ export async function listAlertRules(): Promise<AlertRule[]> {
     description: r.description,
     action: r.action,
     parameters: r.parameters ?? {},
+    conditions: r.conditions ?? {},
     isEnabled: r.is_enabled,
     sortOrder: r.sort_order,
     updatedAt: r.updated_at,
@@ -71,11 +83,16 @@ export async function listAlertRules(): Promise<AlertRule[]> {
 
 /** Guarda varias reglas en una sola transaccion (la base valida cada una). */
 export async function saveAlertRules(
-  rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown> }[],
+  rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown>; conditions?: RuleConditions }[],
 ): Promise<void> {
   const sb = requireSupabase();
   const { error } = await sb.rpc("guardar_alert_rules", {
-    p_rules: rules.map((r) => ({ code: r.code, is_enabled: r.isEnabled, parameters: r.parameters })),
+    p_rules: rules.map((r) => ({
+      code: r.code,
+      is_enabled: r.isEnabled,
+      parameters: r.parameters,
+      ...(r.conditions ? { conditions: r.conditions } : {}),
+    })),
   });
   if (error) throw new DataAccessError(error);
 }
@@ -169,9 +186,132 @@ export async function saveClientBlockParameter(input: {
   if (error) throw new DataAccessError(error);
 }
 
+/** Parámetros individuales de un cliente (null = usa los generales). */
+export async function getClientBlockParameter(legajo: string): Promise<ClientBlockParameter | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.from("v_client_block_parameters").select(COLS).eq("legajo", legajo).maybeSingle();
+  if (error) throw new DataAccessError(error);
+  return data ? toParam(data as ClientBlockParameterRow) : null;
+}
+
 export async function deleteClientBlockParameter(id: string): Promise<void> {
   const sb = requireSupabase();
   const { error } = await sb.rpc("eliminar_parametros_bloqueo_cliente", { p_id: id });
+  if (error) throw new DataAccessError(error);
+}
+
+/** Valores de actividad y provincia que existen en las fichas (para condiciones y montos por actividad). */
+export async function listFichaValues(): Promise<{ actividades: string[]; provincias: string[] }> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("listar_valores_ficha");
+  if (error) throw new DataAccessError(error);
+  const d = (data ?? {}) as { actividades?: string[]; provincias?: string[] };
+  return { actividades: d.actividades ?? [], provincias: d.provincias ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// Perfil transaccional esperado por cliente (public.client_transaction_profiles)
+// ---------------------------------------------------------------------------
+
+export type TransactionProfile = {
+  id: string;
+  clientId: string;
+  legajo: string;
+  correo: string;
+  nombre: string;
+  actividad: string | null;
+  /** Volumen mensual esperado (ingresos + egresos). */
+  monthlyAmount: number;
+  monthlyOperations: number | null;
+  notes: string | null;
+  updatedAt: string;
+  currentMonthAmount: number;
+  currentMonthOperations: number;
+};
+
+type TransactionProfileRow = {
+  id: string;
+  client_id: string;
+  legajo: string;
+  correo: string;
+  nombre: string;
+  actividad: string | null;
+  monthly_amount: number | string;
+  monthly_operations: number | null;
+  notes: string | null;
+  updated_at: string;
+  current_month_amount: number | string;
+  current_month_operations: number | string;
+};
+
+const PROFILE_COLS =
+  "id, client_id, legajo, correo, nombre, actividad, monthly_amount, monthly_operations, notes, updated_at, current_month_amount, current_month_operations";
+
+const toProfile = (r: TransactionProfileRow): TransactionProfile => ({
+  id: r.id,
+  clientId: r.client_id,
+  legajo: r.legajo,
+  correo: r.correo,
+  nombre: r.nombre,
+  actividad: r.actividad,
+  monthlyAmount: Number(r.monthly_amount),
+  monthlyOperations: r.monthly_operations,
+  notes: r.notes,
+  updatedAt: r.updated_at,
+  currentMonthAmount: Number(r.current_month_amount),
+  currentMonthOperations: Number(r.current_month_operations),
+});
+
+export async function listTransactionProfiles(filters: Pagination & { search?: string }): Promise<Page<TransactionProfile>> {
+  const sb = requireSupabase();
+  const from = filters.page * filters.pageSize;
+  const { data, error, count } = await filtrar(
+    sb.from("v_client_transaction_profiles").select(PROFILE_COLS, { count: "exact" }),
+    filters.search,
+  )
+    .order("legajo", { ascending: true })
+    .range(from, from + filters.pageSize - 1);
+  if (error) throw new DataAccessError(error);
+  const rows = ((data ?? []) as TransactionProfileRow[]).map(toProfile);
+  return { rows, total: count ?? rows.length, page: filters.page, pageSize: filters.pageSize };
+}
+
+export async function listAllTransactionProfiles(search?: string): Promise<TransactionProfile[]> {
+  const sb = requireSupabase();
+  const { data, error } = await filtrar(sb.from("v_client_transaction_profiles").select(PROFILE_COLS), search)
+    .order("legajo", { ascending: true })
+    .limit(10000);
+  if (error) throw new DataAccessError(error);
+  return ((data ?? []) as TransactionProfileRow[]).map(toProfile);
+}
+
+/** Perfil transaccional de un cliente con su consumo del mes (null = sin perfil). */
+export async function getTransactionProfile(legajo: string): Promise<TransactionProfile | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.from("v_client_transaction_profiles").select(PROFILE_COLS).eq("legajo", legajo).maybeSingle();
+  if (error) throw new DataAccessError(error);
+  return data ? toProfile(data as TransactionProfileRow) : null;
+}
+
+export async function saveTransactionProfile(input: {
+  legajo: string;
+  monthlyAmount: number;
+  monthlyOperations: number | null;
+  notes: string | null;
+}): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc("guardar_perfil_transaccional", {
+    p_legajo: input.legajo,
+    p_monthly_amount: input.monthlyAmount,
+    p_monthly_operations: input.monthlyOperations,
+    p_notes: input.notes,
+  });
+  if (error) throw new DataAccessError(error);
+}
+
+export async function deleteTransactionProfile(id: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc("eliminar_perfil_transaccional", { p_id: id });
   if (error) throw new DataAccessError(error);
 }
 

@@ -1,17 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Info, AlertTriangle, Loader2 } from "lucide-react";
+import { Save, Info, AlertTriangle, Loader2, Filter, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import {
   listAlertRules,
+  listFichaValues,
   saveAlertRules,
+  type ActivityAmount,
   type AlertRule,
   type AlertRuleCode,
   type MinorsPolicy,
+  type RuleConditions,
   type ScheduleDay,
 } from "@/lib/api/alert-rules";
+import { ChipsSelect, PROVINCIAS_AR, normalizarValor, unirValores } from "@/components/alertas/chips-select";
+import { RuleConditionsDialog, resumenCondiciones } from "@/components/alertas/rule-conditions";
+import { PerfilesTransaccionalesCard } from "@/components/alertas/perfiles-transaccionales-card";
 
 export const Route = createFileRoute("/admin/general/alertas/parametros-alertas")({
   head: () => ({ meta: [{ title: "Parámetros de alertas — Admin Panel" }] }),
@@ -138,6 +144,44 @@ const GROUPS: GroupView[] = [
     ],
   },
   {
+    title: "Exceso del perfil transaccional",
+    rules: [
+      {
+        code: "transaction_profile_excess",
+        switchLabel: "Alertar exceso de perfil",
+        numbers: [{ key: "tolerance_pct", label: "Tolerancia sobre el perfil (%)" }],
+      },
+    ],
+  },
+  {
+    title: "Variación del volumen mensual",
+    rules: [
+      {
+        code: "monthly_volume_variation",
+        switchLabel: "Alertar variación respecto del mes anterior",
+        numbers: [
+          { key: "variation_pct", label: "Aumento respecto del mes anterior (%)" },
+          { key: "min_previous_amount", label: "Volumen mínimo del mes anterior para evaluar ($)" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Jurisdicción de alto riesgo",
+    rules: [{ code: "high_risk_jurisdiction", switchLabel: "Alertar domicilio en jurisdicción de alto riesgo" }],
+  },
+  {
+    title: "Operación individual superior a un monto",
+    full: true,
+    rules: [
+      {
+        code: "single_operation_amount",
+        switchLabel: "Alertar operaciones que superan el monto",
+        numbers: [{ key: "default_amount", label: "Monto general por operación ($, 0 = sin monto general)" }],
+      },
+    ],
+  },
+  {
     title: "Movimiento en horario inusual",
     full: true,
     rules: [{ code: "unusual_hours", switchLabel: "Regla de horario inusual habilitada" }],
@@ -153,7 +197,18 @@ const POLITICAS: { value: MinorsPolicy; label: string }[] = [
 const CODES = GROUPS.flatMap((g) => g.rules.map((r) => r.code));
 
 /** Estado editable: numeros como texto para no perder lo que se esta tipeando. */
-type Draft = Record<string, { isEnabled: boolean; values: Record<string, string>; policy?: MinorsPolicy; days?: ScheduleDay[] }>;
+type Draft = Record<
+  string,
+  {
+    isEnabled: boolean;
+    values: Record<string, string>;
+    conditions: RuleConditions;
+    policy?: MinorsPolicy;
+    days?: ScheduleDay[];
+    jurisdictions?: string[];
+    byActivity?: { activity: string; amount: string }[];
+  }
+>;
 
 function toDraft(rules: AlertRule[]): Draft {
   const d: Draft = {};
@@ -164,17 +219,24 @@ function toDraft(rules: AlertRule[]): Draft {
     d[r.code] = {
       isEnabled: r.isEnabled,
       values,
+      conditions: structuredClone(r.conditions ?? {}),
       policy: (r.parameters.policy as MinorsPolicy | undefined) ?? undefined,
       days: Array.isArray(r.parameters.days) ? (r.parameters.days as ScheduleDay[]).map((x) => ({ ...x })) : undefined,
+      jurisdictions: Array.isArray(r.parameters.jurisdictions) ? [...(r.parameters.jurisdictions as string[])] : undefined,
+      byActivity: Array.isArray(r.parameters.by_activity)
+        ? (r.parameters.by_activity as ActivityAmount[]).map((x) => ({ activity: x.activity, amount: String(x.amount) }))
+        : undefined,
     };
   }
   return d;
 }
 
 /** Valida y arma los parametros a guardar; devuelve errores por campo. */
-function construir(draft: Draft): { rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown> }[]; errores: Record<string, string> } {
+type RuleToSave = { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown>; conditions: RuleConditions };
+
+function construir(draft: Draft): { rules: RuleToSave[]; errores: Record<string, string> } {
   const errores: Record<string, string> = {};
-  const rules: { code: AlertRuleCode; isEnabled: boolean; parameters: Record<string, unknown> }[] = [];
+  const rules: RuleToSave[] = [];
   for (const g of GROUPS) {
     for (const rv of g.rules) {
       const d = draft[rv.code];
@@ -205,6 +267,27 @@ function construir(draft: Draft): { rules: { code: AlertRuleCode; isEnabled: boo
       if (rv.code === "plaft_screening" && typeof parameters.threshold === "number" && parameters.threshold > 100) {
         errores["plaft_screening.threshold"] = "Va de 0 a 100";
       }
+      if (rv.code === "monthly_volume_variation" && parameters.variation_pct === 0) {
+        errores["monthly_volume_variation.variation_pct"] = "Debe ser mayor a 0";
+      }
+      if (rv.code === "high_risk_jurisdiction") {
+        parameters.jurisdictions = d.jurisdictions ?? [];
+        if (d.isEnabled && (d.jurisdictions ?? []).length === 0) {
+          errores["high_risk_jurisdiction.jurisdictions"] = "Elegí al menos una jurisdicción o deshabilitá la regla";
+        }
+      }
+      if (rv.code === "single_operation_amount") {
+        const vistos = new Set<string>();
+        parameters.by_activity = (d.byActivity ?? []).map((row, i) => {
+          const n = Number(row.amount);
+          const k = normalizarValor(row.activity);
+          if (!k) errores[`single_operation_amount.act${i}`] = "Indicá la actividad";
+          else if (vistos.has(k)) errores[`single_operation_amount.act${i}`] = "Actividad repetida";
+          else if (row.amount.trim() === "" || !Number.isFinite(n) || n < 0) errores[`single_operation_amount.act${i}`] = "Monto inválido";
+          vistos.add(k);
+          return { activity: row.activity.trim(), amount: n };
+        });
+      }
       if (rv.code === "minors_transfer_policy") parameters.policy = d.policy ?? "block";
       if (rv.code === "unusual_hours") {
         parameters.days = d.days ?? [];
@@ -212,7 +295,7 @@ function construir(draft: Draft): { rules: { code: AlertRuleCode; isEnabled: boo
           if (day.enabled && day.start >= day.end) errores[`unusual_hours.day${day.day}`] = "El inicio debe ser anterior al fin";
         });
       }
-      rules.push({ code: rv.code, isEnabled: d.isEnabled, parameters });
+      rules.push({ code: rv.code, isEnabled: d.isEnabled, parameters, conditions: d.conditions });
     }
   }
   return { rules, errores };
@@ -248,6 +331,10 @@ function Page() {
     queryKey: ["alert_rules"],
     queryFn: listAlertRules,
   });
+
+  const ficha = useQuery({ queryKey: ["ficha_values"], queryFn: listFichaValues, staleTime: 5 * 60_000 });
+  const fichaValues = ficha.data ?? { actividades: [], provincias: [] };
+  const [condicionesDe, setCondicionesDe] = useState<{ code: string; name: string } | null>(null);
 
   const [draft, setDraft] = useState<Draft>({});
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -298,7 +385,9 @@ function Page() {
         <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800 dark:text-amber-300">
           Una <strong>alerta</strong> solo notifica y queda pendiente de revisión manual. No
-          suspende la cuenta automáticamente.
+          suspende la cuenta automáticamente. Cada regla puede limitarse a ciertos clientes según su
+          ficha (tipo de persona, estado, actividad, provincia, riesgo, PEP) con <strong>Aplica a</strong>.
+          Los cambios rigen desde la próxima operación.
         </div>
       </div>
 
@@ -356,6 +445,71 @@ function Page() {
                           );
                         })}
 
+                        {rv.code === "high_risk_jurisdiction" && (
+                          <div>
+                            <div className="text-xs font-semibold text-muted-foreground mb-1">Jurisdicciones de alto riesgo</div>
+                            <ChipsSelect
+                              value={d.jurisdictions ?? []}
+                              onChange={(v) => patch(rv.code, (x) => { x.jurisdictions = v; })}
+                              options={unirValores(PROVINCIAS_AR, fichaValues.provincias).map((v) => ({ value: v }))}
+                              placeholder="Buscar o escribir una jurisdicción…"
+                              allowCustom
+                              emptyLabel="Ninguna"
+                            />
+                            <ErrorCampo msg={errores["high_risk_jurisdiction.jurisdictions"]} />
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Se compara con la provincia del domicilio. "Ejecutar barrido" en el listado alerta a toda la cartera.
+                            </p>
+                          </div>
+                        )}
+
+                        {rv.code === "single_operation_amount" && (
+                          <div className="space-y-2">
+                            <div className="text-xs font-semibold text-muted-foreground">Montos por actividad económica (reemplazan al general)</div>
+                            {(d.byActivity ?? []).map((row, i) => (
+                              <div key={i}>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    list="actividades-ficha"
+                                    value={row.activity}
+                                    onChange={(e) => patch(rv.code, (x) => { x.byActivity![i].activity = e.target.value; })}
+                                    placeholder="Actividad"
+                                    className="flex-1 min-w-[200px] h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step="any"
+                                    value={row.amount}
+                                    onChange={(e) => patch(rv.code, (x) => { x.byActivity![i].amount = e.target.value; })}
+                                    placeholder="Monto ($)"
+                                    className="w-44 h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                                  />
+                                  <button
+                                    type="button"
+                                    aria-label="Quitar actividad"
+                                    onClick={() => patch(rv.code, (x) => { x.byActivity!.splice(i, 1); })}
+                                    className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-input text-muted-foreground hover:text-red-600"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                                <ErrorCampo msg={errores[`single_operation_amount.act${i}`]} />
+                              </div>
+                            ))}
+                            <datalist id="actividades-ficha">
+                              {fichaValues.actividades.map((a) => <option key={a} value={a} />)}
+                            </datalist>
+                            <button
+                              type="button"
+                              onClick={() => patch(rv.code, (x) => { x.byActivity = [...(x.byActivity ?? []), { activity: "", amount: "" }]; })}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-dashed border-input text-xs hover:bg-accent"
+                            >
+                              <Plus size={12} /> Agregar actividad
+                            </button>
+                          </div>
+                        )}
+
                         {rv.code === "minors_transfer_policy" && (
                           <div>
                             <label htmlFor="politica-menores" className="block text-xs font-semibold text-muted-foreground mb-1">Política</label>
@@ -402,6 +556,18 @@ function Page() {
                             <ErrorCampo msg={errores[`unusual_hours.day${day.day}`]} />
                           </div>
                         ))}
+
+                        <button
+                          type="button"
+                          onClick={() => setCondicionesDe({ code: rv.code, name: g.title })}
+                          className="flex w-full items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                          title="Limitar la regla a clientes con ciertos datos de ficha"
+                        >
+                          <Filter size={12} className="mt-0.5 shrink-0" />
+                          <span>
+                            <span className="font-semibold">Aplica a:</span> {resumenCondiciones(d.conditions)}
+                          </span>
+                        </button>
                       </div>
                     );
                   })}
@@ -424,6 +590,19 @@ function Page() {
           </div>
         </div>
       )}
+
+      {condicionesDe && draft[condicionesDe.code] && (
+        <RuleConditionsDialog
+          open
+          ruleName={condicionesDe.name}
+          value={draft[condicionesDe.code].conditions}
+          fichaValues={fichaValues}
+          onClose={() => setCondicionesDe(null)}
+          onApply={(c) => patch(condicionesDe.code, (x) => { x.conditions = c; })}
+        />
+      )}
+
+      <PerfilesTransaccionalesCard />
     </>
   );
 }

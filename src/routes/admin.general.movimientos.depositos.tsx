@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MovimientosSubRoute } from "@/components/movimientos-subroute";
+import { PageHeader } from "@/components/page-header";
+import { PermissionGuard } from "@/components/permission-guard";
+import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
 
 export const Route = createFileRoute("/admin/general/movimientos/depositos")({
   head: () => ({
@@ -9,10 +11,12 @@ export const Route = createFileRoute("/admin/general/movimientos/depositos")({
     ],
   }),
   component: () => (
-    <MovimientosSubRoute
-      titulo="Depósitos"
-      descripcion="Transacciones de depósito ingresadas a la plataforma."
-      tipoCode="deposito"
-    />
+    <PermissionGuard recurso="movimientos">
+      <PageHeader
+        title="Depósitos"
+        description="Depósitos entrantes, una fila por concepto (ingreso, comisión, impuesto). Las líneas de un mismo depósito comparten el TXID."
+      />
+      <MovimientosLineasTable tiposOperacion={["deposito"]} />
+    </PermissionGuard>
   ),
 });

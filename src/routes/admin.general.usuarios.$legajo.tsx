@@ -20,7 +20,6 @@ import {
   Eye,
   FileUp,
   Ban,
-  ShieldCheck,
   Info,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -31,9 +30,7 @@ import { ModalDialog } from "@/components/modal-dialog";
 import { DataTable, type Column } from "@/components/data-table";
 import { PermissionGuard } from "@/components/permission-guard";
 import { toast } from "sonner";
-import { AlertaGestionModal, type GestionAlerta } from "@/components/alerta-gestion";
 import { useClienteByLegajo } from "@/hooks/useClientes";
-import { useMovimientos } from "@/hooks/useMovimientos";
 import { useImpuestosAsignaciones } from "@/hooks/useImpuestos";
 import {
   aprobarDocumentacionCliente,
@@ -77,10 +74,6 @@ import {
   listAlertas,
   listBloqueos,
   listClienteModulos,
-  listParametrosAlertas,
-  upsertParametroAlerta,
-  listParametrosBloqueos,
-  upsertParametroBloqueo,
   listComerciosPst,
   listLinksPago,
   forzarValidacion,
@@ -90,9 +83,6 @@ import {
   type ExencionDireccion,
   type HistorialCambio,
   type Validacion,
-  type Alerta,
-  type Bloqueo,
-  type ParametroConfig,
   type ComercioPst,
   type LinkPago,
   type ComisionCliente as ComisionClienteLegacy,
@@ -116,17 +106,12 @@ import type {
   EstadoCliente,
   EstadoApiUsuario,
   ImpuestoAsignacion,
-  Movimiento,
 } from "@/lib/api/types";
-import {
-  type EstadoMovimiento,
-  type Movimiento as DetailMovimiento,
-} from "@/lib/api/types";
-import { MovimientoDetail, DetailModal } from "@/components/movimiento-detail";
-import { resolverEstadoMovimiento } from "@/lib/estados";
-import { useEstadosMovimiento } from "@/hooks/useEstados";
-import { useCambiarEstadoMovimiento } from "@/hooks/useMovimientoActions";
-import { FormDialog } from "@/components/form-dialog";
+import { DetailModal } from "@/components/movimiento-detail";
+import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
+import { AlertsTable } from "@/components/alertas/alerts-table";
+import { BlocksTable, BLOCKS_QUERY_KEY, NuevoBloqueoDialog } from "@/components/alertas/blocks-table";
+import { PerfilTransaccionalClienteCard, UmbralBloqueoClienteCard } from "@/components/alertas/monitoreo-cliente-cards";
 import { MOCK_IMPUESTOS_POR_COBRAR, formatImpuestoMonto } from "@/data/impuestos-por-cobrar";
 
 export const Route = createFileRoute("/admin/general/usuarios/$legajo")({
@@ -185,86 +170,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "historial", label: "Historial" },
 ];
 
-type ParamTipo = "switch" | "switch_valor" | "switch_porcentaje" | "switch_cantidad_periodo";
-
-type ParamDef = {
-  clave: string;
-  etiqueta: string;
-  tipo: ParamTipo;
-  valorDefecto?: string;
-  periodoDefecto?: string;
-  unidad?: string;
-};
-
-const ALERTA_PARAM_DEF: ParamDef[] = [
-  {
-    clave: "exceso_perfil_transaccional",
-    etiqueta: "Exceso de perfil transaccional esperado",
-    tipo: "switch",
-  },
-  {
-    clave: "variacion_volumen_mes_anterior",
-    etiqueta: "Variación de volumen esperado respecto al mes anterior",
-    tipo: "switch_porcentaje",
-    valorDefecto: "10",
-    unidad: "%",
-  },
-  {
-    clave: "domicilio_jurisdiccion_alto_riesgo",
-    etiqueta: "Tiene domicilio en jurisdicción considerada de alto riesgo",
-    tipo: "switch",
-  },
-  {
-    clave: "operacion_individual_monto",
-    etiqueta: "La operación individual superó un monto determinado",
-    tipo: "switch_valor",
-    valorDefecto: "100000",
-    unidad: "$",
-  },
-  {
-    clave: "operaciones_repetidas_mismo_destinatario",
-    etiqueta:
-      "Cantidad de operaciones repetidas hacia un mismo destinatario dentro de un período determinado",
-    tipo: "switch_cantidad_periodo",
-    valorDefecto: "5",
-    periodoDefecto: "24h",
-  },
-];
-
-const BLOQUEO_PARAM_DEF: ParamDef[] = [
-  {
-    clave: "bloqueo_exceso_perfil_transaccional",
-    etiqueta: "Bloquear por exceso de perfil transaccional esperado",
-    tipo: "switch",
-  },
-  {
-    clave: "bloqueo_variacion_volumen_mes_anterior",
-    etiqueta: "Bloquear por variación de volumen respecto al mes anterior",
-    tipo: "switch_porcentaje",
-    valorDefecto: "20",
-    unidad: "%",
-  },
-  {
-    clave: "bloqueo_domicilio_jurisdiccion_alto_riesgo",
-    etiqueta: "Bloquear por domicilio en jurisdicción considerada de alto riesgo",
-    tipo: "switch",
-  },
-  {
-    clave: "bloqueo_operacion_individual_monto",
-    etiqueta: "Bloquear por operación individual que supera un monto determinado",
-    tipo: "switch_valor",
-    valorDefecto: "200000",
-    unidad: "$",
-  },
-  {
-    clave: "bloqueo_operaciones_repetidas_mismo_destinatario",
-    etiqueta: "Bloquear por operaciones repetidas hacia un mismo destinatario en un período",
-    tipo: "switch_cantidad_periodo",
-    valorDefecto: "5",
-    periodoDefecto: "24h",
-  },
-];
-
 function fmtFecha(iso: string | null | undefined) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("es-AR");
@@ -278,24 +183,6 @@ function fmtFechaHora(iso: string | null | undefined) {
 function fmtMonto(n: number | null | undefined) {
   if (n === null || n === undefined) return "—";
   return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
-        enabled ? "bg-primary" : "bg-muted-foreground/30"
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-          enabled ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
 }
 
 function Seccion({
@@ -462,45 +349,6 @@ function downloadCSV(filename: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(url);
 }
 
-function ParametrosResumen({ defs, stored }: { defs: ParamDef[]; stored: ParametroConfig[] }) {
-  if (defs.length === 0) {
-    return <p className="text-xs text-muted-foreground">Sin parámetros configurados.</p>;
-  }
-  return (
-    <ul className="space-y-2">
-      {defs.map((d) => {
-        const s = stored.find((p) => p.clave === d.clave);
-        const habilitado = s?.habilitado ?? false;
-        let valor = "No configurado";
-        if (habilitado) {
-          if (d.tipo === "switch") valor = "Habilitado";
-          else if (d.tipo === "switch_valor")
-            valor = `${s?.valor ?? d.valorDefecto ?? ""} ${d.unidad ?? ""}`.trim();
-          else if (d.tipo === "switch_porcentaje")
-            valor = `${s?.valor ?? d.valorDefecto ?? ""}${d.unidad ?? ""}`.trim();
-          else if (d.tipo === "switch_cantidad_periodo")
-            valor = `${s?.valor ?? d.valorDefecto ?? ""} cada ${
-              s?.periodo ?? d.periodoDefecto ?? ""
-            }`;
-          else valor = "Habilitado";
-        }
-        return (
-          <li key={d.clave} className="flex items-start justify-between gap-3 text-xs">
-            <span className="text-muted-foreground">{d.etiqueta}</span>
-            <span
-              className={`font-medium text-right ${
-                habilitado ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {valor}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 const historialColumns: Column<HistorialCambio>[] = [
   { key: "campo", label: "Campo", render: (r) => r.campo },
   { key: "valorAnterior", label: "Valor anterior", render: (r) => r.valorAnterior ?? "—" },
@@ -514,48 +362,6 @@ const validacionesColumns: Column<Validacion>[] = [
   { key: "proveedor", label: "Proveedor", render: (r) => r.proveedor },
   { key: "estado", label: "Estado", render: (r) => r.estado },
   { key: "fecha", label: "Fecha", render: (r) => r.fecha },
-];
-
-type AlertaView = Alerta & { fechaAceptacion?: string };
-type BloqueoView = Bloqueo & { fechaAceptacion?: string };
-
-const riesgoColumns: Column<AlertaView>[] = [
-  { key: "tipo", label: "Tipo de alerta", render: (r) => r.tipo },
-  {
-    key: "estado",
-    label: "Estado",
-    render: (r) => {
-      const tone =
-        r.estado === "Resuelto" ? "success" : r.estado === "Revisado" ? "neutral" : "warn";
-      return <Badge tone={tone}>{r.estado}</Badge>;
-    },
-  },
-  { key: "fecha", label: "Fecha de la alerta", render: (r) => r.fecha },
-  {
-    key: "fechaAceptacion",
-    label: "Fecha de aceptación",
-    render: (r) => r.fechaAceptacion ?? "—",
-  },
-];
-
-const bloqueosColumns: Column<BloqueoView>[] = [
-  { key: "parametro", label: "Tipo", render: (r) => r.parametro },
-  {
-    key: "estado",
-    label: "Estado",
-    render: (r) => {
-      if (!r.estado) return "—";
-      const tone =
-        r.estado === "Desbloqueado" ? "success" : r.estado === "Bloqueado" ? "danger" : "warn";
-      return <Badge tone={tone}>{r.estado}</Badge>;
-    },
-  },
-  { key: "valor", label: "Valor", render: (r) => r.valor ?? "—" },
-  {
-    key: "fechaAceptacion",
-    label: "Fecha de aceptación",
-    render: (r) => r.fechaAceptacion ?? "—",
-  },
 ];
 
 const apiUsuariosColumns = [
@@ -631,91 +437,6 @@ function AccionesMenu({
         </>,
         document.body,
       )}
-    </div>
-  );
-}
-
-function toDetalleMovimiento(
-  m: Movimiento,
-  catalogo: EstadoMovimiento[],
-): DetailMovimiento {
-  return {
-    clienteId: m.clienteId,
-    legajo: m.legajo,
-    id: m.idTxn,
-    tipo: m.tipo,
-    cvu: m.cvu ?? "—",
-    usuario: m.cliente?.correo ?? m.legajo,
-    nombreOrigen: m.cliente?.nombre ?? "—",
-    nombreDestino: "—",
-    cuit: m.cliente?.cuit ?? "—",
-    monto: fmtMonto(m.montoCobrado),
-    fecha: fmtFechaHora(m.fecha),
-    estado: resolverEstadoMovimiento(m, catalogo).codigo,
-  };
-}
-
-function TablaMovimientos({
-  rows,
-  onVerDetalles,
-  onCambiarEstado,
-}: {
-  rows: Movimiento[];
-  onVerDetalles?: (m: Movimiento) => void;
-  onCambiarEstado?: (m: Movimiento) => void;
-}) {
-  const conAcciones = Boolean(onVerDetalles || onCambiarEstado);
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-4 py-3 font-medium">TX</th>
-            <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium text-right">Monto operación</th>
-            <th className="px-4 py-3 font-medium text-right">Comisión</th>
-            <th className="px-4 py-3 font-medium text-right">Impuesto</th>
-            <th className="px-4 py-3 font-medium text-right">Cobrado</th>
-            <th className="px-4 py-3 font-medium">Fecha</th>
-            <th className="px-4 py-3 font-medium">Estado</th>
-            {conAcciones && <th className="px-4 py-3 font-medium text-right">Acciones</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((m) => (
-            <tr key={m.id} className="border-b border-border last:border-b-0">
-              <td className="px-4 py-3 font-mono text-xs">{m.idTxn}</td>
-              <td className="px-4 py-3">{m.tipo}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{fmtMonto(m.montoOperacion)}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{fmtMonto(m.comision)}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{fmtMonto(m.impuesto)}</td>
-              <td className="px-4 py-3 text-right tabular-nums font-medium">
-                {fmtMonto(m.montoCobrado)}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">{fmtFechaHora(m.fecha)}</td>
-              <td className="px-4 py-3">
-                <Badge tone={m.esFinal ? "success" : "warn"}>
-                  {m.estadoNombre ?? m.estadoCodigo ?? "—"}
-                </Badge>
-              </td>
-              {conAcciones && (
-                <td className="px-4 py-3 text-right">
-                  <AccionesMenu
-                    items={[
-                      ...(onVerDetalles
-                        ? [{ label: "Ver detalles", onClick: () => onVerDetalles(m) }]
-                        : []),
-                      ...(onCambiarEstado
-                        ? [{ label: "Cambiar estado", onClick: () => onCambiarEstado(m) }]
-                        : []),
-                    ]}
-                  />
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -1228,182 +949,6 @@ function DocumentosTab({ legajo }: { legajo: string }) {
         </div>
       )}
     </Seccion>
-  );
-}
-
-function ParametrosEditorModal({
-  open,
-  onClose,
-  title,
-  legajo,
-  defs,
-  stored,
-  kind,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  legajo: string;
-  defs: ParamDef[];
-  stored: ParametroConfig[];
-  kind: "alerta" | "bloqueo";
-}) {
-  const queryClient = useQueryClient();
-  const [vals, setVals] = useState<
-    Record<string, { habilitado: boolean; valor: string; periodo: string }>
-  >({});
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  if (open && Object.keys(vals).length === 0) {
-    const init: Record<string, { habilitado: boolean; valor: string; periodo: string }> = {};
-    for (const d of defs) {
-      const s = stored.find((p) => p.clave === d.clave);
-      init[d.clave] = {
-        habilitado: s ? s.habilitado : false,
-        valor: s?.valor ?? d.valorDefecto ?? "",
-        periodo: s?.periodo ?? d.periodoDefecto ?? "",
-      };
-    }
-    setVals(init);
-  }
-
-  const guardar = async () => {
-    setSaving(true);
-    setErr(null);
-    try {
-      for (const d of defs) {
-        const v = vals[d.clave];
-        if (kind === "alerta") {
-          await upsertParametroAlerta(legajo, d.clave, {
-            habilitado: v.habilitado,
-            valor: v.valor || null,
-            periodo: v.periodo || null,
-          });
-        } else {
-          await upsertParametroBloqueo(legajo, d.clave, {
-            habilitado: v.habilitado,
-            valor: v.valor || null,
-            periodo: v.periodo || null,
-          });
-        }
-      }
-      await queryClient.invalidateQueries({
-        queryKey: [kind === "alerta" ? "param_alertas" : "param_bloqueos", legajo],
-      });
-      onClose();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <ModalDialog open={open} onClose={onClose} title={title} size="lg">
-      <div className="space-y-4">
-        {defs.map((d) => {
-          const v = vals[d.clave] ?? { habilitado: false, valor: "", periodo: "" };
-          return (
-            <div key={d.clave} className="rounded-lg border border-border p-3">
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-sm font-medium text-foreground">{d.etiqueta}</span>
-                <Toggle
-                  enabled={v.habilitado}
-                  onChange={(nv) =>
-                    setVals((prev) => ({ ...prev, [d.clave]: { ...v, habilitado: nv } }))
-                  }
-                />
-              </div>
-              {(d.tipo === "switch_valor" ||
-                d.tipo === "switch_porcentaje" ||
-                d.tipo === "switch_cantidad_periodo") && (
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  {d.tipo === "switch_cantidad_periodo" ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-muted-foreground">
-                          Cantidad
-                        </label>
-                        <input
-                          type="number"
-                          disabled={!v.habilitado}
-                          value={v.valor}
-                          onChange={(e) =>
-                            setVals((prev) => ({
-                              ...prev,
-                              [d.clave]: { ...v, valor: e.target.value },
-                            }))
-                          }
-                          className="h-9 w-24 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-muted-foreground">
-                          Período
-                        </label>
-                        <input
-                          type="text"
-                          disabled={!v.habilitado}
-                          value={v.periodo}
-                          onChange={(e) =>
-                            setVals((prev) => ({
-                              ...prev,
-                              [d.clave]: { ...v, periodo: e.target.value },
-                            }))
-                          }
-                          placeholder="ej. 24h"
-                          className="h-9 w-28 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-muted-foreground">
-                        {d.tipo === "switch_porcentaje" ? "Porcentaje" : "Monto"}
-                      </label>
-                      <input
-                        type="number"
-                        disabled={!v.habilitado}
-                        value={v.valor}
-                        onChange={(e) =>
-                          setVals((prev) => ({
-                            ...prev,
-                            [d.clave]: { ...v, valor: e.target.value },
-                          }))
-                        }
-                        className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-                      />
-                      {d.unidad && (
-                        <span className="text-xs text-muted-foreground">{d.unidad}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {err && <p className="text-sm text-red-600">{err}</p>}
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 rounded-md border border-input px-3 text-sm"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={guardar}
-            disabled={saving}
-            className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {saving ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
-      </div>
-    </ModalDialog>
   );
 }
 
@@ -2320,7 +1865,7 @@ function PlaftPerfilModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
       <div className="relative w-full max-w-lg rounded-lg bg-card border shadow-xl p-6 space-y-4">
         <div>
-          <h3 className="font-display font-semibold text-lg">Perfil transaccional</h3>
+          <h3 className="font-display font-semibold text-lg">Límites operativos declarados</h3>
           <p className="text-xs text-muted-foreground mt-1">
             Cliente <span className="font-mono">{clienteId.slice(0, 8)}…</span> · CUIT {cuit}
           </p>
@@ -2436,62 +1981,15 @@ function ClienteDetailPage() {
         }
       : null);
 
-  const [movDesde, setMovDesde] = useState("");
-  const [movHasta, setMovHasta] = useState("");
-  const [movPage, setMovPage] = useState(0);
-
-  const movFechaDesdeISO = movDesde ? new Date(movDesde + "T00:00:00").toISOString() : undefined;
-  const movFechaHastaISO = movHasta ? new Date(movHasta + "T23:59:59").toISOString() : undefined;
-
-  // Reset page when filters change
-  useEffect(() => {
-    setMovPage(0);
-  }, [legajo, movDesde, movHasta]);
-
-  const movimientosQuery = useMovimientos({
-    page: movPage,
-    pageSize: 10,
-    legajo: legajo ?? undefined,
-    fechaDesde: movFechaDesdeISO,
-    fechaHasta: movFechaHastaISO,
-  });
-
-  // Stats para KPIs: fetch amplio (1000) con mismos filtros de período
-  const movimientosStatsQuery = useQuery({
-    queryKey: ["movimientos", "stats", legajo, movDesde, movHasta],
-    queryFn: () =>
-      import("@/lib/api/movimientos").then((m) =>
-        m.listMovimientos({
-          page: 0,
-          pageSize: 1000,
-          legajo: legajo ?? undefined,
-          fechaDesde: movFechaDesdeISO,
-          fechaHasta: movFechaHastaISO,
-        }),
-      ),
-    enabled: !!legajo,
-    staleTime: 15_000,
-  });
-
   const subcuentasQuery = useQuery({
     queryKey: ["subcuentas", legajo],
     queryFn: () => listSubcuentas(legajo),
     enabled: !!cliente,
   });
 
-  const statsRows = movimientosStatsQuery.data?.rows ?? movimientosQuery.rows;
-  // Saldo real = suma de subcuentas (disponible + retenido) como en MollyPay-Enterprises app.index.tsx:98-99
-  // Cuenta general = +1 (principal) no aporta saldo extra, saldo = disp+retenido de todas las subcuentas del legajo
-  const saldoTotal = (subcuentasQuery.data ?? []).reduce(
-    (acc, s) => acc + Number(s.saldoDisponible ?? 0) + Number(s.saldoRetenido ?? 0),
-    0,
-  );
-  const totalMovimientos = movimientosStatsQuery.data?.total ?? movimientosQuery.total ?? 0;
-  const porTipo = statsRows.reduce<Record<string, number>>((acc, r) => {
-    const k = r.tipo ?? "otro";
-    acc[k] = (acc[k] ?? 0) + 1;
-    return acc;
-  }, {});
+  // Saldo real = suma de subcuentas (disponible + retenido por bloqueos).
+  const saldoDisponible = (subcuentasQuery.data ?? []).reduce((acc, s) => acc + Number(s.saldoDisponible ?? 0), 0);
+  const saldoRetenido = (subcuentasQuery.data ?? []).reduce((acc, s) => acc + Number(s.saldoRetenido ?? 0), 0);
   const impuestosQuery = useImpuestosAsignaciones({
     page: 0,
     pageSize: 25,
@@ -2538,16 +2036,6 @@ function ClienteDetailPage() {
     queryFn: () => listClienteModulos(legajo),
     enabled: !!cliente,
   });
-  const paramAlertasQuery = useQuery({
-    queryKey: ["param_alertas", legajo],
-    queryFn: () => listParametrosAlertas(legajo),
-    enabled: !!cliente,
-  });
-  const paramBloqueosQuery = useQuery({
-    queryKey: ["param_bloqueos", legajo],
-    queryFn: () => listParametrosBloqueos(legajo),
-    enabled: !!cliente,
-  });
   const comerciosPstQuery = useQuery({
     queryKey: ["comercios_pst", legajo],
     queryFn: () => listComerciosPst(legajo),
@@ -2576,8 +2064,6 @@ function ClienteDetailPage() {
   const [riesgoSub, setRiesgoSub] = useState<"alertas" | "bloqueos">("alertas");
   const [modulosSub, setModulosSub] = useState<"pct" | "links" | "api">("pct");
 
-  const [editAlertasOpen, setEditAlertasOpen] = useState(false);
-  const [editBloqueosOpen, setEditBloqueosOpen] = useState(false);
   const [editRiesgoOpen, setEditRiesgoOpen] = useState(false);
   const [editPerfilOpen, setEditPerfilOpen] = useState(false);
 
@@ -2607,7 +2093,7 @@ function ClienteDetailPage() {
   const updatePerfilMutation = useMutation({
     mutationFn: updatePerfilTransaccional,
     onSuccess: () => {
-      toast.success("Perfil transaccional actualizado");
+      toast.success("Límites operativos actualizados");
       void queryClient.invalidateQueries({ queryKey: ["clientes"] });
       void queryClient.invalidateQueries({ queryKey: ["clientes-enrichment"] });
       setEditPerfilOpen(false);
@@ -2623,20 +2109,9 @@ function ClienteDetailPage() {
   const apiDetalleOpen = !!apiDetalleId;
   const [exencionOpen, setExencionOpen] = useState(false);
 
-  const [movDetail, setMovDetail] = useState<DetailMovimiento | null>(null);
   const [impuestoDetail, setImpuestoDetail] = useState<ImpuestoAsignacion | null>(null);
   const [comisionDetail, setComisionDetail] = useState<ComisionCliente | null>(null);
-  const [estadoTarget, setEstadoTarget] = useState<{
-    dbId: string;
-    estadoActual: string;
-    nuevoId: number;
-  } | null>(null);
-
-  const { data: catalogoEstados = [] } = useEstadosMovimiento();
-  const cambiarMovimientoEstado = useCambiarEstadoMovimiento();
-
-  const [gestionTarget, setGestionTarget] = useState<{ id: string; resumen: string } | null>(null);
-  const [gestiones, setGestiones] = useState<Record<string, GestionAlerta>>({});
+  const [nuevoBloqueo, setNuevoBloqueo] = useState(false);
 
   const [forzando, setForzando] = useState(false);
 
@@ -2802,18 +2277,6 @@ function ClienteDetailPage() {
   const apiUsuariosVinculados = clienteApiUsuariosQuery.data ?? [];
   // cantidad real prevalece sobre desnormalizado cliente_modulos.cantidad
   const apiCantidadReal = clienteApiUsuariosQuery.isSuccess ? apiUsuariosVinculados.length : (apiModulo?.cantidad ?? 0);
-
-  const alertasHabilitadas = (paramAlertasQuery.data ?? []).filter((p) => p.habilitado).length;
-  const bloqueosHabilitados = (paramBloqueosQuery.data ?? []).filter((p) => p.habilitado).length;
-
-  const alertasVisibles: AlertaView[] = (alertasQuery.data ?? []).map((a) => {
-    const g = gestiones[a.id];
-    return { ...a, estado: g ? "Resuelto" : a.estado, fechaAceptacion: g?.fecha };
-  });
-  const bloqueosVisibles: BloqueoView[] = (bloqueosQuery.data ?? []).map((b) => {
-    const g = gestiones[b.id];
-    return { ...b, estado: g ? "Desbloqueado" : b.estado, fechaAceptacion: g?.fecha };
-  });
 
   return (
     <PermissionGuard recurso="usuarios">
@@ -3096,124 +2559,26 @@ function ClienteDetailPage() {
 
           {activeTab === "movimientos" && (
             <div className="mt-6 space-y-4">
-              {/* Filtros por período */}
-              <div className="rounded-xl border border-border bg-card p-4">
-                <div className="flex flex-wrap items-end gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">Fecha desde</label>
-                    <input
-                      type="date"
-                      value={movDesde}
-                      onChange={(e) => setMovDesde(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">Fecha hasta</label>
-                    <input
-                      type="date"
-                      value={movHasta}
-                      onChange={(e) => setMovHasta(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 [color-scheme:light] dark:[color-scheme:dark]"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMovDesde("");
-                      setMovHasta("");
-                    }}
-                    className="h-9 rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
-                  >
-                    Limpiar
-                  </button>
-                  <span className="text-xs text-muted-foreground">
-                    {movimientosStatsQuery.isFetching ? "Actualizando…" : `${totalMovimientos} movimiento(s) en el período`}
-                  </span>
-                </div>
-              </div>
-
-              {/* KPIs generales */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saldo total de la cuenta</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">{fmtMonto(saldoTotal)}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saldo disponible</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">{fmtMonto(saldoDisponible)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Disponible + retenido · {(subcuentasQuery.data?.length ?? 0) > 0
-                      ? `1 principal + ${subcuentasQuery.data!.length} subcuenta(s)`
-                      : "sin subcuentas"}
-                    {subcuentasQuery.isLoading ? " (cargando…)" : ""}
+                    {(subcuentasQuery.data?.length ?? 0)} subcuenta(s){subcuentasQuery.isLoading ? " (cargando…)" : ""}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total de movimientos</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">{totalMovimientos}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {Object.keys(porTipo).length} tipo(s) distinto(s)
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saldo retenido</p>
+                  <p className={`mt-2 text-2xl font-semibold tabular-nums ${saldoRetenido > 0 ? "text-amber-700" : ""}`}>{fmtMonto(saldoRetenido)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Depósitos retenidos por bloqueos y reservas en curso</p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Movimientos por tipo</p>
-                  {Object.keys(porTipo).length === 0 ? (
-                    <p className="mt-3 text-sm text-muted-foreground">Sin datos en el período.</p>
-                  ) : (
-                    <ul className="mt-3 space-y-1.5">
-                      {Object.entries(porTipo)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([tipo, cant]) => (
-                          <li key={tipo} className="flex items-center justify-between gap-2 text-sm">
-                            <span className="text-muted-foreground">{tipo}</span>
-                            <span className="font-mono font-semibold tabular-nums rounded-full bg-muted px-2 py-0.5 text-xs">{cant}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saldo total</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">{fmtMonto(saldoDisponible + saldoRetenido)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Disponible + retenido</p>
                 </div>
               </div>
-
-              {/* Tabla paginada */}
-              <Seccion
-                titulo={`Movimientos${movDesde || movHasta ? " del período" : " recientes"} — página ${movPage + 1}`}
-                loading={movimientosQuery.isLoading}
-                error={movimientosQuery.isError ? movimientosQuery.error : null}
-                onRetry={movimientosQuery.refetch}
-                vacio={movimientosQuery.rows.length === 0}
-              >
-                <TablaMovimientos
-                  rows={movimientosQuery.rows}
-                  onVerDetalles={(m) => setMovDetail(toDetalleMovimiento(m, catalogoEstados))}
-                  onCambiarEstado={(m) =>
-                    setEstadoTarget({
-                      dbId: m.id,
-                      estadoActual: resolverEstadoMovimiento(m, catalogoEstados).codigo,
-                      nuevoId: m.estadoId ?? 0,
-                    })
-                  }
-                />
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {totalMovimientos} total · página {movPage + 1} de {Math.max(1, Math.ceil(totalMovimientos / 10))}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={movPage === 0}
-                      onClick={() => setMovPage((p) => Math.max(0, p - 1))}
-                      className="h-8 rounded-md border border-input px-3 text-xs font-medium disabled:opacity-50"
-                    >
-                      Anterior
-                    </button>
-                    <button
-                      type="button"
-                      disabled={(movPage + 1) * 10 >= totalMovimientos}
-                      onClick={() => setMovPage((p) => p + 1)}
-                      className="h-8 rounded-md border border-input px-3 text-xs font-medium disabled:opacity-50"
-                    >
-                      Siguiente
-                    </button>
-                  </div>
-                </div>
-              </Seccion>
+              <MovimientosLineasTable legajo={cliente.legajo} embedded />
             </div>
           )}
 
@@ -3545,11 +2910,16 @@ function ClienteDetailPage() {
                   )}
                 </div>
 
-                {/* Tarjeta 2: Perfil Transaccional */}
+                <PerfilTransaccionalClienteCard legajo={cliente.legajo} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                <UmbralBloqueoClienteCard legajo={cliente.legajo} tipoPersona={cliente.tipoPersona} />
+
                 <div className="rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <Activity size={13} /> Perfil transaccional
+                      <Activity size={13} /> Límites operativos declarados
                     </div>
                     <button
                       type="button"
@@ -3563,167 +2933,63 @@ function ClienteDetailPage() {
                     <div>
                       <div className="text-[10px] text-muted-foreground uppercase">Monto máx. transferencia</div>
                       <div className="text-sm font-semibold tabular-nums">
-                        {cliente.limiteTransferencia != null
-                          ? new Intl.NumberFormat("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                              maximumFractionDigits: 0,
-                            }).format(cliente.limiteTransferencia)
-                          : "—"}
+                        {cliente.limiteTransferencia != null ? fmtMonto(cliente.limiteTransferencia) : "—"}
                       </div>
                     </div>
                     <div>
                       <div className="text-[10px] text-muted-foreground uppercase">Ops. diarias máx.</div>
-                      <div className="text-sm font-semibold tabular-nums">
-                        {cliente.limiteOpsDiarias ?? "—"}
-                      </div>
+                      <div className="text-sm font-semibold tabular-nums">{cliente.limiteOpsDiarias ?? "—"}</div>
                     </div>
                     <div>
                       <div className="text-[10px] text-muted-foreground uppercase">Monto diario máx.</div>
                       <div className="text-sm font-semibold tabular-nums">
-                        {cliente.limiteMontoDiario != null
-                          ? new Intl.NumberFormat("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                              maximumFractionDigits: 0,
-                            }).format(cliente.limiteMontoDiario)
-                          : "—"}
+                        {cliente.limiteMontoDiario != null ? fmtMonto(cliente.limiteMontoDiario) : "—"}
                       </div>
                     </div>
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Editar este perfil sólo lo debería hacer Compliance. Cualquier cambio queda registrado en la
-                    ficha del cliente.
+                    Datos declarados en la ficha. El motor de alertas usa el perfil transaccional esperado y las reglas de
+                    Parámetros de alertas/bloqueos.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-                <div className="rounded-lg border border-border p-4">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Parámetros de alertas
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditAlertasOpen(true)}
-                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                    >
-                      <Pencil size={12} /> Editar
-                    </button>
-                  </div>
-                  {paramAlertasQuery.isLoading ? (
-                    <p className="text-xs text-muted-foreground">Cargando…</p>
-                  ) : (
-                    <ParametrosResumen
-                      defs={ALERTA_PARAM_DEF}
-                      stored={paramAlertasQuery.data ?? []}
-                    />
-                  )}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border mb-4">
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setRiesgoSub("alertas")}
+                    className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
+                      riesgoSub === "alertas"
+                        ? "bg-primary/10 text-primary border-b-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    Alertas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRiesgoSub("bloqueos")}
+                    className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
+                      riesgoSub === "bloqueos"
+                        ? "bg-primary/10 text-primary border-b-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    Bloqueos
+                  </button>
                 </div>
-                <div className="rounded-lg border border-border p-4">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <ShieldAlert size={13} /> Parámetros de bloqueo
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditBloqueosOpen(true)}
-                      className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                    >
-                      <Pencil size={12} /> Editar
-                    </button>
-                  </div>
-                  {paramBloqueosQuery.isLoading ? (
-                    <p className="text-xs text-muted-foreground">Cargando…</p>
-                  ) : (
-                    <ParametrosResumen
-                      defs={BLOQUEO_PARAM_DEF}
-                      stored={paramBloqueosQuery.data ?? []}
-                    />
-                  )}
-                </div>
+                {riesgoSub === "bloqueos" && (
+                  <button
+                    type="button"
+                    onClick={() => setNuevoBloqueo(true)}
+                    className="mb-1 inline-flex items-center gap-1 h-8 rounded-md border border-input px-2.5 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    <Ban size={12} /> Bloquear cuenta
+                  </button>
+                )}
               </div>
-              <div className="flex flex-wrap gap-1 border-b border-border mb-4">
-                <button
-                  type="button"
-                  onClick={() => setRiesgoSub("alertas")}
-                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
-                    riesgoSub === "alertas"
-                      ? "bg-primary/10 text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Ver alertas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRiesgoSub("bloqueos")}
-                  className={`px-3 py-2 text-xs font-semibold rounded-t-md ${
-                    riesgoSub === "bloqueos"
-                      ? "bg-primary/10 text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Ver bloqueos
-                </button>
-              </div>
-              {riesgoSub === "alertas" ? (
-                <div className="space-y-3">
-                  {alertasQuery.isLoading ? (
-                    <p className="text-sm text-muted-foreground">Cargando…</p>
-                  ) : alertasQuery.isError ? (
-                    <p className="text-sm text-red-600">{(alertasQuery.error as Error).message}</p>
-                  ) : (
-                    <DataTable
-                      columns={riesgoColumns}
-                      data={alertasVisibles}
-                      keyExtractor={(r) => r.id}
-                      emptyMessage="Sin alertas para este cliente"
-                      actions={(r) => (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setGestionTarget({ id: r.id, resumen: `${r.tipo} · ${cliente.nombre}` })
-                          }
-                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                        >
-                          Gestionar
-                        </button>
-                      )}
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {bloqueosQuery.isLoading ? (
-                    <p className="text-sm text-muted-foreground">Cargando…</p>
-                  ) : bloqueosQuery.isError ? (
-                    <p className="text-sm text-red-600">{(bloqueosQuery.error as Error).message}</p>
-                  ) : (
-                    <DataTable
-                      columns={bloqueosColumns}
-                      data={bloqueosVisibles}
-                      keyExtractor={(r) => r.id}
-                      emptyMessage="Sin bloqueos para este cliente"
-                      actions={(r) => (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setGestionTarget({
-                              id: r.id,
-                              resumen: `${r.parametro} · ${cliente.nombre}`,
-                            })
-                          }
-                          className="inline-flex items-center gap-1 h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground hover:bg-accent"
-                        >
-                          Gestionar
-                        </button>
-                      )}
-                    />
-                  )}
-                </div>
-              )}
+              {riesgoSub === "alertas" ? <AlertsTable legajo={cliente.legajo} /> : <BlocksTable legajo={cliente.legajo} />}
             </SectionCard>
           )}
 
@@ -4044,26 +3310,6 @@ function ClienteDetailPage() {
           cantidad={apiCantidadReal}
         />
 
-        {/* Edición de parámetros dentro del contexto del usuario */}
-        <ParametrosEditorModal
-          open={editAlertasOpen}
-          onClose={() => setEditAlertasOpen(false)}
-          title="Parámetros de alertas automáticas"
-          legajo={legajo}
-          defs={ALERTA_PARAM_DEF}
-          stored={paramAlertasQuery.data ?? []}
-          kind="alerta"
-        />
-        <ParametrosEditorModal
-          open={editBloqueosOpen}
-          onClose={() => setEditBloqueosOpen(false)}
-          title="Parámetros de bloqueos"
-          legajo={legajo}
-          defs={BLOQUEO_PARAM_DEF}
-          stored={paramBloqueosQuery.data ?? []}
-          kind="bloqueo"
-        />
-
         {/* PLAFT: Nivel de Riesgo */}
         <PlaftRiesgoModal
           open={editRiesgoOpen}
@@ -4091,16 +3337,16 @@ function ClienteDetailPage() {
           onSubmit={(input) => updatePerfilMutation.mutate({ clienteId: cliente.id, ...input })}
         />
 
-        <AlertaGestionModal
-          open={!!gestionTarget}
-          onClose={() => setGestionTarget(null)}
-          resumen={gestionTarget?.resumen ?? ""}
-          onGuardar={(g) => {
-            if (gestionTarget) {
-              setGestiones((prev) => ({ ...prev, [gestionTarget.id]: g }));
-            }
-          }}
-        />
+        {nuevoBloqueo && (
+          <NuevoBloqueoDialog
+            cliente={{ legajo: cliente.legajo, correo: cliente.correo }}
+            onClose={() => setNuevoBloqueo(false)}
+            onDone={() => {
+              void queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
+              void queryClient.invalidateQueries({ queryKey: ["bloqueos", legajo] });
+            }}
+          />
+        )}
 
         <ExencionModal
           open={exencionOpen}
@@ -4108,8 +3354,6 @@ function ClienteDetailPage() {
           legajo={cliente.legajo}
           cuitDefault={cliente.cuit}
         />
-
-        {movDetail && <MovimientoDetail m={movDetail} onClose={() => setMovDetail(null)} />}
 
         {impuestoDetail && (
           <DetailModal
@@ -4134,51 +3378,6 @@ function ClienteDetailPage() {
               { label: "Legajo", value: impuestoDetail.clienteLegajo },
             ]}
           />
-        )}
-
-        {estadoTarget && (
-          <FormDialog
-            open
-            onClose={() => setEstadoTarget(null)}
-            title="Cambiar estado del movimiento"
-            description={`Transición atómica registrada en el historial (origen = manual). Estado actual: ${estadoTarget.estadoActual}.`}
-            onSubmit={async () => {
-              await cambiarMovimientoEstado.mutateAsync({
-                movimientoId: estadoTarget.dbId,
-                nuevoEstadoId: estadoTarget.nuevoId,
-                observaciones: "Cambio manual desde ficha de cliente",
-              });
-              setEstadoTarget(null);
-            }}
-            submitLabel={cambiarMovimientoEstado.isPending ? "Guardando…" : "Confirmar cambio"}
-            size="md"
-          >
-            {cambiarMovimientoEstado.isError && (
-              <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
-                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                <span>{(cambiarMovimientoEstado.error as Error).message}</span>
-              </div>
-            )}
-            <div>
-              <label htmlFor="nuevo-estado-cli" className="text-sm font-medium">
-                Nuevo estado
-              </label>
-              <select
-                id="nuevo-estado-cli"
-                className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-card text-sm"
-                value={estadoTarget.nuevoId}
-                onChange={(e) =>
-                  setEstadoTarget((s) => (s ? { ...s, nuevoId: Number(e.target.value) } : s))
-                }
-              >
-                {catalogoEstados.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.codigo} — {s.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </FormDialog>
         )}
 
         {confirmAction && (

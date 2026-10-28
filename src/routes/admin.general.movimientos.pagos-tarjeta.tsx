@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MovimientosSubRoute } from "@/components/movimientos-subroute";
+import { PageHeader } from "@/components/page-header";
+import { PermissionGuard } from "@/components/permission-guard";
+import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")({
   head: () => ({
@@ -9,10 +11,12 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")
     ],
   }),
   component: () => (
-    <MovimientosSubRoute
-      titulo="Pagos con tarjeta"
-      descripcion="Movimientos de pago con tarjeta. Los campos medio de pago y cuotas del mock no existen en la tabla movimientos."
-      tipoCode="tarjeta"
-    />
+    <PermissionGuard recurso="movimientos">
+      <PageHeader
+        title="Pagos con tarjeta"
+        description="Pagos con tarjeta, una fila por concepto. Las líneas de un mismo pago comparten el TXID."
+      />
+      <MovimientosLineasTable tiposOperacion={["tarjeta"]} />
+    </PermissionGuard>
   ),
 });

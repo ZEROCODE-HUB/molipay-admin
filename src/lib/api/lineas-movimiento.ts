@@ -78,7 +78,10 @@ export type LineaFilters = Pagination & {
   /** Texto libre: TXID, legajo, email, nombre o nombre destino. */
   search?: string;
   tipoLinea?: TipoLinea;
-  tipoOperacion?: string;
+  /** Una operación o varias (p. ej. retiros = retiro + transferencia). */
+  tipoOperacion?: string | string[];
+  /** Excluye transferencias internas entre subcuentas propias (TXID INT-...). */
+  excluirInternas?: boolean;
   estadoCodigo?: string;
   legajo?: string;
   txid?: string;
@@ -129,7 +132,10 @@ export async function listLineasMovimiento(filters: LineaFilters): Promise<Page<
   if (cuitDigitos) q = q.ilike("cuit", ilike(cuitDigitos));
   if (filters.cvu?.trim()) q = q.or(`cvu.ilike.${ilike(filters.cvu)},cvu_propio.ilike.${ilike(filters.cvu)}`);
   if (filters.tipoLinea) q = q.eq("tipo_linea", filters.tipoLinea);
-  if (filters.tipoOperacion) q = q.eq("tipo_operacion", filters.tipoOperacion);
+  if (Array.isArray(filters.tipoOperacion)) {
+    if (filters.tipoOperacion.length) q = q.in("tipo_operacion", filters.tipoOperacion);
+  } else if (filters.tipoOperacion) q = q.eq("tipo_operacion", filters.tipoOperacion);
+  if (filters.excluirInternas) q = q.not("id_txn", "like", "INT-%");
   if (filters.estadoCodigo) q = q.eq("estado_codigo", filters.estadoCodigo);
   if (filters.subaccountId) q = q.eq("subaccount_id", filters.subaccountId);
   if (filters.fechaDesde) q = q.gte("fecha", filters.fechaDesde);

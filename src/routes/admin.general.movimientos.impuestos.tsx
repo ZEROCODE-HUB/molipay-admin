@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ImpuestosBanner, MovimientosSubRoute } from "@/components/movimientos-subroute";
+import { PageHeader } from "@/components/page-header";
+import { PermissionGuard } from "@/components/permission-guard";
+import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
 
 export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
   head: () => ({
@@ -8,18 +10,13 @@ export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
       { name: "description", content: "Impuestos cobrados a través de la plataforma Moli." },
     ],
   }),
-  component: ImpuestosPage,
-});
-
-function ImpuestosPage() {
-  return (
-    <>
-      <ImpuestosBanner />
-      <MovimientosSubRoute
-        titulo="Impuestos cobrados"
-        descripcion="Retenciones impositivas al cliente registradas en la columna impuesto de cada movimiento (todos los tipos)."
-        soloConImpuesto
+  component: () => (
+    <PermissionGuard recurso="movimientos">
+      <PageHeader
+        title="Impuestos cobrados"
+        description="Solo las líneas de impuesto (IVA sobre comisiones, etc.) de todas las operaciones. Clic en el TXID para ver la operación completa."
       />
-    </>
-  );
-}
+      <MovimientosLineasTable tipoLinea="impuesto" />
+    </PermissionGuard>
+  ),
+});

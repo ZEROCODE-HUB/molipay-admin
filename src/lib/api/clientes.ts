@@ -562,6 +562,14 @@ export async function hardDeleteCliente(id: string): Promise<void> {
   if (!cliente) throw new Error("Cliente no encontrado");
   const hasMov = await clienteTieneMovimientos(cliente.legajo);
   if (hasMov) throw new Error("No se puede eliminar: el cliente tiene movimientos históricos.");
+  // Alertas y bloqueos son historial de compliance: la base impide borrarlos.
+  const [{ count: nAlertas }, { count: nBloqueos }] = await Promise.all([
+    sb.from("alerts").select("id", { count: "exact", head: true }).eq("client_id", cliente.id),
+    sb.from("account_blocks").select("id", { count: "exact", head: true }).eq("client_id", cliente.id),
+  ]);
+  if ((nAlertas ?? 0) > 0 || (nBloqueos ?? 0) > 0) {
+    throw new Error("No se puede eliminar: el cliente tiene alertas o bloqueos (historial de compliance).");
+  }
 
   // Limpieza de tablas dependientes (idempotente: ignora si tabla no existe o sin filas)
   const legajo = cliente.legajo;
@@ -571,8 +579,6 @@ export async function hardDeleteCliente(id: string): Promise<void> {
     "documentos",
     "historial_cambios",
     "validaciones",
-    "alertas",
-    "bloqueos",
     "cliente_modulos",
     "cliente_parametros_alertas",
     "cliente_parametros_bloqueos",

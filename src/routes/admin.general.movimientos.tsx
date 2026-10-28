@@ -18,8 +18,6 @@ const tabs: Tab[] = [
   { label: "Cobro de comisiones", to: "/admin/general/movimientos/comisiones" },
   { label: "Impuestos cobrados", to: "/admin/general/movimientos/impuestos" },
   { label: "Pagos con tarjeta", to: "/admin/general/movimientos/pagos-tarjeta" },
-  { label: "Pagos QR", to: "/admin/general/movimientos/pagos-qr" },
-  { label: "Cobros QR", to: "/admin/general/movimientos/cobros-qr" },
 ];
 
 function MovimientosLayout() {

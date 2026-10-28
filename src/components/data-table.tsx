@@ -6,9 +6,9 @@ import {
   Download,
   X,
   Search,
-  HelpCircle,
 } from "lucide-react";
 import { BtnOutline } from "./portal-shell";
+import { HeaderHint } from "./header-hint";
 import { Pagination } from "./pagination";
 
 export type FilterType = "text" | "date" | "enum";
@@ -547,11 +547,7 @@ export function DataTable<T>({
                     disabled={!col.sortable}
                   >
                     {col.label}
-                    {col.hint && (
-                      <span title={col.hint} className="cursor-help text-muted-foreground">
-                        <HelpCircle size={12} />
-                      </span>
-                    )}
+                    {col.hint && <HeaderHint title={col.label} text={col.hint} />}
                     {col.sortable && <SortIcon columnKey={col.key} />}
                   </button>
                 </th>
