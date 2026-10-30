@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { z } from "zod";
 import {
   Eye,
   Calendar,
@@ -41,11 +42,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataAccessError } from "@/lib/api/errors";
 import {
   listLotes,
-  updateLote,
+  getLote,
   listLoteMovimientos,
   resumenLotes,
   exportLotesAcreditacion,
 } from "@/lib/api/lotes";
+import { establecimientoDeLote, guardarSeleccion, QK_ACRED, recalcularLote } from "@/lib/api/acreditaciones";
+import { ExtractoLiquidacion, type DatosLiquidacion } from "@/components/acreditaciones/comunes";
+import { SimularContracargosModal } from "@/components/acreditaciones/simular-contracargos-modal";
 import { listBanderas } from "@/lib/api/banderas";
 import { listAdelantosByComercio } from "@/lib/api/adelantos";
 import type { EstadoLote, LoteAcreditacion, Movimiento } from "@/lib/api/types";
@@ -53,7 +57,18 @@ import { useComercios } from "@/hooks/useComercios";
 import { generarCsvLiquidacionTestParaLote } from "@/lib/liquidaciones/parse";
 import * as XLSX from "xlsx";
 
+/**
+ * Deep links desde las otras pantallas del modulo:
+ *   ?lote=<uuid>         abre el detalle del lote
+ *   ?importacion=<uuid>  (informativo) lotes de una importacion
+ */
+const searchSchema = z.object({
+  lote: z.string().optional(),
+  importacion: z.string().optional(),
+});
+
 export const Route = createFileRoute("/admin/comercios/link-pago/lotes")({
+  validateSearch: searchSchema,
   component: Page,
   head: () => ({
     meta: [
@@ -65,12 +80,41 @@ export const Route = createFileRoute("/admin/comercios/link-pago/lotes")({
 
 const PAGE_SIZES = [10, 20, 50];
 
-function tone(e: EstadoLote): "success" | "warn" | "danger" | "neutral" {
+function tone(e: EstadoLote | EstadoMostrado): "success" | "warn" | "danger" | "neutral" {
   if (e === "Acreditado") return "success";
   if (e === "Contracargo") return "danger";
   if (e === "Pendiente") return "warn";
+  if (e === "Adelantado") return "warn";
   if (e === "Cancelado") return "neutral";
   return "neutral"; // Programado
+}
+
+/** Estado que ve el operador: Pendiente, Acreditado, Adelantado o Contracargo (+ Programado). */
+type EstadoMostrado = "Programado" | "Pendiente" | "Acreditado" | "Adelantado" | "Contracargo" | "Cancelado" | "Liquidado";
+
+function estadoMostrado(l: LoteAcreditacion): EstadoMostrado {
+  if (l.estado === "Contracargo" || l.esNegativo || l.contracargos > 0) return "Contracargo";
+  if (l.estado === "Pendiente" && l.compensacionAdelantos > 0) return "Adelantado";
+  return l.estado;
+}
+
+const SUBESTADO_TXT: Record<string, string> = {
+  listo: "Listo para acreditar",
+  negativo: "Negativo",
+  no_conciliado: "No conciliado",
+  sin_tasa: "Sin tasa configurada",
+  sin_calcular: "Sin calcular",
+  comercio_inactivo: "Comercio inactivo",
+};
+
+/** ¿El lote viene del archivo de Payway (liquidacion real) o es una proyeccion? */
+function esDelArchivo(l: LoteAcreditacion) {
+  return l.origen === "archivo";
+}
+
+/** Neto a acreditar: el calculado en la base para los lotes del archivo; la proyeccion en los Programado. */
+function netoLote(l: LoteAcreditacion) {
+  return esDelArchivo(l) ? Number(l.netoAcreditar ?? l.importeNeto) : l.importeNeto;
 }
 
 /**
@@ -162,6 +206,19 @@ function round2(n: number): number {
  *    incluye como cualquier otro descuento firme.
  */
 function totalDescuentos(l: LoteAcreditacion): number {
+  // Lote del archivo: impuestos y tasa de Payway (CSV) + tasa MoliPay (+ IVA
+  // si esta configurado) + cierre de lote (lo calcula la base). Las
+  // compensaciones de adelantos y deudas se muestran aparte.
+  if (esDelArchivo(l)) {
+    // Siempre bruto - importe final: el detalle cierra aunque haya
+    // retenciones, compensaciones o recuperos.
+    return round2(Number(l.importeBruto ?? 0) - Number(netoLote(l)));
+  }
+  // Proyeccion del flujo nuevo: el neto estimado ya descuenta Payway, tasa,
+  // IVA y cierre (trigger lote_proyeccion_neto), igual que el detalle.
+  if (!l.legacy && l.estado === "Programado") {
+    return round2(Number(l.importeBruto ?? 0) - Number(l.importeNeto ?? 0));
+  }
   const cierre = esLoteEstimado(l) ? 0 : (l.comisionCierreLoteMonto ?? 0);
   const tasas = tasasCalculadas(l);
   // Si los 3 snapshots están en 0 y el legacy > 0, usamos el legacy
@@ -183,16 +240,97 @@ function totalDescuentos(l: LoteAcreditacion): number {
   );
 }
 
+/**
+ * Liquidacion de un lote del archivo de Payway: la cadena de importes que
+ * calculo la base (lote_calculo). No se recalcula nada en el navegador.
+ */
+/** Liquidacion del lote con el formato de extracto comun (components/acreditaciones). */
+function DesgloseLote({ lote }: { lote: LoteAcreditacion }) {
+  const archivo = esDelArchivo(lote);
+  const bruto = Number(lote.importeBruto ?? 0);
+  const costo = archivo ? Number(lote.costoServicioPayway ?? 0) : round2((bruto * Number(lote.tasaPaywayPct ?? 0)) / 100);
+  const impuestos = archivo ? Number(lote.impuestosPayway ?? 0) : 0;
+  const d: DatosLiquidacion = {
+    estimado: !archivo,
+    estado: lote.estado,
+    fechaAcreditacion: lote.fechaAcreditacion,
+    conciliado: archivo ? lote.conciliado : null,
+    bruto,
+    impuestosPayway: impuestos,
+    costoPayway: costo,
+    netoPayway: archivo ? Number(lote.netoPayway ?? bruto - impuestos - costo) : round2(bruto - costo),
+    tasaPct: Number(lote.tasaMolipayPct ?? 0),
+    tasa: Number(lote.tasaMolipayMonto ?? 0),
+    iva: Number(lote.ivaTasaMonto ?? 0),
+    cierrePct: Number(lote.comisionCierreLotePct ?? 0),
+    cierre: Number(lote.comisionCierreLoteMonto ?? 0),
+    asignados: archivo ? lote.impuestosDetalle.map((x) => ({ nombre: x.nombre, monto: Number(x.monto) })) : [],
+    retencion: archivo ? lote.retencionContracargos : 0,
+    compensacion: archivo ? lote.compensacionAdelantos : 0,
+    recuperacion: archivo ? lote.recuperacionDeuda : 0,
+    neto: Number(netoLote(lote)),
+  };
+  return (
+    <div className="space-y-3">
+      <ExtractoLiquidacion d={d} />
+      {archivo && lote.retencionContracargos === 0 && lote.retencionPendiente > 0 && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+          Al acreditar se retienen {fmt(lote.retencionPendiente)} por contracargos de ventas incluidas en este lote.
+        </p>
+      )}
+      {lote.esNegativo && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+          Liquidación negativa (contracargo o devolución): al acreditar se debita del saldo del comercio; el faltante queda como deuda y
+          se recupera de las próximas liquidaciones.
+        </p>
+      )}
+      {lote.estado === "Pendiente" && lote.motivoNoElegible && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">{lote.motivoNoElegible}</p>
+      )}
+    </div>
+  );
+}
+
+/** Dato de la ficha del lote. */
+function DatoFicha({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0 bg-card px-4 py-2.5">
+      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm">{children}</dd>
+    </div>
+  );
+}
+
 function LoteDetalle({
-  lote,
+  lote: loteInicial,
   onClose,
   onSubirCsv,
+  onAcreditar,
 }: {
   lote: LoteAcreditacion;
   onClose: () => void;
   onSubirCsv: (l: LoteAcreditacion) => void;
+  onAcreditar?: (l: LoteAcreditacion) => void;
 }) {
   const queryClient = useQueryClient();
+  // Un lote Pendiente se recalcula al abrirlo con los parametros vigentes
+  // (mismo calculo que la revision), asi el detalle muestra lo que se va a
+  // acreditar. Los acreditados se muestran como quedaron.
+  const fresco = useQuery({
+    queryKey: ["lote-detalle-recalculado", loteInicial.id],
+    queryFn: async () => {
+      if (loteInicial.estado === "Pendiente" && esDelArchivo(loteInicial)) {
+        try {
+          await recalcularLote(loteInicial.id);
+          void queryClient.invalidateQueries({ queryKey: ["lotes"] });
+        } catch {
+          // Sin la migracion 20261031120000 se muestra lo guardado.
+        }
+      }
+      return getLote(loteInicial.id);
+    },
+  });
+  const lote = fresco.data ?? loteInicial;
   const { data: movimientos } = useQuery({
     queryKey: ["lote-movimientos", lote.id],
     queryFn: () => listLoteMovimientos(lote.id),
@@ -252,8 +390,18 @@ function LoteDetalle({
       { Campo: "Comisión cierre lote (%)", Valor: comisionCierrePct },
       { Campo: "Comisión cierre lote ($)", Valor: comisionCierre },
       { Campo: "Contracargo", Valor: contracargo },
-      { Campo: "Importe neto", Valor: lote.importeNeto },
-      { Campo: "Estado", Valor: lote.estado },
+      { Campo: "Neto Payway", Valor: lote.netoPayway ?? "" },
+      { Campo: "Costo servicio Payway", Valor: lote.costoServicioPayway ?? "" },
+      { Campo: "Impuestos Payway", Valor: lote.impuestosPayway ?? "" },
+      { Campo: "IVA sobre la tasa", Valor: lote.ivaTasaMonto ?? 0 },
+      { Campo: "Impuestos asignados", Valor: esDelArchivo(lote) ? lote.impuestos : 0 },
+      { Campo: "Retención contracargos", Valor: lote.retencionContracargos },
+      { Campo: "Compensación adelantos", Valor: lote.compensacionAdelantos },
+      { Campo: "Recuperación deuda", Valor: lote.recuperacionDeuda },
+      { Campo: "Descuentos e impuestos", Valor: totalDescuentos(lote) },
+      { Campo: "Neto a acreditar", Valor: netoLote(lote) },
+      { Campo: "Fecha de acreditación", Valor: lote.fechaAcreditacion ?? "" },
+      { Campo: "Estado", Valor: estadoMostrado(lote) },
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -269,7 +417,7 @@ function LoteDetalle({
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div className="min-w-0">
             <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-              <Receipt size={18} /> Detalle del lote
+              Liquidación de lote
             </h3>
             <p className="text-sm font-mono text-muted-foreground">
               {lote.codigo} · {parseDateLocal(lote.fecha).toLocaleDateString("es-AR")} ·{" "}
@@ -285,256 +433,40 @@ function LoteDetalle({
           </div>
         </div>
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-3">
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar size={12} /> Fecha estimada
-              </div>
-              <div className="font-mono font-semibold mt-1">
-                {parseDateLocal(lote.fecha).toLocaleDateString("es-AR")}
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                Cobro real:{" "}
-                {lote.fechaCobroReal ? (
-                  <>
-                    <span className="font-mono">{fmtFechaCorta(lote.fechaCobroReal)}</span>
-                    <Badge tone="success">real</Badge>
-                  </>
-                ) : (
-                  <Badge tone="neutral">est.</Badge>
-                )}
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Store size={12} /> Comercio
-              </div>
-              <div className="font-semibold mt-1 truncate">
-                {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"}
-              </div>
-              <div className="font-mono text-xs text-muted-foreground">{lote.comercio?.legajo ?? lote.comercioId}</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-muted-foreground">Bandera</div>
-              <div className="font-semibold mt-1">{lote.bandera}</div>
-              <div className="text-xs text-muted-foreground">
-                {esCuotas ? `${lote.cuotas} cuotas` : "Pago único"}
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-muted-foreground">Estado</div>
-              <div className="mt-1">
-                <Badge tone={tone(lote.estado)}>{lote.estado}</Badge>
-              </div>
-              <div className="font-mono text-xs mt-1">{lote.cantidadOperaciones} ops</div>
-            </Card>
-          </div>
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
+            <DatoFicha label="Comercio">
+              <span className="font-medium">{lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"}</span>
+            </DatoFicha>
+            <DatoFicha label="Legajo">
+              <span className="font-mono">{lote.comercio?.legajo ?? lote.comercioId}</span>
+            </DatoFicha>
+            <DatoFicha label="Medio de pago">
+              {lote.bandera} · {esCuotas ? `${lote.cuotas} cuotas` : "Pago único"}
+            </DatoFicha>
+            <DatoFicha label="Estado">
+              <Badge tone={tone(estadoMostrado(lote))}>{estadoMostrado(lote)}</Badge>
+              {lote.estado === "Pendiente" && lote.subestado && (
+                <span className="ml-1.5 text-xs text-muted-foreground">{SUBESTADO_TXT[lote.subestado] ?? lote.subestado}</span>
+              )}
+            </DatoFicha>
+            <DatoFicha label={esDelArchivo(lote) ? "Fecha de pago Payway" : "Fecha estimada de pago"}>
+              <span className="font-mono">{parseDateLocal(lote.fecha).toLocaleDateString("es-AR")}</span>
+            </DatoFicha>
+            <DatoFicha label="Fecha de acreditación">
+              <span className="font-mono">{lote.fechaAcreditacion ? fmtFechaCorta(lote.fechaAcreditacion) : "—"}</span>
+            </DatoFicha>
+            <DatoFicha label="Operaciones">
+              <span className="font-mono">{lote.cantidadOperaciones}</span>
+            </DatoFicha>
+            <DatoFicha label="Establecimiento">
+              <span className="font-mono">{(lote as { establecimiento?: string | null }).establecimiento ?? "—"}</span>
+            </DatoFicha>
+          </dl>
 
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Detalle financiero del lote
-              </h4>
-              {loteEstimado && (
-                <Badge tone="neutral">Proyección — sujeto al CSV de Payway</Badge>
-              )}
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Importe bruto</span>
-                <span
-                  className={`font-mono font-semibold ${
-                    loteEstimado ? "text-muted-foreground/70" : ""
-                  }`}
-                >
-                  {fmt(lote.importeBruto)}
-                  {loteEstimado && (
-                    <span className="ml-1 text-[10px] text-muted-foreground/70">(Est.)</span>
-                  )}
-                </span>
-              </div>
-              {(() => {
-                // Snapshots reales del motor de retenciones (vienen de
-                // la acreditación del lote). Si los 3 están en 0 y el
-                // legacy > 0, caemos al legacy (lotes viejos donde el
-                // cálculo se hacía con la fórmula hardcoded).
-                const iva = lote.ivaMonto ?? 0;
-                const dc = lote.debitoCreditoMonto ?? 0;
-                const iibb = lote.iibbMonto ?? 0;
-                const legacy = lote.impuestos ?? 0;
-                const totalReal = iva + dc + iibb;
-                const usarLegacy = totalReal === 0 && legacy > 0;
-                return (
-                  <>
-                    {iva > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Receipt size={12} /> IVA
-                          {lote.tasaMolipayPct > 0 && (
-                            <span className="text-[10px] text-muted-foreground/70">
-                              ({(iva / Math.max(lote.tasaMolipayMonto, 0.01) * 100).toFixed(0)}% s/comision)
-                            </span>
-                          )}
-                        </span>
-                        <span className="font-mono text-red-600">- {fmt(iva)}</span>
-                      </div>
-                    )}
-                    {dc > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Receipt size={12} /> Débito/Crédito
-                        </span>
-                        <span className="font-mono text-red-600">- {fmt(dc)}</span>
-                      </div>
-                    )}
-                    {iibb > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Receipt size={12} /> Ingresos Brutos
-                        </span>
-                        <span className="font-mono text-red-600">- {fmt(iibb)}</span>
-                      </div>
-                    )}
-                    {usarLegacy && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Receipt size={12} /> Impuestos
-                          <span className="text-[10px] text-muted-foreground/70">
-                            (legacy)
-                          </span>
-                        </span>
-                        <span className="font-mono text-red-600">- {fmt(legacy)}</span>
-                      </div>
-                    )}
-                    {totalReal === 0 && !usarLegacy && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Receipt size={12} /> Impuestos
-                        </span>
-                        <span className="font-mono text-muted-foreground/60">- $ 0,00</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-muted-foreground">Menos impuestos</span>
-                      <span className={`font-mono ${loteEstimado ? "text-muted-foreground/70" : ""}`}>
-                        {fmt(lote.importeBruto - (usarLegacy ? legacy : totalReal))}
-                      </span>
-                    </div>
-                  </>
-                );
-              })()}
-              <div className="border-t my-2" />
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Percent size={12} /> Tasa de interés PayWay ({lote.tasaPaywayPct}%)
-                </span>
-                <span
-                  className={`font-mono ${loteEstimado ? "text-muted-foreground/60" : "text-red-600"}`}
-                >
-                  - {fmt(tasaPaywayMostrar)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Percent size={12} /> Tasa de interés MoliPay ({lote.tasaMolipayPct}%)
-                </span>
-                <span
-                  className={`font-mono ${loteEstimado ? "text-muted-foreground/60" : "text-red-600"}`}
-                >
-                  - {fmt(tasaMolipayMostrar)}
-                </span>
-              </div>
-              {esCuotas && lote.costoPaywayPagoUnico != null && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <CreditCard size={12} /> Costo PayWay por pago único ({lote.cuotas} cuotas)
-                  </span>
-                  <span
-                    className={`font-mono ${loteEstimado ? "text-muted-foreground/60" : "text-red-600"}`}
-                  >
-                    - {fmt(lote.costoPaywayPagoUnico)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Percent size={12} /> Comisión cierre de lote ({comisionCierrePct}%)
-                </span>
-                {loteEstimado ? (
-                  <span className="font-mono text-muted-foreground/60">
-                    $ 0,00 <span className="text-[10px]">— Pendiente de cierre</span>
-                  </span>
-                ) : (
-                  <span className="font-mono text-red-600">- {fmt(comisionCierre)}</span>
-                )}
-              </div>
-              {esContracargo && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Receipt size={12} /> Contracargo{" "}
-                    <Badge tone="danger" className="ml-1">retenido</Badge>
-                  </span>
-                  <span className="font-mono text-red-600">- {fmt(contracargo)}</span>
-                </div>
-              )}
-              {esCuotas && (
-                <p className="text-[11px] text-muted-foreground">
-                  Si el comprador paga en cuotas, PayWay acredita a MoliPay en un solo pago y
-                  cobra fee por esa liquidación.
-                </p>
-              )}
-              <p className="text-[11px] text-muted-foreground">
-                Tasa MoliPay = tasa cobrada al comercio − tasa PayWay a MoliPay (neto).
-              </p>
-              {loteEstimado && (
-                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-                  El 0,45% de cierre de lote se calcula y debita únicamente
-                  al confirmar la liquidación (estado Pendiente → Acreditado).
-                  Hasta entonces los importes son una proyección.
-                </p>
-              )}
-              <div className="border-t my-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Total descuentos</span>
-                <span
-                  className={`font-mono ${loteEstimado ? "text-muted-foreground/70" : ""}`}
-                >
-                  - {fmt(totalDesc)}
-                </span>
-              </div>
-              <div className="flex justify-between text-base font-semibold">
-                <span>Importe final a acreditar</span>
-                <span
-                  className={`font-mono flex items-center gap-1.5 ${
-                    lote.estado === "Contracargo"
-                      ? "text-red-600"
-                      : loteEstimado
-                        ? "text-muted-foreground/80"
-                        : "text-emerald-700"
-                  }`}
-                >
-                  {fmt(lote.importeNeto)}
-                  {loteEstimado && <Badge tone="neutral">Est.</Badge>}
-                </span>
-              </div>
-              {esContracargo && (
-                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mt-2">
-                  Incluye contracargo ({fmt(contracargo)} retenido): el lote descuenta ese pago.
-                </p>
-              )}
-              {lote.notasResolucion && (
-                <p className="text-xs text-muted-foreground border rounded px-2 py-1.5 mt-2 whitespace-pre-wrap">
-                  Notas: {lote.notasResolucion}
-                </p>
-              )}
-              {lote.resueltoPor && (
-                <p className="text-[11px] text-muted-foreground">
-                  Resuelto por {lote.resueltoPor}{" "}
-                  {lote.fechaResolucion ? `· ${new Date(lote.fechaResolucion).toLocaleString("es-AR")}` : ""}
-                </p>
-              )}
-            </div>
-          </Card>
+          <section>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidación</h4>
+            <DesgloseLote lote={lote} />
+          </section>
 
           <Card className="p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -609,11 +541,20 @@ function LoteDetalle({
                     // movimientos cargados todavía, se cae a una sola
                     // fila agregada con el total del lote. Nunca se
                     // incluyen otros lotes u otras banderas.
-                    const siteId = lote.comercio?.siteId?.trim();
+                    // La importacion identifica al comercio por el numero de
+                    // establecimiento de Payway: el de la tabla de
+                    // establecimientos para la marca del lote o, si no hay,
+                    // el site_id de la ficha del comercio.
+                    let siteId: string | undefined;
+                    try {
+                      const est = await establecimientoDeLote(lote.id);
+                      siteId = est.establecimiento?.trim() || undefined;
+                    } catch (e) {
+                      toast.error(`No se pudo leer el establecimiento: ${(e as Error).message}`);
+                    }
                     let aviso: string | null = null;
                     if (!siteId) {
-                      aviso =
-                        "El comercio no tiene site_id cargado. El archivo se generó con un placeholder (00000000); cargalo en la ficha del comercio y volvé a bajar el CSV.";
+                      aviso = `El comercio no tiene establecimiento de Payway para ${lote.bandera}. El archivo se generó con un placeholder (00000000): al importarlo va a quedar en Excepciones y desde ahí lo podés asignar.`;
                     }
                     const { filename, contenido } = generarCsvLiquidacionTestParaLote(
                       {
@@ -661,6 +602,24 @@ function LoteDetalle({
                   <FileUp size={14} className="inline mr-1.5" /> Subir CSV
                 </button>
               </>
+            )}
+            {lote.estado === "Pendiente" && onAcreditar && (
+              <button
+                onClick={() => onAcreditar(lote)}
+                disabled={!lote.elegible}
+                title={lote.elegible ? undefined : (lote.motivoNoElegible ?? "No se puede acreditar todavía")}
+                className="h-9 px-4 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <CheckCircle2 size={14} className="inline mr-1.5" /> Acreditar
+              </button>
+            )}
+            {lote.contracargos > 0 && (
+              <Link
+                to="/admin/comercios/link-pago/contracargos"
+                className="h-9 px-4 rounded-md text-sm font-semibold bg-card border text-foreground hover:bg-muted inline-flex items-center"
+              >
+                <Gavel size={14} className="inline mr-1.5" /> Ver contracargo
+              </Link>
             )}
           </div>
         </div>
@@ -786,9 +745,9 @@ function ComercioDetalleModal({
                         <td className="px-2 py-1.5 font-mono">
                           {parseDateLocal(l.fecha).toLocaleDateString("es-AR")}
                         </td>
-                        <td className="px-2 py-1.5 text-right font-mono">{fmt(l.importeNeto)}</td>
+                        <td className="px-2 py-1.5 text-right font-mono">{fmt(netoLote(l))}</td>
                         <td className="px-2 py-1.5">
-                          <Badge tone={tone(l.estado)}>{l.estado}</Badge>
+                          <Badge tone={tone(estadoMostrado(l))}>{estadoMostrado(l)}</Badge>
                         </td>
                         {lotesDelComercio.some((x) => (x.contracargoMonto ?? 0) > 0) && (
                           <td className="px-2 py-1.5 text-right font-mono text-red-600">
@@ -870,6 +829,8 @@ function ComercioDetalleModal({
 
 function Page() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const search_ = Route.useSearch();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -882,17 +843,27 @@ function Page() {
   const [detail, setDetail] = useState<LoteAcreditacion | null>(null);
   const [comercioDetail, setComercioDetail] = useState<ResumenComercio | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; message: string } | null>(null);
-  const [contracargoModal, setContracargoModal] = useState<
-    { lote: LoteAcreditacion; notas: string; contracargoMonto: string } | null
-  >(null);
   // Cargar CSV: null = cerrado. Si trae `lote`, modo per-lote; si no, modo general.
   const [cargarCsv, setCargarCsv] = useState<{ lote: LoteAcreditacion | null } | null>(null);
+  const [simularCc, setSimularCc] = useState(false);
   const [confirmarAcreditacion, setConfirmarAcreditacion] = useState<LoteAcreditacion | null>(null);
   const [exportando, setExportando] = useState(false);
   const { can } = useCan();
   const puedeGestionar = can("modificar", "comercios");
 
   const { rows: comerciosOptions } = useComercios({ page: 0, pageSize: 100 });
+
+  // ?lote=<uuid>: abre el detalle (lo usan Ejecucion masiva, Contracargos y Lotes de venta).
+  useEffect(() => {
+    if (!search_.lote) return;
+    let vivo = true;
+    getLote(search_.lote)
+      .then((l) => vivo && l && setDetail(l))
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [search_.lote]);
 
   // Banderas dinámicas desde el catálogo (no hardcodeadas). Si la
   // tabla no existe / falla, se cae al set de fallback que tenía la
@@ -941,9 +912,19 @@ function Page() {
       const nombre = l.comercio?.nombreComercio ?? l.comercio?.usuario ?? "—";
       const legajo = l.comercio?.legajo ?? l.comercioId;
       const key = l.comercioId;
-      const pay = l.tasaPaywayMonto + (l.costoPaywayPagoUnico ?? 0);
-      const moli = l.tasaMolipayMonto;
-      const contra = l.contracargoMonto ?? 0;
+      // Lote del archivo: costo Payway real y descuentos MoliPay calculados
+      // en la base. Proyeccion: estimado desde las ventas.
+      const archivo = esDelArchivo(l);
+      const pay = archivo
+        ? Number(l.costoServicioPayway ?? 0) + Number(l.impuestosPayway ?? 0)
+        : l.tasaPaywayMonto + (l.costoPaywayPagoUnico ?? 0);
+      const moli = archivo
+        ? Number(l.tasaMolipayMonto ?? 0) + Number(l.ivaTasaMonto ?? 0) + Number(l.comisionCierreLoteMonto ?? 0)
+        : l.tasaMolipayMonto;
+      const contra = archivo ? (l.esNegativo ? -Number(l.netoPayway ?? 0) : 0) + l.recuperacionDeuda : (l.contracargoMonto ?? 0);
+      const neto = netoLote(l);
+      const pendiente = l.estado === "Acreditado" ? 0 : neto;
+      const imp = archivo ? Number(l.impuestos ?? 0) : l.impuestos;
       const prev = map.get(key);
       if (!prev) {
         map.set(key, {
@@ -953,25 +934,25 @@ function Page() {
           cantidadLotes: 1,
           cantidadOps: l.cantidadOperaciones,
           totalBruto: l.importeBruto,
-          totalImpuestos: l.impuestos,
+          totalImpuestos: imp,
           totalPayWay: pay,
           totalMoliPay: moli,
           totalContracargo: contra,
-          totalFinal: l.importeNeto,
-          pendienteAcreditar: l.importeNeto,
-          pendienteImpuestos: l.impuestos,
+          totalFinal: neto,
+          pendienteAcreditar: pendiente,
+          pendienteImpuestos: l.estado === "Acreditado" ? 0 : imp,
         });
       } else {
         prev.cantidadLotes += 1;
         prev.cantidadOps += l.cantidadOperaciones;
         prev.totalBruto += l.importeBruto;
-        prev.totalImpuestos += l.impuestos;
+        prev.totalImpuestos += imp;
         prev.totalPayWay += pay;
         prev.totalMoliPay += moli;
         prev.totalContracargo += contra;
-        prev.totalFinal += l.importeNeto;
-        prev.pendienteAcreditar += l.importeNeto;
-        prev.pendienteImpuestos += l.impuestos;
+        prev.totalFinal += neto;
+        prev.pendienteAcreditar += pendiente;
+        prev.pendienteImpuestos += l.estado === "Acreditado" ? 0 : imp;
       }
     }
     return Array.from(map.values());
@@ -986,13 +967,12 @@ function Page() {
   const handleCsvCargado = (r: { aplicados: number; sinMatch: number }) => {
     if (r.aplicados > 0) {
       toast.success(
-        r.aplicados === 1
-          ? `Lote pasado a Pendiente.${r.sinMatch > 0 ? ` ${r.sinMatch} renglón(es) sin match siguen en Programado.` : ""}`
-          : `${r.aplicados} lotes pasados a Pendiente.${r.sinMatch > 0 ? ` ${r.sinMatch} renglón(es) sin match.` : ""}`,
+        `${r.aplicados} lote(s) del archivo quedaron Pendiente.${r.sinMatch > 0 ? ` ${r.sinMatch} renglón(es) fueron a Excepciones.` : ""} Falta conciliar con la recaudadora para poder acreditar.`,
       );
     } else {
-      toast.warning("Ningún renglón del archivo matcheó contra lotes Programado.");
+      toast.warning(`Ningún renglón se pudo asignar a un comercio.${r.sinMatch > 0 ? ` ${r.sinMatch} quedaron en Excepciones.` : ""}`);
     }
+    queryClient.invalidateQueries({ queryKey: QK_ACRED });
     queryClient.invalidateQueries({ queryKey: ["lotes"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-resumen"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
@@ -1001,32 +981,11 @@ function Page() {
 
   const handleAcreditado = () => {
     toast.success(`Lote ${confirmarAcreditacion?.codigo ?? ""} acreditado`);
+    queryClient.invalidateQueries({ queryKey: QK_ACRED });
     queryClient.invalidateQueries({ queryKey: ["lotes"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-resumen"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
     setConfirmarAcreditacion(null);
-  };
-
-  const handleContracargo = async () => {
-    if (!contracargoModal) return;
-    const { lote, notas, contracargoMonto } = contracargoModal;
-    const parsedContracargo =
-      contracargoMonto.trim() === ""
-        ? undefined
-        : parseFloat(contracargoMonto.replace(",", ".")) || 0;
-    try {
-      await updateLote(lote.id, {
-        estado: "Acreditado",
-        contracargoMonto: parsedContracargo,
-        notasResolucion: notas || null,
-      });
-      toast.success(`Lote ${lote.codigo} acreditado${notas ? ` — ${notas}` : ""}`);
-      queryClient.invalidateQueries({ queryKey: ["lotes"] });
-      queryClient.invalidateQueries({ queryKey: ["lotes-resumen"] });
-      setContracargoModal(null);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
   };
 
   const exportarCsv = async () => {
@@ -1047,35 +1006,32 @@ function Page() {
       }
       const HEADERS = [
         "Código",
-        "Fecha estimada",
-        "Fecha cobro real",
+        "Fecha de liquidación",
         "Comercio",
         "Legajo",
         "Bandera",
-        "Cuotas",
         "Ops",
-        "Importe bruto",
-        "Descuentos",
-        "Importe a acreditar",
+        "Monto bruto liquidado",
+        "Descuentos e impuestos",
+        "Neto a acreditar",
+        "Fecha de acreditación",
         "Estado",
       ];
       const lines: string[] = [HEADERS.join(";")];
       for (const l of rows) {
-        const cuotas = l.cuotas != null ? `${l.cuotas}c` : "1c";
         lines.push(
           [
             l.codigo,
-            l.fecha,
-            l.fechaCobroReal ?? "",
+            esDelArchivo(l) ? l.fecha : `${l.fecha} (estimada)`,
             l.comercio?.nombreComercio ?? l.comercio?.usuario ?? "",
             l.comercio?.legajo ?? l.comercioId,
             l.bandera,
-            cuotas,
             l.cantidadOperaciones,
             l.importeBruto.toFixed(2).replace(".", ","),
             totalDescuentos(l).toFixed(2).replace(".", ","),
-            l.importeNeto.toFixed(2).replace(".", ","),
-            l.estado,
+            netoLote(l).toFixed(2).replace(".", ","),
+            l.fechaAcreditacion ?? "",
+            estadoMostrado(l),
           ]
             .map((v) => {
               const s = String(v);
@@ -1107,7 +1063,7 @@ function Page() {
 
   const getActions = (r: LoteAcreditacion): ActionItem[] => {
     const base: ActionItem[] = [
-      { label: "Ver detalle", icon: Eye, onClick: () => setDetail(r) },
+      { label: r.estado === "Acreditado" ? "Ver liquidación" : "Ver detalle", icon: Eye, onClick: () => setDetail(r) },
     ];
     if (r.estado === "Programado") {
       base.push({
@@ -1117,33 +1073,39 @@ function Page() {
         onClick: () => onSubirCsv(r),
       });
     }
-    if (r.estado === "Pendiente") {
+    if (r.estado === "Pendiente" && !r.legacy) {
       base.push({
         label: "Acreditar",
         icon: ArrowUpRight,
-        disabled: !puedeGestionar,
+        disabled: !puedeGestionar || !r.elegible,
         onClick: () => {
-          if (!puedeGestionar) return;
+          if (!puedeGestionar || !r.elegible) return;
           setDetail(null);
           setConfirmarAcreditacion(r);
         },
       });
+      if (r.subestado === "no_conciliado") {
+        base.push({
+          label: "Conciliar con la recaudadora",
+          icon: CheckCircle2,
+          disabled: !puedeGestionar,
+          onClick: () => void navigate({ to: "/admin/comercios/link-pago/acreditaciones", search: { fecha: r.fecha } }),
+        });
+      }
     }
-    if (r.estado === "Contracargo") {
+    if (estadoMostrado(r) === "Contracargo") {
       base.push({
-        label: "Ver Disputa",
+        label: "Ver contracargo",
         icon: Gavel,
-        disabled: !puedeGestionar,
-        onClick: () =>
-          setContracargoModal({ lote: r, notas: "", contracargoMonto: String(r.contracargoMonto ?? "") }),
+        onClick: () => void navigate({ to: "/admin/comercios/link-pago/contracargos" }),
       });
     }
     return base;
   };
 
-  // Botón principal según estado. Aplica color distinto: emerald
-  // para Acreditar (lote que ya tiene los números del CSV),
-  // primario para Subir CSV, slate para Comprobante/Ver Disputa.
+  // Boton principal segun estado: Subir CSV (Programado), Acreditar
+  // (Pendiente listo), Conciliar (Pendiente sin conciliar), Ver
+  // liquidacion (Acreditado).
   const botonAccion = (r: LoteAcreditacion) => {
     if (!puedeGestionar) return null;
     if (r.estado === "Programado") {
@@ -1156,11 +1118,24 @@ function Page() {
         </button>
       );
     }
-    if (r.estado === "Pendiente") {
+    if (r.estado === "Pendiente" && !r.legacy) {
+      if (r.subestado === "no_conciliado") {
+        return (
+          <button
+            onClick={() => void navigate({ to: "/admin/comercios/link-pago/acreditaciones", search: { fecha: r.fecha } })}
+            className="h-8 px-3 rounded-md text-xs font-semibold bg-card border text-foreground hover:bg-muted inline-flex items-center gap-1"
+            title="Falta verificar que el neto entró a la recaudadora"
+          >
+            <CheckCircle2 size={13} /> Conciliar
+          </button>
+        );
+      }
       return (
         <button
           onClick={() => setConfirmarAcreditacion(r)}
-          className="h-8 px-3 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1"
+          disabled={!r.elegible}
+          title={r.elegible ? undefined : (r.motivoNoElegible ?? undefined)}
+          className="h-8 px-3 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 disabled:opacity-50"
         >
           <CheckCircle2 size={13} /> Acreditar
         </button>
@@ -1172,19 +1147,7 @@ function Page() {
           onClick={() => setDetail(r)}
           className="h-8 px-3 rounded-md text-xs font-semibold bg-card border text-foreground hover:bg-muted inline-flex items-center gap-1"
         >
-          <ReceiptIcon size={13} /> Comprobante
-        </button>
-      );
-    }
-    if (r.estado === "Contracargo") {
-      return (
-        <button
-          onClick={() =>
-            setContracargoModal({ lote: r, notas: "", contracargoMonto: String(r.contracargoMonto ?? "") })
-          }
-          className="h-8 px-3 rounded-md text-xs font-semibold bg-card border text-foreground hover:bg-muted inline-flex items-center gap-1"
-        >
-          <Gavel size={13} /> Ver Disputa
+          <ReceiptIcon size={13} /> Ver liquidación
         </button>
       );
     }
@@ -1194,46 +1157,21 @@ function Page() {
   const columns: Column<LoteAcreditacion>[] = [
     {
       key: "fecha",
-      label: "Fecha (est./real)",
-      minWidth: 160,
-      render: (r) => {
-        // El lote Programado siempre muestra "est.": no tiene aún la
-        // fecha real de cobro. A partir de Pendiente/Acreditado la
-        // fecha real aparece si el CSV la aportó.
-        const badge = r.fechaCobroReal
-          ? { tone: "success" as const, txt: "real" }
-          : { tone: "neutral" as const, txt: "est." };
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-xs tabular-nums">
-              {parseDateLocal(r.fecha).toLocaleDateString("es-AR")}
-            </span>
-            <span className="flex items-center gap-1">
-              <Badge tone={badge.tone}>{badge.txt}</Badge>
-              {r.fechaCobroReal && (
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  cob. {fmtFechaCorta(r.fechaCobroReal)}
-                </span>
-              )}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      key: "codigo",
-      label: "Lote",
+      label: "Fecha de liquidación",
+      hint: "Día en que Payway procesó la planilla de pago (FECHA del archivo). En los lotes Programado es la fecha estimada.",
       minWidth: 150,
-      maxWidth: 260,
       render: (r) => (
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs font-semibold">{r.codigo}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono text-xs tabular-nums">{parseDateLocal(r.fecha).toLocaleDateString("es-AR")}</span>
+          <span className="flex items-center gap-1">
+            {esDelArchivo(r) ? <Badge tone="success">liquidado</Badge> : <Badge tone="neutral">est.</Badge>}
+          </span>
         </div>
       ),
     },
     {
       key: "comercio",
-      label: "Comercio / Legajo",
+      label: "Comercio",
       minWidth: 200,
       maxWidth: 320,
       render: (r) => (
@@ -1241,94 +1179,63 @@ function Page() {
           <div className="font-semibold text-sm truncate max-w-[180px]">
             {r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}
           </div>
-          <div className="font-mono text-xs text-muted-foreground">
-            {r.comercio?.legajo ?? r.comercioId}
-          </div>
+          <div className="font-mono text-xs text-muted-foreground">{r.comercio?.legajo ?? r.comercioId}</div>
         </div>
       ),
     },
     {
       key: "bandera",
       label: "Bandera",
-      minWidth: 100,
+      minWidth: 120,
       render: (r) => (
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">
-          {r.bandera}
-        </span>
-      ),
-    },
-    {
-      key: "cantidadOperaciones",
-      label: "Ops",
-      minWidth: 70,
-      render: (r) => (
-        <span className="font-mono tabular-nums">
-          {r.cantidadOperaciones}
-          {r.cuotas && r.cuotas > 1 ? ` · ${r.cuotas}c` : ""}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera}</span>
+          <span className="font-mono text-[10px] text-muted-foreground">{r.codigo}</span>
+        </div>
       ),
     },
     {
       key: "importeBruto",
-      label: "Importe bruto",
-      minWidth: 130,
+      label: "Monto bruto liquidado",
+      hint: "Base bruta de ventas del lote.",
+      minWidth: 150,
       render: (r) => (
-        <span
-          className={`font-mono tabular-nums ${esLoteEstimado(r) ? "text-muted-foreground/60" : ""}`}
-        >
+        <span className={`font-mono tabular-nums ${esLoteEstimado(r) ? "text-muted-foreground/60" : ""}`}>
           {fmt(r.importeBruto)}
-          {esLoteEstimado(r) && (
-            <span className="ml-1 text-[10px] text-muted-foreground/70">(Est.)</span>
-          )}
+          {esLoteEstimado(r) && <span className="ml-1 text-[10px] text-muted-foreground/70">(Est.)</span>}
         </span>
       ),
     },
     {
       key: "descuentos",
-      label: "Descuentos",
-      minWidth: 150,
+      label: "Descuentos e impuestos",
+      hint: "Aranceles e impuestos de Payway + tasa MoliPay con IVA + cierre de lote 0,45% + impuestos asignados al comercio (Ingresos Brutos, Ley de Cheques, etc.).",
+      minWidth: 160,
       render: (r) => {
-        // En Programado: la 0,45% está "Pendiente de cierre" — no
-        // se descuenta todavía, así que la cifra va atenuada y con la
-        // leyenda para que el operador no la confunda con un cargo firme.
         const estimado = esLoteEstimado(r);
         return (
-          <span
-            className={`font-mono tabular-nums ${
-              estimado ? "text-muted-foreground/60" : "text-red-600"
-            }`}
-          >
+          <span className={`font-mono tabular-nums ${estimado ? "text-muted-foreground/60" : "text-red-600"}`}>
             - {fmt(totalDescuentos(r))}
-            {estimado && (
-              <span className="ml-1 text-[10px] text-muted-foreground/70">
-                (sin 0,45%)
-              </span>
-            )}
+            {estimado && <span className="ml-1 text-[10px] text-muted-foreground/70">(sin 0,45%)</span>}
           </span>
         );
       },
     },
     {
       key: "importeNeto",
-      label: "Importe a acreditar",
-      minWidth: 170,
+      label: "Neto a acreditar",
+      hint: "Importe neto real que ingresa al saldo del comercio (ya descontados adelantos y deudas, si los hay).",
+      minWidth: 160,
       render: (r) => {
         const estimado = esLoteEstimado(r);
-        // En Programado el importe a acreditar todavía es proyección:
-        // incluye la comisión MoliPay/IVA estimada pero NO el 0,45%
-        // de cierre (que se aplica al confirmar). Lo dejamos claro
-        // con un badge (Est.) al lado.
+        const neto = netoLote(r);
         return (
           <span
             className={`font-mono tabular-nums font-semibold ${
-              r.estado === "Contracargo"
-                ? "text-red-600"
-                : estimado
-                  ? "text-muted-foreground/70"
-                  : "text-emerald-700"
+              neto < 0 ? "text-red-600" : estimado ? "text-muted-foreground/70" : "text-emerald-700"
             }`}
           >
-            {fmt(r.importeNeto)}
+            {fmt(neto)}
             {estimado && (
               <Badge tone="neutral" className="ml-1.5 align-middle">
                 Est.
@@ -1339,10 +1246,28 @@ function Page() {
       },
     },
     {
+      key: "fechaAcreditacion",
+      label: "Fecha de acreditación",
+      hint: "Fecha efectiva de liberación del dinero al comercio.",
+      minWidth: 130,
+      render: (r) => <span className="font-mono text-xs tabular-nums">{r.fechaAcreditacion ? fmtFechaCorta(r.fechaAcreditacion) : "—"}</span>,
+    },
+    {
       key: "estado",
       label: "Estado",
-      minWidth: 120,
-      render: (r) => <Badge tone={tone(r.estado)}>{r.estado}</Badge>,
+      hint: "Programado: Payway todavía no pagó. Pendiente: llegó en el archivo y falta acreditar. Adelantado: el comercio ya cobró parte por un adelanto. Acreditado: es saldo del comercio. Contracargo: liquidación negativa o con contracargo.",
+      minWidth: 140,
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <Badge tone={tone(estadoMostrado(r))}>{estadoMostrado(r)}</Badge>
+          {r.estado === "Pendiente" && r.subestado && r.subestado !== "listo" && (
+            <span className="text-[10px] text-muted-foreground" title={r.motivoNoElegible ?? undefined}>
+              {SUBESTADO_TXT[r.subestado] ?? r.subestado}
+            </span>
+          )}
+          {r.legacy && <span className="text-[10px] text-muted-foreground">histórico</span>}
+        </div>
+      ),
     },
   ];
 
@@ -1397,7 +1322,7 @@ function Page() {
     <PermissionGuard recurso="comercios">
       <PageHeader
         title="Lotes de Acreditación"
-        description="Corte diario generado por MoliPay por bandera: Programado → (Subir CSV) → Pendiente → (Acreditar) → Acreditado."
+        description="Lo que Payway liquidó a cada comercio por bandera: Programado → (Subir CSV) → Pendiente → (Conciliar) → (Acreditar) → Acreditado."
         action={
           <div className="flex flex-wrap gap-2">
             <BtnOutline onClick={exportarCsv} disabled={exportando}>
@@ -1408,6 +1333,27 @@ function Page() {
               )}
               Descargar CSV
             </BtnOutline>
+            {puedeGestionar && (
+              <BtnOutline onClick={() => setSimularCc(true)} title="CSV de prueba de contracargos con ventas reales de lotes Programados o Pendientes">
+                <Download size={14} /> Simular contracargos
+              </BtnOutline>
+            )}
+            <Link to="/admin/comercios/link-pago/excepciones" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border bg-card text-sm font-semibold hover:bg-accent">
+              <AlertTriangle size={14} /> Excepciones
+            </Link>
+            <Link to="/admin/comercios/link-pago/acreditaciones" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border bg-card text-sm font-semibold hover:bg-accent">
+              <Calendar size={14} /> Conciliar por día
+            </Link>
+            {puedeGestionar && (
+              <BtnOutline
+                onClick={() => {
+                  guardarSeleccion(lotes.filter((l) => l.elegible).map((l) => l.id));
+                  void navigate({ to: "/admin/comercios/link-pago/ejecucion" });
+                }}
+              >
+                <Wallet size={14} /> Ejecución masiva
+              </BtnOutline>
+            )}
             {puedeGestionar && (
               <BtnPrimary
                 onClick={() => setCargarCsv({ lote: null })}
@@ -1503,7 +1449,6 @@ function Page() {
               <option value="Programado">Programado</option>
               <option value="Pendiente">Pendiente</option>
               <option value="Acreditado">Acreditado</option>
-              <option value="Contracargo">Contracargo</option>
             </select>
           </div>
           <div>
@@ -1672,9 +1617,21 @@ function Page() {
       )}
 
       {detail && (
-        <LoteDetalle lote={detail} onClose={() => setDetail(null)} onSubirCsv={onSubirCsv} />
+        <LoteDetalle
+          lote={detail}
+          onClose={() => {
+            setDetail(null);
+            if (search_.lote) void navigate({ to: "/admin/comercios/link-pago/lotes", search: {} });
+          }}
+          onSubirCsv={onSubirCsv}
+          onAcreditar={(l) => {
+            setDetail(null);
+            setConfirmarAcreditacion(l);
+          }}
+        />
       )}
 
+      {simularCc && <SimularContracargosModal onClose={() => setSimularCc(false)} />}
       {cargarCsv && (
         <CargarCsvModal
           open={!!cargarCsv}
@@ -1694,80 +1651,6 @@ function Page() {
 
       {comercioDetail && (
         <ComercioDetalleModal data={comercioDetail} lotes={lotes} onClose={() => setComercioDetail(null)} />
-      )}
-
-      {contracargoModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setContracargoModal(null)} />
-          <div className="relative bg-card rounded-xl w-full max-w-md shadow-xl p-6 space-y-4">
-            <h3 className="font-display font-semibold text-lg">
-              Resolver contracargo — {contracargoModal.lote.codigo}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Lote {contracargoModal.lote.bandera} ·{" "}
-              {contracargoModal.lote.comercio?.nombreComercio ??
-                contracargoModal.lote.comercio?.usuario}{" "}
-              · Contracargo actual {fmt(contracargoModal.lote.contracargoMonto)}.
-            </p>
-            <div>
-              <Label>Contracargo monto (opcional, recalcula neto)</Label>
-              <Input
-                value={contracargoModal.contracargoMonto}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "" || /^[0-9]*[.,]?[0-9]*$/.test(v))
-                    setContracargoModal({ ...contracargoModal, contracargoMonto: v });
-                }}
-                placeholder="0.00"
-                className="font-mono"
-                inputMode="decimal"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Neto recalculado:{" "}
-                {(() => {
-                  // Recalcular las tasas desde bruto × pct en vez de
-                  // usar los valores de la DB (que están mal acumulados
-                  // del job que arma los lotes). La DB queda como
-                  // auditoría; la UI muestra siempre la fórmula
-                  // correcta.
-                  const tasas = tasasCalculadas(contracargoModal.lote);
-                  return fmt(
-                    contracargoModal.lote.importeBruto -
-                      contracargoModal.lote.impuestos -
-                      tasas.paywayMonto -
-                      tasas.molipayMonto -
-                      (parseFloat(contracargoModal.contracargoMonto.replace(",", ".") || "0") || 0) -
-                      (contracargoModal.lote.comisionCierreLoteMonto ?? 0),
-                  );
-                })()}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold">Notas</label>
-              <textarea
-                value={contracargoModal.notas}
-                onChange={(e) => setContracargoModal({ ...contracargoModal, notas: e.target.value })}
-                rows={3}
-                placeholder="Motivo, ticket PayWay, notas internas..."
-                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setContracargoModal(null)}
-                className="h-9 px-3 rounded-md border bg-card text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleContracargo()}
-                className="h-9 px-4 rounded-md text-sm font-semibold bg-primary text-primary-foreground"
-              >
-                Acreditar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {confirm && (

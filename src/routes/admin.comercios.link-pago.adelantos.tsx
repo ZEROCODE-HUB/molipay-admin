@@ -82,14 +82,29 @@ type AdelantoUI = {
   fechaAcreditacion?: string | null;
   montoPorAcreditar?: number | null;
   fechaResolucion?: string | null;
+  /** Monto aprobado en la oferta. */
+  montoOfertado?: number | null;
+  descuento?: number | null;
+  netoARecibir?: number | null;
+  compensado?: number;
+  rechazoMotivo?: string | null;
 };
 
 function tone(e: EstadoAdelanto): "warn" | "success" | "danger" | "neutral" {
   if (e === "Pendiente") return "warn";
   if (e === "Aprobado") return "neutral";
+  if (e === "Aceptado") return "warn";
   if (e === "Acreditado") return "success";
+  if (e === "Compensado") return "success";
   if (e === "Cancelado") return "neutral";
   return "danger";
+}
+
+/** Nombre que ve el operador: Pendiente = Solicitado, Aprobado = Ofertado. */
+function etiqueta(e: EstadoAdelanto): string {
+  if (e === "Pendiente") return "Solicitado";
+  if (e === "Aprobado") return "Ofertado";
+  return e;
 }
 
 function fmt(n: number) {
@@ -111,14 +126,16 @@ function Detalle({
   onSave: (u: AdelantoUI) => void;
   onAcreditado: () => void;
 }) {
-  // El modal hace 3 cosas distintas según el estado:
-  //  - Pendiente: el admin puede Aprobar (carga TEM) o Rechazar.
-  //  - Aprobado: el admin puede Acreditar (mueve plata) o Rechazar.
-  //  - Acreditado: solo lectura.
+  // El modal hace cosas distintas según el estado:
+  //  - Solicitado (Pendiente): el usuario maestro oferta (monto + tasa) o rechaza.
+  //  - Ofertado (Aprobado): espera que la empresa acepte o cancele.
+  //  - Aceptado: el usuario maestro acredita (sale de la recaudadora de Payway).
+  //  - Acreditado / Compensado: solo lectura, con lo compensado.
   const [tasaInteres, setTasaInteres] = useState<string>(
     a.tasaInteresPct != null ? String(a.tasaInteresPct) : "",
   );
   const [notas, setNotas] = useState<string>("");
+  const [montoOferta, setMontoOferta] = useState<string>(String(a.montoOfertado ?? a.importeSolicitado));
   const [busy, setBusy] = useState(false);
   const [tope, setTope] = useState<number | null>(null);
 
@@ -126,7 +143,7 @@ function Detalle({
   // (Pendiente o Aprobado). Es informativo: le dice al admin cuánto le
   // queda al comercio para pedir más adelantos.
   useEffect(() => {
-    if (a.estado !== "Pendiente" && a.estado !== "Aprobado") {
+    if (a.estado !== "Pendiente" && a.estado !== "Aprobado" && a.estado !== "Aceptado") {
       setTope(null);
       return;
     }
@@ -144,7 +161,7 @@ function Detalle({
         .eq("id", a.fullId)
         .maybeSingle();
       if (cancelled || !data?.comercio_id) return;
-      const t = await calcularTopeDisponible(data.comercio_id as string);
+      const t = await calcularTopeDisponible(data.comercio_id as string, a.fullId);
       if (!cancelled) setTope(t);
     })();
     return () => {
@@ -158,15 +175,23 @@ function Detalle({
     return Number.isFinite(v) ? v : null;
   }, [tasaInteres]);
 
+  const montoOfertaNum = useMemo(() => {
+    const v = parseFloat(montoOferta.replace(",", "."));
+    return Number.isFinite(v) ? v : 0;
+  }, [montoOferta]);
+
+  // Tasa = descuento unico sobre el monto (no TNA / TEM).
   const interesEstimado = useMemo(() => {
     if (tasaPctNum == null) return 0;
-    return Math.round((a.importeSolicitado * tasaPctNum) / 100 * 100) / 100;
-  }, [a.importeSolicitado, tasaPctNum]);
+    return Math.round((montoOfertaNum * tasaPctNum) / 100 * 100) / 100;
+  }, [montoOfertaNum, tasaPctNum]);
 
   const netoEstimado = useMemo(
-    () => Math.max(0, a.importeSolicitado - interesEstimado),
-    [a.importeSolicitado, interesEstimado],
+    () => Math.max(0, montoOfertaNum - interesEstimado),
+    [montoOfertaNum, interesEstimado],
   );
+
+  const montoAcreditar = a.montoOfertado ?? a.importeSolicitado;
 
   // Pool de Recaudación: se consulta solo cuando el modal está abierto
   // y el adelanto está en estado Aprobado (es el único caso donde el
@@ -174,11 +199,11 @@ function Detalle({
   const { data: pool } = useQuery<PoolRecaudacion>({
     queryKey: ["pool-recaudacion", a.fullId],
     queryFn: () => obtenerPoolRecaudacion(),
-    enabled: a.estado === "Aprobado",
+    enabled: a.estado === "Aceptado",
     refetchInterval: 30_000, // refresca cada 30s mientras el modal está abierto
   });
   const poolInsuficiente =
-    a.estado === "Aprobado" && (pool?.cupoDisponiblePool ?? 0) < a.importeSolicitado;
+    a.estado === "Aceptado" && (pool?.cupoDisponiblePool ?? 0) < montoAcreditar;
 
   const handleAprobar = async () => {
     if (tasaPctNum == null) {
@@ -191,9 +216,20 @@ function Detalle({
     }
     setBusy(true);
     try {
-      const r = await aprobarAdelanto(a.fullId, tasaPctNum, notas.trim() || undefined);
+      if (!(montoOfertaNum > 0)) {
+        toast.error("Cargá el monto aprobado");
+        setBusy(false);
+        return;
+      }
+      if (tope != null && montoOfertaNum > tope) {
+        toast.error("El monto aprobado supera el tope del comercio");
+        setBusy(false);
+        return;
+      }
+      const r = await aprobarAdelanto(a.fullId, tasaPctNum, notas.trim() || undefined, { monto: montoOfertaNum });
       onSave({ ...a, estado: "Aprobado", tasaInteresPct: r.tasaPct, motivo: notas.trim() || a.motivo });
-      toast.success(`Adelanto aprobado — TEM ${r.tasaPct}%`);
+      toast.success(`Oferta enviada: ${fmt(r.netoARecibir)} netos al ${r.tasaPct}%. La empresa tiene que aceptarla.`);
+      if (!r.alcanza) toast.warning("Hoy la recaudadora no alcanza para este monto: no se va a poder acreditar hasta que haya disponible.");
       onClose();
     } catch (e) {
       toast.error((e as Error).message);
@@ -209,13 +245,8 @@ function Detalle({
     }
     setBusy(true);
     try {
-      const updated = await rechazarAdelanto(a.fullId, notas.trim());
-      onSave({
-        ...a,
-        estado: updated.estado,
-        motivo: updated.motivo,
-        fechaResolucion: updated.fechaResolucion,
-      });
+      await rechazarAdelanto(a.fullId, notas.trim());
+      onSave({ ...a, estado: "Rechazado", rechazoMotivo: notas.trim() });
       toast.success("Adelanto rechazado");
       onClose();
     } catch (e) {
@@ -226,15 +257,15 @@ function Detalle({
   };
 
   const handleAcreditar = async () => {
-    if (a.estado !== "Aprobado") {
-      toast.error("Solo se acreditan adelantos en estado Aprobado");
+    if (a.estado !== "Aceptado") {
+      toast.error("Solo se acreditan adelantos que la empresa aceptó");
       return;
     }
     setBusy(true);
     try {
       const r = await acreditarAdelanto(a.fullId, notas.trim() || undefined);
       toast.success(
-        `Adelanto acreditado. Depósito neto: ${fmt(r.montoNetoDepositado)} (interés ${fmt(r.interes)}).`,
+        `Adelanto acreditado. Depósito neto: ${fmt(r.montoNetoDepositado)} (descuento ${fmt(r.interes)}).`,
       );
       onAcreditado();
       onClose();
@@ -245,7 +276,7 @@ function Detalle({
     }
   };
 
-  const readOnly = a.estado === "Acreditado" || a.estado === "Cancelado";
+  const readOnly = ["Acreditado", "Compensado", "Cancelado", "Rechazado"].includes(a.estado);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -261,7 +292,7 @@ function Detalle({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge tone={tone(a.estado)}>{a.estado}</Badge>
+            <Badge tone={tone(a.estado)}>{etiqueta(a.estado)}</Badge>
             <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md">✕</button>
           </div>
         </div>
@@ -279,10 +310,10 @@ function Detalle({
             </div>
           )}
 
-          {/* Pool de Recaudación: banner solo cuando el adelanto está
-              Aprobado (es el único caso donde se Acredita y se mueve
-              plata desde el pool). */}
-          {a.estado === "Aprobado" && pool && (
+          {/* Recaudadora de Payway: banner solo cuando el adelanto está
+              Aceptado (es el único caso donde se Acredita y se mueve
+              plata). */}
+          {a.estado === "Aceptado" && pool && (
             <div
               className={
                 "rounded-lg border px-3 py-2 text-xs flex items-center justify-between " +
@@ -293,11 +324,11 @@ function Detalle({
             >
               <span className="flex items-center gap-3">
                 <span>
-                  Pool Recaudación:{" "}
+                  Pendiente de acreditar:{" "}
                   <span className="font-mono font-semibold">{fmt(pool.poolRecaudacionTotal)}</span>
                 </span>
                 <span>
-                  Adelantos en curso:{" "}
+                  Adelantos sin compensar:{" "}
                   <span className="font-mono font-semibold">{fmt(pool.adelantosEnCurso)}</span>
                 </span>
                 <span>
@@ -307,7 +338,7 @@ function Detalle({
               </span>
               {poolInsuficiente && (
                 <span className="font-semibold">
-                  ⚠ Pool insuficiente para acreditar {fmt(a.importeSolicitado)}
+                  ⚠ La recaudadora no alcanza para acreditar {fmt(montoAcreditar)}
                 </span>
               )}
             </div>
@@ -350,6 +381,21 @@ function Detalle({
                   <div className="text-sm whitespace-pre-wrap">{a.motivo}</div>
                 </div>
               )}
+              {a.montoOfertado != null && (
+                <div>
+                  <span className="text-muted-foreground">Oferta</span>
+                  <div className="font-mono font-semibold">{fmt(a.montoOfertado)} al {a.tasaInteresPct ?? 0}%</div>
+                  <div className="text-xs text-muted-foreground">
+                    Neto a recibir: <span className="font-mono">{fmt(a.netoARecibir ?? 0)}</span>
+                  </div>
+                </div>
+              )}
+              {a.rechazoMotivo && (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Motivo del rechazo</span>
+                  <div className="text-sm whitespace-pre-wrap">{a.rechazoMotivo}</div>
+                </div>
+              )}
               {a.fechaResolucion && (
                 <div>
                   <span className="text-muted-foreground">Fecha resolución</span>
@@ -372,11 +418,32 @@ function Detalle({
                 Gestión (Admin)
               </h4>
 
-              {/* TEM — siempre editable cuando el adelanto no está cerrado */}
+              {a.estado === "Aprobado" && (
+                <p className="text-sm text-muted-foreground">
+                  Oferta enviada. Esperando que la empresa la acepte o la cancele desde su portal.
+                </p>
+              )}
+
+              {a.estado === "Pendiente" && (
               <div>
-                <Label htmlFor="tasa-interes">
-                  Tasa de interés (TEM) — {a.estado === "Aprobado" ? "ajuste" : "requerida para aprobar"}
-                </Label>
+                <Label htmlFor="monto-oferta">Monto aprobado (no puede superar el tope)</Label>
+                <Input
+                  id="monto-oferta"
+                  value={montoOferta}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v !== "" && !/^[0-9]*[.,]?[0-9]*$/.test(v)) return;
+                    setMontoOferta(v);
+                  }}
+                  className="h-9"
+                  inputMode="decimal"
+                />
+              </div>
+              )}
+
+              {a.estado === "Pendiente" && (
+              <div>
+                <Label htmlFor="tasa-interes">Tasa (%) — descuento único sobre el monto</Label>
                 <Input
                   id="tasa-interes"
                   value={tasaInteres}
@@ -389,21 +456,19 @@ function Detalle({
                   className="h-9"
                   inputMode="decimal"
                 />
-                {tasaPctNum != null && tasaPctNum > 0 && (
+                {tasaPctNum != null && (
                   <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-3">
                     <span>
-                      Interés: <span className="font-mono font-semibold text-red-600">- {fmt(interesEstimado)}</span>
+                      Descuento: <span className="font-mono font-semibold text-red-600">- {fmt(interesEstimado)}</span>
                     </span>
                     <span>
-                      Neto a depositar:{" "}
+                      Neto que recibe el comercio:{" "}
                       <span className="font-mono font-semibold text-emerald-700">{fmt(netoEstimado)}</span>
-                    </span>
-                    <span>
-                      TNA: <span className="font-mono">{(tasaPctNum * 12).toFixed(1)}%</span>
                     </span>
                   </div>
                 )}
               </div>
+              )}
 
               {/* Notas: se concatenan al motivo del adelanto */}
               <div>
@@ -422,12 +487,12 @@ function Detalle({
                 {/* Aprobar (sólo Pendiente) */}
                 {a.estado === "Pendiente" && (
                   <BtnPrimary disabled={busy} onClick={handleAprobar}>
-                    <CheckCircle2 size={14} className="mr-1" /> Aprobar y ofrecer TEM
+                    <CheckCircle2 size={14} className="mr-1" /> Enviar oferta
                   </BtnPrimary>
                 )}
 
-                {/* Acreditar (sólo Aprobado) — mueve plata */}
-                {a.estado === "Aprobado" && (
+                {/* Acreditar (sólo Aceptado por la empresa) — mueve plata */}
+                {a.estado === "Aceptado" && (
                   <BtnPrimary
                     disabled={busy || poolInsuficiente}
                     onClick={handleAcreditar}
@@ -435,16 +500,16 @@ function Detalle({
                       ? "bg-red-300 cursor-not-allowed"
                       : "bg-emerald-600 hover:bg-emerald-700"}
                     title={poolInsuficiente
-                      ? "Pool de Recaudación insuficiente para financiar este adelanto. La RPC rechazará la operación."
-                      : "Descuenta de la subcuenta Recaudación (pool global) y acredita el neto en la Operativa del comercio"}
+                      ? "La recaudadora de Payway no alcanza para este adelanto. La RPC rechazará la operación."
+                      : "Sale de la recaudadora de Payway y acredita el neto en la Operativa del comercio"}
                   >
                     <Banknote size={14} className="mr-1" />
-                    {poolInsuficiente ? "Pool insuficiente" : "Acreditar y mover saldo"}
+                    {poolInsuficiente ? "Recaudadora insuficiente" : "Acreditar y mover saldo"}
                   </BtnPrimary>
                 )}
 
-                {/* Rechazar (Pendiente o Aprobado) */}
-                {(a.estado === "Pendiente" || a.estado === "Aprobado") && (
+                {/* Rechazar (solo Solicitado) */}
+                {a.estado === "Pendiente" && (
                   <BtnOutline
                     disabled={busy}
                     onClick={handleRechazar}
@@ -463,12 +528,17 @@ function Detalle({
 
           {readOnly && (
             <Card className="p-4 text-sm text-muted-foreground">
-              {a.estado === "Acreditado" ? (
+              {a.estado === "Acreditado" || a.estado === "Compensado" ? (
                 <p>
                   Este adelanto ya fue acreditado. Los fondos se depositaron en la subcuenta{" "}
                   <span className="font-mono">Operativa</span> del legajo{" "}
-                  <span className="font-mono">{a.legajo}</span> el {a.fechaAcreditacion}.
+                  <span className="font-mono">{a.legajo}</span> el {a.fechaAcreditacion}.{" "}
+                  {a.estado === "Compensado"
+                    ? "Ya se descontó todo de sus liquidaciones siguientes."
+                    : `Compensado hasta ahora: ${fmt(a.compensado ?? 0)}; se descuenta solo de sus próximos lotes.`}
                 </p>
+              ) : a.estado === "Rechazado" ? (
+                <p>Este adelanto fue rechazado.</p>
               ) : (
                 <p>Este adelanto fue cancelado por el comercio. No se pueden revertir las acciones.</p>
               )}
@@ -476,33 +546,22 @@ function Detalle({
           )}
 
           {/* Detalle del movimiento de saldo — sólo visible si ya se acreditó */}
-          {a.estado === "Acreditado" && a.fechaAcreditacion && (
+          {(a.estado === "Acreditado" || a.estado === "Compensado") && a.fechaAcreditacion && (
             <Card className="p-4 border-l-4 border-l-emerald-500">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
                 <Banknote size={14} className="text-emerald-600" /> Movimiento de saldo
               </h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Origen (Recaudación)</div>
-                <div className="font-mono text-red-600 text-right">
-                  - {fmt(a.importeSolicitado)}
-                </div>
-                <div className="text-muted-foreground">
-                  Interés (TEM {a.tasaInteresPct ?? 0}%)
-                </div>
-                <div className="font-mono text-red-600 text-right">
-                  - {fmt(
-                    Math.round((a.importeSolicitado * (a.tasaInteresPct ?? 0)) / 100 * 100) / 100,
-                  )}
-                </div>
+                <div className="text-muted-foreground">Adelantado (recaudadora de Payway)</div>
+                <div className="font-mono text-red-600 text-right">- {fmt(montoAcreditar)}</div>
+                <div className="text-muted-foreground">Descuento ({a.tasaInteresPct ?? 0}%)</div>
+                <div className="font-mono text-red-600 text-right">- {fmt(a.descuento ?? 0)}</div>
                 <div className="text-muted-foreground font-semibold">Neto a Operativa</div>
-                <div className="font-mono text-emerald-700 text-right font-semibold">
-                  +{" "}
-                  {fmt(
-                    a.importeSolicitado -
-                      Math.round((a.importeSolicitado * (a.tasaInteresPct ?? 0)) / 100 * 100) /
-                        100,
-                  )}
-                </div>
+                <div className="font-mono text-emerald-700 text-right font-semibold">+ {fmt(a.netoARecibir ?? 0)}</div>
+                <div className="text-muted-foreground">Compensado con lotes</div>
+                <div className="font-mono text-right">{fmt(a.compensado ?? 0)}</div>
+                <div className="text-muted-foreground">Pendiente de compensar</div>
+                <div className="font-mono text-right font-semibold">{fmt(Math.max(0, montoAcreditar - (a.compensado ?? 0)))}</div>
               </div>
             </Card>
           )}
@@ -609,8 +668,7 @@ function Page() {
       plazoSolicitado: `${a.plazoAdelantadoDias} días`,
       plazoContractual: `${a.plazoOriginalDias} días`,
       comision: a.tasaInteresPct != null ? `${a.tasaInteresPct}%` : "Pendiente",
-      tasaEfectiva:
-        a.tasaInteresPct != null ? `TNA ${(a.tasaInteresPct * 12).toFixed(0)}%` : undefined,
+      tasaEfectiva: a.netoARecibir != null ? `Neto ${fmt(a.netoARecibir)}` : undefined,
       estado: a.estado,
       notas: a.motivo,
       tasaInteresPct: a.tasaInteresPct,
@@ -618,6 +676,11 @@ function Page() {
       fechaAcreditacion: a.fechaAcreditacion,
       montoPorAcreditar: a.montoPorAcreditar,
       fechaResolucion: a.fechaResolucion,
+      montoOfertado: a.montoOfertado,
+      descuento: a.descuento,
+      netoARecibir: a.netoARecibir,
+      compensado: a.compensado,
+      rechazoMotivo: a.rechazoMotivo,
     };
   });
 
@@ -683,8 +746,10 @@ function Page() {
     const m: Record<EstadoAdelanto, { cantidad: number; monto: number }> = {
       Pendiente: { cantidad: 0, monto: 0 },
       Aprobado: { cantidad: 0, monto: 0 },
+      Aceptado: { cantidad: 0, monto: 0 },
       Rechazado: { cantidad: 0, monto: 0 },
       Acreditado: { cantidad: 0, monto: 0 },
+      Compensado: { cantidad: 0, monto: 0 },
       Cancelado: { cantidad: 0, monto: 0 },
     };
     for (const a of adelantosCrudos) {
@@ -734,7 +799,7 @@ function Page() {
     },
     {
       key: "comision",
-      label: "Tasa / comisión",
+      label: "Tasa / neto",
       render: (r) => (
         <div>
           <div className="font-semibold text-sm">{r.comision}</div>
@@ -746,8 +811,20 @@ function Page() {
       key: "estado",
       label: "Estado",
       filterable: "enum",
-      filterOptions: ["Pendiente", "Aprobado", "Rechazado", "Acreditado", "Cancelado"],
-      render: (r) => <Badge tone={tone(r.estado)}>{r.estado}</Badge>,
+      filterOptions: ["Pendiente", "Aprobado", "Aceptado", "Rechazado", "Acreditado", "Compensado", "Cancelado"],
+      render: (r) => <Badge tone={tone(r.estado)}>{etiqueta(r.estado)}</Badge>,
+    },
+    {
+      key: "compensado",
+      label: "Pendiente de compensar",
+      render: (r) =>
+        r.estado === "Acreditado" || r.estado === "Compensado" ? (
+          <span className="font-mono tabular-nums text-xs">
+            {fmt(Math.max(0, (r.montoOfertado ?? r.importeSolicitado) - (r.compensado ?? 0)))}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: "fechaSolicitud",
@@ -762,7 +839,7 @@ function Page() {
     <PermissionGuard recurso="comercios">
       <PageHeader
         title="Adelantos de Dinero"
-        description="Solicitudes de comercios para recibir fondos antes del plazo contractual. Se fondean desde la subcuenta Recaudación (pool) hacia la Operativa del comercio."
+        description="Solicitudes de comercios para recibir fondos antes de que Payway liquide. Se fondean desde la recaudadora de Payway hacia la Operativa del comercio y se compensan solos con sus próximos lotes."
       />
 
       {filtradoPorComercio && (
@@ -795,10 +872,12 @@ function Page() {
               className="w-full sm:min-w-[130px] h-8 px-2 rounded-md border bg-background text-xs"
             >
               <option value="">Todos</option>
-              <option value="Pendiente">Pendiente</option>
-              <option value="Aprobado">Aprobado</option>
+              <option value="Pendiente">Solicitado</option>
+              <option value="Aprobado">Ofertado</option>
+              <option value="Aceptado">Aceptado</option>
               <option value="Rechazado">Rechazado</option>
               <option value="Acreditado">Acreditado</option>
+              <option value="Compensado">Compensado</option>
               <option value="Cancelado">Cancelado</option>
             </select>
           </div>
@@ -811,13 +890,13 @@ function Page() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">
-            Pool de Recaudación (plataforma)
+            Pendiente de acreditar (recaudadora Payway)
           </div>
           <div className="font-mono text-2xl font-semibold mt-1">
             {poolCabecera ? fmt(poolCabecera.poolRecaudacionTotal) : "—"}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            Suma de saldo_disponible de todas las subcuentas tipo=Recaudación.
+            Lo que Payway ya depositó y todavía no es saldo de ningún comercio.
             Es la única fuente de fondeo para los adelantos.
           </div>
         </Card>
@@ -829,8 +908,8 @@ function Page() {
             {poolCabecera ? fmt(poolCabecera.adelantosEnCurso) : "—"}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            Capital prestado pendiente de reponer: Aprobados (aún no desembolsados)
-            + Acreditados (aún no repuestos por el lote real de Payway).
+            Adelantos acreditados que todavía no se compensaron con los lotes
+            del comercio.
           </div>
         </Card>
         <Card
@@ -862,19 +941,19 @@ function Page() {
             {poolCabecera ? fmt(poolCabecera.cupoDisponiblePool) : "—"}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            Pool − Adelantos en curso. Define si se puede seguir Acreditando.
+            Pendiente de acreditar − adelantos sin compensar. Define si se puede seguir acreditando adelantos.
           </div>
         </Card>
       </div>
 
       {/* Cards de totales por estado (cantidad + monto reservado) */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        {(["Pendiente", "Aprobado", "Rechazado", "Acreditado", "Cancelado"] as const).map((s) => {
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-4">
+        {(["Pendiente", "Aprobado", "Aceptado", "Rechazado", "Acreditado", "Compensado", "Cancelado"] as const).map((s) => {
           const t = totalesPorEstado[s];
           return (
             <Card key={s} className="p-3">
               <div className="text-xs text-muted-foreground flex items-center justify-between">
-                <span>{s}</span>
+                <span>{etiqueta(s)}</span>
                 <Badge tone={tone(s)}>{t.cantidad}</Badge>
               </div>
               <div className="font-mono text-lg font-semibold mt-1">

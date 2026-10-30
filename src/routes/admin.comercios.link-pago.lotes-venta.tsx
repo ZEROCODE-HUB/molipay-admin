@@ -15,17 +15,16 @@ import { ModalDialog } from "@/components/modal-dialog";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Pagination } from "@/components/pagination";
 import { useQuery } from "@tanstack/react-query";
-import { exportLotesVenta, listLotesVenta, listOperacionesLote } from "@/lib/api/lotes-venta";
 import { listBanderas } from "@/lib/api/banderas";
 import { useComercios } from "@/hooks/useComercios";
-import type { LoteVenta, Movimiento } from "@/lib/api/types";
+import { listVentasDiaPaginado, ventasDelDia, type VentaDia, type VentaDetalle } from "@/lib/api/acreditaciones";
 
 export const Route = createFileRoute("/admin/comercios/link-pago/lotes-venta")({
   component: Page,
   head: () => ({
     meta: [
       { title: "Lotes de Venta — Links de Pago — Admin — Moli" },
-      { name: "description", content: "Venta bruta acumulada del día por comercio, bandera y fecha (v_lotes_venta)." },
+      { name: "description", content: "Ventas brutas aprobadas por comercio y día. Informativo: no mueve dinero." },
     ],
   }),
 });
@@ -53,12 +52,12 @@ function fmtDateTime(iso: string): string {
   });
 }
 
-function estadoTone(codigo?: string): "success" | "warn" | "danger" | "neutral" {
-  if (!codigo) return "neutral";
-  if (codigo === "APROBADO") return "success";
-  if (codigo === "PENDIENTE" || codigo === "PROCESADO") return "warn";
-  if (codigo === "RECHAZADO" || codigo === "CANCELADO" || codigo === "ERROR") return "danger";
-  return "neutral";
+/**
+ * Estado del lote de venta: Abierto (dia en curso, antes del corte) o
+ * Cerrado (lote finalizado y enviado a Payway).
+ */
+function estadoLote(r: VentaDia): "Abierto" | "Cerrado" {
+  return r.estado === "Abierto" ? "Abierto" : "Cerrado";
 }
 
 function Page() {
@@ -69,7 +68,7 @@ function Page() {
   const [comercioFilter, setComercioFilter] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
-  const [detalle, setDetalle] = useState<LoteVenta | null>(null);
+  const [detalle, setDetalle] = useState<VentaDia | null>(null);
   const [exportando, setExportando] = useState(false);
 
   const { rows: comerciosOptions } = useComercios({ page: 0, pageSize: 100 });
@@ -82,14 +81,14 @@ function Page() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["lotes-venta", page, pageSize, search, banderaFilter, comercioFilter, fechaDesde, fechaHasta],
     queryFn: () =>
-      listLotesVenta({
+      listVentasDiaPaginado({
         page,
         pageSize,
         search: search || undefined,
         bandera: banderaFilter || undefined,
         comercioId: comercioFilter || undefined,
-        fechaDesde: fechaDesde || undefined,
-        fechaHasta: fechaHasta || undefined,
+        desde: fechaDesde || undefined,
+        hasta: fechaHasta || undefined,
       }),
   });
 
@@ -97,33 +96,38 @@ function Page() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const filtrosExport = {
-    search: search || undefined,
-    bandera: banderaFilter || undefined,
-    comercioId: comercioFilter || undefined,
-    fechaDesde: fechaDesde || undefined,
-    fechaHasta: fechaHasta || undefined,
-  };
-
   const exportar = async () => {
     setExportando(true);
     try {
-      const rows = await exportLotesVenta(filtrosExport);
+      const rows: VentaDia[] = [];
+      for (let p = 0; p < 50; p++) {
+        const r = await listVentasDiaPaginado({
+          page: p,
+          pageSize: 1000,
+          search: search || undefined,
+          bandera: banderaFilter || undefined,
+          comercioId: comercioFilter || undefined,
+          desde: fechaDesde || undefined,
+          hasta: fechaHasta || undefined,
+        });
+        rows.push(...r.rows);
+        if (rows.length >= r.total || r.rows.length === 0) break;
+      }
       const escape = (v: unknown) => {
         const s = v == null ? "" : String(v);
         return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
       };
-      const header = ["Fecha Venta", "Comercio", "Legajo", "Bandera", "Ops", "Bruto", "Impuestos Est.", "Comisión Est.", "Neto Estimado"];
+      const header = ["Fecha de venta", "Comercio", "Legajo", "Ventas", "Monto bruto vendido", "Por bandera", "Estado"];
       const lines = rows.map((r) => [
         parseDateLocal(r.fecha).toLocaleDateString("es-AR"),
-        r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—",
-        r.comercio?.legajo ?? r.comercioId,
-        r.bandera,
-        r.cantidadOperaciones,
-        r.importeBruto.toFixed(2),
-        r.impuestos.toFixed(2),
-        r.comision.toFixed(2),
-        r.netoEstimado.toFixed(2),
+        r.comercio_nombre ?? "—",
+        r.comercio_legajo,
+        r.ventas,
+        Number(r.bruto).toFixed(2),
+        Object.entries(r.por_bandera ?? {})
+          .map(([b, v]) => `${b}: ${Number(v).toFixed(2)}`)
+          .join(" | "),
+        estadoLote(r),
       ]);
       const csv = [header, ...lines].map((row) => row.map(escape).join(";")).join("\n");
       // BOM para que Excel interprete UTF-8 correctamente.
@@ -143,80 +147,62 @@ function Page() {
     }
   };
 
-  const columns: Column<LoteVenta>[] = [
+  const columns: Column<VentaDia>[] = [
     {
       key: "fecha",
-      label: "Fecha Venta",
+      label: "Fecha de venta",
+      hint: "Día en que se realizaron las compras en el comercio.",
       minWidth: 120,
-      render: (r) => (
-        <span className="font-mono text-xs tabular-nums">
-          {parseDateLocal(r.fecha).toLocaleDateString("es-AR")}
-        </span>
-      ),
+      render: (r) => <span className="font-mono text-xs tabular-nums">{parseDateLocal(r.fecha).toLocaleDateString("es-AR")}</span>,
     },
     {
       key: "comercio",
-      label: "Comercio / Legajo",
+      label: "Comercio",
+      hint: "Nombre de fantasía y legajo del cliente.",
       minWidth: 200,
       maxWidth: 320,
       render: (r) => (
         <div>
-          <div className="font-semibold text-sm truncate max-w-[180px]">
-            {r.comercio?.nombreComercio ?? r.comercio?.usuario ?? "—"}
-          </div>
-          <div className="font-mono text-xs text-muted-foreground">
-            {r.comercio?.legajo ?? r.comercioId}
-          </div>
+          <div className="font-semibold text-sm truncate max-w-[180px]">{r.comercio_nombre ?? "—"}</div>
+          <div className="font-mono text-xs text-muted-foreground">{r.comercio_legajo}</div>
         </div>
       ),
     },
     {
-      key: "bandera",
-      label: "Bandera",
-      minWidth: 130,
+      key: "ventas",
+      label: "Ventas (cant.)",
+      hint: "Cantidad total de transacciones aprobadas en el día.",
+      minWidth: 100,
+      render: (r) => <span className="font-mono tabular-nums">{r.ventas}</span>,
+    },
+    {
+      key: "bruto",
+      label: "Monto bruto vendido",
+      hint: "Suma total bruta cobrada al cliente final.",
+      minWidth: 150,
+      render: (r) => <span className="font-mono tabular-nums font-semibold">{fmt(Number(r.bruto))}</span>,
+    },
+    {
+      key: "por_bandera",
+      label: "Por bandera",
+      hint: "Desglose bruto por marca de tarjeta procesada.",
+      minWidth: 200,
       render: (r) => (
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">
-          {r.bandera}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          {Object.entries(r.por_bandera ?? {}).map(([b, v]) => (
+            <span key={b} className="text-xs">
+              <span className="text-muted-foreground">{b}:</span> <span className="font-mono">{fmt(Number(v))}</span>
+            </span>
+          ))}
+        </div>
       ),
     },
     {
-      key: "cantidadOperaciones",
-      label: "Ops",
-      minWidth: 80,
-      render: (r) => <span className="font-mono tabular-nums">{r.cantidadOperaciones}</span>,
-    },
-    {
-      key: "importeBruto",
-      label: "Bruto",
-      minWidth: 130,
-      render: (r) => <span className="font-mono tabular-nums">{fmt(r.importeBruto)}</span>,
-    },
-    {
-      key: "impuestos",
-      label: "Impuestos Est.",
-      minWidth: 130,
-      render: (r) => (
-        <span className="font-mono tabular-nums text-red-600">- {fmt(r.impuestos)}</span>
-      ),
-    },
-    {
-      key: "comision",
-      label: "Comisión Est.",
-      minWidth: 130,
-      render: (r) => (
-        <span className="font-mono tabular-nums text-red-600">- {fmt(r.comision)}</span>
-      ),
-    },
-    {
-      key: "netoEstimado",
-      label: "Neto Estimado",
-      minWidth: 140,
-      render: (r) => (
-        <span className="font-mono tabular-nums font-semibold text-emerald-700">
-          {fmt(r.netoEstimado)}
-        </span>
-      ),
+      key: "estado",
+      label: "Estado del lote",
+      hint: "Abierto: día en curso antes del horario de corte. Cerrado: lote finalizado y enviado a Payway.",
+      minWidth: 120,
+      render: (r) => <Badge tone={estadoLote(r) === "Abierto" ? "warn" : "neutral"}>{estadoLote(r)}</Badge>,
     },
   ];
 
@@ -226,7 +212,7 @@ function Page() {
     <PermissionGuard recurso="comercios">
       <PageHeader
         title="Lotes de Venta"
-        description="Venta bruta acumulada del día por comercio, bandera y fecha (desde v_lotes_venta). Información de proyección, la liquidación real vive en Lotes de Acreditación."
+        description="Volumen bruto de ventas aprobadas por comercio y día. Es informativo y no mueve dinero: lo cobrado vive en Lotes de Acreditación."
       />
 
       <Card className="p-4 mb-4">
@@ -241,7 +227,7 @@ function Page() {
                   setSearch(e.target.value);
                   setPage(0);
                 }}
-                placeholder="Comercio, legajo o bandera…"
+                placeholder="Comercio o legajo…"
                 className="pl-8 h-8 text-xs"
               />
             </div>
@@ -345,7 +331,7 @@ function Page() {
           <DataTable
             columns={columns}
             data={lotes}
-            keyExtractor={(r) => `${r.comercioId}-${r.bandera}-${r.fecha}`}
+            keyExtractor={(r) => `${r.comercio_id}-${r.fecha}`}
             hidePagination
             showGlobalFilter={false}
             showDownloadButton={false}
@@ -384,32 +370,28 @@ function Page() {
 
 // ============================ Detalle del lote ============================
 
-function DetalleLoteModal({ lote, onClose }: { lote: LoteVenta; onClose: () => void }) {
+function DetalleLoteModal({ lote, onClose }: { lote: VentaDia; onClose: () => void }) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["lote-venta-ops", lote.comercioId, lote.bandera, lote.fecha, page, pageSize, search],
-    queryFn: () =>
-      listOperacionesLote({
-        comercioId: lote.comercioId,
-        bandera: lote.bandera,
-        fecha: lote.fecha,
-        page,
-        pageSize,
-        search: search || undefined,
-      }),
+    queryKey: ["lote-venta-ops", lote.comercio_id, lote.fecha],
+    queryFn: () => ventasDelDia(lote.comercio_id, lote.fecha),
   });
 
-  const ops = data?.rows ?? [];
-  const total = data?.total ?? 0;
+  const filtradas = (data ?? []).filter((v) => {
+    const q = search.trim().toLowerCase();
+    return !q || v.id_txn.toLowerCase().includes(q) || (v.bandera ?? "").toLowerCase().includes(q);
+  });
+  const total = filtradas.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const ops = filtradas.slice(page * pageSize, page * pageSize + pageSize);
 
-  const columns: Column<Movimiento>[] = [
+  const columns: Column<VentaDetalle>[] = [
     {
       key: "fecha",
-      label: "Fecha",
+      label: "Hora",
       minWidth: 130,
       render: (r) => <span className="font-mono text-xs tabular-nums">{fmtDateTime(r.fecha)}</span>,
     },
@@ -419,49 +401,50 @@ function DetalleLoteModal({ lote, onClose }: { lote: LoteVenta; onClose: () => v
       minWidth: 180,
       maxWidth: 240,
       render: (r) => (
-        <span className="font-mono text-xs truncate block" title={r.idTxn}>
-          {r.idTxn}
+        <span className="font-mono text-xs truncate block" title={r.id_txn}>
+          {r.id_txn}
         </span>
       ),
     },
     {
-      key: "cliente",
-      label: "Cliente",
-      minWidth: 200,
+      key: "bandera",
+      label: "Bandera",
+      minWidth: 110,
       render: (r) => (
-        <div>
-          <div className="text-sm truncate max-w-[180px]">
-            {r.cliente?.nombre ?? r.legajo}
-          </div>
-          <div className="font-mono text-xs text-muted-foreground">{r.legajo}</div>
-        </div>
+        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-muted/50">{r.bandera ?? "—"}</span>
       ),
+    },
+    {
+      key: "cuotas",
+      label: "Cuotas",
+      minWidth: 70,
+      render: (r) => <span className="font-mono tabular-nums">{r.cuotas ?? 1}</span>,
     },
     {
       key: "montoOperacion",
       label: "Monto",
       minWidth: 110,
-      render: (r) => <span className="font-mono tabular-nums">{fmt(r.montoOperacion)}</span>,
-    },
-    {
-      key: "comision",
-      label: "Comisión",
-      minWidth: 110,
-      render: (r) => <span className="font-mono tabular-nums text-red-600">- {fmt(r.comision)}</span>,
-    },
-    {
-      key: "impuesto",
-      label: "Impuesto",
-      minWidth: 110,
-      render: (r) => <span className="font-mono tabular-nums text-red-600">- {fmt(r.impuesto)}</span>,
+      render: (r) => <span className="font-mono tabular-nums">{fmt(Number(r.monto_operacion))}</span>,
     },
     {
       key: "estado",
       label: "Estado",
       minWidth: 110,
-      render: (r) => (
-        <Badge tone={estadoTone(r.estadoCodigo)}>{r.estadoNombre ?? r.estadoCodigo ?? "—"}</Badge>
-      ),
+      render: () => <Badge tone="success">Autorizada</Badge>,
+    },
+    {
+      key: "lote",
+      label: "Lote de acreditación",
+      minWidth: 180,
+      render: (r) =>
+        r.lote ? (
+          <span className="font-mono text-xs">
+            {r.lote.codigo} · {r.lote.estado}
+            {r.lote.origen === "venta" ? ` (est. ${parseDateLocal(r.lote.fecha).toLocaleDateString("es-AR")})` : ""}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
   ];
 
@@ -470,37 +453,27 @@ function DetalleLoteModal({ lote, onClose }: { lote: LoteVenta; onClose: () => v
       open
       onClose={onClose}
       title="Detalle del lote de venta"
-      description={`${parseDateLocal(lote.fecha).toLocaleDateString("es-AR")} · ${
-        lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"
-      } · ${lote.comercio?.legajo ?? lote.comercioId} · ${lote.bandera}`}
+      description={`${parseDateLocal(lote.fecha).toLocaleDateString("es-AR")} · ${lote.comercio_nombre ?? "—"} · ${lote.comercio_legajo} · ${estadoLote(lote)}`}
       size="xl"
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-xs text-muted-foreground">Operaciones</div>
-            <div className="font-mono font-semibold text-lg">{lote.cantidadOperaciones}</div>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-xs text-muted-foreground">Bruto</div>
-            <div className="font-mono font-semibold text-lg">{fmt(lote.importeBruto)}</div>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-xs text-muted-foreground">Impuestos Est.</div>
-            <div className="font-mono font-semibold text-lg text-red-600">
-              - {fmt(lote.impuestos)}
-            </div>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-xs text-muted-foreground">Comisión Est.</div>
-            <div className="font-mono font-semibold text-lg text-red-600">
-              - {fmt(lote.comision)}
-            </div>
+            <div className="text-xs text-muted-foreground">Ventas</div>
+            <div className="font-mono font-semibold text-lg">{lote.ventas}</div>
           </div>
           <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 p-3">
-            <div className="text-xs text-muted-foreground">Neto Estimado</div>
-            <div className="font-mono font-semibold text-lg text-emerald-700">
-              {fmt(lote.netoEstimado)}
+            <div className="text-xs text-muted-foreground">Monto bruto vendido</div>
+            <div className="font-mono font-semibold text-lg text-emerald-700">{fmt(Number(lote.bruto))}</div>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3 md:col-span-2">
+            <div className="text-xs text-muted-foreground">Por bandera</div>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {Object.entries(lote.por_bandera ?? {}).map(([b, v]) => (
+                <span key={b} className="text-sm">
+                  <span className="text-muted-foreground">{b}:</span> <span className="font-mono font-semibold">{fmt(Number(v))}</span>
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -513,7 +486,7 @@ function DetalleLoteModal({ lote, onClose }: { lote: LoteVenta; onClose: () => v
               setSearch(e.target.value);
               setPage(0);
             }}
-            placeholder="Buscar por ID, legajo, cliente…"
+            placeholder="Buscar por ID o bandera…"
             className="pl-8 h-8 text-xs"
           />
         </div>

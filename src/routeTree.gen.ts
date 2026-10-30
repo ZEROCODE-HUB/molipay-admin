@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminCentroAlertasRouteImport } from './routes/admin.centro-alertas'
 import { Route as AdminComerciosRouteImport } from './routes/admin.comercios'
 import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
 import { Route as AdminIncidentesRouteImport } from './routes/admin.incidentes'
@@ -57,11 +58,16 @@ import { Route as AdminComerciosImpuestosDebitosCreditosRouteImport } from './ro
 import { Route as AdminComerciosImpuestosIngresosBrutosRouteImport } from './routes/admin.comercios.impuestos.ingresos-brutos'
 import { Route as AdminComerciosImpuestosUsuariosRouteImport } from './routes/admin.comercios.impuestos.usuarios'
 import { Route as AdminComerciosLinkPagoIndexRouteImport } from './routes/admin.comercios.link-pago.index'
+import { Route as AdminComerciosLinkPagoAcreditacionesRouteImport } from './routes/admin.comercios.link-pago.acreditaciones'
 import { Route as AdminComerciosLinkPagoAdelantosRouteImport } from './routes/admin.comercios.link-pago.adelantos'
 import { Route as AdminComerciosLinkPagoCalendarioAcreditacionesRouteImport } from './routes/admin.comercios.link-pago.calendario-acreditaciones'
 import { Route as AdminComerciosLinkPagoContracargosRouteImport } from './routes/admin.comercios.link-pago.contracargos'
+import { Route as AdminComerciosLinkPagoEjecucionRouteImport } from './routes/admin.comercios.link-pago.ejecucion'
+import { Route as AdminComerciosLinkPagoExcepcionesRouteImport } from './routes/admin.comercios.link-pago.excepciones'
+import { Route as AdminComerciosLinkPagoLiquidacionesRouteImport } from './routes/admin.comercios.link-pago.liquidaciones'
 import { Route as AdminComerciosLinkPagoLotesRouteImport } from './routes/admin.comercios.link-pago.lotes'
 import { Route as AdminComerciosLinkPagoLotesVentaRouteImport } from './routes/admin.comercios.link-pago.lotes-venta'
+import { Route as AdminComerciosLinkPagoParametrosRouteImport } from './routes/admin.comercios.link-pago.parametros'
 import { Route as AdminComerciosLinkPagoResumenRouteImport } from './routes/admin.comercios.link-pago.resumen'
 import { Route as AdminComerciosTransferenciaIndexRouteImport } from './routes/admin.comercios.transferencia.index'
 import { Route as AdminGeneralAlertasIndexRouteImport } from './routes/admin.general.alertas.index'
@@ -94,6 +100,11 @@ const AdminRoute = AdminRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCentroAlertasRoute = AdminCentroAlertasRouteImport.update({
+  id: '/centro-alertas',
+  path: '/centro-alertas',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminComerciosRoute = AdminComerciosRouteImport.update({
@@ -347,6 +358,12 @@ const AdminComerciosLinkPagoIndexRoute =
     path: '/',
     getParentRoute: () => AdminComerciosLinkPagoRoute,
   } as any)
+const AdminComerciosLinkPagoAcreditacionesRoute =
+  AdminComerciosLinkPagoAcreditacionesRouteImport.update({
+    id: '/acreditaciones',
+    path: '/acreditaciones',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
 const AdminComerciosLinkPagoAdelantosRoute =
   AdminComerciosLinkPagoAdelantosRouteImport.update({
     id: '/adelantos',
@@ -365,6 +382,24 @@ const AdminComerciosLinkPagoContracargosRoute =
     path: '/contracargos',
     getParentRoute: () => AdminComerciosLinkPagoRoute,
   } as any)
+const AdminComerciosLinkPagoEjecucionRoute =
+  AdminComerciosLinkPagoEjecucionRouteImport.update({
+    id: '/ejecucion',
+    path: '/ejecucion',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
+const AdminComerciosLinkPagoExcepcionesRoute =
+  AdminComerciosLinkPagoExcepcionesRouteImport.update({
+    id: '/excepciones',
+    path: '/excepciones',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
+const AdminComerciosLinkPagoLiquidacionesRoute =
+  AdminComerciosLinkPagoLiquidacionesRouteImport.update({
+    id: '/liquidaciones',
+    path: '/liquidaciones',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
 const AdminComerciosLinkPagoLotesRoute =
   AdminComerciosLinkPagoLotesRouteImport.update({
     id: '/lotes',
@@ -375,6 +410,12 @@ const AdminComerciosLinkPagoLotesVentaRoute =
   AdminComerciosLinkPagoLotesVentaRouteImport.update({
     id: '/lotes-venta',
     path: '/lotes-venta',
+    getParentRoute: () => AdminComerciosLinkPagoRoute,
+  } as any)
+const AdminComerciosLinkPagoParametrosRoute =
+  AdminComerciosLinkPagoParametrosRouteImport.update({
+    id: '/parametros',
+    path: '/parametros',
     getParentRoute: () => AdminComerciosLinkPagoRoute,
   } as any)
 const AdminComerciosLinkPagoResumenRoute =
@@ -488,6 +529,7 @@ const AdminComerciosImpuestosIngresosBrutosIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/centro-alertas': typeof AdminCentroAlertasRoute
   '/admin/comercios': typeof AdminComerciosRouteWithChildren
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
@@ -527,11 +569,16 @@ export interface FileRoutesByFullPath {
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/acreditaciones': typeof AdminComerciosLinkPagoAcreditacionesRoute
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/calendario-acreditaciones': typeof AdminComerciosLinkPagoCalendarioAcreditacionesRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/ejecucion': typeof AdminComerciosLinkPagoEjecucionRoute
+  '/admin/comercios/link-pago/excepciones': typeof AdminComerciosLinkPagoExcepcionesRoute
+  '/admin/comercios/link-pago/liquidaciones': typeof AdminComerciosLinkPagoLiquidacionesRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/lotes-venta': typeof AdminComerciosLinkPagoLotesVentaRoute
+  '/admin/comercios/link-pago/parametros': typeof AdminComerciosLinkPagoParametrosRoute
   '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -560,6 +607,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/centro-alertas': typeof AdminCentroAlertasRoute
   '/admin/incidentes': typeof AdminIncidentesRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
@@ -584,11 +632,16 @@ export interface FileRoutesByTo {
   '/admin/comercios/gestion/metodos-pago': typeof AdminComerciosGestionMetodosPagoRoute
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/acreditaciones': typeof AdminComerciosLinkPagoAcreditacionesRoute
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/calendario-acreditaciones': typeof AdminComerciosLinkPagoCalendarioAcreditacionesRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/ejecucion': typeof AdminComerciosLinkPagoEjecucionRoute
+  '/admin/comercios/link-pago/excepciones': typeof AdminComerciosLinkPagoExcepcionesRoute
+  '/admin/comercios/link-pago/liquidaciones': typeof AdminComerciosLinkPagoLiquidacionesRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/lotes-venta': typeof AdminComerciosLinkPagoLotesVentaRoute
+  '/admin/comercios/link-pago/parametros': typeof AdminComerciosLinkPagoParametrosRoute
   '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -619,6 +672,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/centro-alertas': typeof AdminCentroAlertasRoute
   '/admin/comercios': typeof AdminComerciosRouteWithChildren
   '/admin/configuracion': typeof AdminConfiguracionRouteWithChildren
   '/admin/incidentes': typeof AdminIncidentesRoute
@@ -658,11 +712,16 @@ export interface FileRoutesById {
   '/admin/comercios/impuestos/debitos-creditos': typeof AdminComerciosImpuestosDebitosCreditosRoute
   '/admin/comercios/impuestos/ingresos-brutos': typeof AdminComerciosImpuestosIngresosBrutosRouteWithChildren
   '/admin/comercios/impuestos/usuarios': typeof AdminComerciosImpuestosUsuariosRoute
+  '/admin/comercios/link-pago/acreditaciones': typeof AdminComerciosLinkPagoAcreditacionesRoute
   '/admin/comercios/link-pago/adelantos': typeof AdminComerciosLinkPagoAdelantosRoute
   '/admin/comercios/link-pago/calendario-acreditaciones': typeof AdminComerciosLinkPagoCalendarioAcreditacionesRoute
   '/admin/comercios/link-pago/contracargos': typeof AdminComerciosLinkPagoContracargosRoute
+  '/admin/comercios/link-pago/ejecucion': typeof AdminComerciosLinkPagoEjecucionRoute
+  '/admin/comercios/link-pago/excepciones': typeof AdminComerciosLinkPagoExcepcionesRoute
+  '/admin/comercios/link-pago/liquidaciones': typeof AdminComerciosLinkPagoLiquidacionesRoute
   '/admin/comercios/link-pago/lotes': typeof AdminComerciosLinkPagoLotesRoute
   '/admin/comercios/link-pago/lotes-venta': typeof AdminComerciosLinkPagoLotesVentaRoute
+  '/admin/comercios/link-pago/parametros': typeof AdminComerciosLinkPagoParametrosRoute
   '/admin/comercios/link-pago/resumen': typeof AdminComerciosLinkPagoResumenRoute
   '/admin/general/alertas/bloqueos': typeof AdminGeneralAlertasBloqueosRoute
   '/admin/general/alertas/parametros-alertas': typeof AdminGeneralAlertasParametrosAlertasRoute
@@ -694,6 +753,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/centro-alertas'
     | '/admin/comercios'
     | '/admin/configuracion'
     | '/admin/incidentes'
@@ -733,11 +793,16 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/acreditaciones'
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/calendario-acreditaciones'
     | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/ejecucion'
+    | '/admin/comercios/link-pago/excepciones'
+    | '/admin/comercios/link-pago/liquidaciones'
     | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/lotes-venta'
+    | '/admin/comercios/link-pago/parametros'
     | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -766,6 +831,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/centro-alertas'
     | '/admin/incidentes'
     | '/admin/modulos'
     | '/legales/arrepentimiento'
@@ -790,11 +856,16 @@ export interface FileRouteTypes {
     | '/admin/comercios/gestion/metodos-pago'
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/acreditaciones'
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/calendario-acreditaciones'
     | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/ejecucion'
+    | '/admin/comercios/link-pago/excepciones'
+    | '/admin/comercios/link-pago/liquidaciones'
     | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/lotes-venta'
+    | '/admin/comercios/link-pago/parametros'
     | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -824,6 +895,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/centro-alertas'
     | '/admin/comercios'
     | '/admin/configuracion'
     | '/admin/incidentes'
@@ -863,11 +935,16 @@ export interface FileRouteTypes {
     | '/admin/comercios/impuestos/debitos-creditos'
     | '/admin/comercios/impuestos/ingresos-brutos'
     | '/admin/comercios/impuestos/usuarios'
+    | '/admin/comercios/link-pago/acreditaciones'
     | '/admin/comercios/link-pago/adelantos'
     | '/admin/comercios/link-pago/calendario-acreditaciones'
     | '/admin/comercios/link-pago/contracargos'
+    | '/admin/comercios/link-pago/ejecucion'
+    | '/admin/comercios/link-pago/excepciones'
+    | '/admin/comercios/link-pago/liquidaciones'
     | '/admin/comercios/link-pago/lotes'
     | '/admin/comercios/link-pago/lotes-venta'
+    | '/admin/comercios/link-pago/parametros'
     | '/admin/comercios/link-pago/resumen'
     | '/admin/general/alertas/bloqueos'
     | '/admin/general/alertas/parametros-alertas'
@@ -925,6 +1002,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/centro-alertas': {
+      id: '/admin/centro-alertas'
+      path: '/centro-alertas'
+      fullPath: '/admin/centro-alertas'
+      preLoaderRoute: typeof AdminCentroAlertasRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/comercios': {
@@ -1242,6 +1326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosLinkPagoIndexRouteImport
       parentRoute: typeof AdminComerciosLinkPagoRoute
     }
+    '/admin/comercios/link-pago/acreditaciones': {
+      id: '/admin/comercios/link-pago/acreditaciones'
+      path: '/acreditaciones'
+      fullPath: '/admin/comercios/link-pago/acreditaciones'
+      preLoaderRoute: typeof AdminComerciosLinkPagoAcreditacionesRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
     '/admin/comercios/link-pago/adelantos': {
       id: '/admin/comercios/link-pago/adelantos'
       path: '/adelantos'
@@ -1263,6 +1354,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComerciosLinkPagoContracargosRouteImport
       parentRoute: typeof AdminComerciosLinkPagoRoute
     }
+    '/admin/comercios/link-pago/ejecucion': {
+      id: '/admin/comercios/link-pago/ejecucion'
+      path: '/ejecucion'
+      fullPath: '/admin/comercios/link-pago/ejecucion'
+      preLoaderRoute: typeof AdminComerciosLinkPagoEjecucionRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
+    '/admin/comercios/link-pago/excepciones': {
+      id: '/admin/comercios/link-pago/excepciones'
+      path: '/excepciones'
+      fullPath: '/admin/comercios/link-pago/excepciones'
+      preLoaderRoute: typeof AdminComerciosLinkPagoExcepcionesRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
+    '/admin/comercios/link-pago/liquidaciones': {
+      id: '/admin/comercios/link-pago/liquidaciones'
+      path: '/liquidaciones'
+      fullPath: '/admin/comercios/link-pago/liquidaciones'
+      preLoaderRoute: typeof AdminComerciosLinkPagoLiquidacionesRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
     '/admin/comercios/link-pago/lotes': {
       id: '/admin/comercios/link-pago/lotes'
       path: '/lotes'
@@ -1275,6 +1387,13 @@ declare module '@tanstack/react-router' {
       path: '/lotes-venta'
       fullPath: '/admin/comercios/link-pago/lotes-venta'
       preLoaderRoute: typeof AdminComerciosLinkPagoLotesVentaRouteImport
+      parentRoute: typeof AdminComerciosLinkPagoRoute
+    }
+    '/admin/comercios/link-pago/parametros': {
+      id: '/admin/comercios/link-pago/parametros'
+      path: '/parametros'
+      fullPath: '/admin/comercios/link-pago/parametros'
+      preLoaderRoute: typeof AdminComerciosLinkPagoParametrosRouteImport
       parentRoute: typeof AdminComerciosLinkPagoRoute
     }
     '/admin/comercios/link-pago/resumen': {
@@ -1478,25 +1597,39 @@ const AdminComerciosImpuestosRouteWithChildren =
   )
 
 interface AdminComerciosLinkPagoRouteChildren {
+  AdminComerciosLinkPagoAcreditacionesRoute: typeof AdminComerciosLinkPagoAcreditacionesRoute
   AdminComerciosLinkPagoAdelantosRoute: typeof AdminComerciosLinkPagoAdelantosRoute
   AdminComerciosLinkPagoCalendarioAcreditacionesRoute: typeof AdminComerciosLinkPagoCalendarioAcreditacionesRoute
   AdminComerciosLinkPagoContracargosRoute: typeof AdminComerciosLinkPagoContracargosRoute
+  AdminComerciosLinkPagoEjecucionRoute: typeof AdminComerciosLinkPagoEjecucionRoute
+  AdminComerciosLinkPagoExcepcionesRoute: typeof AdminComerciosLinkPagoExcepcionesRoute
+  AdminComerciosLinkPagoLiquidacionesRoute: typeof AdminComerciosLinkPagoLiquidacionesRoute
   AdminComerciosLinkPagoLotesRoute: typeof AdminComerciosLinkPagoLotesRoute
   AdminComerciosLinkPagoLotesVentaRoute: typeof AdminComerciosLinkPagoLotesVentaRoute
+  AdminComerciosLinkPagoParametrosRoute: typeof AdminComerciosLinkPagoParametrosRoute
   AdminComerciosLinkPagoResumenRoute: typeof AdminComerciosLinkPagoResumenRoute
   AdminComerciosLinkPagoIndexRoute: typeof AdminComerciosLinkPagoIndexRoute
 }
 
 const AdminComerciosLinkPagoRouteChildren: AdminComerciosLinkPagoRouteChildren =
   {
+    AdminComerciosLinkPagoAcreditacionesRoute:
+      AdminComerciosLinkPagoAcreditacionesRoute,
     AdminComerciosLinkPagoAdelantosRoute: AdminComerciosLinkPagoAdelantosRoute,
     AdminComerciosLinkPagoCalendarioAcreditacionesRoute:
       AdminComerciosLinkPagoCalendarioAcreditacionesRoute,
     AdminComerciosLinkPagoContracargosRoute:
       AdminComerciosLinkPagoContracargosRoute,
+    AdminComerciosLinkPagoEjecucionRoute: AdminComerciosLinkPagoEjecucionRoute,
+    AdminComerciosLinkPagoExcepcionesRoute:
+      AdminComerciosLinkPagoExcepcionesRoute,
+    AdminComerciosLinkPagoLiquidacionesRoute:
+      AdminComerciosLinkPagoLiquidacionesRoute,
     AdminComerciosLinkPagoLotesRoute: AdminComerciosLinkPagoLotesRoute,
     AdminComerciosLinkPagoLotesVentaRoute:
       AdminComerciosLinkPagoLotesVentaRoute,
+    AdminComerciosLinkPagoParametrosRoute:
+      AdminComerciosLinkPagoParametrosRoute,
     AdminComerciosLinkPagoResumenRoute: AdminComerciosLinkPagoResumenRoute,
     AdminComerciosLinkPagoIndexRoute: AdminComerciosLinkPagoIndexRoute,
   }
@@ -1694,6 +1827,7 @@ const AdminGeneralUsuariosRouteWithChildren =
   AdminGeneralUsuariosRoute._addFileChildren(AdminGeneralUsuariosRouteChildren)
 
 interface AdminRouteChildren {
+  AdminCentroAlertasRoute: typeof AdminCentroAlertasRoute
   AdminComerciosRoute: typeof AdminComerciosRouteWithChildren
   AdminConfiguracionRoute: typeof AdminConfiguracionRouteWithChildren
   AdminIncidentesRoute: typeof AdminIncidentesRoute
@@ -1710,6 +1844,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCentroAlertasRoute: AdminCentroAlertasRoute,
   AdminComerciosRoute: AdminComerciosRouteWithChildren,
   AdminConfiguracionRoute: AdminConfiguracionRouteWithChildren,
   AdminIncidentesRoute: AdminIncidentesRoute,

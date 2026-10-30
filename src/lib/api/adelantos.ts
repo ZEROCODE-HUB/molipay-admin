@@ -2,8 +2,20 @@ import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
 import type { Adelanto, AdelantoRow, EstadoAdelanto } from "./types";
 
+// Adelantos de dinero (modulo de acreditaciones).
+//
+// Ciclo: Pendiente (Solicitado) -> Aprobado (Ofertado, con tasa) ->
+// Aceptado (lo acepta la empresa) -> Acreditado -> Compensado (se descuenta
+// solo al acreditar los proximos lotes del comercio).
+//
+// Los cambios de estado pasan por RPCs SECURITY DEFINER:
+//   adelanto_ofertar, adelanto_rechazar, adelanto_acreditar (backoffice)
+//   adelanto_aceptar, cancelar_adelanto (empresa)
+// El adelanto sale de la recaudadora comun de Payway, no de una subcuenta
+// del comercio. La tasa es un descuento unico: monto x tasa.
+
 const COLUMNS =
-  "id, comercio_id, monto_solicitado, plazo_original_dias, plazo_adelantado_dias, tasa_interes_pct, estado, motivo, fecha_acreditacion, monto_por_acreditar, fecha_solicitud, fecha_resolucion, resuelto_por, created_at, updated_at";
+  "id, comercio_id, monto_solicitado, plazo_original_dias, plazo_adelantado_dias, tasa_interes_pct, estado, motivo, fecha_acreditacion, monto_por_acreditar, fecha_solicitud, fecha_resolucion, resuelto_por, created_at, updated_at, monto_ofertado, descuento, neto_a_recibir, compensado, modelo, rechazo_motivo, aceptado_at";
 
 function toAdelanto(r: AdelantoRow): Adelanto {
   return {
@@ -22,6 +34,13 @@ function toAdelanto(r: AdelantoRow): Adelanto {
     resueltoPor: r.resuelto_por,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    montoOfertado: r.monto_ofertado != null ? Number(r.monto_ofertado) : null,
+    descuento: r.descuento != null ? Number(r.descuento) : null,
+    netoARecibir: r.neto_a_recibir != null ? Number(r.neto_a_recibir) : null,
+    compensado: Number(r.compensado ?? 0),
+    modelo: r.modelo ?? "legacy",
+    rechazoMotivo: r.rechazo_motivo ?? null,
+    aceptadoAt: r.aceptado_at ?? null,
   };
 }
 
@@ -57,68 +76,51 @@ export async function listAdelantos(filters: {
 }
 
 /**
- * Tope disponible que el comercio tiene para pedir un adelanto.
- *
- * Llama a la RPC `fn_calcular_tope_disponible` (fuente única de
- * verdad en la DB) en vez de recalcular la fórmula en JS. El front
- * debe usar siempre esta función para que no se desincronicen las
- * dos puntas.
+ * Tope que puede pedir el comercio (RPC adelanto_tope): vendido con tarjeta y
+ * no acreditado (neto estimado) menos los adelantos vigentes.
  */
-export async function calcularTopeDisponible(comercioId: string): Promise<number> {
+export async function calcularTopeDisponible(comercioId: string, excluirAdelanto?: string): Promise<number> {
   const sb = requireSupabase();
-  const { data, error } = await sb.rpc("fn_calcular_tope_disponible", {
+  const { data, error } = await sb.rpc("adelanto_tope", {
     p_comercio_id: comercioId,
+    p_excluir_adelanto: excluirAdelanto ?? null,
   });
   if (error) {
-    // Si la RPC no existe (migración no aplicada), caemos a 0 y el
-    // operador verá el problema en la consola. NO recalculamos en JS.
-    console.warn("fn_calcular_tope_disponible no disponible:", error.message);
+    console.warn("adelanto_tope no disponible:", error.message);
     return 0;
   }
-  return Number(data ?? 0);
+  return Number((data as { tope?: number } | null)?.tope ?? 0);
 }
 
-/**
- * KPIs del Pool de Recaudación de la plataforma.
- *
- * El pool es la suma de saldo_disponible de TODAS las subcuentas
- * tipo='Recaudacion'. Es la única fuente de fondeo para los adelantos:
- * MoliPay NUNCA usa capital propio. La UI del backoffice muestra estos
- * tres valores en la cabecera y bloquea el botón "Acreditar" si el
- * cupo_disponible_pool es insuficiente.
- */
 export type PoolRecaudacion = {
-  /** Σ saldo_disponible de subcuentas tipo=Recaudacion */
+  /** Lo que entro a la recaudadora de Payway y todavia no se acredito. */
   poolRecaudacionTotal: number;
-  /** Σ monto_solicitado de adelantos Aprobado + Acreditado (los
-   *  Acreditados aún no se repusieron al liquidar el lote real) */
+  /** Adelantos acreditados que falta compensar. */
   adelantosEnCurso: number;
-  /** pool_recaudacion_total - adelantos_en_curso. Cuánto le queda
-   *  libre al pool para autorizar nuevos Acreditar. */
+  /** Disponible para nuevos adelantos. */
   cupoDisponiblePool: number;
 };
 
+/** Estado de la recaudadora de Payway (RPC recaudadora_estado). */
 export async function obtenerPoolRecaudacion(): Promise<PoolRecaudacion> {
   const sb = requireSupabase();
-  const { data, error } = await sb.rpc("rpc_pool_recaudacion");
+  const { data, error } = await sb.rpc("recaudadora_estado");
   if (error) {
-    // Si la RPC no existe (migración no aplicada), caemos a 0 para no
-    // romper la pantalla. La UI mostrará "Pool no disponible".
-    console.warn("rpc_pool_recaudacion no disponible:", error.message);
-    return {
-      poolRecaudacionTotal: 0,
-      adelantosEnCurso: 0,
-      cupoDisponiblePool: 0,
-    };
+    console.warn("recaudadora_estado no disponible:", error.message);
+    return { poolRecaudacionTotal: 0, adelantosEnCurso: 0, cupoDisponiblePool: 0 };
   }
   const r = (data ?? {}) as Record<string, unknown>;
   return {
-    poolRecaudacionTotal: Number(r.pool_recaudacion_total ?? 0),
-    adelantosEnCurso: Number(r.adelantos_en_curso ?? 0),
-    cupoDisponiblePool: Number(r.cupo_disponible_pool ?? 0),
+    poolRecaudacionTotal: Number(r.pendiente_acreditar ?? 0),
+    adelantosEnCurso: Number(r.adelantos_sin_compensar ?? 0),
+    cupoDisponiblePool: Number(r.disponible_adelantos ?? 0),
   };
 }
 
+/**
+ * Alta de un adelanto desde el backoffice (en nombre del comercio). Queda
+ * Pendiente (Solicitado) y sigue el mismo ciclo que los que pide la empresa.
+ */
 export async function createAdelanto(input: {
   comercioId: string;
   montoSolicitado: number;
@@ -132,10 +134,6 @@ export async function createAdelanto(input: {
 }): Promise<Adelanto> {
   const sb = requireSupabase();
 
-  // Validación: el comercio debe tener CVU y comisiones configuradas
-  // para operar. Basado en detalle_reunion_revision_plataforma.md
-  // Seccion 6: "bloquear operaciones a nivel de servidor para
-  // comercios sin CVU/comisión configurada".
   try {
     const { data: puedeOperar, error: rpcError } = await sb.rpc("validar_operacion_comercio", {
       p_comercio_id: input.comercioId,
@@ -144,9 +142,7 @@ export async function createAdelanto(input: {
       console.warn("No se pudo validar operación del comercio:", rpcError.message);
     } else if (puedeOperar === false) {
       throw new DataAccessError(
-        new Error(
-          "Tu comercio no tiene CVU o comisiones configuradas y no puede operar. Contactá a soporte.",
-        ),
+        new Error("Tu comercio no tiene CVU o comisiones configuradas y no puede operar. Contactá a soporte."),
       );
     }
   } catch (e) {
@@ -154,62 +150,13 @@ export async function createAdelanto(input: {
     console.warn("Error al validar operación del comercio:", e);
   }
 
-  // Validación del tope: usamos la RPC `fn_calcular_tope_disponible`
-  // (fuente única de verdad) en lugar de recalcular la fórmula en JS.
-  // Si la RPC no está disponible (migración no aplicada), caemos al
-  // comportamiento viejo basado en `v_lotes_venta` para no romper el
-  // flujo, pero el warning queda en consola.
-  try {
-    const { data: rpcData, error: rpcError } = await sb.rpc("fn_calcular_tope_disponible", {
-      p_comercio_id: input.comercioId,
-    });
-    if (!rpcError) {
-      const tope = Number(rpcData ?? 0);
-      if (input.montoSolicitado > tope) {
-        throw new DataAccessError(
-          new Error(
-            `El monto solicitado ($${input.montoSolicitado.toLocaleString()}) supera el máximo disponible para adelantar ($${tope.toLocaleString()}).`,
-          ),
-        );
-      }
-    } else {
-      throw new Error(rpcError.message);
-    }
-  } catch (e) {
-    if (e instanceof DataAccessError) throw e;
-    // Fallback: cálculo en JS sólo si la RPC no está disponible.
-    console.warn("fn_calcular_tope_disponible no disponible, usando fallback:", e);
-    try {
-      const { data: ventasData } = await sb
-        .from("v_lotes_venta")
-        .select("importe_neto")
-        .eq("comercio_id", input.comercioId);
-      const totalVendido = (ventasData ?? []).reduce(
-        (sum: number, v: { importe_neto: number }) => sum + Number(v.importe_neto ?? 0),
-        0,
-      );
-      const { data: adelantosData } = await sb
-        .from("adelantos")
-        .select("monto_por_acreditar")
-        .eq("comercio_id", input.comercioId)
-        .in("estado", ["Pendiente", "Aprobado"]);
-      const adelantosPendientes = (adelantosData ?? []).reduce(
-        (sum: number, a: { monto_por_acreditar: number | null }) =>
-          sum + Number(a.monto_por_acreditar ?? 0),
-        0,
-      );
-      const montoMaximo = totalVendido - adelantosPendientes;
-      if (input.montoSolicitado > montoMaximo) {
-        throw new DataAccessError(
-          new Error(
-            `El monto solicitado ($${input.montoSolicitado.toLocaleString()}) supera el máximo disponible para adelantar ($${montoMaximo.toLocaleString()}). Ventas totales: $${totalVendido.toLocaleString()}, adelantos pendientes: $${adelantosPendientes.toLocaleString()}.`,
-          ),
-        );
-      }
-    } catch (inner) {
-      if (inner instanceof DataAccessError) throw inner;
-      console.warn("No se pudo validar el monto máximo de adelanto:", inner);
-    }
+  const tope = await calcularTopeDisponible(input.comercioId);
+  if (input.montoSolicitado > tope) {
+    throw new DataAccessError(
+      new Error(
+        `El monto solicitado ($${input.montoSolicitado.toLocaleString()}) supera el máximo disponible para adelantar ($${tope.toLocaleString()}).`,
+      ),
+    );
   }
 
   const payload = {
@@ -217,45 +164,59 @@ export async function createAdelanto(input: {
     monto_solicitado: input.montoSolicitado,
     plazo_original_dias: input.plazoOriginalDias ?? 30,
     plazo_adelantado_dias: input.plazoAdelantadoDias,
-    tasa_interes_pct: input.tasaInteresPct ?? null,
-    estado: input.estado ?? "Pendiente",
+    estado: "Pendiente",
     motivo: input.motivo ?? null,
     fecha_acreditacion: input.fechaAcreditacion ?? null,
-    monto_por_acreditar: input.montoPorAcreditar ?? null,
+    tope_al_solicitar: tope,
+    modelo: "v2",
   };
   const { data, error } = await sb.from("adelantos").insert(payload).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
   return toAdelanto(data as AdelantoRow);
 }
 
-// =====================================================================
-// Acciones del admin: aprobar, rechazar y acreditar
-// =====================================================================
-// Estas acciones van por RPC para mantener la lógica en un solo lugar
-// y para que la validación del estado sea atómica (FOR UPDATE). El
-// `updateAdelanto` de abajo queda para campos menores (motivo,
-// montoPorAcreditar) y para los cambios de estado que no requieren
-// mover plata (Aprobado <-> Pendiente si el admin se arrepiente).
-
 export type ResultadoAprobarAdelanto = {
   adelantoId: string;
   estado: "Aprobado";
   tasaPct: number;
   montoSolicitado: number;
+  descuento: number;
+  netoARecibir: number;
+  alcanza: boolean;
   comercioId: string;
 };
 
-/** Aprueba un adelanto Pendiente y le carga la TEM. */
+/**
+ * Oferta al comercio (RPC adelanto_ofertar): monto, tasa y plazo. Si no se
+ * pasan monto / plazo se usan los del pedido. La empresa despues acepta o
+ * cancela desde su portal.
+ */
 export async function aprobarAdelanto(
   id: string,
   tasaPct: number,
-  notas?: string,
+  _notas?: string,
+  opciones: { monto?: number; plazoDias?: number } = {},
 ): Promise<ResultadoAprobarAdelanto> {
   const sb = requireSupabase();
-  const { data, error } = await sb.rpc("fn_aprobar_adelanto", {
+  let monto = opciones.monto;
+  let plazo = opciones.plazoDias;
+  let comercioId = "";
+  if (monto == null || plazo == null) {
+    const { data: a, error: e1 } = await sb
+      .from("adelantos")
+      .select("monto_solicitado, plazo_adelantado_dias, comercio_id")
+      .eq("id", id)
+      .single();
+    if (e1) throw new DataAccessError(e1);
+    monto = monto ?? Number(a.monto_solicitado);
+    plazo = plazo ?? Number(a.plazo_adelantado_dias);
+    comercioId = String(a.comercio_id);
+  }
+  const { data, error } = await sb.rpc("adelanto_ofertar", {
     p_adelanto_id: id,
+    p_monto: monto,
     p_tasa_pct: tasaPct,
-    p_notas: notas ?? null,
+    p_plazo_dias: plazo,
   });
   if (error) throw new DataAccessError(error);
   const r = (data ?? {}) as Record<string, unknown>;
@@ -263,8 +224,11 @@ export async function aprobarAdelanto(
     adelantoId: String(r.adelanto_id ?? id),
     estado: "Aprobado",
     tasaPct: Number(r.tasa_pct ?? tasaPct),
-    montoSolicitado: Number(r.monto_solicitado ?? 0),
-    comercioId: String(r.comercio_id ?? ""),
+    montoSolicitado: Number(r.monto ?? monto),
+    descuento: Number(r.descuento ?? 0),
+    netoARecibir: Number(r.neto_a_recibir ?? 0),
+    alcanza: Boolean(r.alcanza),
+    comercioId,
   };
 }
 
@@ -281,71 +245,35 @@ export type ResultadoAcreditarAdelanto = {
   fechaAcreditacion: string;
 };
 
-/** Acredita un adelanto Aprobado: mueve plata de Recaudación a Operativa. */
-export async function acreditarAdelanto(
-  id: string,
-  notas?: string,
-): Promise<ResultadoAcreditarAdelanto> {
+/**
+ * Acredita un adelanto Aceptado por la empresa (RPC adelanto_acreditar): el
+ * neto pasa a la Operativa del comercio desde la recaudadora de Payway.
+ */
+export async function acreditarAdelanto(id: string, _notas?: string): Promise<ResultadoAcreditarAdelanto> {
   const sb = requireSupabase();
-  const { data, error } = await sb.rpc("fn_acreditar_adelanto", {
-    p_adelanto_id: id,
-    p_notas: notas ?? null,
-  });
+  const { data, error } = await sb.rpc("adelanto_acreditar", { p_adelanto_id: id });
   if (error) throw new DataAccessError(error);
   const r = (data ?? {}) as Record<string, unknown>;
   return {
     adelantoId: String(r.adelanto_id ?? id),
     estado: "Acreditado",
-    montoSolicitado: Number(r.monto_solicitado ?? 0),
-    tasaPct: Number(r.tasa_pct ?? 0),
-    interes: Number(r.interes ?? 0),
-    montoNetoDepositado: Number(r.monto_neto_depositado ?? 0),
-    subcuentaOperativaId: String(r.subcuenta_operativa_id ?? ""),
-    subcuentaRecaudacionId: String(r.subcuenta_recaudacion_id ?? ""),
-    legajo: String(r.legajo ?? ""),
-    fechaAcreditacion: String(r.fecha_acreditacion ?? ""),
+    montoSolicitado: Number(r.monto ?? 0),
+    tasaPct: 0,
+    interes: Number(r.descuento ?? 0),
+    montoNetoDepositado: Number(r.neto_depositado ?? 0),
+    subcuentaOperativaId: "",
+    subcuentaRecaudacionId: "",
+    legajo: "",
+    fechaAcreditacion: new Date().toISOString().slice(0, 10),
   };
 }
 
-/**
- * Rechaza un adelanto (Pendiente o Aprobado). Sólo cambia el estado;
- * no devuelve plata porque todavía no se acreditó.
- *
- * Implementado en el cliente (no necesita RPC): no hay lock que
- * coordinar ni plata que mover. El admin debe tener permiso de
- * `modificar adelantos` para llegar a este botón.
- */
-export async function rechazarAdelanto(id: string, notas?: string): Promise<Adelanto> {
+/** Rechazo con motivo (RPC adelanto_rechazar). */
+export async function rechazarAdelanto(id: string, notas?: string): Promise<void> {
   const sb = requireSupabase();
-  const payload: Record<string, unknown> = {
-    estado: "Rechazado",
-    fecha_resolucion: new Date().toISOString(),
-  };
-  // Las notas se concatenan al motivo existente
-  if (notas && notas.trim().length > 0) {
-    const { data: actual } = await sb
-      .from("adelantos")
-      .select("motivo")
-      .eq("id", id)
-      .maybeSingle();
-    const previo = (actual?.motivo ?? "").toString().trim();
-    payload.motivo = previo ? `${previo}\n${notas.trim()}` : notas.trim();
-  }
-  try {
-    const { data: auth } = await sb.auth.getUser();
-    const uid = auth?.user?.id ?? null;
-    if (uid) payload.resuelto_por = uid;
-  } catch {
-    // ignore
-  }
-  const { data, error } = await sb
-    .from("adelantos")
-    .update(payload)
-    .eq("id", id)
-    .select(COLUMNS)
-    .single();
+  const motivo = notas && notas.trim().length >= 3 ? notas.trim() : "Rechazado por el backoffice";
+  const { error } = await sb.rpc("adelanto_rechazar", { p_adelanto_id: id, p_motivo: motivo });
   if (error) throw new DataAccessError(error);
-  return toAdelanto(data as AdelantoRow);
 }
 
 export async function updateAdelanto(
@@ -362,50 +290,18 @@ export async function updateAdelanto(
 ): Promise<Adelanto> {
   const sb = requireSupabase();
 
-  // "Cancelado" es acción exclusiva del comercio — admin no puede setearlo.
-  if (input.estado === "Cancelado") {
+  if (input.estado !== undefined) {
     throw new DataAccessError(
-      new Error(
-        "El estado 'Cancelado' es una acción exclusiva del comercio y no puede ser seteado por un admin.",
-      ),
-    );
-  }
-
-  // "Acreditado" se hace por la RPC `fn_acreditar_adelanto` (mueve
-  // plata). Si el front lo pide por acá, fallamos explícitamente para
-  // que el dev lo cambie.
-  if (input.estado === "Acreditado") {
-    throw new DataAccessError(
-      new Error(
-        "Para acreditar un adelanto usá la función acreditarAdelanto() (RPC fn_acreditar_adelanto) — mover plata no es un update trivial.",
-      ),
+      new Error("El estado del adelanto cambia solo por su flujo (ofertar, rechazar, aceptar, acreditar), no con un update."),
     );
   }
 
   const payload: Record<string, unknown> = {};
   if (input.montoSolicitado !== undefined) payload.monto_solicitado = input.montoSolicitado;
   if (input.plazoAdelantadoDias !== undefined) payload.plazo_adelantado_dias = input.plazoAdelantadoDias;
-  if (input.tasaInteresPct !== undefined) payload.tasa_interes_pct = input.tasaInteresPct;
   if (input.motivo !== undefined) payload.motivo = input.motivo;
   if (input.fechaAcreditacion !== undefined) payload.fecha_acreditacion = input.fechaAcreditacion;
-  if (input.montoPorAcreditar !== undefined) payload.monto_por_acreditar = input.montoPorAcreditar;
-  if (input.estado !== undefined) {
-    payload.estado = input.estado;
-    payload.fecha_resolucion = new Date().toISOString();
-    try {
-      const { data: auth } = await sb.auth.getUser();
-      const uid = auth?.user?.id ?? null;
-      if (uid) payload.resuelto_por = uid;
-    } catch {
-      // ignore
-    }
-  }
-  const { data, error } = await sb
-    .from("adelantos")
-    .update(payload)
-    .eq("id", id)
-    .select(COLUMNS)
-    .single();
+  const { data, error } = await sb.from("adelantos").update(payload).eq("id", id).select(COLUMNS).single();
   if (error) throw new DataAccessError(error);
   return toAdelanto(data as AdelantoRow);
 }

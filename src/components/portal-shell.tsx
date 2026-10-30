@@ -37,10 +37,13 @@ const isActive = (to: string, path: string, leaves: NavLeaf[]): boolean => {
 export function PortalShell({
   nav,
   title,
+  headerActions,
   children,
 }: {
   nav: NavItem[];
   title: string;
+  /** Botones extra del header (ej. la campana de alertas), a la izquierda de la sesion. */
+  headerActions?: ReactNode;
   children: ReactNode;
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -77,6 +80,7 @@ export function PortalShell({
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {headerActions}
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-xs text-black-400">Sesión</span>
             <span className="text-sm font-semibold text-black-700">Admin</span>

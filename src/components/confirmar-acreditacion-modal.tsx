@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Info, Wallet } from "lucide-react";
 import { FormDialog } from "@/components/form-dialog";
-import { Badge, Input, Label } from "@/components/portal-shell";
-import { useQuery } from "@tanstack/react-query";
-import { listAdelantosByComercio } from "@/lib/api/adelantos";
-import { acreditarLote } from "@/lib/api/lotes";
+import { Badge, Label } from "@/components/portal-shell";
+import { ConfirmacionesAcreditacion, confirmacionesCompletas, type Confirmaciones } from "@/components/acreditaciones/lote-apertura";
 import type { LoteAcreditacion } from "@/lib/api/types";
+import { ejecutarAcreditacion, revisarAcreditacion, type Revision } from "@/lib/api/acreditaciones";
 
-// Confirmar Acreditación: el segundo paso del flujo.
-// El lote ya está Pendiente con el snapshot real del CSV (importe_neto,
-// comisiones, retenciones) escrito en `aplicar_liquidacion_lote`. Este
-// modal muestra el desglose desde el snapshot y, si el comercio tiene
-// adelantos Pendiente/Aprobado, una línea de deducción adicional. Confirmar
-// llama la RPC `acreditar_lote` que deposita en la subcuenta Operativa
-// y descuenta los adelantos en FIFO.
+// Confirmacion de la acreditacion de un lote Pendiente.
+//
+// El desglose lo calcula la base (acreditacion_revisar): neto de Payway,
+// tasa MoliPay, IVA de la tasa, cierre de lote, impuestos asignados al
+// comercio y compensacion de adelantos / deudas. Al confirmar se llama a
+// acreditacion_ejecutar con el hash de la revision: si algo cambio en el
+// medio (un parametro, un adelanto), el lote se omite y hay que revisar.
 
 type Props = {
   lote: LoteAcreditacion | null;
@@ -29,6 +28,12 @@ function fmtFecha(iso: string | null | undefined): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function hoy() {
+  const d = new Date();
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 function CalcRow({
@@ -62,65 +67,52 @@ function CalcRow({
 }
 
 export function ConfirmarAcreditacionModal({ lote, onClose, onAcreditado }: Props) {
-  const [notas, setNotas] = useState("");
+  const [rev, setRev] = useState<Revision | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [conf, setConf] = useState<Confirmaciones>({ totales: false, compensaciones: false, irreversible: false });
+  const [texto, setTexto] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
 
-  // Adelantos del comercio: el modal sólo necesita el montoPorAcreditar
-  // de los estados Pendiente/Aprobado. staleTime largo porque el dato
-  // no cambia mientras el modal está abierto (el RPC acreditar_lote
-  // los va a bajar al confirmar).
-  const adelantosQuery = useQuery({
-    queryKey: ["adelantos", lote?.comercioId],
-    queryFn: () => listAdelantosByComercio(lote!.comercioId),
-    enabled: !!lote,
-    staleTime: 30_000,
-  });
-
-  // Suma del pendiente a devolver al comercio. El RPC acreditar_lote
-  // valida que no supere el neto del lote, así que en la práctica siempre
-  // cabe; se muestra un warning si la suma lo superara para que el
-  // operador lo sepa antes de confirmar.
-  const deduccionAdelantos = useMemo(() => {
-    const rs = adelantosQuery.data ?? [];
-    return rs
-      .filter((a) => a.estado === "Pendiente" || a.estado === "Aprobado")
-      .reduce((s, a) => s + Number(a.montoPorAcreditar ?? 0), 0);
-  }, [adelantosQuery.data]);
-
-  // Reset del estado cuando cambia el lote
   useEffect(() => {
-    setNotas("");
+    setRev(null);
     setErrorGuardado(null);
-    setGuardando(false);
-  }, [lote?.id]);
+    setConf({ totales: false, compensaciones: false, irreversible: false });
+    setTexto("");
+    if (!lote) return;
+    setCargando(true);
+    revisarAcreditacion([lote.id])
+      .then(setRev)
+      .catch((e) => setErrorGuardado(e instanceof Error ? e.message : String(e)))
+      .finally(() => setCargando(false));
+  }, [lote]);
 
-  const importeNeto = lote?.importeNeto ?? 0;
-  const netoFinal = Math.max(0, importeNeto - deduccionAdelantos);
-  const deduccionExcedeNeto = deduccionAdelantos > importeNeto;
-
-  const comisionMolipayMonto = lote?.tasaMolipayMonto ?? 0;
-  const comisionCierreMonto = lote?.comisionCierreLoteMonto ?? 0;
-  const debitoCreditoMonto = lote?.debitoCreditoMonto ?? 0;
-  const ivaMonto = lote?.ivaMonto ?? 0;
-  const iibbMonto = lote?.iibbMonto ?? 0;
-  const totalDescuentos =
-    comisionMolipayMonto + comisionCierreMonto + debitoCreditoMonto + ivaMonto + iibbMonto;
-  // netoCsv = importeNeto + descuentos (reconstruido del snapshot)
-  const netoCsv = importeNeto + totalDescuentos;
-
-  const submitLabel = lote
-    ? `Acreditar y depositar ${fmt(netoFinal)}`
-    : "Acreditar";
+  const calc = rev?.lotes[0] ?? null;
+  const com = rev?.comercios[0] ?? null;
+  const omitido = rev?.omitidos[0] ?? null;
 
   const confirmar = async () => {
-    if (!lote) return;
+    if (!lote || !calc) return;
+    if (!confirmacionesCompletas(conf, texto)) {
+      setErrorGuardado("Completá las tres confirmaciones y escribí ACREDITAR.");
+      return;
+    }
     setGuardando(true);
     setErrorGuardado(null);
     try {
-      await acreditarLote(lote.id, notas, deduccionAdelantos);
-      onAcreditado();
-      onClose();
+      const r = await ejecutarAcreditacion({
+        ids: [lote.id],
+        fecha: hoy(),
+        confirmaciones: conf,
+        texto,
+        hashes: { [lote.id]: calc.hash },
+      });
+      const it = r.items[0];
+      if (it?.resultado === "acreditado") {
+        onAcreditado();
+      } else {
+        setErrorGuardado(`${it?.resultado === "omitido" ? "Omitido" : "Error"}: ${it?.motivo ?? "sin detalle"}`);
+      }
     } catch (e) {
       setErrorGuardado(e instanceof Error ? e.message : String(e));
     } finally {
@@ -128,13 +120,15 @@ export function ConfirmarAcreditacionModal({ lote, onClose, onAcreditado }: Prop
     }
   };
 
+  const submitLabel = guardando ? "Acreditando…" : calc ? `Acreditar ${fmt(calc.neto_a_acreditar)}` : "Acreditar";
+
   return (
     <FormDialog
       open={!!lote}
       onClose={onClose}
       title={lote ? `Confirmar acreditación — ${lote.codigo}` : "Confirmar acreditación"}
-      description="El lote ya está Pendiente con los importes reales del CSV. Confirmá para acreditar el neto a la subcuenta Operativa del comercio."
-      onSubmit={confirmar}
+      description="El lote está Pendiente con los importes reales del archivo de Payway y conciliado con la recaudadora. Confirmá para acreditar el neto a la subcuenta Operativa del comercio."
+      onSubmit={() => void confirmar()}
       submitLabel={submitLabel}
       size="lg"
       isSubmitting={guardando}
@@ -147,12 +141,8 @@ export function ConfirmarAcreditacionModal({ lote, onClose, onAcreditado }: Prop
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="min-w-0">
                 <div className="text-muted-foreground">Comercio</div>
-                <div className="font-semibold truncate">
-                  {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? lote.comercioId}
-                </div>
-                <div className="font-mono text-[11px] text-muted-foreground truncate">
-                  {lote.comercio?.legajo ?? "—"}
-                </div>
+                <div className="font-semibold truncate">{lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? lote.comercioId}</div>
+                <div className="font-mono text-[11px] text-muted-foreground truncate">{lote.comercio?.legajo ?? "—"}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Bandera</div>
@@ -160,131 +150,122 @@ export function ConfirmarAcreditacionModal({ lote, onClose, onAcreditado }: Prop
                 <div className="text-[11px] text-muted-foreground">{lote.cantidadOperaciones} ops</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Fecha estimada</div>
+                <div className="text-muted-foreground">Fecha de liquidación</div>
                 <div className="font-mono font-semibold">{fmtFecha(lote.fecha)}</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Fecha cobro real</div>
-                <div className="font-mono font-semibold flex items-center gap-1.5">
-                  {fmtFecha(lote.fechaCobroReal)}
-                  {lote.fechaCobroReal ? (
-                    <Badge tone="success">real</Badge>
-                  ) : (
-                    <Badge tone="neutral">est.</Badge>
-                  )}
+                <div className="text-muted-foreground">Recaudadora</div>
+                <div className="font-semibold flex items-center gap-1.5">
+                  {lote.conciliado ? <Badge tone="success">conciliado</Badge> : <Badge tone="warn">sin conciliar</Badge>}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Desglose del snapshot del CSV */}
-          <div className="rounded-lg border p-3">
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Desglose del archivo de liquidación
-            </h4>
+          {cargando && <p className="text-sm text-muted-foreground">Calculando…</p>}
 
-            <CalcRow
-              label="Neto liquidado por Payway (CSV)"
-              value={fmt(netoCsv)}
-              hint="TOTAL_NETO reconstruido del snapshot"
-            />
-            <div className="border-t my-1" />
-
-            <CalcRow
-              label="Comisión MoliPay"
-              value={`- ${fmt(comisionMolipayMonto)}`}
-              tone="subtract"
-              hint={`${lote.tasaMolipayPct}% sobre el neto CSV`}
-            />
-            <CalcRow
-              label="Comisión de cierre de lote"
-              value={`- ${fmt(comisionCierreMonto)}`}
-              tone="subtract"
-              hint={
-                lote.comisionCierreLotePct != null
-                  ? `${lote.comisionCierreLotePct}% — snapshot del lote`
-                  : "snapshot del lote"
-              }
-            />
-            <CalcRow
-              label="Retención débito/crédito"
-              value={`- ${fmt(debitoCreditoMonto)}`}
-              tone="subtract"
-              hint="RG 2111/4172"
-            />
-            <CalcRow
-              label="Retención IVA"
-              value={`- ${fmt(ivaMonto)}`}
-              tone="subtract"
-              hint="21% sobre la comisión MoliPay"
-            />
-            <CalcRow
-              label="Retención Ingresos Brutos"
-              value={`- ${fmt(iibbMonto)}`}
-              tone="subtract"
-            />
-
-            <div className="border-t mt-1 pt-1" />
-            <CalcRow
-              label="Importe a acreditar (lote Pendiente)"
-              value={fmt(importeNeto)}
-              tone="total"
-              hint="a depositar en la subcuenta Operativa"
-            />
-          </div>
-
-          {/* Adelantos: la línea solo aparece si hay. Decisión confirmada
-              (vía API de adelantos): mostrar deducción sólo si hay
-              adelantos Pendiente/Aprobado. */}
-          {adelantosQuery.isLoading ? (
-            <p className="text-xs text-muted-foreground">Cargando adelantos del comercio…</p>
-          ) : deduccionAdelantos > 0 ? (
-            <div className="rounded-lg border p-3 space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                <Wallet size={14} /> Adelantos previos
-              </h4>
-              <CalcRow
-                label="Deducción por adelantos Pendiente/Aprobado"
-                value={`- ${fmt(deduccionAdelantos)}`}
-                tone="subtract"
-                hint="se descuenta del neto acreditado (FIFO)"
-              />
-              <div className="border-t pt-1">
-                <CalcRow
-                  label="Neto final a depositar en la subcuenta"
-                  value={fmt(netoFinal)}
-                  tone="final"
-                  hint="importe_neto - deducción adelantos"
-                />
-              </div>
-              {deduccionExcedeNeto && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                  <span>
-                    La deducción ({fmt(deduccionAdelantos)}) supera el neto del lote. La RPC
-                    rechazará esta confirmación; revisá los adelantos.
-                  </span>
-                </div>
-              )}
+          {omitido && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>{omitido.motivo}</span>
             </div>
-          ) : (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Info size={13} /> El comercio no tiene adelantos previos pendientes.
-            </p>
           )}
 
-          {/* Notas */}
-          <div>
-            <Label htmlFor="acredit-notas">Notas (opcional)</Label>
-            <textarea
-              id="acredit-notas"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={2}
-              placeholder="Ticket de Payway, motivo, comentarios..."
-              className="mt-1.5 w-full rounded-md border bg-background px-3 py-2 text-sm"
-            />
-          </div>
+          {calc && (
+            <>
+              {/* Desglose calculado en la base */}
+              <div className="rounded-lg border p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desglose de la liquidación</h4>
+                <CalcRow label="Importe bruto" value={fmt(calc.bruto)} />
+                <CalcRow
+                  label="Impuestos y tasa de interés PayWay (CSV)"
+                  value={`- ${fmt(calc.bruto - calc.neto_payway)}`}
+                  tone="subtract"
+                  hint="Referencia: los descontó Payway antes de depositar"
+                />
+                <CalcRow label="Neto liquidado por Payway" value={fmt(calc.neto_payway)} />
+                <div className="border-t my-1" />
+                <CalcRow label="Tasa de interés MoliPay" value={`- ${fmt(calc.tasa_monto)}`} tone="subtract" hint={`${calc.tasa_pct}% sobre el neto de Payway`} />
+                {calc.iva_tasa_monto > 0 && (
+                  <CalcRow label="IVA sobre la tasa MoliPay" value={`- ${fmt(calc.iva_tasa_monto)}`} tone="subtract" hint={`${calc.iva_pct}% de la tasa`} />
+                )}
+                <CalcRow
+                  label="Comisión cierre de lote"
+                  value={`- ${fmt(calc.cierre_monto)}`}
+                  tone="subtract"
+                  hint={`${calc.cierre_pct}% sobre ${calc.cierre_base === "neto_menos_tasa" ? "el neto menos la tasa" : "el neto de Payway"}`}
+                />
+                {calc.impuestos.filter((i) => Number(i.monto) > 0).map((i) => (
+                  <CalcRow
+                    key={i.asignacion_id}
+                    label={`${i.nombre} (${i.codigo})`}
+                    value={`- ${fmt(i.monto)}`}
+                    tone="subtract"
+                    hint={i.nota ?? `${i.alicuota != null ? `${i.alicuota}% · ` : ""}aplica a: ${i.aplica_a}`}
+                  />
+                ))}
+                <div className="border-t mt-1 pt-1" />
+                <CalcRow
+                  label="Importe a acreditar antes de compensaciones"
+                  value={fmt(calc.neto_a_acreditar + (calc.retencion_contracargos ?? 0) + calc.compensacion_adelantos + calc.recuperacion_deuda)}
+                  tone="total"
+                />
+              </div>
+
+              {/* Adelantos y deudas: solo si hay algo que compensar */}
+              {(calc.retencion_contracargos ?? 0) > 0 || calc.compensacion_adelantos > 0 || calc.recuperacion_deuda > 0 ? (
+                <div className="rounded-lg border p-3 space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                    <Wallet size={14} /> Adelantos y deudas
+                  </h4>
+                  {(calc.retencion_contracargos ?? 0) > 0 && (
+                    <CalcRow
+                      label="Retención por contracargos"
+                      value={`- ${fmt(calc.retencion_contracargos ?? 0)}`}
+                      tone="subtract"
+                      hint="ventas de este lote desconocidas por el pagador"
+                    />
+                  )}
+                  {calc.compensacion_adelantos > 0 && (
+                    <CalcRow
+                      label="Compensación de adelantos acreditados"
+                      value={`- ${fmt(calc.compensacion_adelantos)}`}
+                      tone="subtract"
+                      hint="el comercio ya cobró esto por adelantado (FIFO)"
+                    />
+                  )}
+                  {calc.recuperacion_deuda > 0 && (
+                    <CalcRow
+                      label="Recuperación de deuda"
+                      value={`- ${fmt(calc.recuperacion_deuda)}`}
+                      tone="subtract"
+                      hint="contracargos o lotes negativos anteriores"
+                    />
+                  )}
+                </div>
+              ) : (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Info size={13} /> El comercio no tiene adelantos ni deudas pendientes de compensar.
+                </p>
+              )}
+
+              <div className="rounded-lg border p-3">
+                <CalcRow label="Neto final a depositar en la subcuenta" value={fmt(calc.neto_a_acreditar)} tone="final" />
+                {com && (
+                  <>
+                    <CalcRow label="Saldo actual de la Operativa" value={fmt(com.saldo_actual)} />
+                    <CalcRow label="Saldo después de acreditar" value={fmt(com.saldo_despues)} tone="total" />
+                  </>
+                )}
+                {!rev?.alcanza && <p className="text-xs text-red-700 mt-1">La recaudadora no cubre este lote: no se puede acreditar.</p>}
+              </div>
+
+              <div>
+                <Label>Confirmaciones</Label>
+                <ConfirmacionesAcreditacion value={conf} onChange={setConf} texto={texto} onTexto={setTexto} />
+              </div>
+            </>
+          )}
 
           {errorGuardado && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">

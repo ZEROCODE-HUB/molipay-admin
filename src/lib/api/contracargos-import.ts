@@ -43,116 +43,21 @@ type MatchResult = {
   siteId: string | null;
 };
 
-/**
- * Intenta matchear una fila de PayWay contra la base:
- *
- *  1. Match principal: `cliente_links_pago_pagos.site_transaction_id`
- *  2. Match secundario: `autorizacion` (payway_payment_id) + site_id
- *
- * Si ninguna matchea, devuelve `null` y la fila queda como
- * `unmatched` para que el operador la gestione manualmente.
- */
-async function matchPago(
-  sb: ReturnType<typeof requireSupabase>,
-  row: PaywayDisputeRow,
-): Promise<MatchResult | null> {
-  const tid = row.parsed.idTransaccion;
-  const authCode = row.parsed.autorizacion;
-  const siteId = row.parsed.establecimiento;
-
-  // 1. Por TID
-  if (tid) {
-    const { data, error } = await sb
-      .from("cliente_links_pago_pagos")
-      .select(
-        "id, link_id, cliente_legajo, cliente_links_pago!inner(id, comercio_id, comercio_nombre, site_id)",
-      )
-      .eq("site_transaction_id", tid)
-      .maybeSingle();
-    if (error) {
-      // Si la columna no existe (schema legacy), caemos al fallback.
-      if (/site_transaction_id|column.*does not exist/i.test(error.message)) {
-        // continuar al fallback
-      } else {
-        throw new DataAccessError(error);
-      }
-    } else if (data) {
-      const link = Array.isArray(data.cliente_links_pago)
-        ? data.cliente_links_pago[0]
-        : data.cliente_links_pago;
-      if (link) {
-        return {
-          comercioId: link.comercio_id,
-          comercioNombre: link.comercio_nombre,
-          clienteLegajo: data.cliente_legajo,
-          pagoId: data.id,
-          linkId: data.link_id,
-          siteId: link.site_id ?? null,
-        };
-      }
-    }
-  }
-
-  // 2. Por payway_payment_id + site_id
-  if (authCode && siteId) {
-    const { data, error } = await sb
-      .from("cliente_links_pago_pagos")
-      .select(
-        "id, link_id, cliente_legajo, cliente_links_pago!inner(id, comercio_id, comercio_nombre, site_id)",
-      )
-      .eq("payway_payment_id", authCode)
-      .maybeSingle();
-    if (error) throw new DataAccessError(error);
-    if (data) {
-      const link = Array.isArray(data.cliente_links_pago)
-        ? data.cliente_links_pago[0]
-        : data.cliente_links_pago;
-      if (link && (link.site_id ?? null) === siteId) {
-        return {
-          comercioId: link.comercio_id,
-          comercioNombre: link.comercio_nombre,
-          clienteLegajo: data.cliente_legajo,
-          pagoId: data.id,
-          linkId: data.link_id,
-          siteId: link.site_id ?? null,
-        };
-      }
-    }
-  }
-
-  return null;
-}
+type ResultadoRpc = {
+  fila: number;
+  status: "ok" | "vinculado" | "duplicate" | "unmatched" | "error";
+  message?: string;
+  contracargo_id?: string;
+  comercio_id?: string;
+  retencion?: string;
+};
 
 /**
- * Verifica si ya existe un contracargo con ese site_transaction_id
- * para evitar duplicados al reprocesar el mismo archivo.
- */
-async function yaExiste(
-  sb: ReturnType<typeof requireSupabase>,
-  siteTransactionId: string,
-): Promise<boolean> {
-  if (!siteTransactionId) return false;
-  const { data, error } = await sb
-    .from("contracargos")
-    .select("id")
-    .eq("site_transaction_id", siteTransactionId)
-    .not("estado", "eq", "Eliminado")
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    // Si la columna no existe, no podemos deduplicar; seguimos.
-    if (/site_transaction_id|column.*does not exist/i.test(error.message)) {
-      return false;
-    }
-    throw new DataAccessError(error);
-  }
-  return !!data;
-}
-
-/**
- * Importa las filas de un reporte de PayWay. Procesa en serie para
- * no saturar la DB y para que los errores de una fila no afecten a
- * las demás. Devuelve un resumen con el detalle por fila.
+ * Importa las filas de un reporte de PayWay con la RPC `contracargo_importar`.
+ * La base busca la venta por site_transaction_id, evita duplicados, se cruza
+ * con el contracargo que haya creado la liquidacion y decide la retencion
+ * (en el lote de la venta, del saldo o como deuda). Las filas con error de
+ * parseo no se envian.
  */
 export async function importChargebacksFromPayway(
   rows: PaywayDisputeRow[],
@@ -167,104 +72,53 @@ export async function importChargebacksFromPayway(
     details: [],
   };
 
+  const validas: { row: PaywayDisputeRow; payload: Record<string, unknown> }[] = [];
   for (const row of rows) {
-    const base: ImportRowResult = { ...row, status: "error" };
-
-    // Errores de parseo: no seguimos.
-    if (row.errors.length > 0) {
-      base.status = "error";
-      base.message = row.errors.join(" ");
+    if (row.errors.length > 0 || !row.parsed.idTransaccion) {
       summary.errors += 1;
-      summary.details.push(base);
+      summary.details.push({
+        ...row,
+        status: "error",
+        message: row.errors.length > 0 ? row.errors.join(" ") : "Fila sin ID_TRANSACCION; no se puede importar.",
+      });
       continue;
     }
-
-    if (!row.parsed.idTransaccion) {
-      base.status = "error";
-      base.message = "Fila sin ID_TRANSACCION; no se puede importar.";
-      summary.errors += 1;
-      summary.details.push(base);
-      continue;
-    }
-
-    // Duplicado
-    try {
-      if (await yaExiste(sb, row.parsed.idTransaccion)) {
-        base.status = "duplicate";
-        base.message = `Ya existe un contracargo con site_transaction_id=${row.parsed.idTransaccion}.`;
-        summary.duplicate += 1;
-        summary.details.push(base);
-        continue;
-      }
-    } catch (e) {
-      base.message = `Error al verificar duplicado: ${(e as Error).message}`;
-      summary.errors += 1;
-      summary.details.push(base);
-      continue;
-    }
-
-    // Match
-    let match: MatchResult | null = null;
-    try {
-      match = await matchPago(sb, row);
-    } catch (e) {
-      base.message = `Error al matchear: ${(e as Error).message}`;
-      summary.errors += 1;
-      summary.details.push(base);
-      continue;
-    }
-
-    if (!match) {
-      base.status = "unmatched";
-      base.message =
-        "No se encontró el pago en cliente_links_pago_pagos. Asigná el contracargo manualmente desde el comercio.";
-      summary.unmatched += 1;
-      summary.details.push(base);
-      continue;
-    }
-
-    // Insert
-    const monto = parseMonto(row.parsed.monto) ?? 0;
-    const fecha = parseFecha(row.parsed.fechaTransaccion);
-    const tarjeta = parseTarjetaMasked(row.parsed.nroTarjeta);
-
-    try {
-      const { data: inserted, error } = await sb
-        .from("contracargos")
-        .insert({
-          comercio_id: match.comercioId,
-          cliente_legajo: match.clienteLegajo,
-          pago_id: match.pagoId,
-          importe: monto,
-          estado: "Abierto",
-          es_simulacion: false,
-          ticket_payway: row.parsed.autorizacion ?? null,
-          motivo_payway: row.parsed.ccoMotivo ?? null,
-          site_transaction_id: row.parsed.idTransaccion,
-          site_id: row.parsed.establecimiento ?? match.siteId ?? null,
-          nro_tarjeta_masked: tarjeta ?? null,
-          marca_tarjeta: row.parsed.marca ?? null,
-          fecha_transaccion: fecha,
-          cco_origen: row.parsed.ccoOrigen ?? null,
-        } as Record<string, unknown>)
-        .select("id")
-        .single();
-      if (error) throw new DataAccessError(error);
-
-      base.status = "ok";
-      base.contracargoId = inserted.id;
-      base.comercioId = match.comercioId;
-      base.comercioNombre = match.comercioNombre;
-      base.clienteLegajo = match.clienteLegajo;
-      base.pagoId = match.pagoId;
-      summary.ok += 1;
-      summary.details.push(base);
-    } catch (e) {
-      base.message = `Error al insertar: ${(e as Error).message}`;
-      summary.errors += 1;
-      summary.details.push(base);
-    }
+    validas.push({
+      row,
+      payload: {
+        id_transaccion: row.parsed.idTransaccion,
+        fecha: parseFecha(row.parsed.fechaTransaccion),
+        marca: row.parsed.marca ?? null,
+        tarjeta: parseTarjetaMasked(row.parsed.nroTarjeta),
+        monto: parseMonto(row.parsed.monto),
+        autorizacion: row.parsed.autorizacion ?? null,
+        cco_origen: row.parsed.ccoOrigen ?? null,
+        cco_motivo: row.parsed.ccoMotivo ?? null,
+        establecimiento: row.parsed.establecimiento ?? null,
+      },
+    });
   }
+  if (validas.length === 0) return summary;
 
+  const { data, error } = await sb.rpc("contracargo_importar", { p_filas: validas.map((v) => v.payload) });
+  if (error) throw new DataAccessError(error);
+  const resultados = (data ?? []) as ResultadoRpc[];
+
+  validas.forEach((v, idx) => {
+    const r = resultados.find((x) => Number(x.fila) === idx + 1);
+    const status: ImportRowStatus = !r ? "error" : r.status === "vinculado" ? "ok" : r.status;
+    const det: ImportRowResult = {
+      ...v.row,
+      status,
+      message: r?.message ?? "Sin respuesta de la base",
+      contracargoId: r?.contracargo_id,
+      comercioId: r?.comercio_id,
+    };
+    if (status === "ok") summary.ok += 1;
+    else if (status === "duplicate") summary.duplicate += 1;
+    else if (status === "unmatched") summary.unmatched += 1;
+    else summary.errors += 1;
+    summary.details.push(det);
+  });
   return summary;
 }

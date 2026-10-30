@@ -671,7 +671,17 @@ export type MetodoHttp = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 export const METODOS_HTTP: MetodoHttp[] = ["GET", "POST", "PUT", "DELETE", "PATCH"];
 
 export type GrupoEndpoint =
-  "Autenticación" | "Enlaces de pago" | "QR" | "SubAccounts" | "Transfer" | "User" | "Webhooks";
+  | "Autenticación"
+  | "Enlaces de pago"
+  | "QR"
+  | "SubAccounts"
+  | "Transfer"
+  | "User"
+  | "Webhooks"
+  | "Cobros"
+  | "Consultas"
+  | "Contracargos"
+  | "Transferencias";
 
 export const GRUPOS_ENDPOINT: GrupoEndpoint[] = [
   "Autenticación",
@@ -681,6 +691,10 @@ export const GRUPOS_ENDPOINT: GrupoEndpoint[] = [
   "Transfer",
   "User",
   "Webhooks",
+  "Cobros",
+  "Consultas",
+  "Contracargos",
+  "Transferencias",
 ];
 
 export type EstadoEndpoint = "Habilitado" | "Deshabilitado";
@@ -1375,8 +1389,8 @@ export type LoteVenta = {
 
 // --- lotes_acreditacion / lote_movimientos / adelantos (real Supabase) -----
 
-export type EstadoLote = "Programado" | "Pendiente" | "Acreditado" | "Contracargo" | "Cancelado";
-export const ESTADOS_LOTE: EstadoLote[] = ["Programado", "Pendiente", "Acreditado", "Contracargo", "Cancelado"];
+export type EstadoLote = "Programado" | "Pendiente" | "Acreditado" | "Contracargo" | "Cancelado" | "Liquidado";
+export const ESTADOS_LOTE: EstadoLote[] = ["Programado", "Pendiente", "Acreditado", "Contracargo", "Cancelado", "Liquidado"];
 
 export type LoteAcreditacionRow = {
   id: string;
@@ -1415,6 +1429,31 @@ export type LoteAcreditacionRow = {
   /** Fecha real del cobro de Payway. null mientras el lote es Programado. */
   fecha_cobro_real: string | null;
   comercios?: ComercioJoined | null;
+  // Modulo de acreditaciones (v_lotes_acreditacion)
+  origen?: "venta" | "archivo";
+  legacy?: boolean;
+  establecimiento?: string | null;
+  neto_payway?: number | null;
+  costo_servicio_payway?: number | null;
+  impuestos_payway?: number | null;
+  iva_tasa_monto?: number | null;
+  impuestos_detalle?: unknown;
+  compensacion_adelantos?: number | null;
+  recuperacion_deuda?: number | null;
+  retencion_contracargos?: number | null;
+  retencion_pendiente?: number | null;
+  neto_a_acreditar?: number | null;
+  conciliado?: boolean;
+  es_negativo?: boolean;
+  fecha_acreditacion?: string | null;
+  calculado_at?: string | null;
+  subestado?: string | null;
+  motivo_no_elegible?: string | null;
+  elegible?: boolean;
+  contracargos?: number | null;
+  comercio_nombre?: string | null;
+  comercio_legajo?: string | null;
+  comercio_usuario?: string | null;
 };
 
 export type LoteAcreditacion = {
@@ -1456,6 +1495,33 @@ export type LoteAcreditacion = {
   comercio?: { id: string; usuario: string; legajo: string; nombreComercio: string | null; siteId: string | null } | null;
   // compat mock
   importeFinal?: number;
+  // Modulo de acreditaciones: el calculo lo hace la base (lote_calculo).
+  /** venta: proyeccion desde las ventas (Programado). archivo: renglon del archivo de Payway. */
+  origen: "venta" | "archivo";
+  /** Lote del flujo anterior: solo lectura. */
+  legacy: boolean;
+  establecimiento: string | null;
+  netoPayway: number | null;
+  costoServicioPayway: number | null;
+  impuestosPayway: number | null;
+  ivaTasaMonto: number | null;
+  impuestosDetalle: { asignacion_id: string; codigo: string; nombre: string; tipo: string; alicuota: number | null; monto: number; aplica_a: string; nota: string | null }[];
+  /** Retencion de contracargos de ventas del lote (aplicada al calcular). */
+  retencionContracargos: number;
+  /** Contracargos de ventas del lote que se retendran al acreditar. */
+  retencionPendiente: number;
+  compensacionAdelantos: number;
+  recuperacionDeuda: number;
+  netoAcreditar: number | null;
+  conciliado: boolean;
+  esNegativo: boolean;
+  fechaAcreditacion: string | null;
+  /** listo, negativo, no_conciliado, sin_tasa, programado, liquidado, acreditado, legacy... */
+  subestado: string | null;
+  motivoNoElegible: string | null;
+  /** Se puede acreditar (Listo o Negativo). */
+  elegible: boolean;
+  contracargos: number;
 };
 
 export type LoteMovimientoRow = {
@@ -1463,8 +1529,9 @@ export type LoteMovimientoRow = {
   movimiento_id: string;
 };
 
-export type EstadoAdelanto = "Pendiente" | "Aprobado" | "Rechazado" | "Acreditado" | "Cancelado";
-export const ESTADOS_ADELANTO: EstadoAdelanto[] = ["Pendiente", "Aprobado", "Rechazado", "Acreditado", "Cancelado"];
+/** Pendiente = Solicitado, Aprobado = Ofertado (con tasa). Aceptado lo pone la empresa; Compensado, el sistema. */
+export type EstadoAdelanto = "Pendiente" | "Aprobado" | "Aceptado" | "Rechazado" | "Acreditado" | "Compensado" | "Cancelado";
+export const ESTADOS_ADELANTO: EstadoAdelanto[] = ["Pendiente", "Aprobado", "Aceptado", "Rechazado", "Acreditado", "Compensado", "Cancelado"];
 
 export type AdelantoRow = {
   id: string;
@@ -1482,6 +1549,13 @@ export type AdelantoRow = {
   resuelto_por: string | null;
   created_at: string;
   updated_at: string;
+  monto_ofertado?: number | null;
+  descuento?: number | null;
+  neto_a_recibir?: number | null;
+  compensado?: number | null;
+  modelo?: "legacy" | "v2";
+  rechazo_motivo?: string | null;
+  aceptado_at?: string | null;
 };
 
 export type Adelanto = {
@@ -1500,6 +1574,17 @@ export type Adelanto = {
   resueltoPor: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Monto aprobado en la oferta (puede diferir del solicitado). */
+  montoOfertado: number | null;
+  /** Descuento por tasa (monto × tasa). */
+  descuento: number | null;
+  /** Lo que recibe el comercio: monto − descuento. */
+  netoARecibir: number | null;
+  /** Ya descontado de liquidaciones posteriores. */
+  compensado: number;
+  modelo: "legacy" | "v2";
+  rechazoMotivo: string | null;
+  aceptadoAt: string | null;
 };
 
 // --- util ------------------------------------------------------------------

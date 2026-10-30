@@ -299,64 +299,14 @@ export async function deleteContracargo(id: string): Promise<void> {
  * contiene la transacción (si hay `movimiento_id` o `pago_id`).
  */
 export async function confirmarSimulacion(id: string): Promise<Contra> {
+  // La base pasa Simulado -> Abierto, vincula la venta y decide la retencion
+  // (en el lote de la venta si no se acredito; si no, del saldo o como deuda).
   const sb = requireSupabase();
-
-  // 1. Cargar el contracargo actual
+  const { error } = await sb.rpc("contracargo_confirmar", { p_contracargo_id: id });
+  if (error) throw new DataAccessError(error);
   const actual = await getContra(id);
   if (!actual) throw new DataAccessError(new Error("Contracargo no encontrado"));
-  if (actual.estadoDb !== "Simulado") {
-    throw new DataAccessError(
-      new Error(
-        `El contracargo no está en Simulado (estado actual: ${actual.estadoDb}).`,
-      ),
-    );
-  }
-
-  // 2. Intentar resolver lote sugerido
-  let loteSugeridoId: string | null = actual.loteSugeridoId;
-  if (!loteSugeridoId && actual.movimientoId) {
-    const { data: lm } = await sb
-      .from("lote_movimientos")
-      .select("lote_id, lotes_acreditacion!inner(estado)")
-      .eq("movimiento_id", actual.movimientoId)
-      .limit(1)
-      .maybeSingle();
-    if (lm) {
-      const lote = Array.isArray(lm.lotes_acreditacion)
-        ? lm.lotes_acreditacion[0]
-        : lm.lotes_acreditacion;
-      // Solo lo sugerimos si el lote no está Acreditado todavía.
-      if (lote && lote.estado !== "Acreditado") {
-        loteSugeridoId = lm.lote_id;
-      }
-    }
-  }
-  if (!loteSugeridoId) {
-    // Próximo lote del comercio en estado Programado o Pendiente
-    const { data: prox } = await sb
-      .from("lotes_acreditacion")
-      .select("id")
-      .eq("comercio_id", actual.comercioId)
-      .in("estado", ["Programado", "Pendiente"])
-      .order("fecha", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (prox) loteSugeridoId = prox.id;
-  }
-
-  // 3. Update
-  const { data, error } = await sb
-    .from("contracargos")
-    .update({
-      estado: "Abierto",
-      es_simulacion: false,
-      lote_sugerido_id: loteSugeridoId,
-    })
-    .eq("id", id)
-    .select(COLUMNS)
-    .single();
-  if (error) throw new DataAccessError(error);
-  return toContra(data as ContraRow);
+  return actual;
 }
 
 // ---------------------------------------------------------------------------

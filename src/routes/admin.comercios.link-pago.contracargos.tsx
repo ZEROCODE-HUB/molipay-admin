@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { QK_ACRED, cambiarEstadoContracargo, listContracargosRecupero } from "@/lib/api/acreditaciones";
 import { useState, useEffect, useMemo, useRef, type ReactElement } from "react";
 import {
   Eye,
@@ -19,6 +20,7 @@ import {
   ExternalLink,
   Copy,
   UploadCloud,
+  Download,
   Calendar,
   CreditCard,
   Banknote,
@@ -41,15 +43,13 @@ import {
   agregarAdjunto,
   quitarAdjunto,
   enviarAPayway,
-  cerrarComoRetenido,
-  listLotesParaCerrarRetenido,
   estadoUiToDb,
   type Contra,
   type EstadoContra,
-  type LoteCerrarRetenido,
 } from "@/lib/api/contracargos";
 import { useComercios } from "@/hooks/useComercios";
 import { ImportarContracargosModal } from "@/components/importar-contracargos-modal";
+import { SimularContracargosModal } from "@/components/acreditaciones/simular-contracargos-modal";
 import { getAdjuntoSignedUrl } from "@/lib/storage/contracargos";
 
 export const Route = createFileRoute("/admin/comercios/link-pago/contracargos")({
@@ -183,41 +183,25 @@ function Detalle({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Lote destino (solo si va a Cerrado_retenido)
-  const [lotes, setLotes] = useState<LoteCerrarRetenido[]>([]);
-  const [loteId, setLoteId] = useState<string>(c.loteSugeridoId ?? "");
-  const [loadingLotes, setLoadingLotes] = useState(false);
-
-  // Cuando el operador elige Cerrado_retenido, cargamos los lotes
-  // disponibles. También si el contracargo ya está en ese estado.
-  useEffect(() => {
-    if (estado !== "Cerrado_retenido") return;
-    let alive = true;
-    setLoadingLotes(true);
-    listLotesParaCerrarRetenido(c.comercioId, c.loteSugeridoId)
-      .then((ls) => {
-        if (!alive) return;
-        setLotes(ls);
-        // Si el sugerido no está, tomar el primero disponible.
-        if (!loteId && ls.length > 0) setLoteId(ls[0].id);
-      })
-      .catch((e) => toast.error((e as Error).message))
-      .finally(() => alive && setLoadingLotes(false));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado, c.comercioId, c.loteSugeridoId]);
+  // Donde se desconto y si se recupero (vista v_contracargos_recupero).
+  const recupero = useQuery({
+    queryKey: [...QK_ACRED, "contracargo-recupero", c.id],
+    queryFn: async () => (await listContracargosRecupero()).find((x) => x.id === c.id) ?? null,
+  });
 
   const guardar = async () => {
     setSaving(true);
     try {
-      // Camino especial: Cerrado_retenido → RPC con impacto en lote
-      if (estado === "Cerrado_retenido" && loteId) {
-        const r = await cerrarComoRetenido(c.id, loteId);
-        toast.success(
-          `Contracargo retenido. Se descontaron ${fmt(r.importeDescontado)} del lote ${r.loteCodigo || r.loteId.slice(0, 8)}.`,
-        );
+      // El dinero no se mueve aca: el descuento llega por el renglon negativo
+      // del archivo de Payway. Descontarlo ademas a mano lo cobraba dos veces.
+      // Los cambios de estado de la mediacion pasan por la RPC.
+      const cambio = estado !== c.estado;
+      if (cambio && estado !== "Simulado" && c.estado !== "Simulado") {
+        await cambiarEstadoContracargo(c.id, estadoUiToDb(estado), resolucion || undefined);
+        await updateContracargo(c.id, {
+          ticketPayway: ticket || null,
+          documentacion: doc || null,
+        });
       } else {
         await updateContracargo(c.id, {
           estado,
@@ -226,8 +210,8 @@ function Detalle({
           resolucion: resolucion || null,
           esSimulacion: estado === "Simulado",
         });
-        toast.success("Contracargo actualizado");
       }
+      toast.success("Contracargo actualizado");
       qc.invalidateQueries({ queryKey: ["contracargos"] });
       qc.invalidateQueries({ queryKey: ["lotes"] });
       onClose();
@@ -244,8 +228,8 @@ function Detalle({
       const actualizado = await confirmarSimulacion(c.id);
       toast.success(
         actualizado.loteSugeridoId
-          ? "Simulación confirmada. Se sugirió un lote para aplicar el impacto."
-          : "Simulación confirmada. Sin lote sugerido: aplicar manualmente al cerrar.",
+          ? "Contracargo abierto. Se retiene al acreditar el lote de la venta (o del saldo si ya se acreditó)."
+          : "Contracargo abierto. Sin venta vinculada: se descuenta cuando llegue en la liquidación de Payway.",
       );
       qc.invalidateQueries({ queryKey: ["contracargos"] });
       onClose();
@@ -642,36 +626,50 @@ function Detalle({
                   </p>
                 )}
                 {estado === "Cerrado_retenido" && (
-                  <p className="text-xs text-red-600 mt-1">
-                    ⚠ Aplicará un descuento al lote seleccionado abajo.
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Gana el comprador. El importe ya lo descontó Payway en su liquidación (renglón negativo del archivo): no se descuenta de nuevo.
                   </p>
                 )}
               </div>
 
-              {estado === "Cerrado_retenido" && (
-                <div>
-                  <label className="text-xs font-semibold">Lote a aplicar</label>
-                  {loadingLotes ? (
-                    <p className="text-xs text-muted-foreground mt-1">Buscando lotes…</p>
-                  ) : lotes.length === 0 ? (
-                    <p className="text-xs text-amber-700 mt-1">
-                      Este comercio no tiene lotes en Programado/Pendiente.
-                      El contracargo quedará cerrado pero sin impacto.
-                    </p>
-                  ) : (
-                    <select
-                      value={loteId}
-                      onChange={(e) => setLoteId(e.target.value)}
-                      className="mt-1 w-full h-10 rounded-md border bg-background px-3 text-sm"
-                    >
-                      {lotes.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.codigo} · {l.estado} · {l.fecha} · neto {fmt(l.importeNeto)}
-                          {l.esSugerido ? "  ★ sugerido" : ""}
-                        </option>
-                      ))}
-                    </select>
+              {recupero.data && (
+                <div className="rounded-md border px-3 py-2 text-xs space-y-0.5">
+                  <div className="font-semibold">Descuento y recupero</div>
+                  <div>
+                    Estado: <Badge tone={recupero.data.estado_recupero === "Recuperado" || recupero.data.estado_recupero === "Descontado" || recupero.data.estado_recupero === "Liberado" ? "success" : recupero.data.estado_recupero === "Pendiente de recuperar" ? "danger" : recupero.data.estado_recupero === "Retención programada" || recupero.data.estado_recupero === "Retenido" ? "warn" : "neutral"}>{recupero.data.estado_recupero}</Badge>
+                  </div>
+                  {recupero.data.lote_venta_codigo && (
+                    <div>
+                      Lote de la venta: <span className="font-mono">{recupero.data.lote_venta_codigo}</span>
+                      {recupero.data.lote_venta_estado ? ` (${recupero.data.lote_venta_estado})` : ""}
+                    </div>
                   )}
+                  {recupero.data.retencion_estado === "pendiente" && (
+                    <div className="text-amber-700">Se retiene {fmt(c.importe)} al acreditar el lote de la venta.</div>
+                  )}
+                  {recupero.data.retenido_monto > 0 && (
+                    <div>
+                      Retenido al comercio: {fmt(recupero.data.retenido_monto)}
+                      {recupero.data.retencion_lote_codigo ? ` (lote ${recupero.data.retencion_lote_codigo})` : " (del saldo)"}
+                    </div>
+                  )}
+                  {recupero.data.retencion_estado === "aplicado_payway" && (
+                    <div className="text-muted-foreground">Lo retenido cubrió el descuento que hizo Payway: no se cobró dos veces.</div>
+                  )}
+                  {recupero.data.retencion_estado === "liberado" && (
+                    <div className="text-emerald-700">Resuelto a favor del comercio: se le devolvió lo retenido.</div>
+                  )}
+                  <div>
+                    Lote donde se descontó:{" "}
+                    {recupero.data.lote_descuento_id ? (
+                      <Link to="/admin/comercios/link-pago/lotes" search={{ lote: recupero.data.lote_descuento_id }} className="font-mono text-primary hover:underline">
+                        {recupero.data.lote_descuento_codigo}
+                      </Link>
+                    ) : (
+                      "todavía no llegó en el archivo de Payway"
+                    )}
+                  </div>
+                  {recupero.data.pendiente_recuperar > 0 && <div>Pendiente de recuperar: {fmt(recupero.data.pendiente_recuperar)}</div>}
                 </div>
               )}
 
@@ -918,6 +916,7 @@ function Page() {
   } | null>(null);
   const [showCrear, setShowCrear] = useState(false);
   const [showImportar, setShowImportar] = useState(false);
+  const [showSimular, setShowSimular] = useState(false);
   const [estadoFilter, setEstadoFilter] = useState<EstadoContra | "">("");
   const { can } = useCan();
   const puedeGestionar = can("modificar", "comercios");
@@ -1105,6 +1104,15 @@ function Page() {
           )}
           {puedeGestionar && (
             <button
+              onClick={() => setShowSimular(true)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md border bg-card text-xs font-semibold hover:bg-muted"
+              title="CSV de prueba con ventas reales de lotes Programados o Pendientes"
+            >
+              <Download size={14} /> Simular contracargos
+            </button>
+          )}
+          {puedeGestionar && (
+            <button
               onClick={() => setShowCrear(true)}
               className="flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold"
             >
@@ -1135,6 +1143,7 @@ function Page() {
       {detail && <Detalle c={detail} onClose={() => setDetail(null)} />}
       {showCrear && <CrearModal onClose={() => setShowCrear(false)} />}
       {showImportar && <ImportarContracargosModal onClose={() => setShowImportar(false)} />}
+      {showSimular && <SimularContracargosModal onClose={() => setShowSimular(false)} />}
       {confirm && (
         <ConfirmDialog
           open={!!confirm}

@@ -27,6 +27,7 @@ import { PortalShell, type NavItem } from "@/components/portal-shell";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { RouteSkeleton } from "@/components/route-skeleton";
 import { AdminChatbot } from "@/components/admin-chatbot";
+import { AlertasHeader } from "@/components/alertas/alertas-header";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin")({
@@ -50,7 +51,7 @@ const nav: NavItem[] = [
     icon: Store,
     items: [
       { to: "/admin/comercios/gestion", label: "Gestión de comercios", icon: Store },
-      { to: "/admin/comercios/transferencia", label: "Pagos con QR", icon: CreditCard },
+      // { to: "/admin/comercios/transferencia", label: "Pagos con QR", icon: CreditCard },
       { to: "/admin/comercios/link-pago", label: "Enlaces de pago", icon: Link2 },
       { to: "/admin/comercios/impuestos", label: "Impuestos", icon: Receipt },
       { to: "/admin/comercios/apis", label: "APIs externas", icon: Code2 },
@@ -72,6 +73,7 @@ const nav: NavItem[] = [
     items: [
       { to: "/admin/modulos", label: "Salud de módulos", icon: Puzzle },
       { to: "/admin/configuracion", label: "Integraciones", icon: Cable },
+      { to: "/admin/centro-alertas", label: "Centro de alertas", icon: Bell },
       { to: "/admin/notificaciones", label: "Notificaciones", icon: BellRing },
     ],
   },
@@ -109,7 +111,7 @@ function AdminLayout() {
   if (!authChecked) return <RouteSkeleton />;
 
   return (
-    <PortalShell nav={nav} title="Backoffice Molly">
+    <PortalShell nav={nav} title="Backoffice Molly" headerActions={<AlertasHeader />}>
       <Outlet />
       <AdminChatbot />
     </PortalShell>

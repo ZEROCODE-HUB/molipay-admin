@@ -34,6 +34,13 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
    - Adelantos de Dinero — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/adelantos)
    - Contracargos — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/contracargos)
    - Lotes de Acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes)
+   - Acreditaciones por día — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/acreditaciones)
+   - Calendario de acreditaciones — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/calendario-acreditaciones)
+   - Ejecución masiva — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/ejecucion)
+   - Excepciones de importación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/excepciones)
+   - Carga de liquidaciones — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/liquidaciones)
+   - Lotes de Venta — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes-venta)
+   - Parámetros de acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/parametros)
    - Resumen general — Link de Pago — Admin — Moli  (/admin/comercios/link-pago/resumen)
    - Pagos con transferencia — Admin — Moli  (/admin/comercios/transferencia)
 
@@ -67,6 +74,7 @@ export const KB_NAVIGATION = `Estructura actual del panel administrativo (se gen
 
 • Sistema:
    - Sistema de Notificaciones — Admin — Moli  (/admin/notificaciones)
+   - Centro de alertas — Admin — Moli  (/admin/centro-alertas)
 
 • Registros:
    - Registros  (/administracion/registros)
@@ -182,6 +190,38 @@ export const KB_ROUTES: { path: string; title: string }[] = [
   {
     "path": "/admin/comercios/link-pago/lotes",
     "title": "Lotes de Acreditación — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/acreditaciones",
+    "title": "Acreditaciones por día — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/calendario-acreditaciones",
+    "title": "Calendario de acreditaciones — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/ejecucion",
+    "title": "Ejecución masiva — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/excepciones",
+    "title": "Excepciones de importación — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/liquidaciones",
+    "title": "Carga de liquidaciones — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/lotes-venta",
+    "title": "Lotes de Venta — Links de Pago — Admin — Moli"
+  },
+  {
+    "path": "/admin/centro-alertas",
+    "title": "Centro de alertas — Admin — Moli"
+  },
+  {
+    "path": "/admin/comercios/link-pago/parametros",
+    "title": "Parámetros de acreditación — Links de Pago — Admin — Moli"
   },
   {
     "path": "/admin/comercios/link-pago/resumen",

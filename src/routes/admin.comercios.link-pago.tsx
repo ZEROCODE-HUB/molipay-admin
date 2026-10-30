@@ -19,6 +19,7 @@ const tabs: Tab[] = [
   { label: "Contracargos", to: "/admin/comercios/link-pago/contracargos" },
   { label: "Adelantos de Dinero", to: "/admin/comercios/link-pago/adelantos" },
   { label: "Resumen general", to: "/admin/comercios/link-pago/resumen" },
+  { label: "Parámetros", to: "/admin/comercios/link-pago/parametros" },
 ];
 
 function LinkPagoLayout() {

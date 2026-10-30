@@ -527,6 +527,9 @@ export function generarCsvLiquidacionTestParaLote(
     },
     {
       establecimiento: lote.comercio?.siteId?.trim() || undefined,
+      // Payway liquida en la fecha estimada del lote: con esa FECHA la
+      // importacion vincula el renglon con la proyeccion (lote Programado).
+      fecha: lote.fecha,
     },
   );
 }
