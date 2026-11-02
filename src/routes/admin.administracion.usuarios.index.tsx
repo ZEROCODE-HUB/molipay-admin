@@ -1,356 +1,574 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Eye, Loader2, AlertTriangle, Inbox, X } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
-import { DataTable, type Column, type TableServerFilters } from "@/components/data-table";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { FormDialog } from "@/components/form-dialog";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  KeyRound,
+  Loader2,
+  Mail,
+  Pencil,
+  Power,
+  PowerOff,
+  Search,
+  ShieldCheck,
+  UserPlus,
+} from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader, Badge, BtnOutline, BtnPrimary, Input, Label } from "@/components/portal-shell";
+import { DataTable, type Column } from "@/components/data-table";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { Badge, Input, BtnPrimary } from "@/components/portal-shell";
-import { listAdminUsers } from "@/lib/api/admin-users";
-import { listRoles } from "@/lib/api/roles-permisos";
-import type { AdminUser, Rol } from "@/lib/api/types";
-import { crearAdminUser } from "@/lib/api/edge";
-import { DataAccessError } from "@/lib/api/errors";
-import { useCan } from "@/lib/permissions";
-import { PermissionGuard } from "@/components/permission-guard";
-import { Pagination } from "@/components/pagination";
-
-const PAGE_SIZES = [10, 20, 50];
+import { FormDialog } from "@/components/form-dialog";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { Can, useCan, usePermissions } from "@/lib/permissions";
+import { RBAC_QUERY_KEYS, fetchRoles, type Role } from "@/lib/api/rbac";
+import {
+  BACKOFFICE_USERS_QUERY_KEY,
+  fetchBackofficeUsers,
+  inviteBackofficeUser,
+  sendPasswordLink,
+  setBackofficeUserActive,
+  updateBackofficeUser,
+  type BackofficeUser,
+  type BackofficeUserStatus,
+} from "@/lib/api/backoffice-users";
 
 export const Route = createFileRoute("/admin/administracion/usuarios/")({
-  head: () => ({ meta: [{ title: "Administración de personal — Admin Panel" }] }),
-  component: Page,
+  head: () => ({ meta: [{ title: "Usuarios backoffice — Admin Panel" }] }),
+  component: BackofficeUsersPage,
 });
 
-function fmtFecha(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-}
+const PAGE_SIZE = 20;
 
-function Page() {
-  const qc = useQueryClient();
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [detail, setDetail] = useState<AdminUser | null>(null);
-  const [showNew, setShowNew] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+const selectClass =
+  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
 
-  const [filtrosPanel, setFiltrosPanel] = useState<TableServerFilters>({ global: "", enums: {}, dates: {} });
-  const search = useDebouncedValue(filtrosPanel.global.trim(), 350);
-  const aplicarFiltros = (f: TableServerFilters) => {
-    setPage(0);
-    setFiltrosPanel(f);
+const STATUS_LABEL: Record<BackofficeUserStatus, string> = {
+  invited: "Invitado",
+  active: "Activo",
+  inactive: "Inactivo",
+};
+const STATUS_TONE: Record<BackofficeUserStatus, "warn" | "success" | "neutral"> = {
+  invited: "warn",
+  active: "success",
+  inactive: "neutral",
+};
+
+const formatDateTime = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
+// ---------------------------------------------------------------------------
+// Dialogos
+// ---------------------------------------------------------------------------
+
+function InviteUserDialog({
+  roles,
+  onClose,
+  onInvited,
+}: {
+  roles: Role[];
+  onClose: () => void;
+  onInvited: () => void;
+}) {
+  const { session } = usePermissions();
+  const assignableRoles = roles.filter((r) => !r.isSuperadmin || session?.isSuperadmin);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [roleId, setRoleId] = useState(
+    assignableRoles.find((r) => !r.isSuperadmin)?.id ?? assignableRoles[0]?.id ?? "",
+  );
+  const [staffCode, setStaffCode] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const valid = fullName.trim().length >= 2 && emailValid && !!roleId;
+
+  const submit = async () => {
+    if (!valid || sending) return;
+    setSending(true);
+    try {
+      await inviteBackofficeUser({ fullName, email, roleId, staffCode });
+      toast.success(`Invitación enviada a ${email.trim().toLowerCase()}.`);
+      onInvited();
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSending(false);
+    }
   };
 
-  const rolesQ = useQuery({ queryKey: ["roles"], queryFn: listRoles });
-  const roles = rolesQ.data ?? [];
-  const rolNombre = new Map<string, string>(roles.map((r) => [r.id, r.nombre]));
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title="Invitar usuario"
+      description="Le llega un email para definir su contraseña. Hasta que la defina no puede usar el panel."
+      onSubmit={submit}
+      submitLabel={sending ? "Enviando…" : "Enviar invitación"}
+      isSubmitting={sending}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Label htmlFor="invite-name">Nombre y apellido</Label>
+          <Input
+            id="invite-name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="invite-email">Email</Label>
+          <Input
+            id="invite-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="nombre@empresa.com"
+          />
+          {email && !emailValid && <p className="mt-1 text-xs text-red-600">Email inválido.</p>}
+        </div>
+        <div>
+          <Label htmlFor="invite-role">Rol</Label>
+          <select
+            id="invite-role"
+            className={selectClass}
+            value={roleId}
+            onChange={(e) => setRoleId(e.target.value)}
+          >
+            {assignableRoles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+                {r.isSuperadmin ? " (acceso total)" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="invite-code">Legajo (opcional)</Label>
+          <Input
+            id="invite-code"
+            value={staffCode}
+            onChange={(e) => setStaffCode(e.target.value)}
+            placeholder="Se genera solo"
+          />
+        </div>
+      </div>
+    </FormDialog>
+  );
+}
 
-  const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-    queryKey: ["admin-users", page, pageSize, search],
-    queryFn: () => listAdminUsers({ page, pageSize, search: search || undefined }),
-  });
+function EditUserDialog({
+  user,
+  roles,
+  onClose,
+  onSaved,
+}: {
+  user: BackofficeUser;
+  roles: Role[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { session } = usePermissions();
+  const isSelf = session?.userId === user.id;
+  const canTouchAdmin = !!session?.isSuperadmin;
+  const assignableRoles = roles.filter(
+    (r) => !r.isSuperadmin || canTouchAdmin || r.id === user.roleId,
+  );
+  const [fullName, setFullName] = useState(user.fullName);
+  const [roleId, setRoleId] = useState(user.roleId);
+  const [saving, setSaving] = useState(false);
+  const roleLocked = isSelf || (user.roleIsSuperadmin && !canTouchAdmin);
 
-  const rows: AdminUser[] = data?.rows ?? [];
-  const total = data?.total ?? 0;
-  const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
+  const submit = async () => {
+    if (fullName.trim().length < 2 || saving) return;
+    setSaving(true);
+    try {
+      await updateBackofficeUser(user.id, fullName, roleId);
+      toast.success("Usuario actualizado.");
+      onSaved();
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const createMut = useMutation({
-    mutationFn: (vars: {
-      nombre: string;
-      email: string;
-      legajo: string;
-      password: string;
-      rolId: string;
-    }) => crearAdminUser(vars),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      setShowNew(false);
-      setSaveError(null);
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title="Editar usuario"
+      description={user.email}
+      onSubmit={submit}
+      submitLabel={saving ? "Guardando…" : "Guardar"}
+      isSubmitting={saving}
+    >
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="edit-name">Nombre y apellido</Label>
+          <Input id="edit-name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="edit-role">Rol</Label>
+          <select
+            id="edit-role"
+            className={selectClass}
+            value={roleId}
+            disabled={roleLocked}
+            onChange={(e) => setRoleId(e.target.value)}
+          >
+            {assignableRoles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+                {r.isSuperadmin ? " (acceso total)" : ""}
+              </option>
+            ))}
+          </select>
+          {roleLocked && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isSelf
+                ? "No podés cambiar tu propio rol."
+                : "Solo un Admin puede cambiar el rol de otro Admin."}
+            </p>
+          )}
+        </div>
+      </div>
+    </FormDialog>
+  );
+}
+
+type PendingAction = { kind: "password" | "deactivate" | "activate"; user: BackofficeUser };
+
+function ConfirmActionDialog({
+  action,
+  onClose,
+  onDone,
+}: {
+  action: PendingAction;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [running, setRunning] = useState(false);
+  const { user, kind } = action;
+  const isInvitation = kind === "password" && user.status === "invited";
+
+  const copy = {
+    password: isInvitation
+      ? {
+          title: "Reenviar invitación",
+          body: `Se envía un nuevo email a ${user.email} para definir su contraseña.`,
+          cta: "Reenviar",
+        }
+      : {
+          title: "Resetear contraseña",
+          body: `${user.fullName} queda sin acceso hasta definir una contraseña nueva con el link que le llega a ${user.email}.`,
+          cta: "Resetear y enviar email",
+        },
+    deactivate: {
+      title: "Desactivar usuario",
+      body: `${user.fullName} pierde el acceso de inmediato (se cierran sus sesiones abiertas). Podés reactivarlo después.`,
+      cta: "Desactivar",
     },
-    onError: (e) =>
-      setSaveError(e instanceof DataAccessError ? e.message : "Error al crear usuario"),
-  });
-
-  const { can } = useCan();
-  const puedeCrear = can("crear", "usuarios_backoffice");
-
-  const getActions = (r: AdminUser): ActionItem[] => [
-    { label: "Ver detalles", icon: Eye, onClick: () => setDetail(r) },
-  ];
-
-  const columns: Column<AdminUser>[] = [
-    { key: "legajo", label: "Legajo", sortable: true, filterable: true, render: (r) => r.legajo },
-    { key: "nombre", label: "Nombre", sortable: true, filterable: true, render: (r) => r.nombre },
-    { key: "email", label: "Email", sortable: true, filterable: true, render: (r) => r.email },
-    {
-      key: "rolId",
-      label: "Rol",
-      sortable: true,
-      filterable: false,
-      render: (r) => rolNombre.get(r.rolId) ?? r.rolId,
+    activate: {
+      title: "Activar usuario",
+      body: `${user.fullName} vuelve a tener acceso con su rol actual.`,
+      cta: "Activar",
     },
+  }[kind];
+
+  const run = async () => {
+    setRunning(true);
+    try {
+      if (kind === "password") {
+        await sendPasswordLink(user.id);
+        toast.success(isInvitation ? "Invitación reenviada." : "Email de reseteo enviado.");
+      } else {
+        const result = await setBackofficeUserActive(user.id, kind === "activate");
+        if (result.warning) toast.warning(result.warning);
+        else toast.success(kind === "activate" ? "Usuario activado." : "Usuario desactivado.");
+      }
+      onDone();
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title={copy.title}
+      onSubmit={run}
+      submitLabel={running ? "Procesando…" : copy.cta}
+      isSubmitting={running}
+    >
+      <p className="text-sm text-muted-foreground">{copy.body}</p>
+    </FormDialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pagina
+// ---------------------------------------------------------------------------
+
+function BackofficeUsersPage() {
+  const queryClient = useQueryClient();
+  const { has } = useCan();
+  const { session } = usePermissions();
+
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebouncedValue(searchInput, 300);
+  const [roleId, setRoleId] = useState("");
+  const [status, setStatus] = useState<BackofficeUserStatus | "">("");
+  useEffect(() => setPage(0), [search, roleId, status]);
+
+  const filters = {
+    page,
+    pageSize: PAGE_SIZE,
+    search: search || undefined,
+    roleId: roleId || undefined,
+    status: status || undefined,
+  };
+  const usersQuery = useQuery({
+    queryKey: [...BACKOFFICE_USERS_QUERY_KEY, filters],
+    queryFn: () => fetchBackofficeUsers(filters),
+    placeholderData: keepPreviousData,
+  });
+  const rolesQuery = useQuery({ queryKey: RBAC_QUERY_KEYS.roles, queryFn: fetchRoles });
+  const roles = rolesQuery.data ?? [];
+
+  const [showInvite, setShowInvite] = useState(false);
+  const [editing, setEditing] = useState<BackofficeUser | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: BACKOFFICE_USERS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: RBAC_QUERY_KEYS.roles });
+  };
+
+  // Solo las acciones permitidas (las demas no se muestran).
+  const actionsFor = (user: BackofficeUser): ActionItem[] => {
+    const isSelf = user.id === session?.userId;
+    const items: ActionItem[] = [];
+    if (has("backoffice.users.update"))
+      items.push({ label: "Editar", icon: Pencil, onClick: () => setEditing(user) });
+    if (user.isActive && user.status === "invited" && has("backoffice.users.invite")) {
+      items.push({
+        label: "Reenviar invitación",
+        icon: Mail,
+        onClick: () => setPending({ kind: "password", user }),
+      });
+    }
+    if (user.isActive && user.status === "active" && has("backoffice.users.update")) {
+      items.push({
+        label: "Resetear contraseña",
+        icon: KeyRound,
+        onClick: () => setPending({ kind: "password", user }),
+      });
+    }
+    if (has("backoffice.users.deactivate") && !isSelf) {
+      items.push(
+        user.isActive
+          ? {
+              label: "Desactivar",
+              icon: PowerOff,
+              variant: "danger",
+              onClick: () => setPending({ kind: "deactivate", user }),
+            }
+          : {
+              label: "Activar",
+              icon: Power,
+              onClick: () => setPending({ kind: "activate", user }),
+            },
+      );
+    }
+    return items;
+  };
+
+  const columns: Column<BackofficeUser>[] = [
     {
-      key: "activo",
-      label: "Estado",
-      sortable: true,
-      filterable: false,
-      render: (r) => (
-        <Badge tone={r.activo ? "success" : "neutral"}>{r.activo ? "Activo" : "Inactivo"}</Badge>
+      key: "user",
+      label: "Usuario",
+      render: (u) => (
+        <div className="leading-tight">
+          <div className="font-medium">
+            {u.fullName}
+            {u.id === session?.userId && (
+              <span className="ml-1.5 text-[11px] text-muted-foreground">(vos)</span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">{u.email}</div>
+        </div>
       ),
     },
     {
-      key: "created_at",
-      label: "Creado",
-      sortable: true,
-      filterable: false,
-      render: (r) => fmtFecha(r.createdAt),
+      key: "staffCode",
+      label: "Legajo",
+      render: (u) => <span className="font-mono text-xs">{u.staffCode}</span>,
+    },
+    {
+      key: "role",
+      label: "Rol",
+      render: (u) =>
+        u.roleIsSuperadmin ? (
+          <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            <ShieldCheck size={12} /> {u.roleName}
+          </span>
+        ) : (
+          <Badge tone="neutral">{u.roleName}</Badge>
+        ),
+    },
+    {
+      key: "status",
+      label: "Estado",
+      render: (u) => <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>,
+    },
+    {
+      key: "lastLogin",
+      label: "Último acceso",
+      render: (u) => <span className="text-xs">{formatDateTime(u.lastLoginAt)}</span>,
+    },
+    {
+      key: "createdAt",
+      label: "Alta",
+      render: (u) => <span className="text-xs">{formatDateTime(u.createdAt)}</span>,
     },
   ];
 
-  const err = error instanceof DataAccessError ? error : null;
+  const total = usersQuery.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <PermissionGuard recurso="usuarios_backoffice">
+    <>
       <PageHeader
-        title="Administración de personal"
-        description="Gestión de usuarios del backoffice (datos reales de la base de datos)."
+        title="Usuarios backoffice"
+        description="Personas con acceso al panel. El alta es por invitación y el acceso lo define su rol."
         action={
-          <button
-            onClick={() => {
-              setSaveError(null);
-              setShowNew(true);
-            }}
-            disabled={!puedeCrear}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus size={14} /> Nuevo usuario
-          </button>
+          <Can permission="backoffice.users.invite">
+            <BtnPrimary onClick={() => setShowInvite(true)} disabled={roles.length === 0}>
+              <UserPlus size={14} /> Invitar usuario
+            </BtnPrimary>
+          </Can>
         }
       />
 
-      {isLoading ? (
-        <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-[220px] flex-1">
+          <Label htmlFor="users-search">Buscar</Label>
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id="users-search"
+              className="pl-8"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Nombre, email o legajo…"
+            />
+          </div>
+        </div>
+        <div className="min-w-[180px]">
+          <Label htmlFor="users-role">Rol</Label>
+          <select
+            id="users-role"
+            className={selectClass}
+            value={roleId}
+            onChange={(e) => setRoleId(e.target.value)}
+          >
+            <option value="">Todos los roles</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[160px]">
+          <Label htmlFor="users-status">Estado</Label>
+          <select
+            id="users-status"
+            className={selectClass}
+            value={status}
+            onChange={(e) => setStatus(e.target.value as BackofficeUserStatus | "")}
+          >
+            <option value="">Todos</option>
+            <option value="active">Activos</option>
+            <option value="invited">Invitados</option>
+            <option value="inactive">Inactivos</option>
+          </select>
+        </div>
+      </div>
+
+      {usersQuery.isLoading ? (
+        <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground">
           <Loader2 size={16} className="mr-2 animate-spin" /> Cargando usuarios…
         </div>
-      ) : isError ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
-          <AlertTriangle size={28} />
-          <p className="font-semibold">
-            {err?.permission
-              ? "No tenés permiso para ver esto"
-              : "Ocurrió un error al cargar los usuarios"}
-          </p>
-          <p>{err?.message ?? "Error desconocido"}</p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-2 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Reintentar
-          </button>
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-          <Inbox size={28} />
-          <p>No hay usuarios que coincidan con la búsqueda.</p>
-        </div>
+      ) : usersQuery.isError ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {(usersQuery.error as Error).message}
+        </p>
       ) : (
         <>
           <DataTable
             columns={columns}
-            data={rows}
-            keyExtractor={(r) => r.id}
-            pageSize={pageSize}
-            hidePagination
-            serverFilterState={filtrosPanel}
-            onServerFilterChange={aplicarFiltros}
-            serverResultCount={total}
-            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
-          />
-          <Pagination
-            page={page + 1}
-            totalPages={totalPaginas}
-            pageSize={pageSize}
-            total={total}
-            countLabel="usuario(s)"
-            pageSizes={PAGE_SIZES}
-            disabled={isFetching}
-            onPageChange={(p) => setPage(p - 1)}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(0);
+            data={usersQuery.data?.rows ?? []}
+            keyExtractor={(u) => u.id}
+            pageSize={PAGE_SIZE}
+            showGlobalFilter={false}
+            showDownloadButton={false}
+            emptyMessage="No hay usuarios con esos filtros."
+            actions={(u) => {
+              const items = actionsFor(u);
+              return items.length > 0 ? <ActionsDropdown actions={items} /> : null;
             }}
           />
+          {pages > 1 && (
+            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                {total} usuario(s) · página {page + 1} de {pages}
+              </span>
+              <div className="flex gap-2">
+                <BtnOutline disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                  Anterior
+                </BtnOutline>
+                <BtnOutline disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>
+                  Siguiente
+                </BtnOutline>
+              </div>
+            </div>
+          )}
         </>
       )}
 
-      {detail && (
-        <FormDialog
-          open={!!detail}
-          onClose={() => setDetail(null)}
-          title="Detalle del usuario"
-          description={`${detail.nombre} · ${detail.legajo}`}
-          onSubmit={() => setDetail(null)}
-          submitLabel="Cerrar"
-        >
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Nombre:</span>{" "}
-              <span className="font-medium">{detail.nombre}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Legajo:</span>{" "}
-              <span className="font-medium">{detail.legajo}</span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-muted-foreground">Email:</span>{" "}
-              <span className="font-medium">{detail.email}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Rol:</span>{" "}
-              <span className="font-medium">{rolNombre.get(detail.rolId) ?? detail.rolId}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Estado:</span>{" "}
-              <span className="font-medium">{detail.activo ? "Activo" : "Inactivo"}</span>
-            </div>
-          </div>
-        </FormDialog>
+      {showInvite && (
+        <InviteUserDialog roles={roles} onClose={() => setShowInvite(false)} onInvited={refresh} />
       )}
-
-      {showNew && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setShowNew(false)}
-        >
-          <div
-            className="bg-card border rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display font-semibold">Nuevo usuario backoffice</h3>
-              <button onClick={() => setShowNew(false)} className="p-1 hover:opacity-70">
-                <X size={18} />
-              </button>
-            </div>
-
-            {rolesQ.isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                <Loader2 size={16} className="animate-spin" /> Cargando roles…
-              </div>
-            ) : (
-              <NewUserForm
-                roles={roles}
-                submitting={createMut.isPending}
-                error={saveError}
-                onSubmit={(vars) => createMut.mutate(vars)}
-                onCancel={() => setShowNew(false)}
-              />
-            )}
-          </div>
-        </div>
-      )}
-    </PermissionGuard>
-  );
-}
-
-function NewUserForm({
-  roles,
-  submitting,
-  error,
-  onSubmit,
-  onCancel,
-}: {
-  roles: Rol[];
-  submitting: boolean;
-  error: string | null;
-  onSubmit: (vars: {
-    nombre: string;
-    email: string;
-    legajo: string;
-    password: string;
-    rolId: string;
-  }) => void;
-  onCancel: () => void;
-}) {
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
-  const [legajo, setLegajo] = useState("");
-  const [password, setPassword] = useState("");
-  const [rolId, setRolId] = useState(roles[0]?.id ?? "");
-
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!nombre.trim() || !email.trim() || !password.trim() || !rolId) return;
-        onSubmit({
-          nombre: nombre.trim(),
-          email: email.trim(),
-          legajo: legajo.trim(),
-          password,
-          rolId,
-        });
-      }}
-    >
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {error}
-        </div>
-      )}
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1">Nombre</label>
-        <Input value={nombre} onChange={(e) => setNombre(e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1">Email</label>
-        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1">Legajo</label>
-        <Input value={legajo} onChange={(e) => setLegajo(e.target.value)} placeholder="Opcional" />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1">Contraseña</label>
-        <Input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+      {editing && (
+        <EditUserDialog
+          user={editing}
+          roles={roles}
+          onClose={() => setEditing(null)}
+          onSaved={refresh}
         />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1">Rol</label>
-        <select
-          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-          value={rolId}
-          onChange={(e) => setRolId(e.target.value)}
-        >
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 h-10 rounded-md border border-input bg-card text-sm font-semibold hover:bg-accent"
-        >
-          Cancelar
-        </button>
-        <BtnPrimary type="submit" disabled={submitting || !rolId} className="flex-1">
-          {submitting ? "Creando…" : "Crear usuario"}
-        </BtnPrimary>
-      </div>
-    </form>
+      )}
+      {pending && (
+        <ConfirmActionDialog action={pending} onClose={() => setPending(null)} onDone={refresh} />
+      )}
+    </>
   );
 }

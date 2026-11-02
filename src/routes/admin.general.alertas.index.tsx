@@ -7,7 +7,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { BtnOutline } from "@/components/portal-shell";
 import { PageHeader } from "@/components/page-header";
 import { AlertsTable, ALERTS_QUERY_KEY } from "@/components/alertas/alerts-table";
-import { runComplianceSweep, simulateDeposit, simulateHistory } from "@/lib/api/compliance";
+import { netoDeposito, runComplianceSweep, simulateDeposit, simulateHistory } from "@/lib/api/compliance";
 
 export const Route = createFileRoute("/admin/general/alertas/")({
   head: () => ({
@@ -98,10 +98,22 @@ function SimularDepositoDialog({ onClose, onDone }: { onClose: () => void; onDon
         cbuOrigen: form.cbuOrigen.trim(),
       });
       if (r.estado === "acreditado") {
+        const $ = (n: number | string | undefined) =>
+          `$ ${Number(n ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const desglose = [
+          `Bruto ${$(r.importe)}`,
+          `comisión ${$(r.comision)}`,
+          `IVA ${$(r.impuesto)}`,
+          ...(r.taxes ?? [])
+            .filter((t) => Number(t.amount) > 0)
+            .map((t) => `${t.tax_name} ${$(t.amount)}`),
+          `neto ${$(netoDeposito(r))}`,
+        ].join(" · ");
         toast.success(
           r.retenido
             ? `Depósito ${r.idCoelsa} acreditado RETENIDO (bloqueo preventivo).`
             : `Depósito ${r.idCoelsa} acreditado (${r.decision === "alert" ? "con alertas" : "sin alertas"}).`,
+          { description: desglose },
         );
         onDone();
         onClose();

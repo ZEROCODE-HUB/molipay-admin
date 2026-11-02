@@ -29,30 +29,6 @@ export const ESTADOS_CLIENTE: EstadoCliente[] = [
   "eliminado",
 ];
 
-// --- admin_users (rol_id FK a roles) --------------------------------------
-
-export type AdminUserRow = {
-  id: string;
-  legajo: string;
-  email: string;
-  nombre: string;
-  activo: boolean;
-  rol_id: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type AdminUser = {
-  id: string;
-  legajo: string;
-  email: string;
-  nombre: string;
-  activo: boolean;
-  rolId: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 // --- clientes --------------------------------------------------------------
 
 export type ClienteRow = {
@@ -269,57 +245,7 @@ export const ESTADOS_MOVIMIENTO_CODES = [
 /** Alias legible para los filtros de UI. */
 export const ESTADOS_MOVIMIENTO = ESTADOS_MOVIMIENTO_CODES;
 
-// --- catálogos: roles / recursos / permisos / estados ---------------------
-
-export type RolRow = {
-  id: string;
-  nombre: string;
-  descripcion: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Rol = {
-  id: string;
-  nombre: string;
-  descripcion: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type RecursoRow = {
-  id: string;
-  codigo: string;
-  nombre: string;
-  modulo: string;
-};
-
-export type Recurso = {
-  id: string;
-  codigo: string;
-  nombre: string;
-  modulo: string;
-};
-
-export type PermisoRow = {
-  id: string;
-  rol_id: string;
-  recurso_id: string;
-  puede_leer: boolean;
-  puede_crear: boolean;
-  puede_modificar: boolean;
-  puede_borrar: boolean;
-};
-
-export type Permiso = {
-  id: string;
-  rolId: string;
-  recursoId: string;
-  puedeLeer: boolean;
-  puedeCrear: boolean;
-  puedeModificar: boolean;
-  puedeBorrar: boolean;
-};
+// --- catálogos: estados -----------------------------------------------------
 
 export type EstadoMovimientoRow = {
   id: number;
@@ -964,28 +890,31 @@ export const AMBITOS_IMPUESTO: AmbitoImpuesto[] = ["Externo", "Interno"];
 export type TipoImpuesto = "Porcentaje" | "Fijo" | "Otro";
 export type EstadoImpuesto = "Activo" | "Inactivo";
 
-export type ImpuestoRow = {
+// Catalogo: tabla `taxes`. Valores en ingles en la base, etiquetas en espanol en la UI.
+export type TaxRow = {
   id: string;
-  codigo: string;
-  nombre: string;
-  descripcion: string | null;
-  tipo: TipoImpuesto;
-  monto: number | null;
-  estado: EstadoImpuesto;
-  ambito?: AmbitoImpuesto | string | null;
+  code: string;
+  name: string;
+  description: string | null;
+  scope: "external" | "internal";
+  status: "active" | "inactive";
+  rate_source: "fixed" | "taxpayer_registry" | "manual";
   created_at: string;
   updated_at: string;
 };
+
+/** De donde sale la alicuota: tax_rates (Fija), padron de IIBB (Padron) o asignacion por cliente (Manual). */
+export type FuenteAlicuota = "Fija" | "Padrón" | "Manual";
+export const FUENTES_ALICUOTA: FuenteAlicuota[] = ["Fija", "Padrón", "Manual"];
 
 export type Impuesto = {
   id: string;
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  tipo: TipoImpuesto;
-  monto: number | null;
   estado: EstadoImpuesto;
   ambito: AmbitoImpuesto;
+  fuenteAlicuota: FuenteAlicuota;
   alicuotas: Alicuota[];
   createdAt: string;
   updatedAt: string;
@@ -995,10 +924,9 @@ export type ImpuestoInput = {
   codigo: string;
   nombre: string;
   descripcion?: string | null;
-  tipo: TipoImpuesto;
-  monto: number | null;
   estado: EstadoImpuesto;
-  ambito?: AmbitoImpuesto | string | null;
+  ambito: AmbitoImpuesto;
+  fuenteAlicuota: FuenteAlicuota;
 };
 
 export type ImpuestoFilters = Pagination & {
@@ -1006,52 +934,85 @@ export type ImpuestoFilters = Pagination & {
   estado?: EstadoImpuesto;
 };
 
-export type AlicuotaRow = {
+// Alicuotas fijas: tabla `tax_rates`.
+export type TaxRateRow = {
   id: string;
-  impuesto_id: string;
-  codigo: string;
-  tasa: number;
-  descripcion: string | null;
-  estado: "Activo" | "Inactivo";
+  tax_id: string;
+  code: string;
+  calculation_type: "percentage" | "fixed_amount";
+  value: number;
+  direction: "inbound" | "outbound" | "both";
+  description: string | null;
+  status: "active" | "inactive";
+  valid_from: string;
+  valid_to: string | null;
   created_at: string;
-  updated_at?: string;
+  updated_at: string;
 };
+
+export type TipoCalculoAlicuota = "Porcentaje" | "Monto fijo";
+/** Entrante = ingreso de fondos (Pay-In), Saliente = egreso (Pay-Out). */
+export type DireccionAlicuota = "Entrante" | "Saliente" | "Ambas";
+export const DIRECCIONES_ALICUOTA: DireccionAlicuota[] = ["Entrante", "Saliente", "Ambas"];
 
 export type Alicuota = {
   id: string;
   impuestoId: string;
   codigo: string;
-  tasa: number;
+  tipoCalculo: TipoCalculoAlicuota;
+  valor: number;
+  direccion: DireccionAlicuota;
   descripcion: string | null;
-  estado: "Activo" | "Inactivo";
+  estado: EstadoImpuesto;
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
 export type AlicuotaInput = {
-  impuesto_id: string;
   codigo: string;
-  tasa: number;
+  tipoCalculo: TipoCalculoAlicuota;
+  valor: number;
+  direccion: DireccionAlicuota;
   descripcion?: string | null;
-  estado: "Activo" | "Inactivo";
+  estado: EstadoImpuesto;
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
 };
 
 export type AlicuotaFilters = Pagination & {
   impuesto_id?: string;
   search?: string;
-  estado?: "Activo" | "Inactivo";
+  estado?: EstadoImpuesto;
 };
 
-export type ImpuestoAsignacionRow = {
+/**
+ * Operacion a la que aplica una asignacion (null = todas). Define la direccion
+ * de la alicuota: Retiro = Pay-Out (saliente); el resto = Pay-In (entrante).
+ */
+export type OperacionImpuesto = TipoOperacion;
+export const OPERACIONES_IMPUESTO: OperacionImpuesto[] = TIPOS_OPERACION;
+export const DIRECCION_DE_OPERACION: Record<OperacionImpuesto, "Entrante" | "Saliente"> = {
+  Depósito: "Entrante",
+  Retiro: "Saliente",
+  "Link de pago": "Entrante",
+  "E-commerce": "Entrante",
+};
+
+export type TaxAssignmentRow = {
   id: string;
-  legajo: string;
-  impuesto_id: string;
-  tipo: TipoImpuesto;
-  monto: number | null;
-  estado: EstadoImpuesto;
-  fecha_asignacion: string | null;
-  tipo_operacion: TipoOperacion | null;
-  impuestos?: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null }[] | null;
+  client_legajo: string;
+  tax_id: string;
+  operation_type: "deposit" | "withdrawal" | "payment_link" | "ecommerce" | null;
+  status: "active" | "inactive";
+  custom_calculation_type: "percentage" | "fixed_amount" | null;
+  custom_rate: number | string | null;
+  assigned_at: string | null;
+  updated_at: string | null;
+  taxes?:
+    | { code: string; name: string; rate_source: TaxRow["rate_source"]; tax_rates?: TaxRateRow[] | null }[]
+    | null;
   clientes?:
     | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
     | null;
@@ -1061,12 +1022,20 @@ export type ImpuestoAsignacion = {
   id: string;
   clienteLegajo: string;
   impuestoId: string;
-  tipo: TipoImpuesto;
-  monto: number | null;
+  /** null = todas las operaciones. */
+  operacion: OperacionImpuesto | null;
   estado: EstadoImpuesto;
+  /** Solo impuestos de fuente Manual. */
+  tipoCalculo: TipoCalculoAlicuota | null;
+  alicuotaPropia: number | null;
   fechaAsignacion: string | null;
-  tipoOperacion: TipoOperacion | null;
-  impuesto: { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null } | null;
+  updatedAt: string | null;
+  impuesto: {
+    codigo: string;
+    nombre: string;
+    fuenteAlicuota: FuenteAlicuota;
+    alicuotas: Alicuota[];
+  } | null;
   cliente: {
     legajo: string;
     nombre: string;
@@ -1079,11 +1048,11 @@ export type ImpuestoAsignacion = {
 export type ImpuestoAsignacionInput = {
   cliente_legajo: string;
   impuesto_id: string;
-  tipo: TipoImpuesto;
-  monto: number | null;
+  operacion: OperacionImpuesto | null;
   estado: EstadoImpuesto;
-  fecha_asignacion?: string | null;
-  tipo_operacion?: TipoOperacion | null;
+  /** Solo impuestos de fuente Manual; en el resto va null. */
+  tipo_calculo: TipoCalculoAlicuota | null;
+  alicuota_propia: number | null;
 };
 
 export type ImpuestoAsignacionFilters = Pagination & {
@@ -1093,169 +1062,17 @@ export type ImpuestoAsignacionFilters = Pagination & {
   estado?: EstadoImpuesto;
 };
 
-export type EstadoPadron = "Cargando" | "Procesando" | "Finalizado" | "Error";
-
-export type IbPadronRow = {
-  id: string;
-  impuesto_id: string;
-  nombre: string;
-  archivo: string;
-  estado: EstadoPadron;
-  progreso: number;
-  created_at: string;
+/** Alicuota que regiria hoy un impuesto para un comercio (tax_rate_preview). */
+export type AlicuotaPrevista = {
+  direccion: "Entrante" | "Saliente";
+  codigo: string | null;
+  tipoCalculo: TipoCalculoAlicuota;
+  valor: number;
+  padronId: string | null;
+  nota: string | null;
 };
 
-export type IbPadron = {
-  id: string;
-  impuestoId: string;
-  nombre: string;
-  archivo: string;
-  estado: EstadoPadron;
-  progreso: number;
-  createdAt: string;
-};
-
-export type IbPadronInput = {
-  impuesto_id: string;
-  nombre: string;
-  archivo: string;
-  estado?: EstadoPadron;
-  progreso?: number;
-};
-
-export type IbPadronFilters = Pagination & {
-  search?: string;
-  impuesto_id?: string;
-  estado?: EstadoPadron;
-};
-
-export type IbNormalizacionPreviewRow = {
-  id: string;
-  padron_id: string;
-  kpis_json: Record<string, unknown> | null;
-  creados_json: unknown[] | null;
-  desactivados_json: unknown[] | null;
-  omitidos_json: unknown[] | null;
-  aplicado: boolean;
-  created_at: string;
-};
-
-export type IbNormalizacionPreview = {
-  id: string;
-  padronId: string;
-  kpisJson: Record<string, unknown> | null;
-  creadosJson: unknown[] | null;
-  desactivadosJson: unknown[] | null;
-  omitidosJson: unknown[] | null;
-  aplicado: boolean;
-  createdAt: string;
-};
-
-export type IbNormalizacionPreviewInput = {
-  padron_id: string;
-  kpis_json?: Record<string, unknown> | null;
-  creados_json?: unknown[] | null;
-  desactivados_json?: unknown[] | null;
-  omitidos_json?: unknown[] | null;
-  aplicado?: boolean;
-};
-
-export type IbNormalizacionPreviewFilters = Pagination & {
-  padron_id?: string;
-  aplicado?: boolean;
-};
-
-export type DireccionDcExcepcion = "Entrantes" | "Salientes";
-export type TipoDcExcepcion = "Alta manual" | "Convenio multilateral" | "Exención";
-
-export type DcExcepcionRow = {
-  id: string;
-  usuario: string;
-  cuit: string;
-  tipo: TipoDcExcepcion;
-  direccion: DireccionDcExcepcion;
-  motivo: string | null;
-  vigencia_desde: string | null;
-  vigencia_hasta: string | null;
-  autorizacion_codigo: string | null;
-  estado: EstadoImpuesto;
-  archivo_certificado: string | null;
-  impuesto_id: string | null;
-  fecha_creacion: string;
-  fecha_actualizacion: string;
-  impuestos?: { codigo: string; nombre: string }[] | null;
-};
-
-export type DcExcepcion = {
-  id: string;
-  email: string;
-  cuit: string;
-  tipo: TipoDcExcepcion;
-  direccion: DireccionDcExcepcion;
-  motivo: string | null;
-  vigenciaDesde: string | null;
-  vigenciaHasta: string | null;
-  autorizacionCodigo: string | null;
-  estado: EstadoImpuesto;
-  archivoCertificado: string | null;
-  impuestoId: string | null;
-  impuestoNombre: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type DcExcepcionInput = {
-  email: string;
-  cuit: string;
-  tipo: TipoDcExcepcion;
-  direccion: DireccionDcExcepcion;
-  motivo?: string | null;
-  vigencia_desde?: string | null;
-  vigencia_hasta?: string | null;
-  autorizacion_codigo?: string | null;
-  estado: EstadoImpuesto;
-};
-
-export type DcExcepcionFilters = Pagination & {
-  search?: string;
-  cuit?: string;
-  direccion?: DireccionDcExcepcion;
-  estado?: EstadoImpuesto;
-};
-
-export type DcSyncRetroactivoRow = {
-  id: string;
-  cuit: string;
-  desde: string;
-  hasta: string;
-  preview_json: Record<string, unknown> | null;
-  aplicado: boolean;
-  created_at: string;
-};
-
-export type DcSyncRetroactivo = {
-  id: string;
-  cuit: string;
-  desde: string;
-  hasta: string;
-  previewJson: Record<string, unknown> | null;
-  aplicado: boolean;
-  createdAt: string;
-};
-
-export type DcSyncRetroactivoInput = {
-  cuit: string;
-  desde: string;
-  hasta: string;
-  preview_json?: Record<string, unknown> | null;
-  aplicado?: boolean;
-};
-
-export type DcSyncRetroactivoFilters = Pagination & {
-  search?: string;
-  cuit?: string;
-  aplicado?: boolean;
-};
+export type EstadoPadron = "Cargando" | "Procesando" | "Finalizado" | "Error" | "Borrador" | "Vigente" | "Reemplazado";
 
 // --- banderas (catálogo) / banderas_cuotas ----------------------------------
 

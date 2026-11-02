@@ -1,7 +1,4 @@
 import type {
-  AmbitoImpuesto,
-  AdminUser,
-  AdminUserRow,
   ApiEndpoint,
   ApiEndpointInput,
   ApiEndpointRow,
@@ -23,24 +20,19 @@ import type {
   ComercioRow,
   ComisionCliente,
   ComisionClienteRow,
-  DcExcepcion,
-  DcExcepcionRow,
-  DcSyncRetroactivo,
-  DcSyncRetroactivoRow,
   EstadoEntrega,
   EventoNotificacion,
   EventoNotificacionInput,
   EventoNotificacionRow,
   Impuesto,
-  ImpuestoRow,
+  TaxRow,
+  TaxRateRow,
+  FuenteAlicuota,
+  DireccionAlicuota,
   ImpuestoAsignacion,
-  ImpuestoAsignacionRow,
+  TaxAssignmentRow,
+  TipoOperacion,
   Alicuota,
-  AlicuotaRow,
-  IbPadron,
-  IbPadronRow,
-  IbNormalizacionPreview,
-  IbNormalizacionPreviewRow,
   Integracion,
   IntegracionRow,
   Movimiento,
@@ -53,7 +45,6 @@ import type {
   CodigoCategoria,
   CodigoCategoriaRow,
   EstadoApiUsuario,
-  TipoImpuesto,
 } from "./types";
 
 export function toCliente(r: ClienteRow): Cliente {
@@ -174,19 +165,6 @@ export function toMovimiento(
   };
 }
 
-export function toAdminUser(r: AdminUserRow): AdminUser {
-  return {
-    id: r.id,
-    legajo: r.legajo,
-    email: r.email,
-    nombre: r.nombre,
-    rolId: r.rol_id,
-    activo: r.activo,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  };
-}
-
 function firstOrNull<T>(v: T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null;
   return (v as T | null) ?? null;
@@ -222,9 +200,9 @@ export function toComercio(
       | null;
     codigos_categoria?: CodigoCategoriaRow[] | null;
     puntos_venta?: PuntoVentaRow[] | null;
-    admin_users?: {
+    backoffice_users?: {
       id: string;
-      nombre: string;
+      full_name: string;
       email: string;
     }[] | null;
   },
@@ -232,7 +210,7 @@ export function toComercio(
   const cli = firstOrNull(r.clientes);
   const cat = firstOrNull(r.codigos_categoria);
   const pdvs = (r.puntos_venta ?? []) as PuntoVentaRow[];
-  const adminUser = firstOrNull(r.admin_users);
+  const executive = firstOrNull(r.backoffice_users);
   return {
     id: r.id,
     usuario: r.usuario,
@@ -262,11 +240,11 @@ export function toComercio(
     nivel: r.nivel,
     estado: r.estado,
     ejecutivoResponsableId: (r as unknown as { ejecutivo_responsable_id?: string | null }).ejecutivo_responsable_id ?? null,
-    ejecutivo: adminUser
+    ejecutivo: executive
       ? {
-          id: adminUser.id,
-          nombre: adminUser.nombre,
-          email: adminUser.email,
+          id: executive.id,
+          nombre: executive.full_name,
+          email: executive.email,
         }
       : null,
     siteId: (r as unknown as { site_id?: string | null }).site_id ?? null,
@@ -425,78 +403,81 @@ export function toEventoNotificacion(
   };
 }
 
-function parseAmbitoImpuesto(r: ImpuestoRow): AmbitoImpuesto {
-  const raw = (r as unknown as { ambito?: unknown }).ambito;
-  if (raw === "Interno" || raw === "Externo") return raw as AmbitoImpuesto;
-  return "Externo";
-}
+const FUENTE_DESDE_DB: Record<TaxRow["rate_source"], FuenteAlicuota> = {
+  fixed: "Fija",
+  taxpayer_registry: "Padrón",
+  manual: "Manual",
+};
+const DIRECCION_DESDE_DB: Record<TaxRateRow["direction"], DireccionAlicuota> = {
+  inbound: "Entrante",
+  outbound: "Saliente",
+  both: "Ambas",
+};
 
-export function toImpuesto(
-  r: ImpuestoRow & { impuestos_alicuotas?: AlicuotaRow[] | null },
-): Impuesto {
-  const alicuotas = Array.isArray(r.impuestos_alicuotas)
-    ? r.impuestos_alicuotas.map(toAlicuota)
-    : [];
+export function toImpuesto(r: TaxRow & { tax_rates?: TaxRateRow[] | null }): Impuesto {
+  const alicuotas = Array.isArray(r.tax_rates) ? r.tax_rates.map(toAlicuota) : [];
   return {
     id: r.id,
-    codigo: r.codigo,
-    nombre: r.nombre,
-    descripcion: r.descripcion ?? null,
-    tipo: r.tipo,
-    monto: r.monto,
-    estado: r.estado,
-    ambito: parseAmbitoImpuesto(r),
+    codigo: r.code,
+    nombre: r.name,
+    descripcion: r.description ?? null,
+    estado: r.status === "active" ? "Activo" : "Inactivo",
+    ambito: r.scope === "internal" ? "Interno" : "Externo",
+    fuenteAlicuota: FUENTE_DESDE_DB[r.rate_source] ?? "Manual",
     alicuotas,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
 
-export function toAlicuota(r: AlicuotaRow): Alicuota {
+export function toAlicuota(r: TaxRateRow): Alicuota {
   return {
     id: r.id,
-    impuestoId: r.impuesto_id,
-    codigo: r.codigo,
-    tasa: r.tasa,
-    descripcion: r.descripcion,
-    estado: r.estado,
+    impuestoId: r.tax_id,
+    codigo: r.code,
+    tipoCalculo: r.calculation_type === "fixed_amount" ? "Monto fijo" : "Porcentaje",
+    valor: Number(r.value),
+    direccion: DIRECCION_DESDE_DB[r.direction] ?? "Ambas",
+    descripcion: r.description,
+    estado: r.status === "active" ? "Activo" : "Inactivo",
+    vigenciaDesde: r.valid_from,
+    vigenciaHasta: r.valid_to,
     createdAt: r.created_at,
     updatedAt: r.updated_at ?? r.created_at,
   };
 }
 
-export function toImpuestoAsignacion(
-  r: ImpuestoAsignacionRow & {
-    impuestos?:
-      { codigo: string; nombre: string; tipo: TipoImpuesto; monto: number | null }[] | null;
-    clientes?:
-      | {
-          legajo: string;
-          nombre: string;
-          cuit: string;
-          tipo_persona: TipoPersona;
-          correo: string;
-        }[]
-      | null;
-  },
-): ImpuestoAsignacion {
-  const imp = firstOrNull(r.impuestos);
+const OPERACION_DESDE_DB: Record<NonNullable<TaxAssignmentRow["operation_type"]>, TipoOperacion> = {
+  deposit: "Depósito",
+  withdrawal: "Retiro",
+  payment_link: "Link de pago",
+  ecommerce: "E-commerce",
+};
+
+export function toImpuestoAsignacion(r: TaxAssignmentRow): ImpuestoAsignacion {
+  const imp = firstOrNull(r.taxes);
   const cli = firstOrNull(r.clientes);
   return {
     id: r.id,
-    clienteLegajo: r.legajo,
-    impuestoId: r.impuesto_id,
-    tipo: r.tipo,
-    monto: r.monto,
-    estado: r.estado,
-    fechaAsignacion: r.fecha_asignacion,
-    tipoOperacion: r.tipo_operacion ?? null,
+    clienteLegajo: r.client_legajo,
+    impuestoId: r.tax_id,
+    operacion: r.operation_type ? OPERACION_DESDE_DB[r.operation_type] : null,
+    estado: r.status === "active" ? "Activo" : "Inactivo",
+    tipoCalculo:
+      r.custom_calculation_type === "fixed_amount"
+        ? "Monto fijo"
+        : r.custom_calculation_type === "percentage"
+          ? "Porcentaje"
+          : null,
+    alicuotaPropia: r.custom_rate === null ? null : Number(r.custom_rate),
+    fechaAsignacion: r.assigned_at,
+    updatedAt: r.updated_at,
     impuesto: imp
       ? {
-          codigo: imp.codigo,
-          nombre: imp.nombre,
-          tipo: imp.tipo,
-          monto: imp.monto,
+          codigo: imp.code,
+          nombre: imp.name,
+          fuenteAlicuota: FUENTE_DESDE_DB[imp.rate_source] ?? "Manual",
+          alicuotas: Array.isArray(imp.tax_rates) ? imp.tax_rates.map(toAlicuota) : [],
         }
       : null,
     cliente: cli
@@ -508,63 +489,5 @@ export function toImpuestoAsignacion(
           correo: cli.correo,
         }
       : null,
-  };
-}
-
-export function toIbPadron(r: IbPadronRow): IbPadron {
-  return {
-    id: r.id,
-    impuestoId: r.impuesto_id,
-    nombre: r.nombre,
-    archivo: r.archivo,
-    estado: r.estado,
-    progreso: r.progreso,
-    createdAt: r.created_at,
-  };
-}
-
-export function toIbNormalizacionPreview(r: IbNormalizacionPreviewRow): IbNormalizacionPreview {
-  return {
-    id: r.id,
-    padronId: r.padron_id,
-    kpisJson: r.kpis_json,
-    creadosJson: r.creados_json,
-    desactivadosJson: r.desactivados_json,
-    omitidosJson: r.omitidos_json,
-    aplicado: r.aplicado,
-    createdAt: r.created_at,
-  };
-}
-
-export function toDcExcepcion(r: DcExcepcionRow): DcExcepcion {
-  const imp = Array.isArray(r.impuestos) ? r.impuestos[0] ?? null : null;
-  return {
-    id: r.id,
-    email: r.usuario,
-    cuit: r.cuit,
-    tipo: r.tipo,
-    direccion: r.direccion,
-    motivo: r.motivo,
-    vigenciaDesde: r.vigencia_desde,
-    vigenciaHasta: r.vigencia_hasta,
-    autorizacionCodigo: r.autorizacion_codigo,
-    estado: r.estado,
-    archivoCertificado: r.archivo_certificado ?? null,
-    impuestoId: r.impuesto_id ?? null,
-    impuestoNombre: imp?.nombre ?? null,
-    createdAt: r.fecha_creacion,
-    updatedAt: r.fecha_actualizacion,
-  };
-}
-
-export function toDcSyncRetroactivo(r: DcSyncRetroactivoRow): DcSyncRetroactivo {
-  return {
-    id: r.id,
-    cuit: r.cuit,
-    desde: r.desde,
-    hasta: r.hasta,
-    previewJson: r.preview_json,
-    aplicado: r.aplicado,
-    createdAt: r.created_at,
   };
 }

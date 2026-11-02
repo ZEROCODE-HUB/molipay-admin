@@ -50,11 +50,11 @@ export async function listClientes(filters: ClienteFilters): Promise<Page<Client
 
   let rows = (data ?? []) as ClienteRow[];
 
-  // Excluir emails de backoffice (admin_users) para que no aparezcan en
+  // Excluir emails de backoffice (backoffice_users) para que no aparezcan en
   // /admin/general/usuarios (persona física/jurídica). Solo deben verse en
   // /admin/administracion/usuarios. Best-effort: si falla (RLS/no admin), no filtramos.
   try {
-    const { data: admins } = await sb.from("admin_users").select("email").limit(200);
+    const { data: admins } = await sb.from("backoffice_users").select("email").limit(500);
     if (admins && admins.length) {
       const adminSet = new Set((admins as { email: string }[]).map((a) => a.email.trim().toLowerCase()));
       const before = rows.length;
@@ -72,7 +72,7 @@ export async function listClientes(filters: ClienteFilters): Promise<Page<Client
       }
     }
   } catch {
-    // ignorar: sin permiso para leer admin_users o tabla inexistente
+    // ignorar: sin permiso para leer backoffice_users
   }
 
   return { rows: rows.map(toCliente), total: count ?? rows.length, page, pageSize };
@@ -583,12 +583,12 @@ export async function hardDeleteCliente(id: string): Promise<void> {
     "cliente_parametros_alertas",
     "cliente_parametros_bloqueos",
     "cliente_comercios_pst",
-    "impuestos_asignaciones",
+    "tax_assignments",
     "cliente_transiciones",
   ];
   for (const t of tablasLegajo) {
     try {
-      const col = t === "impuestos_asignaciones" ? "legajo" : "cliente_legajo";
+      const col = t === "tax_assignments" ? "client_legajo" : "cliente_legajo";
       // cliente_transiciones tiene ambos; intentamos legajo
       if (t === "cliente_transiciones") {
         await sb.from(t).delete().eq("legajo", legajo);

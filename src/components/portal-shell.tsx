@@ -34,16 +34,30 @@ const isActive = (to: string, path: string, leaves: NavLeaf[]): boolean => {
   return false;
 };
 
+/** Usuario de la sesion que se muestra en el header. */
+export type ShellAccount = { name: string; email: string; role: string };
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]!.toUpperCase())
+    .join("") || "?";
+
 export function PortalShell({
   nav,
   title,
   headerActions,
+  account,
   children,
 }: {
   nav: NavItem[];
   title: string;
   /** Botones extra del header (ej. la campana de alertas), a la izquierda de la sesion. */
   headerActions?: ReactNode;
+  /** null/undefined mientras cargan los permisos. */
+  account?: ShellAccount | null;
   children: ReactNode;
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -81,13 +95,33 @@ export function PortalShell({
         </div>
         <div className="flex items-center gap-3">
           {headerActions}
-          <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-xs text-black-400">Sesión</span>
-            <span className="text-sm font-semibold text-black-700">Admin</span>
-          </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold bg-red-50 text-red-500">
-            AD
-          </div>
+          {account ? (
+            <>
+              <div
+                className="hidden sm:flex flex-col items-end leading-tight"
+                title={account.email}
+              >
+                <span className="text-sm font-semibold text-black-700 max-w-48 truncate">
+                  {account.name}
+                </span>
+                <span className="text-xs text-black-400">{account.role}</span>
+              </div>
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold bg-red-50 text-red-500"
+                title={`${account.name} · ${account.role}`}
+              >
+                {initials(account.name)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="hidden sm:flex flex-col items-end gap-1">
+                <span className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+                <span className="h-3 w-14 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
+            </>
+          )}
           <button
             onClick={onLogout}
             className="hidden md:inline-flex items-center gap-1 text-xs text-black-400 hover:text-black-700 transition-colors"

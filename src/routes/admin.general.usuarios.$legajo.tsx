@@ -32,6 +32,8 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { toast } from "sonner";
 import { useClienteByLegajo } from "@/hooks/useClientes";
 import { useImpuestosAsignaciones } from "@/hooks/useImpuestos";
+import { ResumenAlicuota } from "@/components/impuestos/alicuota-resumen";
+import { formatValor } from "@/lib/impuestos-format";
 import {
   aprobarDocumentacionCliente,
   activarCliente,
@@ -107,6 +109,7 @@ import type {
   EstadoApiUsuario,
   ImpuestoAsignacion,
 } from "@/lib/api/types";
+import { DIRECCION_DE_OPERACION } from "@/lib/api/types";
 import { DetailModal } from "@/components/movimiento-detail";
 import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
 import { AlertsTable } from "@/components/alertas/alerts-table";
@@ -441,6 +444,31 @@ function AccionesMenu({
   );
 }
 
+function operacionLabel(a: ImpuestoAsignacion) {
+  if (!a.operacion) return "Todas las operaciones";
+  return `${a.operacion} · ${DIRECCION_DE_OPERACION[a.operacion] === "Saliente" ? "Pay-Out" : "Pay-In"}`;
+}
+
+/** Alicuota que rige para la asignacion segun la fuente del impuesto. */
+function AlicuotaAsignada({ a }: { a: ImpuestoAsignacion }) {
+  if (!a.impuesto) return <>—</>;
+  if (a.impuesto.fuenteAlicuota === "Manual")
+    return (
+      <span className="font-mono tabular-nums">
+        {a.tipoCalculo && a.alicuotaPropia !== null
+          ? formatValor({ tipoCalculo: a.tipoCalculo, valor: a.alicuotaPropia })
+          : "Sin alícuota"}
+      </span>
+    );
+  return (
+    <ResumenAlicuota
+      fuente={a.impuesto.fuenteAlicuota}
+      alicuotas={a.impuesto.alicuotas}
+      direccion={a.operacion ? DIRECCION_DE_OPERACION[a.operacion] : undefined}
+    />
+  );
+}
+
 function TablaImpuestos({
   rows,
   onVerDetalles,
@@ -456,8 +484,8 @@ function TablaImpuestos({
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
             <th className="px-4 py-3 font-medium">Impuesto</th>
             <th className="px-4 py-3 font-medium">Código</th>
-            <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium text-right">Monto / Tasa</th>
+            <th className="px-4 py-3 font-medium">Operación</th>
+            <th className="px-4 py-3 font-medium">Alícuota</th>
             <th className="px-4 py-3 font-medium">Fecha asignación</th>
             <th className="px-4 py-3 font-medium">Estado</th>
             {conAcciones && <th className="px-4 py-3 font-medium text-right">Acciones</th>}
@@ -468,11 +496,9 @@ function TablaImpuestos({
             <tr key={a.id} className="border-b border-border last:border-b-0">
               <td className="px-4 py-3">{a.impuesto?.nombre ?? a.impuestoId}</td>
               <td className="px-4 py-3 font-mono text-xs">{a.impuesto?.codigo ?? "—"}</td>
-              <td className="px-4 py-3">{a.impuesto?.tipo ?? a.tipo}</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {(a.impuesto?.tipo ?? a.tipo) === "Porcentaje"
-                  ? `${a.impuesto?.monto ?? a.monto ?? 0} %`
-                  : fmtMonto(a.impuesto?.monto ?? a.monto)}
+              <td className="px-4 py-3">{operacionLabel(a)}</td>
+              <td className="px-4 py-3">
+                <AlicuotaAsignada a={a} />
               </td>
               <td className="px-4 py-3 whitespace-nowrap">{fmtFecha(a.fechaAsignacion)}</td>
               <td className="px-4 py-3">
@@ -3365,14 +3391,8 @@ function ClienteDetailPage() {
                 value: impuestoDetail.impuesto?.nombre ?? impuestoDetail.impuestoId,
               },
               { label: "Código", value: impuestoDetail.impuesto?.codigo ?? "—" },
-              { label: "Tipo", value: impuestoDetail.impuesto?.tipo ?? impuestoDetail.tipo },
-              {
-                label: "Monto / Tasa",
-                value:
-                  (impuestoDetail.impuesto?.tipo ?? impuestoDetail.tipo) === "Porcentaje"
-                    ? `${impuestoDetail.impuesto?.monto ?? impuestoDetail.monto ?? 0} %`
-                    : fmtMonto(impuestoDetail.impuesto?.monto ?? impuestoDetail.monto),
-              },
+              { label: "Operación", value: operacionLabel(impuestoDetail) },
+              { label: "Alícuota", value: <AlicuotaAsignada a={impuestoDetail} /> },
               { label: "Fecha asignación", value: fmtFecha(impuestoDetail.fechaAsignacion) },
               { label: "Estado", value: impuestoDetail.estado },
               { label: "Legajo", value: impuestoDetail.clienteLegajo },

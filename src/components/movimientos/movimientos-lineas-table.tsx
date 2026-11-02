@@ -15,7 +15,7 @@ import { useEstadosMovimiento } from "@/hooks/useEstados";
 import { calcularDesglose, fmtARS } from "@/lib/aranceles";
 import { DataAccessError } from "@/lib/api/errors";
 import { getMovimiento } from "@/lib/api/movimientos";
-import { TIPOS_LINEA, type LineaMovimiento, type TipoLinea } from "@/lib/api/lineas-movimiento";
+import { TIPOS_LINEA, etiquetaLinea, type LineaMovimiento, type TipoLinea } from "@/lib/api/lineas-movimiento";
 import { ESTADOS_MOVIMIENTO, type EstadoMovimiento, type Movimiento as MovimientoDB } from "@/lib/api/types";
 import { resolverEstadoMovimiento } from "@/lib/estados";
 import { useCan } from "@/lib/permissions";
@@ -213,8 +213,11 @@ export function MovimientosLineasTable({
       minWidth: 170,
       render: (r) => (
         <div className="flex items-center gap-1.5">
-          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TIPO_LINEA_STYLE[r.tipoLinea]}`}>
-            {TIPO_LINEA_LABEL.get(r.tipoLinea) ?? r.tipoLinea}
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TIPO_LINEA_STYLE[r.tipoLinea]}`}
+            title={r.detalle ?? undefined}
+          >
+            {etiquetaLinea(r, TIPO_LINEA_LABEL.get(r.tipoLinea) ?? r.tipoLinea)}
           </span>
           <span className="text-[11px] text-muted-foreground truncate">{OPERACION_LABEL.get(r.tipoOperacion) ?? r.tipoOperacion}</span>
         </div>

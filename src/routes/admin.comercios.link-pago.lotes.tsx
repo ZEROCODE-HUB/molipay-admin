@@ -48,7 +48,6 @@ import {
   exportLotesAcreditacion,
 } from "@/lib/api/lotes";
 import { establecimientoDeLote, guardarSeleccion, QK_ACRED, recalcularLote } from "@/lib/api/acreditaciones";
-import { ExtractoLiquidacion, type DatosLiquidacion } from "@/components/acreditaciones/comunes";
 import { SimularContracargosModal } from "@/components/acreditaciones/simular-contracargos-modal";
 import { listBanderas } from "@/lib/api/banderas";
 import { listAdelantosByComercio } from "@/lib/api/adelantos";
@@ -245,58 +244,24 @@ function totalDescuentos(l: LoteAcreditacion): number {
  * calculo la base (lote_calculo). No se recalcula nada en el navegador.
  */
 /** Liquidacion del lote con el formato de extracto comun (components/acreditaciones). */
-function DesgloseLote({ lote }: { lote: LoteAcreditacion }) {
-  const archivo = esDelArchivo(lote);
-  const bruto = Number(lote.importeBruto ?? 0);
-  const costo = archivo ? Number(lote.costoServicioPayway ?? 0) : round2((bruto * Number(lote.tasaPaywayPct ?? 0)) / 100);
-  const impuestos = archivo ? Number(lote.impuestosPayway ?? 0) : 0;
-  const d: DatosLiquidacion = {
-    estimado: !archivo,
-    estado: lote.estado,
-    fechaAcreditacion: lote.fechaAcreditacion,
-    conciliado: archivo ? lote.conciliado : null,
-    bruto,
-    impuestosPayway: impuestos,
-    costoPayway: costo,
-    netoPayway: archivo ? Number(lote.netoPayway ?? bruto - impuestos - costo) : round2(bruto - costo),
-    tasaPct: Number(lote.tasaMolipayPct ?? 0),
-    tasa: Number(lote.tasaMolipayMonto ?? 0),
-    iva: Number(lote.ivaTasaMonto ?? 0),
-    cierrePct: Number(lote.comisionCierreLotePct ?? 0),
-    cierre: Number(lote.comisionCierreLoteMonto ?? 0),
-    asignados: archivo ? lote.impuestosDetalle.map((x) => ({ nombre: x.nombre, monto: Number(x.monto) })) : [],
-    retencion: archivo ? lote.retencionContracargos : 0,
-    compensacion: archivo ? lote.compensacionAdelantos : 0,
-    recuperacion: archivo ? lote.recuperacionDeuda : 0,
-    neto: Number(netoLote(lote)),
-  };
+/** Fila de descuento del detalle financiero del lote. */
+function FilaDescuento({
+  icon,
+  label,
+  monto,
+  estimado = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  monto: number;
+  estimado?: boolean;
+}) {
   return (
-    <div className="space-y-3">
-      <ExtractoLiquidacion d={d} />
-      {archivo && lote.retencionContracargos === 0 && lote.retencionPendiente > 0 && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-          Al acreditar se retienen {fmt(lote.retencionPendiente)} por contracargos de ventas incluidas en este lote.
-        </p>
-      )}
-      {lote.esNegativo && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-          Liquidación negativa (contracargo o devolución): al acreditar se debita del saldo del comercio; el faltante queda como deuda y
-          se recupera de las próximas liquidaciones.
-        </p>
-      )}
-      {lote.estado === "Pendiente" && lote.motivoNoElegible && (
-        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">{lote.motivoNoElegible}</p>
-      )}
-    </div>
-  );
-}
-
-/** Dato de la ficha del lote. */
-function DatoFicha({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0 bg-card px-4 py-2.5">
-      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 truncate text-sm">{children}</dd>
+    <div className="flex justify-between text-xs">
+      <span className="text-muted-foreground flex items-center gap-1">
+        {icon} {label}
+      </span>
+      <span className={`font-mono ${estimado ? "text-muted-foreground/60" : "text-red-600"}`}>- {fmt(monto)}</span>
     </div>
   );
 }
@@ -365,6 +330,41 @@ function LoteDetalle({
   const esCuotas = (lote.cuotas ?? 1) > 1;
   const esContracargo = lote.estado === "Contracargo" || contracargo > 0;
   const movs = movimientos ?? [];
+  // Importes de la liquidacion: mismo calculo que la revision de acreditaciones.
+  const fin = (() => {
+    const archivo = esDelArchivo(lote);
+    const bruto = Number(lote.importeBruto ?? 0);
+    const costoPayway = archivo ? Number(lote.costoServicioPayway ?? 0) : round2((bruto * Number(lote.tasaPaywayPct ?? 0)) / 100);
+    const impuestosPayway = archivo ? Number(lote.impuestosPayway ?? 0) : 0;
+    const netoPayway = archivo ? Number(lote.netoPayway ?? bruto - impuestosPayway - costoPayway) : round2(bruto - costoPayway);
+    const neto = Number(netoLote(lote));
+    const asignados = archivo
+      ? lote.impuestosDetalle.map((x) => ({ nombre: x.nombre, monto: Number(x.monto) })).filter((x) => x.monto > 0)
+      : [];
+    const tasa = Number(lote.tasaMolipayMonto ?? 0);
+    const iva = Number(lote.ivaTasaMonto ?? 0);
+    const cierre = Number(lote.comisionCierreLoteMonto ?? 0);
+    return {
+      archivo,
+      estimado: !archivo,
+      bruto,
+      costoPayway,
+      impuestosPayway,
+      netoPayway,
+      arancelPct: bruto > 0 ? (costoPayway / bruto) * 100 : 0,
+      tasaPct: Number(lote.tasaMolipayPct ?? 0),
+      tasa,
+      iva,
+      cierrePct: Number(lote.comisionCierreLotePct ?? 0),
+      cierre,
+      asignados,
+      cargosMolipay: archivo ? round2(tasa + iva + cierre + asignados.reduce((t, x) => t + x.monto, 0)) : round2(netoPayway - neto),
+      retencion: archivo ? Number(lote.retencionContracargos ?? 0) : 0,
+      compensacion: archivo ? Number(lote.compensacionAdelantos ?? 0) : 0,
+      recuperacion: archivo ? Number(lote.recuperacionDeuda ?? 0) : 0,
+      neto,
+    };
+  })();
 
   const exportLote = () => {
     const data = [
@@ -417,7 +417,7 @@ function LoteDetalle({
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
           <div className="min-w-0">
             <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-              Liquidación de lote
+              <Receipt size={18} /> Detalle del lote
             </h3>
             <p className="text-sm font-mono text-muted-foreground">
               {lote.codigo} · {parseDateLocal(lote.fecha).toLocaleDateString("es-AR")} ·{" "}
@@ -433,40 +433,179 @@ function LoteDetalle({
           </div>
         </div>
         <div className="p-6 space-y-4">
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
-            <DatoFicha label="Comercio">
-              <span className="font-medium">{lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"}</span>
-            </DatoFicha>
-            <DatoFicha label="Legajo">
-              <span className="font-mono">{lote.comercio?.legajo ?? lote.comercioId}</span>
-            </DatoFicha>
-            <DatoFicha label="Medio de pago">
-              {lote.bandera} · {esCuotas ? `${lote.cuotas} cuotas` : "Pago único"}
-            </DatoFicha>
-            <DatoFicha label="Estado">
-              <Badge tone={tone(estadoMostrado(lote))}>{estadoMostrado(lote)}</Badge>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="p-3">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar size={12} /> {esDelArchivo(lote) ? "Fecha de pago Payway" : "Fecha estimada"}
+              </div>
+              <div className="font-mono font-semibold mt-1">
+                {parseDateLocal(lote.fecha).toLocaleDateString("es-AR")}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                Acreditación:{" "}
+                {lote.fechaAcreditacion ? (
+                  <>
+                    <span className="font-mono">{fmtFechaCorta(lote.fechaAcreditacion)}</span>
+                    <Badge tone="success">real</Badge>
+                  </>
+                ) : (
+                  <Badge tone="neutral">pendiente</Badge>
+                )}
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Store size={12} /> Comercio
+              </div>
+              <div className="font-semibold mt-1 truncate">
+                {lote.comercio?.nombreComercio ?? lote.comercio?.usuario ?? "—"}
+              </div>
+              <div className="font-mono text-xs text-muted-foreground">{lote.comercio?.legajo ?? lote.comercioId}</div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-xs text-muted-foreground">Bandera</div>
+              <div className="font-semibold mt-1">{lote.bandera}</div>
+              <div className="text-xs text-muted-foreground">
+                {esCuotas ? `${lote.cuotas} cuotas` : "Pago único"}
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-xs text-muted-foreground">Estado</div>
+              <div className="mt-1">
+                <Badge tone={tone(estadoMostrado(lote))}>{estadoMostrado(lote)}</Badge>
+              </div>
               {lote.estado === "Pendiente" && lote.subestado && (
-                <span className="ml-1.5 text-xs text-muted-foreground">{SUBESTADO_TXT[lote.subestado] ?? lote.subestado}</span>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{SUBESTADO_TXT[lote.subestado] ?? lote.subestado}</div>
               )}
-            </DatoFicha>
-            <DatoFicha label={esDelArchivo(lote) ? "Fecha de pago Payway" : "Fecha estimada de pago"}>
-              <span className="font-mono">{parseDateLocal(lote.fecha).toLocaleDateString("es-AR")}</span>
-            </DatoFicha>
-            <DatoFicha label="Fecha de acreditación">
-              <span className="font-mono">{lote.fechaAcreditacion ? fmtFechaCorta(lote.fechaAcreditacion) : "—"}</span>
-            </DatoFicha>
-            <DatoFicha label="Operaciones">
-              <span className="font-mono">{lote.cantidadOperaciones}</span>
-            </DatoFicha>
-            <DatoFicha label="Establecimiento">
-              <span className="font-mono">{(lote as { establecimiento?: string | null }).establecimiento ?? "—"}</span>
-            </DatoFicha>
-          </dl>
+              <div className="font-mono text-xs mt-1">{lote.cantidadOperaciones} ops</div>
+            </Card>
+          </div>
 
-          <section>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidación</h4>
-            <DesgloseLote lote={lote} />
-          </section>
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Detalle financiero del lote
+              </h4>
+              {fin.estimado && <Badge tone="neutral">Proyección — sujeto al CSV de Payway</Badge>}
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Importe bruto</span>
+                <span className={`font-mono font-semibold ${fin.estimado ? "text-muted-foreground/70" : ""}`}>
+                  {fmt(fin.bruto)}
+                  {fin.estimado && <span className="ml-1 text-[10px] text-muted-foreground/70">(Est.)</span>}
+                </span>
+              </div>
+              {!fin.estimado && fin.impuestosPayway > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Receipt size={12} /> Impuestos retenidos por Payway
+                    <span className="text-[10px] text-muted-foreground/70">(referencia)</span>
+                  </span>
+                  <span className="font-mono text-muted-foreground">- {fmt(fin.impuestosPayway)}</span>
+                </div>
+              )}
+              <FilaDescuento
+                icon={<Percent size={12} />}
+                label={`Arancel PayWay (${fin.arancelPct.toLocaleString("es-AR", { maximumFractionDigits: 2 })}%)`}
+                monto={fin.costoPayway}
+                estimado={fin.estimado}
+              />
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-muted-foreground">{fin.estimado ? "Neto estimado de Payway" : "Neto liquidado por Payway"}</span>
+                <span className={`font-mono ${fin.estimado ? "text-muted-foreground/70" : ""}`}>{fmt(fin.netoPayway)}</span>
+              </div>
+              <div className="border-t my-2" />
+              {fin.estimado ? (
+                <FilaDescuento
+                  icon={<Percent size={12} />}
+                  label={`Tasa MoliPay (${fin.tasaPct}%), IVA y comisión de cierre`}
+                  monto={fin.cargosMolipay}
+                  estimado
+                />
+              ) : (
+                <>
+                  <FilaDescuento icon={<Percent size={12} />} label={`Tasa de servicio MoliPay (${fin.tasaPct}%)`} monto={fin.tasa} />
+                  {fin.iva > 0 && <FilaDescuento icon={<Receipt size={12} />} label="IVA sobre la tasa" monto={fin.iva} />}
+                  <FilaDescuento icon={<Percent size={12} />} label={`Comisión cierre de lote (${fin.cierrePct}%)`} monto={fin.cierre} />
+                  {fin.asignados.map((x) => (
+                    <FilaDescuento key={x.nombre} icon={<Receipt size={12} />} label={`${x.nombre} (cálculo anterior)`} monto={x.monto} />
+                  ))}
+                </>
+              )}
+              {fin.retencion > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Receipt size={12} /> Contracargo <Badge tone="danger" className="ml-1">retenido</Badge>
+                  </span>
+                  <span className="font-mono text-red-600">- {fmt(fin.retencion)}</span>
+                </div>
+              )}
+              {fin.compensacion > 0 && <FilaDescuento icon={<Wallet size={12} />} label="Compensación de adelanto" monto={fin.compensacion} />}
+              {fin.recuperacion > 0 && <FilaDescuento icon={<Receipt size={12} />} label="Recupero de deuda" monto={fin.recuperacion} />}
+              {esCuotas && (
+                <p className="text-[11px] text-muted-foreground">
+                  Si el comprador paga en cuotas, PayWay acredita a MoliPay en un solo pago y
+                  cobra fee por esa liquidación.
+                </p>
+              )}
+              {fin.estimado && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                  Los cargos de MoliPay y el cierre de lote se calculan al importar el archivo de
+                  liquidación de Payway. Hasta entonces los importes son una proyección.
+                </p>
+              )}
+              <div className="border-t my-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Total descuentos</span>
+                <span className={`font-mono ${fin.estimado ? "text-muted-foreground/70" : ""}`}>
+                  - {fmt(Math.max(fin.bruto - fin.neto, 0))}
+                </span>
+              </div>
+              <div className="flex justify-between text-base font-semibold">
+                <span>{lote.estado === "Acreditado" ? "Importe acreditado" : "Importe final a acreditar"}</span>
+                <span
+                  className={`font-mono flex items-center gap-1.5 ${
+                    fin.neto < 0 || estadoMostrado(lote) === "Contracargo"
+                      ? "text-red-600"
+                      : fin.estimado
+                        ? "text-muted-foreground/80"
+                        : "text-emerald-700"
+                  }`}
+                >
+                  {fmt(fin.neto)}
+                  {fin.estimado && <Badge tone="neutral">Est.</Badge>}
+                </span>
+              </div>
+              {fin.archivo && lote.retencionContracargos === 0 && lote.retencionPendiente > 0 && (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mt-2">
+                  Al acreditar se retienen {fmt(lote.retencionPendiente)} por contracargos de ventas incluidas en este lote.
+                </p>
+              )}
+              {lote.esNegativo && (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mt-2">
+                  Liquidación negativa (contracargo o devolución): al acreditar se debita del saldo del comercio; el
+                  faltante queda como deuda y se recupera de las próximas liquidaciones.
+                </p>
+              )}
+              {lote.estado === "Pendiente" && lote.motivoNoElegible && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-2">
+                  {lote.motivoNoElegible}
+                </p>
+              )}
+              {lote.notasResolucion && (
+                <p className="text-xs text-muted-foreground border rounded px-2 py-1.5 mt-2 whitespace-pre-wrap">
+                  Notas: {lote.notasResolucion}
+                </p>
+              )}
+              {lote.resueltoPor && (
+                <p className="text-[11px] text-muted-foreground">
+                  Resuelto por {lote.resueltoPor}{" "}
+                  {lote.fechaResolucion ? `· ${new Date(lote.fechaResolucion).toLocaleString("es-AR")}` : ""}
+                </p>
+              )}
+            </div>
+          </Card>
 
           <Card className="p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">

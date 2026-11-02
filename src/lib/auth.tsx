@@ -1,15 +1,15 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getAdminUser } from "@/lib/api/admin-users";
-import type { AdminUser } from "@/lib/api/types";
 
+/**
+ * Sesion de Supabase Auth. Los datos del usuario del backoffice (rol, permisos,
+ * cambio de clave pendiente) los resuelve PermissionsProvider (my_permissions).
+ */
 type AuthContextValue = {
   loading: boolean;
   session: Session | null;
   user: User | null;
-  /** Fila de admin_users del backoffice para el usuario autenticado (si existe). */
-  admin: AdminUser | null;
   signOut: () => Promise<void>;
 };
 
@@ -17,7 +17,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
@@ -26,44 +25,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let active = true;
-
-    const load = async (s: Session | null) => {
-      setSession(s);
-      if (!s?.user) {
-        setAdmin(null);
-        setLoading(false);
-        return;
-      }
-      try {
-        const a = await getAdminUser(s.user.id);
-        if (active) setAdmin(a);
-      } catch {
-        if (active) setAdmin(null);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    supabase.auth.getSession().then(({ data }) => load(data.session));
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      void load(s);
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setLoading(false);
     });
-
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
+      setSession(nextSession);
+      setLoading(false);
+    });
     return () => {
       active = false;
-      sub.subscription.unsubscribe();
+      subscription.subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut();
     setSession(null);
-    setAdmin(null);
   };
 
   return (
-    <AuthContext.Provider value={{ loading, session, user: session?.user ?? null, admin, signOut }}>
+    <AuthContext.Provider value={{ loading, session, user: session?.user ?? null, signOut }}>
       {children}
     </AuthContext.Provider>
   );

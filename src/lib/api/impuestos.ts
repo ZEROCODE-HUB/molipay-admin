@@ -1,66 +1,79 @@
-﻿import { requireSupabase } from "@/lib/supabase";
+import { requireSupabase } from "@/lib/supabase";
 import { DataAccessError } from "./errors";
-import {
-  toImpuesto,
-  toAlicuota,
-  toImpuestoAsignacion,
-  toIbPadron,
-  toIbNormalizacionPreview,
-} from "./mappers";
+import { toImpuesto, toAlicuota, toImpuestoAsignacion } from "./mappers";
 import type {
-  AmbitoImpuesto,
   Impuesto,
-  ImpuestoRow,
   ImpuestoInput,
   Alicuota,
-  AlicuotaRow,
+  AlicuotaInput,
+  TaxRow,
+  TaxRateRow,
+  FuenteAlicuota,
+  DireccionAlicuota,
+  TipoCalculoAlicuota,
   ImpuestoAsignacion,
-  ImpuestoAsignacionRow,
-  IbPadron,
-  IbPadronRow,
-  IbNormalizacionPreview,
-  IbNormalizacionPreviewRow,
-  TipoPersona,
+  ImpuestoAsignacionFilters,
+  TaxAssignmentRow,
+  OperacionImpuesto,
+  AlicuotaPrevista,
   Page,
   Pagination,
-  AlicuotaInput,
   ImpuestoAsignacionInput,
 } from "./types";
+
+// ============================================================================
+// IMPUESTOS (tabla taxes)
+// ============================================================================
 
 export type ImpuestoFilters = Pagination & {
   search?: string;
   estado?: "Activo" | "Inactivo";
-  tipo?: "Porcentaje" | "Fijo" | "Otro";
-  ambito?: AmbitoImpuesto;
 };
 
-const IMPUESTOS_COLUMNS =
-  "id, codigo, nombre, descripcion, tipo, monto, estado, ambito, created_at, updated_at, impuestos_alicuotas(id, impuesto_id, codigo, tasa, descripcion, estado, created_at)";
+const FUENTE_A_DB: Record<FuenteAlicuota, TaxRow["rate_source"]> = {
+  Fija: "fixed",
+  Padrón: "taxpayer_registry",
+  Manual: "manual",
+};
+const DIRECCION_A_DB: Record<DireccionAlicuota, TaxRateRow["direction"]> = {
+  Entrante: "inbound",
+  Saliente: "outbound",
+  Ambas: "both",
+};
+const CALCULO_A_DB: Record<TipoCalculoAlicuota, TaxRateRow["calculation_type"]> = {
+  Porcentaje: "percentage",
+  "Monto fijo": "fixed_amount",
+};
+const estadoADb = (e: "Activo" | "Inactivo") => (e === "Activo" ? "active" : "inactive");
+
+const TAX_COLUMNS =
+  "id, code, name, description, scope, status, rate_source, created_at, updated_at";
+const TAX_RATE_COLUMNS =
+  "id, tax_id, code, calculation_type, value, direction, description, status, valid_from, valid_to, created_at, updated_at";
+const IMPUESTOS_COLUMNS = `${TAX_COLUMNS}, tax_rates(${TAX_RATE_COLUMNS})`;
+
+type TaxConAlicuotas = TaxRow & { tax_rates?: TaxRateRow[] | null };
 
 export async function listImpuestos(filters: ImpuestoFilters): Promise<Page<Impuesto>> {
   const sb = requireSupabase();
-  const { page, pageSize, search, estado, tipo } = filters;
+  const { page, pageSize, search, estado } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("impuestos").select(IMPUESTOS_COLUMNS, { count: "exact" });
+  let query = sb.from("taxes").select(IMPUESTOS_COLUMNS, { count: "exact" });
 
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`codigo.ilike.%${q}%,nombre.ilike.%${q}%,descripcion.ilike.%${q}%`);
+    query = query.or(`code.ilike.%${q}%,name.ilike.%${q}%,description.ilike.%${q}%`);
   }
-  if (estado) query = query.eq("estado", estado);
-  if (tipo) query = query.eq("tipo", tipo);
+  if (estado) query = query.eq("status", estadoADb(estado));
 
-  query = query.order("codigo", { ascending: true }).range(from, to);
+  query = query.order("code", { ascending: true }).range(from, to);
 
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
 
-  const rows = (data ?? []) as (ImpuestoRow & {
-    impuestos_alicuotas?: AlicuotaRow[] | null;
-  })[];
-
+  const rows = (data ?? []) as TaxConAlicuotas[];
   return {
     rows: rows.map(toImpuesto),
     total: count ?? rows.length,
@@ -71,37 +84,47 @@ export async function listImpuestos(filters: ImpuestoFilters): Promise<Page<Impu
 
 export async function getImpuesto(id: string): Promise<Impuesto | null> {
   const sb = requireSupabase();
-  const { data, error } = await sb.from("impuestos").select(IMPUESTOS_COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await sb
+    .from("taxes")
+    .select(IMPUESTOS_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new DataAccessError(error);
-  return data
-    ? toImpuesto(data as ImpuestoRow & { impuestos_alicuotas?: AlicuotaRow[] | null })
-    : null;
+  return data ? toImpuesto(data as TaxConAlicuotas) : null;
 }
 
-export type ImpuestoCreateInput = ImpuestoInput;
+function alicuotaADb(input: Partial<AlicuotaInput>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (input.codigo !== undefined) out.code = input.codigo.trim().toUpperCase();
+  if (input.tipoCalculo !== undefined) out.calculation_type = CALCULO_A_DB[input.tipoCalculo];
+  if (input.valor !== undefined) out.value = input.valor;
+  if (input.direccion !== undefined) out.direction = DIRECCION_A_DB[input.direccion];
+  if (input.descripcion !== undefined) out.description = input.descripcion?.trim() || null;
+  if (input.estado !== undefined) out.status = estadoADb(input.estado);
+  if (input.vigenciaDesde !== undefined) out.valid_from = input.vigenciaDesde;
+  if (input.vigenciaHasta !== undefined) out.valid_to = input.vigenciaHasta || null;
+  return out;
+}
 
-export async function createImpuesto(input: ImpuestoCreateInput): Promise<Impuesto> {
+/** Alta del impuesto con sus alicuotas en una sola transaccion (RPC tax_create). */
+export async function createImpuesto(
+  input: ImpuestoInput,
+  alicuotas: AlicuotaInput[] = [],
+): Promise<Impuesto> {
   const sb = requireSupabase();
-  const ambito = (input.ambito as AmbitoImpuesto | undefined) ?? "Externo";
-  const descripcionClean = input.descripcion?.trim() ?? null;
-
-  const payload: Record<string, unknown> = {
-    codigo: input.codigo.trim(),
-    nombre: input.nombre.trim(),
-    descripcion: descripcionClean,
-    tipo: input.tipo,
-    monto: input.monto,
-    estado: input.estado,
-    ambito,
-  };
-  const { data, error } = await sb
-    .from("impuestos")
-    .insert(payload)
-    .select("id, codigo, nombre, descripcion, tipo, monto, estado, ambito, created_at, updated_at")
-    .single();
+  const { data, error } = await sb.rpc("tax_create", {
+    p_tax: {
+      code: input.codigo.trim().toUpperCase(),
+      name: input.nombre.trim(),
+      description: input.descripcion?.trim() || null,
+      scope: input.ambito === "Interno" ? "internal" : "external",
+      status: estadoADb(input.estado),
+      rate_source: FUENTE_A_DB[input.fuenteAlicuota],
+    },
+    p_rates: input.fuenteAlicuota === "Fija" ? alicuotas.map(alicuotaADb) : [],
+  });
   if (error) throw new DataAccessError(error);
-
-  return getImpuesto((data as { id: string }).id) as Promise<Impuesto>;
+  return getImpuesto(data as string) as Promise<Impuesto>;
 }
 
 export type ImpuestoUpdateInput = Partial<ImpuestoInput>;
@@ -109,18 +132,17 @@ export type ImpuestoUpdateInput = Partial<ImpuestoInput>;
 export async function updateImpuesto(id: string, input: ImpuestoUpdateInput): Promise<Impuesto> {
   const sb = requireSupabase();
   const payload: Record<string, unknown> = {};
-  if (input.codigo !== undefined) payload.codigo = input.codigo.trim();
-  if (input.nombre !== undefined) payload.nombre = input.nombre.trim();
-  if (input.descripcion !== undefined) payload.descripcion = input.descripcion?.trim() ?? null;
-  if (input.tipo !== undefined) payload.tipo = input.tipo;
-  if (input.monto !== undefined) payload.monto = input.monto;
-  if (input.estado !== undefined) payload.estado = input.estado;
-  if (input.ambito !== undefined) payload.ambito = input.ambito;
+  if (input.codigo !== undefined) payload.code = input.codigo.trim().toUpperCase();
+  if (input.nombre !== undefined) payload.name = input.nombre.trim();
+  if (input.descripcion !== undefined) payload.description = input.descripcion?.trim() || null;
+  if (input.estado !== undefined) payload.status = estadoADb(input.estado);
+  if (input.ambito !== undefined)
+    payload.scope = input.ambito === "Interno" ? "internal" : "external";
+  if (input.fuenteAlicuota !== undefined) payload.rate_source = FUENTE_A_DB[input.fuenteAlicuota];
 
-  const { data, error } = await sb.from("impuestos").update(payload).eq("id", id).select("id, codigo, nombre, descripcion, tipo, monto, estado, ambito, created_at, updated_at").single();
+  const { error } = await sb.from("taxes").update(payload).eq("id", id);
   if (error) throw new DataAccessError(error);
-
-  return getImpuesto((data as { id: string }).id) as Promise<Impuesto>;
+  return getImpuesto(id) as Promise<Impuesto>;
 }
 
 export async function setImpuestoEstado(
@@ -132,12 +154,12 @@ export async function setImpuestoEstado(
 
 export async function deleteImpuesto(id: string): Promise<void> {
   const sb = requireSupabase();
-  const { error } = await sb.from("impuestos").delete().eq("id", id);
+  const { error } = await sb.from("taxes").delete().eq("id", id);
   if (error) throw new DataAccessError(error);
 }
 
 // ============================================================================
-// ALICUOTAS
+// ALICUOTAS (tabla tax_rates)
 // ============================================================================
 
 export type AlicuotaFilters = Pagination & {
@@ -146,29 +168,31 @@ export type AlicuotaFilters = Pagination & {
   estado?: "Activo" | "Inactivo";
 };
 
-const ALICUOTAS_COLUMNS = "id, impuesto_id, codigo, tasa, descripcion, estado, created_at";
-
 export async function listAlicuotas(filters: AlicuotaFilters): Promise<Page<Alicuota>> {
   const sb = requireSupabase();
   const { page, pageSize, impuesto_id, search, estado } = filters;
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("impuestos_alicuotas").select(ALICUOTAS_COLUMNS, { count: "exact" });
+  let query = sb.from("tax_rates").select(TAX_RATE_COLUMNS, { count: "exact" });
 
-  if (impuesto_id) query = query.eq("impuesto_id", impuesto_id);
-  if (estado) query = query.eq("estado", estado);
+  if (impuesto_id) query = query.eq("tax_id", impuesto_id);
+  if (estado) query = query.eq("status", estadoADb(estado));
   if (search && search.trim()) {
     const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`codigo.ilike.%${q}%,descripcion.ilike.%${q}%`);
+    query = query.or(`code.ilike.%${q}%,description.ilike.%${q}%`);
   }
 
-  query = query.order("codigo", { ascending: true }).range(from, to);
+  query = query
+    .order("status", { ascending: true })
+    .order("valid_from", { ascending: false })
+    .order("code", { ascending: true })
+    .range(from, to);
 
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
 
-  const rows = (data ?? []) as AlicuotaRow[];
+  const rows = (data ?? []) as TaxRateRow[];
   return {
     rows: rows.map(toAlicuota),
     total: count ?? rows.length,
@@ -177,89 +201,75 @@ export async function listAlicuotas(filters: AlicuotaFilters): Promise<Page<Alic
   };
 }
 
-export async function createAlicuota(impuesto_id: string, input: AlicuotaInput): Promise<Alicuota> {
+export async function createAlicuota(impuestoId: string, input: AlicuotaInput): Promise<Alicuota> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("impuestos_alicuotas")
-    .insert({
-      impuesto_id,
-      codigo: input.codigo.trim(),
-      tasa: input.tasa,
-      descripcion: input.descripcion?.trim() ?? null,
-      estado: input.estado ?? "Activo",
-    })
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
+    .from("tax_rates")
+    .insert({ tax_id: impuestoId, ...alicuotaADb(input) })
+    .select(TAX_RATE_COLUMNS)
     .single();
   if (error) throw new DataAccessError(error);
-  return toAlicuota(data as AlicuotaRow);
+  return toAlicuota(data as TaxRateRow);
 }
 
 export async function updateAlicuota(id: string, input: Partial<AlicuotaInput>): Promise<Alicuota> {
   const sb = requireSupabase();
-  const payload: Record<string, unknown> = {};
-  if (input.codigo !== undefined) payload.codigo = input.codigo.trim();
-  if (input.tasa !== undefined) payload.tasa = input.tasa;
-  if (input.descripcion !== undefined) payload.descripcion = input.descripcion?.trim() ?? null;
-  if (input.estado !== undefined) payload.estado = input.estado;
-
   const { data, error } = await sb
-    .from("impuestos_alicuotas")
-    .update(payload)
+    .from("tax_rates")
+    .update(alicuotaADb(input))
     .eq("id", id)
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
+    .select(TAX_RATE_COLUMNS)
     .single();
   if (error) throw new DataAccessError(error);
-  return toAlicuota(data as AlicuotaRow);
+  return toAlicuota(data as TaxRateRow);
 }
 
 export async function setAlicuotaEstado(
   id: string,
   estado: "Activo" | "Inactivo",
 ): Promise<Alicuota> {
-  const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("impuestos_alicuotas")
-    .update({ estado })
-    .eq("id", id)
-    .select("id, impuesto_id, codigo, tasa, descripcion, estado, created_at")
-    .single();
-  if (error) throw new DataAccessError(error);
-  return toAlicuota(data as AlicuotaRow);
+  return updateAlicuota(id, { estado });
 }
 
 export async function deleteAlicuota(id: string): Promise<void> {
   const sb = requireSupabase();
-  const { error } = await sb.from("impuestos_alicuotas").delete().eq("id", id);
+  const { error } = await sb.from("tax_rates").delete().eq("id", id);
   if (error) throw new DataAccessError(error);
 }
 
 // ============================================================================
-// ASIGNACIONES
+// ASIGNACIONES (tabla tax_assignments)
 // ============================================================================
 
-export type ImpuestoAsignacionFilters = Pagination & {
-  search?: string;
-  estado?: "Activo" | "Inactivo";
-  impuesto_id?: string;
-  cliente_legajo?: string;
+export type { ImpuestoAsignacionFilters } from "./types";
+
+const OPERACION_A_DB: Record<OperacionImpuesto, NonNullable<TaxAssignmentRow["operation_type"]>> = {
+  Depósito: "deposit",
+  Retiro: "withdrawal",
+  "Link de pago": "payment_link",
+  "E-commerce": "ecommerce",
 };
 
 const ASIGNACIONES_COLUMNS =
-  "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
+  "id, client_legajo, tax_id, operation_type, status, custom_calculation_type, custom_rate, assigned_at, updated_at, " +
+  `taxes(code, name, rate_source, tax_rates(${TAX_RATE_COLUMNS})), ` +
+  "clientes!tax_assignments_client_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)";
 
-type AsignacionRowConEmbed = ImpuestoAsignacionRow & {
-  impuestos?:
-    | {
-        codigo: string;
-        nombre: string;
-        tipo: "Porcentaje" | "Fijo" | "Otro";
-        monto: number | null;
-      }[]
-    | null;
-  clientes?:
-    | { legajo: string; nombre: string; cuit: string; tipo_persona: TipoPersona; correo: string }[]
-    | null;
-};
+function asignacionADb(input: Partial<ImpuestoAsignacionInput>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (input.cliente_legajo !== undefined) out.client_legajo = input.cliente_legajo.trim();
+  if (input.impuesto_id !== undefined) out.tax_id = input.impuesto_id;
+  if (input.operacion !== undefined)
+    out.operation_type = input.operacion ? OPERACION_A_DB[input.operacion] : null;
+  if (input.estado !== undefined) out.status = estadoADb(input.estado);
+  // La base exige el par completo (o vacio) y solo en impuestos manuales.
+  if (input.tipo_calculo !== undefined || input.alicuota_propia !== undefined) {
+    const conAlicuota = input.tipo_calculo != null && input.alicuota_propia != null;
+    out.custom_calculation_type = conAlicuota ? CALCULO_A_DB[input.tipo_calculo!] : null;
+    out.custom_rate = conAlicuota ? input.alicuota_propia : null;
+  }
+  return out;
+}
 
 export async function listImpuestosAsignaciones(
   filters: ImpuestoAsignacionFilters,
@@ -269,25 +279,35 @@ export async function listImpuestosAsignaciones(
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let query = sb.from("impuestos_asignaciones").select(ASIGNACIONES_COLUMNS, { count: "exact" });
+  let query = sb.from("tax_assignments").select(ASIGNACIONES_COLUMNS, { count: "exact" });
 
-  if (impuesto_id) query = query.eq("impuesto_id", impuesto_id);
-  if (cliente_legajo) query = query.eq("legajo", cliente_legajo);
-  if (estado) query = query.eq("estado", estado);
+  if (impuesto_id) query = query.eq("tax_id", impuesto_id);
+  if (cliente_legajo) query = query.eq("client_legajo", cliente_legajo);
+  if (estado) query = query.eq("status", estadoADb(estado));
   if (search && search.trim()) {
-    const q = search.trim().replace(/[%_]/g, "\\$&");
+    // PostgREST no combina en un OR columnas propias y embebidas: primero los
+    // impuestos que coinciden, despues legajo o impuesto.
+    // Comas y parentesis romperian el filtro or=(...); % y _ son comodines de ilike.
+    const q = search.trim().replace(/[,()]/g, " ").replace(/[%_]/g, "\\$&");
+    const { data: taxes, error: taxErr } = await sb
+      .from("taxes")
+      .select("id")
+      .or(`code.ilike.%${q}%,name.ilike.%${q}%`);
+    if (taxErr) throw new DataAccessError(taxErr);
+    const ids = (taxes ?? []).map((t) => t.id as string);
     query = query.or(
-      `impuestos.codigo.ilike.%${q}%,impuestos.nombre.ilike.%${q}%,legajo.ilike.%${q}%`,
+      ids.length > 0
+        ? `client_legajo.ilike.%${q}%,tax_id.in.(${ids.join(",")})`
+        : `client_legajo.ilike.%${q}%`,
     );
   }
 
-  query = query.order("fecha_asignacion", { ascending: false }).range(from, to);
+  query = query.order("assigned_at", { ascending: false }).range(from, to);
 
   const { data, error, count } = await query;
   if (error) throw new DataAccessError(error);
 
-  const rows = (data ?? []) as AsignacionRowConEmbed[];
-
+  const rows = (data ?? []) as unknown as TaxAssignmentRow[];
   return {
     rows: rows.map(toImpuestoAsignacion),
     total: count ?? rows.length,
@@ -301,46 +321,28 @@ export async function createImpuestoAsignacion(
 ): Promise<ImpuestoAsignacion> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("impuestos_asignaciones")
-    .insert({
-      legajo: input.cliente_legajo.trim(),
-      impuesto_id: input.impuesto_id,
-      tipo: input.tipo,
-      monto: input.monto,
-      estado: input.estado ?? "Activo",
-      fecha_asignacion: input.fecha_asignacion ?? new Date().toISOString().slice(0, 10),
-      tipo_operacion: input.tipo_operacion ?? null,
-    })
-    .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
-    )
+    .from("tax_assignments")
+    .insert(asignacionADb(input))
+    .select(ASIGNACIONES_COLUMNS)
     .single();
   if (error) throw new DataAccessError(error);
-  return toImpuestoAsignacion(data as AsignacionRowConEmbed);
+  return toImpuestoAsignacion(data as unknown as TaxAssignmentRow);
 }
 
+/** El comercio no se cambia: para otro comercio se crea otra asignacion. */
 export async function updateImpuestoAsignacion(
   id: string,
-  input: Partial<ImpuestoAsignacionInput>,
+  input: Partial<Omit<ImpuestoAsignacionInput, "cliente_legajo">>,
 ): Promise<ImpuestoAsignacion> {
   const sb = requireSupabase();
-  const payload: Record<string, unknown> = {};
-  if (input.tipo !== undefined) payload.tipo = input.tipo;
-  if (input.monto !== undefined) payload.monto = input.monto;
-  if (input.estado !== undefined) payload.estado = input.estado;
-  if (input.fecha_asignacion !== undefined) payload.fecha_asignacion = input.fecha_asignacion;
-  if (input.tipo_operacion !== undefined) payload.tipo_operacion = input.tipo_operacion;
-
   const { data, error } = await sb
-    .from("impuestos_asignaciones")
-    .update(payload)
+    .from("tax_assignments")
+    .update(asignacionADb(input))
     .eq("id", id)
-    .select(
-      "id, legajo, impuesto_id, tipo, monto, estado, fecha_asignacion, tipo_operacion, impuestos(codigo, nombre, tipo, monto), clientes!impuestos_asignaciones_legajo_fkey(legajo, nombre, cuit, tipo_persona, correo)",
-    )
+    .select(ASIGNACIONES_COLUMNS)
     .single();
   if (error) throw new DataAccessError(error);
-  return toImpuestoAsignacion(data as AsignacionRowConEmbed);
+  return toImpuestoAsignacion(data as unknown as TaxAssignmentRow);
 }
 
 export async function setImpuestoAsignacionEstado(
@@ -352,215 +354,47 @@ export async function setImpuestoAsignacionEstado(
 
 export async function deleteImpuestoAsignacion(id: string): Promise<void> {
   const sb = requireSupabase();
-  const { error } = await sb.from("impuestos_asignaciones").delete().eq("id", id);
+  const { error } = await sb.from("tax_assignments").delete().eq("id", id);
   if (error) throw new DataAccessError(error);
 }
 
-export async function listImpuestosForAsignacion(): Promise<
-  { id: string; codigo: string; nombre: string; tipo: string; monto: number | null }[]
-> {
+/** Alicuota que regiria hoy el impuesto para el comercio, por direccion (RPC tax_rate_preview). */
+export async function previewAlicuotaAsignacion(
+  clienteLegajo: string,
+  impuestoId: string,
+): Promise<AlicuotaPrevista[]> {
   const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("impuestos")
-    .select("id, codigo, nombre, tipo, monto")
-    .eq("estado", "Activo")
-    .order("codigo", { ascending: true });
+  const { data, error } = await sb.rpc("tax_rate_preview", {
+    p_legajo: clienteLegajo.trim(),
+    p_tax_id: impuestoId,
+  });
   if (error) throw new DataAccessError(error);
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    codigo: r.codigo,
-    nombre: r.nombre,
-    tipo: r.tipo,
-    monto: r.monto,
+  type Fila = {
+    direction: "inbound" | "outbound";
+    rate_code: string | null;
+    calculation_type: TaxRateRow["calculation_type"];
+    rate: number | string;
+    registry_id: string | null;
+    note: string | null;
+  };
+  return ((data ?? []) as Fila[]).map((f) => ({
+    direccion: f.direction === "inbound" ? "Entrante" : "Saliente",
+    codigo: f.rate_code,
+    tipoCalculo: f.calculation_type === "fixed_amount" ? "Monto fijo" : "Porcentaje",
+    valor: Number(f.rate),
+    padronId: f.registry_id,
+    nota: f.note,
   }));
 }
 
-// ============================================================================
-// IB_PADRONES
-// ============================================================================
-
-export type IbPadronFilters = Pagination & {
-  search?: string;
-  estado?: "Cargando" | "Procesando" | "Finalizado" | "Error";
-  impuesto_id?: string;
-};
-
-const PADRONES_COLUMNS = "id, impuesto_id, nombre, archivo, estado, progreso, created_at";
-
-export async function listIbPadrones(filters: IbPadronFilters): Promise<Page<IbPadron>> {
-  const sb = requireSupabase();
-  const { page, pageSize, search, estado, impuesto_id } = filters;
-  const from = page * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = sb.from("ib_padrones").select(PADRONES_COLUMNS, { count: "exact" });
-
-  if (impuesto_id) query = query.eq("impuesto_id", impuesto_id);
-  if (estado) query = query.eq("estado", estado);
-  if (search && search.trim()) {
-    const q = search.trim().replace(/[%_]/g, "\\$&");
-    query = query.or(`nombre.ilike.%${q}%,archivo.ilike.%${q}%`);
-  }
-
-  query = query.order("created_at", { ascending: false }).range(from, to);
-
-  const { data, error, count } = await query;
-  if (error) throw new DataAccessError(error);
-
-  const rows = (data ?? []) as IbPadronRow[];
-  return {
-    rows: rows.map(toIbPadron),
-    total: count ?? rows.length,
-    page: filters.page,
-    pageSize: filters.pageSize,
-  };
-}
-
-export async function createIbPadron(input: {
-  impuesto_id: string;
-  nombre: string;
-  archivo: string;
-}): Promise<IbPadron> {
+/** Impuestos activos (con sus alicuotas) para elegir en asignaciones, padrones y exenciones. */
+export async function listImpuestosForAsignacion(): Promise<Impuesto[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
-    .from("ib_padrones")
-    .insert({
-      impuesto_id: input.impuesto_id,
-      nombre: input.nombre.trim(),
-      archivo: input.archivo.trim(),
-      estado: "Cargando",
-    })
-    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at")
-    .single();
+    .from("taxes")
+    .select(IMPUESTOS_COLUMNS)
+    .eq("status", "active")
+    .order("code", { ascending: true });
   if (error) throw new DataAccessError(error);
-  return toIbPadron(data as IbPadronRow);
-}
-
-export async function updateIbPadron(
-  id: string,
-  input: Partial<{ estado: string; progreso: number }>,
-): Promise<IbPadron> {
-  const sb = requireSupabase();
-  const payload: Record<string, unknown> = {};
-  if (input.estado !== undefined) payload.estado = input.estado;
-  if (input.progreso !== undefined) payload.progreso = input.progreso;
-
-  const { data, error } = await sb
-    .from("ib_padrones")
-    .update(payload)
-    .eq("id", id)
-    .select("id, impuesto_id, nombre, archivo, estado, progreso, created_at")
-    .single();
-  if (error) throw new DataAccessError(error);
-  return toIbPadron(data as IbPadronRow);
-}
-
-export async function deleteIbPadron(id: string): Promise<void> {
-  const sb = requireSupabase();
-  const { error } = await sb.from("ib_padrones").delete().eq("id", id);
-  if (error) throw new DataAccessError(error);
-}
-
-// ============================================================================
-// IB_NORMALIZACION_PREVIEW
-// ============================================================================
-
-export type IbNormalizacionPreviewFilters = Pagination & {
-  padron_id?: string;
-};
-
-const NORMALIZACION_PREVIEW_COLUMNS =
-  "id, padron_id, kpis_json, creados_json, desactivados_json, omitidos_json, aplicado, created_at";
-
-export async function listIbNormalizacionPreviews(
-  filters: IbNormalizacionPreviewFilters,
-): Promise<Page<IbNormalizacionPreview>> {
-  const sb = requireSupabase();
-  const { page, pageSize, padron_id } = filters;
-  const from = page * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = sb
-    .from("ib_normalizacion_preview")
-    .select(NORMALIZACION_PREVIEW_COLUMNS, { count: "exact" });
-
-  if (padron_id) query = query.eq("padron_id", padron_id);
-
-  query = query.order("created_at", { ascending: false }).range(from, to);
-
-  const { data, error, count } = await query;
-  if (error) throw new DataAccessError(error);
-
-  const rows = (data ?? []) as IbNormalizacionPreviewRow[];
-  return {
-    rows: rows.map(toIbNormalizacionPreview),
-    total: count ?? rows.length,
-    page: filters.page,
-    pageSize: filters.pageSize,
-  };
-}
-
-export async function createIbNormalizacionPreview(input: {
-  padron_id: string;
-  kpis_json: object;
-  creados_json: object;
-  desactivados_json: object;
-  omitidos_json: object;
-}): Promise<IbNormalizacionPreview> {
-  const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("ib_normalizacion_preview")
-    .insert({
-      padron_id: input.padron_id,
-      kpis_json: input.kpis_json,
-      creados_json: input.creados_json,
-      desactivados_json: input.desactivados_json,
-      omitidos_json: input.omitidos_json,
-    })
-    .select(
-      "id, padron_id, kpis_json, creados_json, desactivados_json, omitidos_json, aplicado, created_at",
-    )
-    .single();
-  if (error) throw new DataAccessError(error);
-  return toIbNormalizacionPreview(data as IbNormalizacionPreviewRow);
-}
-
-export async function setNormalizacionAplicado(
-  id: string,
-  aplicado: boolean,
-): Promise<IbNormalizacionPreview> {
-  const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("ib_normalizacion_preview")
-    .update({ aplicado })
-    .eq("id", id)
-    .select(
-      "id, padron_id, kpis_json, creados_json, desactivados_json, omitidos_json, aplicado, created_at",
-    )
-    .single();
-  if (error) throw new DataAccessError(error);
-  return toIbNormalizacionPreview(data as IbNormalizacionPreviewRow);
-}
-
-export async function deleteIbNormalizacionPreview(id: string): Promise<void> {
-  const sb = requireSupabase();
-  const { error } = await sb.from("ib_normalizacion_preview").delete().eq("id", id);
-  if (error) throw new DataAccessError(error);
-}
-
-export async function getLatestNormalizacionPreviewByPadron(
-  padron_id: string,
-): Promise<IbNormalizacionPreview | null> {
-  const sb = requireSupabase();
-  const { data, error } = await sb
-    .from("ib_normalizacion_preview")
-    .select(
-      "id, padron_id, kpis_json, creados_json, desactivados_json, omitidos_json, aplicado, created_at",
-    )
-    .eq("padron_id", padron_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new DataAccessError(error);
-  return data ? toIbNormalizacionPreview(data as IbNormalizacionPreviewRow) : null;
+  return ((data ?? []) as TaxConAlicuotas[]).map(toImpuesto);
 }

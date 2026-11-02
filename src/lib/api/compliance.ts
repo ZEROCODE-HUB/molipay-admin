@@ -228,10 +228,18 @@ export type SimulatedDeposit = {
   idCoelsa?: string;
   importe?: number;
   comision?: number;
+  /** IVA de la comision. */
   impuesto?: number;
+  /** Impuestos asignados descontados (DyC, IIBB...). */
+  tax_amount?: number;
+  taxes?: { tax_code: string; tax_name: string; rate: number | string; amount: number | string }[];
   retenido?: boolean;
   decision?: string;
 };
+
+/** Neto acreditado de un deposito: importe - comision - IVA - impuestos. */
+export const netoDeposito = (r: SimulatedDeposit) =>
+  Number(r.importe ?? 0) - Number(r.comision ?? 0) - Number(r.impuesto ?? 0) - Number(r.tax_amount ?? 0);
 
 /** Depósito entrante simulado (solo desarrollo) para probar las reglas de depósitos. */
 export const simulateDeposit = (input: { cbuDestino: string; importe: number; cuitOrigen?: string; titularOrigen?: string; cbuOrigen?: string }) =>

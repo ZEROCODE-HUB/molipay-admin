@@ -1,8 +1,7 @@
 // Edge Function: genera URLs firmadas para objetos privados del Storage.
 // Usa el service role (saltea RLS de storage) pero exige que quien llama sea
-// un admin activo. La validación de admin la hace la RLS de `admin_users`
-// (que ya exige rol admin), así que no necesitamos auth.getUser(): el sub del
-// JWT se resuelve localmente y la consulta corre con el JWT del usuario.
+// un usuario del backoffice con el permiso customers.documents.read
+// (has_permission, con el JWT del usuario).
 //
 // Acepta `transform` para devolver además un thumbnail redimensionado
 // (más liviano para la grilla). Si el plan no tiene Image Resizing, el
@@ -68,27 +67,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { data: admin, error: adminErr } = await userSb
-    .from("admin_users")
-    .select("id, activo, rol_id")
-    .eq("id", uid)
-    .maybeSingle();
-
-  if (adminErr || !admin || !admin.activo) {
-    return new Response(JSON.stringify({ error: "No autorizado" }), {
-      status: 403,
-      headers: { ...cors, "content-type": "application/json" },
-    });
-  }
-
-  const { data: rol } = await userSb
-    .from("roles")
-    .select("nombre")
-    .eq("id", admin.rol_id)
-    .maybeSingle();
-
-  if (!rol?.nombre || rol.nombre.toLowerCase() !== "admin") {
-    return new Response(JSON.stringify({ error: "Se requiere rol admin" }), {
+  // Autorizacion: misma puerta que RLS/RPC (usuario activo, clave al dia y permiso).
+  const { data: allowed, error: permissionError } = await userSb.rpc("has_permission", {
+    p_code: "customers.documents.read",
+  });
+  if (permissionError || allowed !== true) {
+    return new Response(JSON.stringify({ error: "No tenés permiso para ver documentos" }), {
       status: 403,
       headers: { ...cors, "content-type": "application/json" },
     });

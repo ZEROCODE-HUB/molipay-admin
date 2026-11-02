@@ -1,559 +1,915 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
+  CalendarClock,
+  Download,
+  Eye,
+  Inbox,
+  Loader2,
   Plus,
   Power,
   PowerOff,
   X,
-  Inbox,
-  AlertTriangle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { DataTable, type Column } from "@/components/data-table";
 import { FormDialog } from "@/components/form-dialog";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ActionsDropdown, type ActionItem } from "@/components/actions-dropdown";
-import { Badge, Input, Label, BtnPrimary } from "@/components/portal-shell";
+import { Badge, BtnOutline, BtnPrimary, Input, Label } from "@/components/portal-shell";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useCan } from "@/lib/permissions";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useDcExcepciones } from "@/hooks/useDcExcepciones";
-import { useImpuestos } from "@/hooks/useImpuestos";
+import { useImpuestosForAsignacion } from "@/hooks/useImpuestos";
+import { DataAccessError } from "@/lib/api/errors";
 import {
-  createDcExcepcion,
-  createDcExcepcionAmbos,
-  setDcExcepcionEstado,
-} from "@/lib/api/dc-excepciones";
-import type {
-  DcExcepcion,
-  DireccionDcExcepcion,
-  TipoDcExcepcion,
-} from "@/lib/api/types";
+  CERTIFICADO_TIPOS,
+  QK_EXENCIONES,
+  SITUACIONES_EXENCION,
+  TIPOS_EXENCION,
+  buscarClientePorCuit,
+  contarVencidasActivas,
+  crearExencion,
+  listExenciones,
+  listExencionesParaExportar,
+  setEstadoExencion,
+  situacion,
+  urlCertificado,
+  verificarVencidas,
+  type DireccionExencion,
+  type Exencion,
+  type ExencionFilters,
+  type SituacionExencion,
+  type TipoExencion,
+  type VencidaExencion,
+} from "@/lib/api/exenciones";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/debitos-creditos")({
-  head: () => ({ meta: [{ title: "Débitos y créditos — Admin — Moli" }] }),
+  head: () => ({ meta: [{ title: "Exenciones impositivas — Admin — Moli" }] }),
   component: Page,
 });
 
 const PAGE_SIZE = 10;
 
-function MensajeEstado({
-  tipo,
-  mensaje,
-  onRetry,
+const selectCls =
+  "w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
+
+const fechaHora = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "Sin fecha";
+
+const TONO_SITUACION: Record<SituacionExencion, "success" | "warn" | "danger" | "neutral"> = {
+  Vigente: "success",
+  Programada: "warn",
+  Vencida: "danger",
+  Inactiva: "neutral",
+};
+
+/** datetime-local (hora local) -> ISO; vacio -> null. */
+const localAIso = (v: string) => (v ? new Date(v).toISOString() : null);
+
+function SituacionBadge({ e }: { e: Exencion }) {
+  const s = situacion(e);
+  return <Badge tone={TONO_SITUACION[s]}>{s}</Badge>;
+}
+
+async function abrirCertificado(path: string) {
+  try {
+    window.open(await urlCertificado(path), "_blank", "noopener,noreferrer");
+  } catch (err) {
+    toast.error((err as Error).message);
+  }
+}
+
+function TarjetaAccion({
+  titulo,
+  texto,
+  children,
 }: {
-  tipo: "error" | "vacio" | "permiso";
-  mensaje: string;
-  onRetry?: () => void;
+  titulo: string;
+  texto: string;
+  children: React.ReactNode;
 }) {
-  if (tipo === "permiso") {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-6 py-12 text-center text-sm text-amber-800">
-        <AlertTriangle size={28} />
-        <div>
-          <p className="font-semibold">No tenés permiso para ver esto</p>
-          <p className="mt-1">{mensaje}</p>
-        </div>
-      </div>
-    );
-  }
-  if (tipo === "error") {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
-        <AlertTriangle size={28} />
-        <div>
-          <p className="font-semibold">Ocurrió un error al cargar las excepciones</p>
-          <p className="mt-1">{mensaje}</p>
-        </div>
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-2 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Reintentar
-          </button>
-        )}
-      </div>
-    );
-  }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-      <Inbox size={28} />
-      <p>No hay excepciones que coincidan con la búsqueda.</p>
+    <div className="rounded-lg border bg-card p-4 flex flex-col gap-3">
+      <div>
+        <h3 className="font-semibold text-sm">{titulo}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{texto}</p>
+      </div>
+      <div className="mt-auto">{children}</div>
     </div>
   );
 }
 
-function formatFecha(f: string | null) {
-  if (!f) return "—";
-  try {
-    return new Date(f).toLocaleDateString("es-AR");
-  } catch {
-    return f;
-  }
-}
-
-// --- Alta manual de excepción ----------------------------------------------------
-
-type DireccionForm = "Entrantes" | "Salientes" | "Ambos";
+// ---------------------------------------------------------------------------
+// Alta
+// ---------------------------------------------------------------------------
 
 type AltaForm = {
-  email: string;
   cuit: string;
-  direccion: DireccionForm;
+  impuestoId: string;
+  direccion: DireccionExencion | "Ambos";
+  tipo: TipoExencion;
   motivo: string;
   desde: string;
   hasta: string;
-  autorizacion: string;
-  impuesto_id: string;
-  archivo_certificado: string;
+  codigo: string;
+  certificado: File | null;
 };
 
-const blankAlta: AltaForm = {
-  email: "",
-  cuit: "",
-  direccion: "Ambos",
-  motivo: "",
-  desde: new Date().toISOString().slice(0, 10),
-  hasta: "",
-  autorizacion: "",
-  impuesto_id: "",
-  archivo_certificado: "",
-};
+function NuevaExencionDialog({ onClose, onCreada }: { onClose: () => void; onCreada: () => void }) {
+  const { rows: impuestos } = useImpuestosForAsignacion();
+  const [f, setF] = useState<AltaForm>({
+    cuit: "",
+    impuestoId: "",
+    direccion: "Ambos",
+    tipo: "Certificado de exención",
+    motivo: "",
+    desde: "",
+    hasta: "",
+    codigo: "",
+    certificado: null,
+  });
+  const [guardando, setGuardando] = useState(false);
 
-// --- Página ------------------------------------------------------------------------
+  // Impuesto por defecto: Debitos y Creditos.
+  const impuestoId =
+    f.impuestoId ||
+    impuestos.find((i) => /DEBITOS|^DC$/i.test(i.codigo))?.id ||
+    impuestos[0]?.id ||
+    "";
+  const impuesto = impuestos.find((i) => i.id === impuestoId);
+  const esPadron = impuesto?.fuenteAlicuota === "Padrón";
+  const direccion = esPadron ? "Entrantes" : f.direccion;
 
-function Page() {
-  const queryClient = useQueryClient();
-  const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebouncedValue(searchInput, 350);
-  const [estadoFilter, setEstadoFilter] = useState<"Activo" | "Inactivo" | "">("");
+  const cuit = f.cuit.replace(/\D/g, "");
+  const cuitOk = /^\d{11}$/.test(cuit);
+  const cliente = useQuery({
+    queryKey: ["clientes", "por-cuit", cuit],
+    queryFn: () => buscarClientePorCuit(cuit),
+    enabled: cuitOk,
+    staleTime: 60_000,
+  });
 
-  const { can } = useCan();
-  const puedeCrear = can("crear", "impuestos");
-  const puedeModificar = can("modificar", "impuestos");
+  const fechasOk = !f.desde || !f.hasta || new Date(f.hasta) >= new Date(f.desde);
+  const valido = cuitOk && !!impuestoId && f.motivo.trim() !== "" && fechasOk;
 
-  // Excepciones
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useDcExcepciones(
-    {
-      page,
-      pageSize: PAGE_SIZE,
-      search,
-      estado: estadoFilter || undefined,
-    },
-  );
-
-  // Alta manual
-  const [showAlta, setShowAlta] = useState(false);
-  const [alta, setAlta] = useState<AltaForm>(blankAlta);
-  const [altaGuardando, setAltaGuardando] = useState(false);
-
-  const { rows: impuestos } = useImpuestos({ page: 0, pageSize: 100, estado: "Activo" });
-
-  const err: any = error ?? null;
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const [confirmAction, setConfirmAction] = useState<{
-    title: string;
-    message: string;
-    confirmLabel: string;
-    variant: "default" | "danger";
-    onConfirm: () => void;
-  } | null>(null);
-  const [banner, setBanner] = useState<string | null>(null);
-
-  const invalidarExcepciones = () =>
-    queryClient.invalidateQueries({ queryKey: ["dc_excepciones"] });
-
-  const toggleEstado = async (row: DcExcepcion) => {
+  const guardar = async () => {
+    if (!valido || guardando) return;
+    setGuardando(true);
     try {
-      await setDcExcepcionEstado(row.id, row.estado === "Activo" ? "Inactivo" : "Activo");
-      invalidarExcepciones();
-    } catch (e) {
-      setConfirmAction({
-        title: "No se pudo actualizar",
-        message: (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
+      const n = await crearExencion({
+        cuit,
+        email: cliente.data?.correo ?? null,
+        impuestoId,
+        direccion,
+        tipo: f.tipo,
+        motivo: f.motivo,
+        desde: localAIso(f.desde),
+        hasta: localAIso(f.hasta),
+        codigoAutorizacion: f.codigo,
+        certificado: f.certificado,
       });
-    }
-  };
-
-  const altaValido =
-    /.+@.+\..+/.test(alta.email.trim()) &&
-    /^[0-9]{11}$/.test(alta.cuit.replace(/[^0-9]/g, "")) &&
-    alta.motivo.trim() !== "" &&
-    alta.desde !== "";
-
-  const guardarAlta = async () => {
-    if (!altaValido || altaGuardando) return;
-    setAltaGuardando(true);
-    const base: any = {
-      email: alta.email,
-      cuit: alta.cuit,
-      tipo: "Alta manual" as TipoDcExcepcion,
-      motivo: alta.motivo,
-      vigencia_desde: alta.desde,
-      vigencia_hasta: alta.hasta || null,
-      autorizacion_codigo: alta.autorizacion || null,
-      impuesto_id: alta.impuesto_id || null,
-      archivo_certificado: alta.archivo_certificado || null,
-    };
-    try {
-      let cantidad: number;
-      if (alta.direccion === "Ambos") {
-        const creadas = await createDcExcepcionAmbos(base); // 2 INSERTs: Entrantes + Salientes
-        cantidad = creadas.length;
-      } else {
-        await createDcExcepcion({
-          ...base,
-          direccion: alta.direccion as DireccionDcExcepcion,
-        });
-        cantidad = 1;
-      }
-      invalidarExcepciones();
-      setShowAlta(false);
-      setAlta(blankAlta);
-      setBanner(
-        cantidad > 1
-          ? "Alta manual creada correctamente (2 registros: Entrantes y Salientes)."
-          : "Excepción creada correctamente.",
+      toast.success(
+        n > 1 ? "Exención creada (2 altas: entrantes y salientes)." : "Exención creada.",
       );
+      onCreada();
+      onClose();
     } catch (e) {
-      const dErr: any = e as any;
-      const esCheck = dErr?.code === "23514";
-      setConfirmAction({
-        title: "No se pudo guardar",
-        message: esCheck
-          ? "Los datos no cumplen las validaciones de la base (verificá el CUIT de 11 dígitos)."
-          : (e as Error).message,
-        confirmLabel: "Cerrar",
-        variant: "danger",
-        onConfirm: () => setConfirmAction(null),
-      });
+      toast.error(
+        e instanceof DataAccessError || e instanceof Error
+          ? e.message
+          : "No se pudo crear la exención",
+      );
+    } finally {
+      setGuardando(false);
     }
-    setAltaGuardando(false);
   };
 
-  const getActions = (row: DcExcepcion): ActionItem[] => [
-    {
-      label: row.estado === "Activo" ? "Desactivar" : "Activar",
-      icon: row.estado === "Activo" ? PowerOff : Power,
-      disabled: !puedeModificar,
-      onClick: () => toggleEstado(row),
-    },
-  ];
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title="Nueva exención"
+      description="Mientras esté vigente, el impuesto elegido se calcula en 0% para ese CUIT."
+      onSubmit={guardar}
+      submitLabel={guardando ? "Creando…" : "Crear exención"}
+      size="lg"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="ex-cuit">CUIT</Label>
+          <Input
+            id="ex-cuit"
+            inputMode="numeric"
+            value={f.cuit}
+            onChange={(e) => setF({ ...f, cuit: e.target.value })}
+            placeholder="Exactamente 11 dígitos"
+          />
+          <p className="text-[11px] mt-1">
+            {!cuit ? (
+              <span className="text-muted-foreground">Exactamente 11 dígitos.</span>
+            ) : !cuitOk ? (
+              <span className="text-red-600">Tiene que tener 11 dígitos.</span>
+            ) : cliente.isLoading ? (
+              <span className="text-muted-foreground">Buscando cliente…</span>
+            ) : cliente.data ? (
+              <span className="text-emerald-700">
+                {cliente.data.nombre} · <span className="font-mono">{cliente.data.legajo}</span>
+              </span>
+            ) : (
+              <span className="text-amber-700">
+                No hay un cliente con ese CUIT (se guarda igual por CUIT).
+              </span>
+            )}
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="ex-impuesto">Impuesto</Label>
+          <select
+            id="ex-impuesto"
+            className={selectCls}
+            value={impuestoId}
+            onChange={(e) => setF({ ...f, impuestoId: e.target.value })}
+          >
+            {impuestos.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.codigo} · {i.nombre}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Cada impuesto lleva su propia exención.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="ex-direccion">Dirección</Label>
+          <select
+            id="ex-direccion"
+            className={selectCls}
+            value={direccion}
+            disabled={esPadron}
+            onChange={(e) => setF({ ...f, direccion: e.target.value as AltaForm["direccion"] })}
+          >
+            <option value="Ambos">Ambos</option>
+            <option value="Entrantes">Entrantes</option>
+            <option value="Salientes">Salientes</option>
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {esPadron
+              ? "IIBB solo se retiene en los ingresos: la exención va en Entrantes."
+              : "Con Ambos se crean dos altas (entrantes y salientes), desactivables por separado."}
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="ex-tipo">Tipo</Label>
+          <select
+            id="ex-tipo"
+            className={selectCls}
+            value={f.tipo}
+            onChange={(e) => setF({ ...f, tipo: e.target.value as TipoExencion })}
+          >
+            {TIPOS_EXENCION.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="ex-motivo">Motivo</Label>
+          <Input
+            id="ex-motivo"
+            value={f.motivo}
+            onChange={(e) => setF({ ...f, motivo: e.target.value })}
+            placeholder="Ej: Certificado de exención AFIP — cooperativa"
+          />
+        </div>
+        <div>
+          <Label htmlFor="ex-desde">Vigencia desde</Label>
+          <Input
+            id="ex-desde"
+            type="datetime-local"
+            value={f.desde}
+            onChange={(e) => setF({ ...f, desde: e.target.value })}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Vacío: desde ahora.</p>
+        </div>
+        <div>
+          <Label htmlFor="ex-hasta">Vigencia hasta</Label>
+          <Input
+            id="ex-hasta"
+            type="datetime-local"
+            value={f.hasta}
+            onChange={(e) => setF({ ...f, hasta: e.target.value })}
+          />
+          <p className={`text-[11px] mt-1 ${fechasOk ? "text-muted-foreground" : "text-red-600"}`}>
+            {fechasOk
+              ? "Puede quedar vacío (sin vencimiento)."
+              : "Tiene que ser posterior a la fecha desde."}
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="ex-codigo">Código de autorización (opcional)</Label>
+          <Input
+            id="ex-codigo"
+            value={f.codigo}
+            onChange={(e) => setF({ ...f, codigo: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label htmlFor="ex-cert">Certificado (opcional)</Label>
+          <input
+            id="ex-cert"
+            type="file"
+            accept={CERTIFICADO_TIPOS.join(",")}
+            className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-card file:px-3 file:py-1.5 file:text-sm"
+            onChange={(e) => setF({ ...f, certificado: e.target.files?.[0] ?? null })}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            PDF, JPG, PNG o WEBP · hasta 10 MB.
+          </p>
+        </div>
+      </div>
+      {!valido && (
+        <p className="text-xs text-muted-foreground">
+          Completá CUIT de 11 dígitos, impuesto y motivo.
+        </p>
+      )}
+    </FormDialog>
+  );
+}
 
-  const columns: Column<DcExcepcion>[] = [
+// ---------------------------------------------------------------------------
+// Verificar vencidas
+// ---------------------------------------------------------------------------
+
+function VerificarVencidasDialog({
+  onClose,
+  onHecho,
+}: {
+  onClose: () => void;
+  onHecho: () => void;
+}) {
+  const preview = useQuery({
+    queryKey: ["tax_exemptions", "vencidas"],
+    queryFn: () => verificarVencidas(true),
+  });
+  const [aplicando, setAplicando] = useState(false);
+
+  const aplicar = async () => {
+    setAplicando(true);
+    try {
+      const r = await verificarVencidas(false);
+      toast.success(
+        r.total > 0
+          ? `${r.total} exención(es) vencida(s) pasaron a inactivas.`
+          : "No había exenciones vencidas.",
+      );
+      onHecho();
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setAplicando(false);
+    }
+  };
+
+  const columns: Column<VencidaExencion>[] = [
     {
       key: "cuit",
       label: "CUIT",
-      sortable: true,
-      render: (r) => <span className="font-mono tabular-nums text-xs">{r.cuit}</span>,
+      render: (v) => (
+        <div className="leading-tight">
+          <div className="font-mono tabular-nums">{v.cuit}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {v.clienteNombre ?? v.clienteLegajo ?? "—"}
+          </div>
+        </div>
+      ),
     },
     {
-      key: "email",
+      key: "impuesto",
+      label: "Impuesto",
+      render: (v) => <span className="font-mono text-xs">{v.impuestoCodigo}</span>,
+    },
+    { key: "direccion", label: "Dirección", render: (v) => v.direccion },
+    {
+      key: "hasta",
+      label: "Venció",
+      render: (v) => <span className="text-xs">{fechaHora(v.hasta)}</span>,
+    },
+  ];
+
+  const total = preview.data?.total ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={aplicando ? undefined : onClose} />
+      <div className="relative bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-start">
+          <div>
+            <h3 className="font-display text-lg font-semibold">Verificar vencidas</h3>
+            <p className="text-sm text-muted-foreground">
+              Exenciones activas con la vigencia vencida. El cálculo ya no las aplica; al confirmar
+              quedan inactivas.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={aplicando}
+            className="p-1.5 hover:bg-muted rounded-md"
+            aria-label="Cerrar"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-6">
+          {preview.isLoading ? (
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" /> Buscando vencidas…
+            </div>
+          ) : preview.isError ? (
+            <p className="text-sm text-red-700">{(preview.error as Error).message}</p>
+          ) : total === 0 ? (
+            <div className="flex items-center gap-2 text-sm">
+              <Badge tone="success">Al día</Badge> No hay exenciones vencidas activas.
+            </div>
+          ) : (
+            <>
+              <p className="text-sm mb-3">
+                <span className="font-semibold">{total}</span> exención(es) vencida(s)
+                {total > (preview.data?.items.length ?? 0)
+                  ? ` (se muestran las primeras ${preview.data?.items.length})`
+                  : ""}
+                .
+              </p>
+              <DataTable
+                columns={columns}
+                data={preview.data?.items ?? []}
+                keyExtractor={(v) => v.id}
+                pageSize={8}
+                showGlobalFilter={false}
+                showDownloadButton={false}
+              />
+            </>
+          )}
+        </div>
+        <div className="border-t px-6 py-3 flex justify-end gap-2">
+          <BtnOutline onClick={onClose} disabled={aplicando}>
+            Cerrar
+          </BtnOutline>
+          {total > 0 && (
+            <BtnPrimary onClick={aplicar} disabled={aplicando}>
+              {aplicando ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Desactivando…
+                </>
+              ) : (
+                `Desactivar ${total} vencida(s)`
+              )}
+            </BtnPrimary>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Detalle
+// ---------------------------------------------------------------------------
+
+function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className="font-medium mt-0.5 break-words">{children}</div>
+    </div>
+  );
+}
+
+function DetalleExencion({ e, onClose }: { e: Exencion; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="border-b px-6 py-4 flex justify-between items-start">
+          <div>
+            <h3 className="font-display text-lg font-semibold">
+              Exención {e.impuestoCodigo} · {e.direccion}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {e.clienteNombre ?? "Sin cliente vinculado"} ·{" "}
+              <span className="font-mono">{e.cuit}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-md" aria-label="Cerrar">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <Campo label="Estado">
+            <SituacionBadge e={e} />
+          </Campo>
+          <Campo label="Impuesto">
+            {e.impuestoNombre}{" "}
+            <span className="font-mono text-xs text-muted-foreground">({e.impuestoCodigo})</span>
+          </Campo>
+          <Campo label="Tipo">{e.tipo}</Campo>
+          <Campo label="Dirección">{e.direccion}</Campo>
+          <Campo label="Vigencia desde">{fechaHora(e.desde)}</Campo>
+          <Campo label="Vigencia hasta">{e.hasta ? fechaHora(e.hasta) : "Sin vencimiento"}</Campo>
+          <Campo label="Cliente">
+            {e.clienteLegajo ? <span className="font-mono">{e.clienteLegajo}</span> : "—"}
+          </Campo>
+          <Campo label="Email">{e.email ?? "—"}</Campo>
+          <Campo label="Código de autorización">{e.codigoAutorizacion ?? "—"}</Campo>
+          <Campo label="Certificado">
+            {e.certificado ? (
+              <button
+                type="button"
+                className="text-primary underline"
+                onClick={() => abrirCertificado(e.certificado!)}
+              >
+                Ver certificado
+              </button>
+            ) : (
+              "—"
+            )}
+          </Campo>
+          <div className="sm:col-span-2">
+            <Campo label="Motivo">{e.motivo ?? "—"}</Campo>
+          </div>
+          <Campo label="Alta">{fechaHora(e.createdAt)}</Campo>
+          <Campo label="Actualización">{fechaHora(e.updatedAt)}</Campo>
+          {e.bajaAt && (
+            <div className="sm:col-span-2">
+              <Campo label="Baja">
+                {fechaHora(e.bajaAt)} · {e.bajaMotivo}
+              </Campo>
+            </div>
+          )}
+        </div>
+        <div className="border-t px-6 py-3 flex justify-end">
+          <BtnOutline onClick={onClose}>Cerrar</BtnOutline>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pagina
+// ---------------------------------------------------------------------------
+
+function Page() {
+  const qc = useQueryClient();
+  const { can } = useCan();
+  const puedeCrear = can("crear", "impuestos");
+  const puedeModificar = can("modificar", "impuestos");
+  const { rows: impuestos } = useImpuestosForAsignacion();
+
+  const [page, setPage] = useState(0);
+  const [cuitInput, setCuitInput] = useState("");
+  const cuit = useDebouncedValue(cuitInput, 350);
+  const [impuestoId, setImpuestoId] = useState("");
+  const [direccion, setDireccion] = useState<DireccionExencion | "">("");
+  const [estado, setEstado] = useState<SituacionExencion | "">("");
+  const filtros: Omit<ExencionFilters, "page" | "pageSize"> = {
+    cuit: cuit || undefined,
+    impuestoId: impuestoId || undefined,
+    direccion: direccion || undefined,
+    situacion: estado || undefined,
+  };
+  // Cualquier cambio de filtro vuelve a la primera pagina.
+  useEffect(() => setPage(0), [cuit, impuestoId, direccion, estado]);
+
+  const query = useQuery({
+    queryKey: [...QK_EXENCIONES, "list", page, filtros],
+    queryFn: () => listExenciones({ page, pageSize: PAGE_SIZE, ...filtros }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+  const vencidas = useQuery({
+    queryKey: [...QK_EXENCIONES, "vencidas-activas"],
+    queryFn: contarVencidasActivas,
+    staleTime: 60_000,
+  });
+
+  const [nueva, setNueva] = useState(false);
+  const [verificar, setVerificar] = useState(false);
+  const [detalle, setDetalle] = useState<Exencion | null>(null);
+  const [exportando, setExportando] = useState(false);
+
+  const refrescar = () => void qc.invalidateQueries({ queryKey: QK_EXENCIONES });
+
+  const cambiarEstado = async (e: Exencion) => {
+    try {
+      await setEstadoExencion(e.id, e.estado === "Activa" ? "Inactiva" : "Activa");
+      toast.success(e.estado === "Activa" ? "Exención desactivada." : "Exención activada.");
+      refrescar();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const exportar = async () => {
+    setExportando(true);
+    try {
+      const filas = await listExencionesParaExportar(filtros);
+      const cab = [
+        "Usuario",
+        "Legajo",
+        "CUIT",
+        "Impuesto",
+        "Dirección",
+        "Tipo",
+        "Motivo",
+        "Vigencia desde",
+        "Vigencia hasta",
+        "Estado",
+        "Alta",
+        "Actualización",
+      ];
+      const lineas = filas.map((e) =>
+        [
+          e.clienteNombre ?? e.email ?? "",
+          e.clienteLegajo ?? "",
+          e.cuit,
+          e.impuestoCodigo,
+          e.direccion,
+          e.tipo,
+          e.motivo ?? "",
+          fechaHora(e.desde),
+          e.hasta ? fechaHora(e.hasta) : "Sin fecha",
+          situacion(e),
+          fechaHora(e.createdAt),
+          fechaHora(e.updatedAt),
+        ]
+          .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+          .join(";"),
+      );
+      const blob = new Blob(["﻿" + [cab.join(";"), ...lineas].join("\n")], {
+        type: "text/csv;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "exenciones.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const getActions = (e: Exencion): ActionItem[] => [
+    { label: "Ver", icon: Eye, onClick: () => setDetalle(e) },
+    {
+      label: e.estado === "Activa" ? "Desactivar" : "Activar",
+      icon: e.estado === "Activa" ? PowerOff : Power,
+      disabled: !puedeModificar,
+      onClick: () => cambiarEstado(e),
+    },
+  ];
+
+  const columns: Column<Exencion>[] = [
+    {
+      key: "usuario",
       label: "Usuario",
-      render: (r) => r.email,
+      render: (e) => (
+        <div className="leading-tight">
+          <div className="font-medium">{e.clienteNombre ?? e.email ?? "—"}</div>
+          <div className="text-[11px] text-muted-foreground font-mono">
+            {e.clienteLegajo ?? "sin cliente"}
+          </div>
+        </div>
+      ),
     },
     {
-      key: "tipo",
-      label: "Tipo",
-      sortable: true,
-      render: (r) => r.tipo,
+      key: "cuit",
+      label: "CUIT",
+      render: (e) => <span className="font-mono tabular-nums text-xs">{e.cuit}</span>,
+    },
+    {
+      key: "impuesto",
+      label: "Impuesto",
+      render: (e) => <span className="font-mono text-xs">{e.impuestoCodigo}</span>,
     },
     {
       key: "direccion",
       label: "Dirección",
-      sortable: true,
-      render: (r) => <Badge tone="neutral">{r.direccion}</Badge>,
-    },
-    {
-      key: "impuestoNombre",
-      label: "Impuesto",
-      render: (r) => r.impuestoNombre ?? <span className="text-muted-foreground">—</span>,
+      render: (e) => <Badge tone="neutral">{e.direccion}</Badge>,
     },
     {
       key: "motivo",
       label: "Motivo",
-      render: (r) => r.motivo ?? "—",
+      render: (e) => <span className="text-xs line-clamp-2 max-w-[220px]">{e.motivo ?? "—"}</span>,
     },
     {
-      key: "vigenciaDesde",
+      key: "desde",
       label: "Vigencia desde",
-      render: (r) => (
-        <span className="font-mono tabular-nums text-xs">{formatFecha(r.vigenciaDesde)}</span>
-      ),
+      render: (e) => <span className="text-xs whitespace-nowrap">{fechaHora(e.desde)}</span>,
     },
     {
-      key: "vigenciaHasta",
+      key: "hasta",
       label: "Vigencia hasta",
-      render: (r) => (
-        <span className="font-mono tabular-nums text-xs">{formatFecha(r.vigenciaHasta)}</span>
-      ),
+      render: (e) => <span className="text-xs whitespace-nowrap">{fechaHora(e.hasta)}</span>,
+    },
+    { key: "estado", label: "Estado", render: (e) => <SituacionBadge e={e} /> },
+    {
+      key: "alta",
+      label: "Alta",
+      render: (e) => <span className="text-xs whitespace-nowrap">{fechaHora(e.createdAt)}</span>,
     },
     {
-      key: "archivoCertificado",
-      label: "Certificado",
-      render: (r) => r.archivoCertificado
-        ? <a href={r.archivoCertificado} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Ver certificado</a>
-        : <span className="text-muted-foreground text-xs">—</span>,
-    },
-    {
-      key: "estado",
-      label: "Estado",
-      sortable: true,
-      render: (r) => <Badge tone={r.estado === "Activo" ? "success" : "neutral"}>{r.estado}</Badge>,
+      key: "actualizacion",
+      label: "Actualización",
+      render: (e) => <span className="text-xs whitespace-nowrap">{fechaHora(e.updatedAt)}</span>,
     },
   ];
+
+  const rows = query.data?.rows ?? [];
+  const total = query.data?.total ?? 0;
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hayFiltros = cuitInput || impuestoId || direccion || estado;
+  const nVencidas = vencidas.data ?? 0;
 
   return (
     <PermissionGuard recurso="impuestos">
       <PageHeader
-        title="Débitos y créditos"
-        description="Excepciones manuales de impuestos débito/crédito. Este impuesto se presenta una vez por semana."
-        action={
-          <BtnPrimary type="button" onClick={() => setShowAlta(true)} disabled={!puedeCrear}>
-            <Plus size={14} /> Nueva excepción
-          </BtnPrimary>
-        }
+        title="Exenciones impositivas"
+        description="Exenciones por CUIT de Débitos y Créditos, Ingresos Brutos y otros impuestos."
       />
 
-      {banner && (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          <span>{banner}</span>
-          <button type="button" onClick={() => setBanner(null)} className="shrink-0">
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 mb-4">
-        Este impuesto se presenta una vez por semana.
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <TarjetaAccion
+          titulo="Alta manual de exenciones"
+          texto="Crea una exención por CUIT e impuesto. Si elegís Ambos, se crean dos altas: entrantes y salientes."
+        >
+          <BtnPrimary onClick={() => setNueva(true)} disabled={!puedeCrear}>
+            <Plus size={14} /> Nueva exención
+          </BtnPrimary>
+        </TarjetaAccion>
+        <TarjetaAccion
+          titulo="Verificar vencidas"
+          texto="Lista las exenciones activas con la vigencia vencida y las pasa a inactivas. El cálculo ya no las aplica."
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <BtnOutline onClick={() => setVerificar(true)} disabled={!puedeModificar}>
+              <CalendarClock size={14} /> Verificar vencidas
+            </BtnOutline>
+            {nVencidas > 0 && <Badge tone="danger">{nVencidas} vencida(s) activas</Badge>}
+          </div>
+        </TarjetaAccion>
+        <TarjetaAccion
+          titulo="Sync retroactivo"
+          texto="Devolver lo retenido antes de cargar un certificado con fecha pasada (preview y aplicar)."
+        >
+          <div className="flex items-center gap-2">
+            <BtnOutline disabled>Ver preview</BtnOutline>
+            <Badge tone="neutral">Próximamente</Badge>
+          </div>
+        </TarjetaAccion>
       </div>
 
+      <h3 className="font-display font-semibold text-base mb-3">Exenciones</h3>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
-          <Label htmlFor="buscar">Buscar</Label>
+          <Label htmlFor="f-cuit">CUIT</Label>
           <Input
-            id="buscar"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="CUIT, email o motivo…"
+            id="f-cuit"
+            inputMode="numeric"
+            value={cuitInput}
+            onChange={(e) => setCuitInput(e.target.value)}
+            placeholder="CUIT o comienzo del CUIT…"
           />
         </div>
-        <div>
+        <div className="min-w-[170px]">
+          <Label htmlFor="f-impuesto">Impuesto</Label>
+          <select
+            id="f-impuesto"
+            className={selectCls}
+            value={impuestoId}
+            onChange={(e) => setImpuestoId(e.target.value)}
+          >
+            <option value="">Todos los impuestos</option>
+            {impuestos.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.codigo}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[170px]">
+          <Label htmlFor="f-direccion">Dirección</Label>
+          <select
+            id="f-direccion"
+            className={selectCls}
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value as DireccionExencion | "")}
+          >
+            <option value="">Todas las direcciones</option>
+            <option value="Entrantes">Entrantes</option>
+            <option value="Salientes">Salientes</option>
+          </select>
+        </div>
+        <div className="min-w-[170px]">
           <Label htmlFor="f-estado">Estado</Label>
           <select
             id="f-estado"
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            value={estadoFilter}
-            onChange={(e) => {
-              setEstadoFilter(e.target.value as "Activo" | "Inactivo" | "");
-              setPage(0);
-            }}
+            className={selectCls}
+            value={estado}
+            onChange={(e) => setEstado(e.target.value as SituacionExencion | "")}
           >
-            <option value="">Todos</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
+            <option value="">Todos los estados</option>
+            {SITUACIONES_EXENCION.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
           </select>
         </div>
+        {hayFiltros && (
+          <BtnOutline
+            onClick={() => {
+              setCuitInput("");
+              setImpuestoId("");
+              setDireccion("");
+              setEstado("");
+            }}
+          >
+            Limpiar
+          </BtnOutline>
+        )}
+        <BtnOutline onClick={exportar} disabled={exportando || total === 0}>
+          {exportando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}{" "}
+          Exportar
+        </BtnOutline>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
-          <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin mr-2" />
-          Cargando excepciones…
+      {query.isLoading ? (
+        <div className="flex items-center justify-center rounded-xl border bg-card py-16 text-sm text-muted-foreground">
+          <Loader2 size={16} className="animate-spin mr-2" /> Cargando exenciones…
         </div>
-      ) : isError ? (
-        <MensajeEstado
-          tipo={err?.permission ? "permiso" : "error"}
-          mensaje={err?.message ?? "Error desconocido"}
-          onRetry={() => refetch()}
-        />
-      ) : isEmpty ? (
-        <MensajeEstado tipo="vacio" mensaje="" />
+      ) : query.isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700">
+          <AlertTriangle size={28} />
+          <p>{(query.error as Error).message}</p>
+          <BtnOutline onClick={() => query.refetch()}>Reintentar</BtnOutline>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+          <Inbox size={28} />
+          <p>No hay exenciones que coincidan con los filtros.</p>
+        </div>
       ) : (
         <>
           <DataTable
             columns={columns}
             data={rows}
-            keyExtractor={(r) => r.id}
+            keyExtractor={(e) => e.id}
             pageSize={PAGE_SIZE}
+            showGlobalFilter={false}
             showDownloadButton={false}
-            actions={(r) => <ActionsDropdown actions={getActions(r)} />}
+            actions={(e) => <ActionsDropdown actions={getActions(e)} />}
           />
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>
-              {total} excepcion(es) · página {page + 1} de {totalPaginas}
+              {total} exención(es) · página {page + 1} de {totalPaginas}
             </span>
             <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page === 0 || isFetching}
+              <BtnOutline
+                disabled={page === 0 || query.isFetching}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page + 1 >= totalPaginas || isFetching}
+              </BtnOutline>
+              <BtnOutline
+                disabled={page + 1 >= totalPaginas || query.isFetching}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Siguiente
-              </button>
+              </BtnOutline>
             </div>
           </div>
         </>
       )}
 
-      {/* Modal: nueva excepción */}
-      {showAlta && (
-        <FormDialog
-          open
-          onClose={() => setShowAlta(false)}
-          title="Nueva excepción Débitos/Créditos"
-          description="La dirección 'Ambos' crea dos registros: uno para Entrantes y otro para Salientes."
-          onSubmit={guardarAlta}
-          submitLabel={altaGuardando ? "Guardando…" : "Crear excepción"}
-        >
-          <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            <p className="font-semibold">Tasa fija: 0,6% + 0,6% = 1,2% total</p>
-            <p className="text-xs text-blue-700 mt-1">
-              Este impuesto se presenta una vez por semana.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
-              <Label htmlFor="ex-email">Email</Label>
-              <Input
-                id="ex-email"
-                value={alta.email}
-                onChange={(e) => setAlta({ ...alta, email: e.target.value })}
-                placeholder="usuario@dominio.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ex-cuit">CUIT</Label>
-              <Input
-                id="ex-cuit"
-                value={alta.cuit}
-                onChange={(e) => setAlta({ ...alta, cuit: e.target.value })}
-                placeholder="20111111111"
-                inputMode="numeric"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                11 dígitos, sin guiones ni puntos.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="ex-direccion">Dirección</Label>
-              <select
-                id="ex-direccion"
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                value={alta.direccion}
-                onChange={(e) => setAlta({ ...alta, direccion: e.target.value as DireccionForm })}
-              >
-                <option value="Ambos">Ambos</option>
-                <option value="Entrantes">Entrantes</option>
-                <option value="Salientes">Salientes</option>
-              </select>
-              {alta.direccion === "Ambos" && (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Se crearán 2 registros (uno por dirección).
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="ex-autorizacion">Código de autorización (opcional)</Label>
-              <Input
-                id="ex-autorizacion"
-                value={alta.autorizacion}
-                onChange={(e) => setAlta({ ...alta, autorizacion: e.target.value })}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="ex-motivo">Motivo</Label>
-              <Input
-                id="ex-motivo"
-                value={alta.motivo}
-                onChange={(e) => setAlta({ ...alta, motivo: e.target.value })}
-                placeholder="Ej: Exento por convenio"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ex-desde">Vigencia desde</Label>
-              <Input
-                id="ex-desde"
-                type="date"
-                value={alta.desde}
-                onChange={(e) => setAlta({ ...alta, desde: e.target.value })}
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">Presentación semanal.</p>
-            </div>
-            <div>
-              <Label htmlFor="ex-hasta">Vigencia hasta (opcional)</Label>
-              <Input
-                id="ex-hasta"
-                type="date"
-                value={alta.hasta}
-                onChange={(e) => setAlta({ ...alta, hasta: e.target.value })}
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">Presentación semanal.</p>
-            </div>
-            <div>
-              <Label htmlFor="ex-impuesto">Impuesto vinculado (opcional)</Label>
-              <select
-                id="ex-impuesto"
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                value={alta.impuesto_id}
-                onChange={(e) => setAlta({ ...alta, impuesto_id: e.target.value })}
-              >
-                <option value="">Sin impuesto específico</option>
-                {(impuestos ?? []).map((imp) => (
-                  <option key={imp.id} value={imp.id}>{imp.codigo} · {imp.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="ex-archivo">URL del certificado (opcional)</Label>
-              <Input
-                id="ex-archivo"
-                value={alta.archivo_certificado}
-                onChange={(e) => setAlta({ ...alta, archivo_certificado: e.target.value })}
-                placeholder="https://..."
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">Link al certificado de exención o convenio.</p>
-            </div>
-          </div>
-          {!altaValido && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Completá email válido, CUIT de 11 dígitos y el motivo para poder guardar.
-            </p>
-          )}
-        </FormDialog>
+      {nueva && <NuevaExencionDialog onClose={() => setNueva(false)} onCreada={refrescar} />}
+      {verificar && (
+        <VerificarVencidasDialog onClose={() => setVerificar(false)} onHecho={refrescar} />
       )}
-
-      {confirmAction && (
-        <ConfirmDialog
-          open={!!confirmAction}
-          onClose={() => setConfirmAction(null)}
-          title={confirmAction.title}
-          message={confirmAction.message}
-          confirmLabel={confirmAction.confirmLabel}
-          variant={confirmAction.variant}
-          onConfirm={confirmAction.onConfirm}
-        />
-      )}
+      {detalle && <DetalleExencion e={detalle} onClose={() => setDetalle(null)} />}
     </PermissionGuard>
   );
 }

@@ -1,5 +1,5 @@
-﻿import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -28,7 +28,11 @@ import { useDemoMode } from "@/contexts/demo-mode";
 import { RouteSkeleton } from "@/components/route-skeleton";
 import { AdminChatbot } from "@/components/admin-chatbot";
 import { AlertasHeader } from "@/components/alertas/alertas-header";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { usePermissions } from "@/lib/permissions";
+import { routePermissions } from "@/lib/route-permissions";
+import { NoAccess } from "@/components/permission-guard";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -80,39 +84,92 @@ const nav: NavItem[] = [
   { to: "/admin/incidentes", label: "Comunicación", icon: Bell },
 ];
 
+/** Menu visible: solo lo que el rol puede ver (grupos vacios se ocultan). */
+function useVisibleNav(): NavItem[] {
+  const { session, hasAny } = usePermissions();
+  return useMemo(() => {
+    const canSee = (to: string) => {
+      const required = routePermissions(to);
+      return required === null ? !!session?.isSuperadmin : hasAny(required);
+    };
+    return nav.flatMap((item): NavItem[] => {
+      if ("items" in item && item.items) {
+        const items = item.items.filter((leaf) => canSee(leaf.to));
+        return items.length > 0 ? [{ ...item, items }] : [];
+      }
+      return canSee((item as { to: string }).to) ? [item] : [];
+    });
+  }, [session, hasAny]);
+}
+
+function NotStaff({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="font-display text-xl font-semibold">Sin acceso al backoffice</h1>
+        <p className="text-sm text-muted-foreground">
+          Tu usuario no está habilitado en el backoffice o fue desactivado. Si creés que es un
+          error, contactá a un administrador.
+        </p>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="inline-flex h-9 items-center rounded-md border border-input bg-card px-4 text-sm font-medium hover:bg-accent"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminLayout() {
   const { role, setRole } = useDemoMode();
   const navigate = useNavigate();
-  const [authChecked, setAuthChecked] = useState(!isSupabaseConfigured);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { loading: authLoading, user, signOut } = useAuth();
+  const { status, session, hasAny } = usePermissions();
+  const visibleNav = useVisibleNav();
 
   useEffect(() => {
     if (role !== "admin" && role !== "operador") setRole("admin");
   }, [role, setRole]);
 
+  // Sin sesion -> login. Clave pendiente (invitacion o reset) -> definir clave.
   useEffect(() => {
-    if (!supabase) return;
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      if (data.session) setAuthChecked(true);
-      else navigate({ to: "/" });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      if (session) setAuthChecked(true);
-      else navigate({ to: "/" });
-    });
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (!isSupabaseConfigured) return;
+    if (!authLoading && !user) navigate({ to: "/" });
+    else if (session?.mustChangePassword) navigate({ to: "/definir-clave" });
+  }, [authLoading, user, session?.mustChangePassword, navigate]);
 
-  if (!authChecked) return <RouteSkeleton />;
+  if (isSupabaseConfigured) {
+    if (status === "loading" || (authLoading && status !== "ready")) return <RouteSkeleton />;
+    if (status === "anonymous" || session?.mustChangePassword) return <RouteSkeleton />;
+    if (status === "not_staff" || (session && !session.isActive)) {
+      return <NotStaff onSignOut={() => void signOut().then(() => navigate({ to: "/" }))} />;
+    }
+  }
+
+  const required = routePermissions(pathname);
+  const allowed =
+    !isSupabaseConfigured || (required === null ? !!session?.isSuperadmin : hasAny(required));
 
   return (
-    <PortalShell nav={nav} title="Backoffice Molly" headerActions={<AlertasHeader />}>
-      <Outlet />
+    <PortalShell
+      nav={isSupabaseConfigured ? visibleNav : nav}
+      title="Backoffice Molly"
+      headerActions={<AlertasHeader />}
+      account={
+        session
+          ? {
+              name: session.fullName || session.email,
+              email: session.email,
+              role: session.roleName,
+            }
+          : null
+      }
+    >
+      {allowed ? <Outlet /> : <NoAccess />}
       <AdminChatbot />
     </PortalShell>
   );

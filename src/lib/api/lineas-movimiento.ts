@@ -5,7 +5,8 @@ import type { Page, Pagination } from "./types";
 // Movimientos por linea contable (vista public.v_transaction_lines).
 //
 // Cada operacion genera una fila por concepto: el ingreso/egreso principal,
-// la comision, el impuesto (IVA) y el interes, todas con el MISMO TXID. Los
+// la comision, el IVA, cada impuesto asignado (DyC, IIBB...) y el interes,
+// todas con el MISMO TXID. Los
 // reversos son filas propias con el signo contrario. La vista sale del ledger
 // (y de las operaciones legacy previas), asi que filtros y paginacion corren
 // en la base, no en la pagina.
@@ -45,7 +46,14 @@ export type LineaMovimiento = {
   estadoCodigo: string;
   estadoNombre: string;
   ledgerStatus: string;
+  /** Etiqueta de la linea: "IVA", "Débitos y Créditos 0,6%"... (memo del asiento). */
+  detalle: string | null;
 };
+
+/** "Impuesto · Débitos y Créditos 0,6%" para las lineas de impuesto; si no, la etiqueta del tipo. */
+export function etiquetaLinea(l: Pick<LineaMovimiento, "tipoLinea" | "detalle">, etiquetaTipo: string): string {
+  return l.tipoLinea === "impuesto" && l.detalle ? l.detalle : etiquetaTipo;
+}
 
 type LineaRow = {
   line_id: string;
@@ -69,10 +77,11 @@ type LineaRow = {
   estado_codigo: string;
   estado_nombre: string;
   ledger_status: string;
+  detalle: string | null;
 };
 
 const COLUMNS =
-  "line_id, transaction_id, id_txn, legajo, tipo_operacion, tipo_linea, concepto, monto, fecha, line_no, subaccount_id, cvu_propio, cvu, email, nombre, nombre_destino, cuit, estado_id, estado_codigo, estado_nombre, ledger_status";
+  "line_id, transaction_id, id_txn, legajo, tipo_operacion, tipo_linea, concepto, monto, fecha, line_no, subaccount_id, cvu_propio, cvu, email, nombre, nombre_destino, cuit, estado_id, estado_codigo, estado_nombre, ledger_status, detalle";
 
 export type LineaFilters = Pagination & {
   /** Texto libre: TXID, legajo, email, nombre o nombre destino. */
@@ -117,6 +126,7 @@ function toLinea(r: LineaRow): LineaMovimiento {
     estadoCodigo: r.estado_codigo,
     estadoNombre: r.estado_nombre,
     ledgerStatus: r.ledger_status,
+    detalle: r.detalle ?? null,
   };
 }
 

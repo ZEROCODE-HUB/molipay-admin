@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Eye, Edit3, CheckCircle, XCircle, Trash2, Plus, AlertTriangle, Inbox, HelpCircle } from "lucide-react";
 import {
@@ -19,7 +19,7 @@ import { LegajoCell } from "@/components/legajo-label";
 import { Pagination } from "@/components/pagination";
 import { useComercios, useClientesForSelect } from "@/hooks/useComercios";
 import { useCodigosCategoria } from "@/hooks/useCodigosCategoria";
-import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { fetchActiveBackofficeUsers, type BackofficeUser } from "@/lib/api/backoffice-users";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Search } from "lucide-react";
 import {
@@ -703,7 +703,7 @@ function ComercioFormModal({
   comercio: Comercio | null;
   clientes: ClienteSelect[];
   categorias: CodigoCategoria[];
-  adminUsers: import("@/lib/api/types").AdminUser[];
+  adminUsers: Pick<BackofficeUser, "id" | "fullName" | "email">[];
   onClose: () => void;
   onSave: (input: {
     clienteLegajo: string;
@@ -961,8 +961,8 @@ function ComercioFormModal({
             onChange={(e) => setEjecutivoId(e.target.value)}
           >
             <option value="">Sin asignar</option>
-            {adminUsers.filter(u => u.activo).map((u) => (
-              <option key={u.id} value={u.id}>{u.nombre} · {u.email}</option>
+            {adminUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.fullName} · {u.email}</option>
             ))}
           </select>
         </div>
@@ -1011,7 +1011,11 @@ function Page() {
 
   const { rows: categorias } = useCodigosCategoria({ page: 0, pageSize: 1000 });
   const { data: clientes } = useClientesForSelect();
-  const { rows: adminUsers } = useAdminUsers({ page: 0, pageSize: 100 });
+  const { data: adminUsers } = useQuery({
+    queryKey: ["backoffice-users", "active"],
+    queryFn: fetchActiveBackofficeUsers,
+    staleTime: 5 * 60_000,
+  });
 
   const [detail, setDetail] = useState<Comercio | null>(null);
   const [editTarget, setEditTarget] = useState<Comercio | null>(null);

@@ -1,124 +1,70 @@
-// Edge Function: eliminación completa de usuario (auth + clientes + admin_users).
-// Recibe { email } o { user_id } o { legajo }. Busca el usuario en auth y lo borra
-// via auth.admin.deleteUser (requiere service_role). También limpia filas huérfanas
-// en public.clientes y public.admin_users por email.
-// Usado por hardDeleteCliente para garantizar que "Eliminar" bloquee el login.
+// Edge Function: baja definitiva de un CLIENTE (auth.users + clientes).
+//
+//   POST { email? , user_id?, legajo? }
+//
+// Seguridad: exige sesion + permiso customers.delete. No borra usuarios del
+// backoffice (esos se desactivan desde Usuarios backoffice).
+// Usado por hardDeleteCliente para que "Eliminar" bloquee el login del cliente.
+//
+// Deploy: supabase functions deploy eliminar-usuario
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { HttpError, json, readJson, requirePermission, serve } from "../_shared/backoffice.ts";
 
-Deno.serve(async (req) => {
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+type Body = { email?: string; user_id?: string; legajo?: string };
 
-  const url = Deno.env.get("SUPABASE_URL");
-  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !service) {
-    return new Response(JSON.stringify({ error: "Falta configuración del servidor" }), {
-      status: 500,
-      headers: { ...cors, "content-type": "application/json" },
-    });
+serve(async (req) => {
+  const caller = await requirePermission(req, "customers.delete");
+  const body = await readJson<Body>(req);
+
+  let email = body.email?.trim().toLowerCase() || null;
+  let userId = body.user_id?.trim() || null;
+  const legajo = body.legajo?.trim().toUpperCase() || null;
+  if (!email && !userId && !legajo) throw new HttpError(400, "Indicá email, user_id o legajo");
+
+  const db = caller.admin;
+
+  if (legajo && !email && !userId) {
+    const { data: customer } = await db.from("clientes").select("correo").eq("legajo", legajo).maybeSingle();
+    if (customer?.correo) email = customer.correo.toLowerCase();
   }
-
-  let body: { email?: string; user_id?: string; legajo?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "Body inválido" }), {
-      status: 400,
-      headers: { ...cors, "content-type": "application/json" },
-    });
+  if (userId && !email) {
+    const { data } = await db.auth.admin.getUserById(userId);
+    email = data?.user?.email?.toLowerCase() ?? null;
   }
+  if (!email) throw new HttpError(404, "No se encontró el cliente");
 
-  const email = body.email?.trim().toLowerCase() ?? null;
-  const userId = body.user_id?.trim() ?? null;
-  const legajo = body.legajo?.trim().toUpperCase() ?? null;
+  // Nunca un usuario del backoffice por esta via.
+  const { data: staff } = await db.from("backoffice_users").select("id").eq("email", email).maybeSingle();
+  if (staff) throw new HttpError(403, "Es un usuario del backoffice: se desactiva desde Usuarios backoffice");
+  if (userId === caller.id) throw new HttpError(403, "No podés eliminar tu propio usuario");
 
-  if (!email && !userId && !legajo) {
-    return new Response(JSON.stringify({ error: "Debe indicar email, user_id o legajo" }), {
-      status: 400,
-      headers: { ...cors, "content-type": "application/json" },
-    });
-  }
-
-  const sb = createClient(url, service, { auth: { autoRefreshToken: false } });
-
-  // Resolver user id / email si solo vino legajo
-  let targetEmail = email;
-  let targetId = userId;
-
-  if (legajo && !targetEmail && !targetId) {
-    const { data: cli } = await sb.from("clientes").select("correo").eq("legajo", legajo).maybeSingle();
-    if (cli?.correo) targetEmail = cli.correo.toLowerCase();
-    const { data: adm } = await sb.from("admin_users").select("email").eq("legajo", legajo).maybeSingle();
-    if (!targetEmail && adm?.email) targetEmail = adm.email.toLowerCase();
-  }
-
-  // Si tenemos email pero no id, buscar en auth
-  if (targetEmail && !targetId) {
-    // listUsers con paginación hasta encontrar coincidencia (evita scan completo si es reciente)
-    let page = 1;
+  if (!userId) {
+    // Busqueda paginada en Auth (sin endpoint por email en la API admin).
     const perPage = 200;
-    outer: for (let attempt = 0; attempt < 10; attempt++) {
-      const { data, error } = await sb.auth.admin.listUsers({ page, perPage });
+    for (let page = 1; page <= 50; page++) {
+      const { data, error } = await db.auth.admin.listUsers({ page, perPage });
       if (error) break;
-      const found = data.users.find((u) => u.email?.toLowerCase() === targetEmail);
+      const found = data.users.find((u) => u.email?.toLowerCase() === email);
       if (found) {
-        targetId = found.id;
-        break outer;
+        userId = found.id;
+        break;
       }
       if (data.users.length < perPage) break;
-      page++;
     }
   }
 
-  // Si tenemos id pero no email, resolver email para limpieza en public
-  if (targetId && !targetEmail) {
-    const { data } = await sb.auth.admin.getUserById(targetId);
-    if (data?.user?.email) targetEmail = data.user.email.toLowerCase();
+  const result: Record<string, unknown> = { email, user_id: userId };
+  if (userId) {
+    const { error } = await db.auth.admin.deleteUser(userId);
+    if (error) result.auth_delete_error = error.message;
+    else result.auth_deleted = true;
+  } else {
+    result.auth_not_found = true;
   }
 
-  const results: Record<string, unknown> = {};
+  const { error: customerError } = await db.from("clientes").delete().eq("correo", email);
+  if (customerError) result.customer_delete_error = customerError.message;
+  else result.customer_deleted = true;
 
-  // 1) Borrar de auth.users (bloquea login)
-  if (targetId) {
-    const { error: delErr } = await sb.auth.admin.deleteUser(targetId);
-    if (delErr) {
-      // No es fatal: puede que ya no exista, continuamos con limpieza de public
-      results.auth_delete_error = delErr.message;
-    } else {
-      results.auth_deleted = targetId;
-    }
-  } else if (targetEmail) {
-    // No se encontró en auth: quizá ya fue borrado o es cliente sin auth (ej. seed)
-    results.auth_not_found = targetEmail;
-  }
-
-  // 2) Limpieza en public (idempotente, ignora RLS porque usamos service_role)
-  if (targetEmail) {
-    const { error: cliErr, count: cliCount } = await sb
-      .from("clientes")
-      .delete()
-      .eq("correo", targetEmail);
-    // supabase-js no expone count en delete sin select; ignoramos
-    if (cliErr) results.clientes_error = cliErr.message;
-    else results.clientes_cleaned = targetEmail;
-
-    const { error: admErr } = await sb.from("admin_users").delete().eq("email", targetEmail);
-    if (admErr) results.admin_users_error = admErr.message;
-    else results.admin_users_cleaned = targetEmail;
-  }
-
-  // Caso histórico específico reportado: asegurar que joseandres no quede huérfano
-  // (si vino legajo, ya se cubrió; si no, igual intentamos por email directo)
-  if (!targetEmail && legajo) {
-    // ya intentado arriba
-  }
-
-  return new Response(JSON.stringify({ ok: true, ...results, email: targetEmail, user_id: targetId }), {
-    headers: { ...cors, "content-type": "application/json" },
-  });
+  return json(req, { ok: true, ...result });
 });

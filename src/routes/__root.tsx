@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DemoModeProvider } from "../contexts/demo-mode";
 import { AuthProvider } from "../lib/auth";
+import { PermissionsProvider } from "../lib/permissions";
 import { Toaster } from "@/components/ui/sonner";
 import ogImageSrc from "@/assets/miniaturaadminfinal.png";
 
@@ -129,9 +130,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <DemoModeProvider>
         <AuthProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-          <Toaster position="top-right" richColors />
+          <PermissionsProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+            <Toaster position="top-right" richColors />
+          </PermissionsProvider>
         </AuthProvider>
       </DemoModeProvider>
     </QueryClientProvider>
