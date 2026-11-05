@@ -1,4 +1,5 @@
 import { useCompaniesPage } from "@/features/customers/components/use-companies-page";
+import { CustomerListFilters } from "./customer-list-filters";
 import { PermissionGuard } from "@/features/rbac/access-gate";
 import { PageHeader } from "@/shared/ui/page-header";
 import { CompaniesTable } from "@/features/customers/components/companies-table";
@@ -15,6 +16,12 @@ export function CompaniesPage() {
         description="Empresas y organizaciones — flujo homologado con personas físicas."
       />
 
+      <CustomerListFilters
+        placeholder="Buscar por razón social, correo, CUIT o legajo"
+        status={vm.filterStatus}
+        onSearchChange={vm.applySearch}
+        onStatusChange={vm.applyStatus}
+      />
       <CompaniesTable {...vm} />
 
       {confirmAction && (

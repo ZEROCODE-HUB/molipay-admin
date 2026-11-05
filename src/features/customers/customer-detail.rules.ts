@@ -1,13 +1,13 @@
 import { getRouteApi } from "@tanstack/react-router";
 import {
-ADDRESS_DE_OPERATION,
-type Customer,
-type StatusCustomer,
-type TaxAssignment,
+  ADDRESS_DE_OPERATION,
+  type Customer,
+  type StatusCustomer,
+  type TaxAssignment,
 } from "@/infrastructure/supabase/legacy/types";
 import { downloadText } from "@/shared/lib/download";
 import { type Column } from "@/shared/ui/data-table";
-import { type HistoryChange,type Validation } from "@/features/customers/customer-detail.supabase";
+import { type HistoryChange, type Validation } from "@/features/customers/customer-detail.supabase";
 import { type TabKey } from "./customer-detail.types";
 
 export const route = getRouteApi("/admin/general/usuarios/$legajo");
@@ -42,6 +42,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "impuestos", label: "Impuestos" },
   { key: "subcuentas", label: "Subcuentas y CVUs" },
   { key: "documentos", label: "Documentos" },
+  { key: "onboarding", label: "Onboarding" },
   { key: "validaciones", label: "Validaciones automáticas" },
   { key: "riesgo", label: "Riesgo y monitoreo" },
   { key: "contexto", label: "Contexto operativo" },

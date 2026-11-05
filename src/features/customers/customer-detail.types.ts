@@ -4,6 +4,7 @@ export type TabKey =
   | "impuestos"
   | "subcuentas"
   | "documentos"
+  | "onboarding"
   | "validaciones"
   | "riesgo"
   | "contexto"

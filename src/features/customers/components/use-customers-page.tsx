@@ -1,41 +1,39 @@
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { type TableServerFilters } from "@/shared/ui/data-table";
-import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
+import { useCallback, useState } from "react";
 import {
-LABEL_A_STATUS,
-STATUS_LABEL,
-STATUS_TONE,
-normalizeStatus,
+  LABEL_A_STATUS,
+  STATUS_LABEL,
+  STATUS_TONE,
+  normalizeStatus,
 } from "@/features/customers/customer-status.rules";
-import { type Customer,type StatusCustomer } from "@/infrastructure/supabase/legacy/types";
+import { type Customer, type StatusCustomer } from "@/infrastructure/supabase/legacy/types";
 import { useCustomers } from "@/features/customers/customers.hooks";
 import { useCan } from "@/features/rbac/rbac.hooks";
 import {
-activarCustomer,
-aprobarDocumentacionCustomer,
-disableCustomer,
-formatCuit,
-getCustomerByLegajo,
-getCustomersEnrichment,
-reactivateCustomer,
-removeCustomer,
-suspendCustomer,
-type CustomerEnrichment,
+  activarCustomer,
+  aprobarDocumentacionCustomer,
+  disableCustomer,
+  formatCuit,
+  getCustomerByLegajo,
+  getCustomersEnrichment,
+  reactivateCustomer,
+  removeCustomer,
+  suspendCustomer,
+  type CustomerEnrichment,
 } from "@/features/customers/customers.supabase";
-import { AppError,isAppError,userMessage } from "@/shared/lib/errors";
+import { AppError, isAppError, userMessage } from "@/shared/lib/errors";
 import { toast } from "sonner";
 import { type ActionItem } from "@/shared/ui/actions-dropdown";
 import {
-Ban,
-CheckCircle,
-Eye,
-Inbox,
-RotateCcw,
-ShieldCheck,
-Trash2,
-XCircle,
+  Ban,
+  CheckCircle,
+  Eye,
+  Inbox,
+  RotateCcw,
+  ShieldCheck,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import { type User } from "@/features/customers/customers.types";
 
@@ -47,29 +45,29 @@ export function useCustomersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [filterStatus, setFilterStatus] = useState<string>("");
 
-  // Buscar de la card: server-side contra toda la base (no solo la página).
-  const [filtersPanel, setFiltersPanel] = useState<TableServerFilters>({
-    global: "",
-    enums: {},
-    dates: {},
-  });
-  const search = useDebouncedValue(filtersPanel.global.trim(), 350);
-  const applyFilters = (f: TableServerFilters) => {
+  // Buscar: server-side contra toda la base (no solo la página).
+  const [search, setSearch] = useState("");
+  const applySearch = useCallback((value: string) => {
     setPage(0);
-    setFiltersPanel(f);
-  };
+    setSearch(value);
+  }, []);
+  const applyStatus = useCallback((value: string) => {
+    setPage(0);
+    setFilterStatus(value);
+  }, []);
 
   const statusFilterDb = filterStatus
     ? (LABEL_A_STATUS[filterStatus] as StatusCustomer | undefined)
     : undefined;
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useCustomers({
-    page,
-    pageSize,
-    estado: statusFilterDb,
-    tipoPersona: "fisica",
-    search: search || undefined,
-  });
+  const { rows, total, isLoading, isFetching, isRefreshing, isError, error, refetch } =
+    useCustomers({
+      page,
+      pageSize,
+      estado: statusFilterDb,
+      tipoPersona: "fisica",
+      search: search || undefined,
+    });
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -296,15 +294,14 @@ export function useCustomersPage() {
     pageSize,
     setPageSize,
     filterStatus,
-    setFilterStatus,
-    filtersPanel,
-    applyFilters,
+    applySearch,
+    applyStatus,
+    isRefreshing,
     total,
     isLoading,
     isFetching,
     isError,
     error,
-    isEmpty,
     refetch,
     confirmAction,
     setConfirmAction,

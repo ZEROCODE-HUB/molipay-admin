@@ -536,6 +536,13 @@ async function transicionarCustomer(
     data = r.data as typeof data;
     error = r.error;
   }
+  // Regla de la base: una empresa no avanza sin una solicitud de onboarding aprobada.
+  if (error?.code === "23514") {
+    return {
+      ok: false,
+      motivo: "Esta empresa necesita una solicitud aprobada. Revisala en la pestaña Onboarding.",
+    };
+  }
   if (error) throw toAppError(error);
 
   // Auditoría explícita si la tabla existe (no bloquea si falla)

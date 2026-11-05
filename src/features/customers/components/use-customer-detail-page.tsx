@@ -1,41 +1,41 @@
 import { fieldsIdentificacion } from "@/features/customers/customer-detail.rules";
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCan } from "@/features/rbac/rbac.hooks";
 import { useCustomerByLegajo } from "@/features/customers/customers.hooks";
 import { findJuridicaMock } from "@/features/customers/companies.data";
 import {
-type Customer,
-type FeeCustomer,
-type TaxAssignment,
+  type Customer,
+  type FeeCustomer,
+  type TaxAssignment,
 } from "@/infrastructure/supabase/legacy/types";
 import { listSubaccounts } from "@/features/customers/subaccounts.supabase";
 import { useTaxesAssignments } from "@/features/taxes/taxes.hooks";
 import {
-forzarValidation,
-listAlerts,
-listBlocks,
-listCustomerApiUsers,
-listCustomerModules,
-listFeesCustomer,
-listHistoryChanges,
-listLinksPayment,
-listMerchantsPst,
-listValidations,
+  forzarValidation,
+  listAlerts,
+  listBlocks,
+  listCustomerApiUsers,
+  listCustomerModules,
+  listFeesCustomer,
+  listHistoryChanges,
+  listLinksPayment,
+  listMerchantsPst,
+  listValidations,
 } from "@/features/customers/customer-detail.supabase";
 import { listFees } from "@/features/customers/fees.supabase";
 import { listDocuments } from "@/features/customers/documents.supabase";
 import { useState } from "react";
 import {
-activarCustomer,
-aprobarDocumentacionCustomer,
-disableCustomer,
-listEvaluacionesRisk,
-reactivateCustomer,
-registrarEvaluacionRisk,
-removeCustomer,
-suspendCustomer,
-updateProfileTransaccional,
+  activarCustomer,
+  aprobarDocumentacionCustomer,
+  disableCustomer,
+  listEvaluacionesRisk,
+  reactivateCustomer,
+  registrarEvaluacionRisk,
+  removeCustomer,
+  suspendCustomer,
+  updateProfileTransaccional,
 } from "@/features/customers/customers.supabase";
 import { toast } from "sonner";
 import { userMessage } from "@/shared/lib/errors";
@@ -174,7 +174,10 @@ export function useCustomerDetailPage() {
     onConfirm: () => void;
   } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabKey>("identificacion");
+  const { tab: initialTab } = route.useSearch();
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    initialTab === "onboarding" ? "onboarding" : "identificacion",
+  );
   const [riskSub, setRiskSub] = useState<"alertas" | "bloqueos">("alertas");
   const [modulesSub, setModulesSub] = useState<"pct" | "links" | "api">("pct");
 

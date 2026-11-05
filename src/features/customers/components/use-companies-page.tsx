@@ -1,30 +1,28 @@
-import { isAppError,AppError,userMessage } from "@/shared/lib/errors";
+import { isAppError, AppError, userMessage } from "@/shared/lib/errors";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Eye,XCircle,RotateCcw,Trash2,ShieldCheck,Ban,CheckCircle } from "lucide-react";
-import { type TableServerFilters } from "@/shared/ui/data-table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { Eye, XCircle, RotateCcw, Trash2, ShieldCheck, Ban, CheckCircle } from "lucide-react";
 import { type ActionItem } from "@/shared/ui/actions-dropdown";
 import { useCustomers } from "@/features/customers/customers.hooks";
-import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import {
-aprobarDocumentacionCustomer,
-activarCustomer,
-suspendCustomer,
-reactivateCustomer,
-disableCustomer,
-removeCustomer,
-getCustomerByLegajo,
-getCustomersEnrichment,
-formatCuit,
-type CustomerEnrichment,
+  aprobarDocumentacionCustomer,
+  activarCustomer,
+  suspendCustomer,
+  reactivateCustomer,
+  disableCustomer,
+  removeCustomer,
+  getCustomerByLegajo,
+  getCustomersEnrichment,
+  formatCuit,
+  type CustomerEnrichment,
 } from "@/features/customers/customers.supabase";
-import type { Customer,StatusCustomer } from "@/infrastructure/supabase/legacy/types";
+import type { Customer, StatusCustomer } from "@/infrastructure/supabase/legacy/types";
 import {
-STATUS_LABEL,
-STATUS_TONE,
-normalizeStatus,
-LABEL_A_STATUS,
+  STATUS_LABEL,
+  STATUS_TONE,
+  normalizeStatus,
+  LABEL_A_STATUS,
 } from "@/features/customers/customer-status.rules";
 import { toast } from "sonner";
 import { useCan } from "@/features/rbac/rbac.hooks";
@@ -42,25 +40,25 @@ export function useCompaniesPage() {
     ? (LABEL_A_STATUS[filterStatus] as StatusCustomer | undefined)
     : undefined;
 
-  // Buscar de la card: server-side contra toda la base (no solo la página).
-  const [filtersPanel, setFiltersPanel] = useState<TableServerFilters>({
-    global: "",
-    enums: {},
-    dates: {},
-  });
-  const search = useDebouncedValue(filtersPanel.global.trim(), 350);
-  const applyFilters = (f: TableServerFilters) => {
+  // Buscar: server-side contra toda la base (no solo la página).
+  const [search, setSearch] = useState("");
+  const applySearch = useCallback((value: string) => {
     setPage(0);
-    setFiltersPanel(f);
-  };
+    setSearch(value);
+  }, []);
+  const applyStatus = useCallback((value: string) => {
+    setPage(0);
+    setFilterStatus(value);
+  }, []);
 
-  const { rows, total, isLoading, isFetching, isError, error, isEmpty, refetch } = useCustomers({
-    page,
-    pageSize,
-    estado: statusFilterDb,
-    tipoPersona: "juridica",
-    search: search || undefined,
-  });
+  const { rows, total, isLoading, isFetching, isRefreshing, isError, error, refetch } =
+    useCustomers({
+      page,
+      pageSize,
+      estado: statusFilterDb,
+      tipoPersona: "juridica",
+      search: search || undefined,
+    });
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -157,16 +155,15 @@ export function useCompaniesPage() {
     ];
     if (norm === "registrado")
       items.push({
-        label: "Preactivar (aprobar documentación)",
+        label: "Revisar onboarding",
         icon: ShieldCheck,
         disabled: !canUpdate,
+        // Una empresa se aprueba desde su solicitud: integrantes, documentos y controles.
         onClick: () =>
-          setConfirmAction({
-            title: "Aprobar documentación",
-            message: `¿Aprobar la documentación de ${row.razonSocial}?`,
-            confirmLabel: "Aprobar",
-            variant: "default",
-            onConfirm: () => run(row.legajo, "aprobar"),
+          navigate({
+            to: "/admin/general/usuarios/$legajo",
+            params: { legajo: row.legajo },
+            search: { tab: "onboarding" },
           }),
       });
     if (norm === "preactivado")
@@ -253,15 +250,14 @@ export function useCompaniesPage() {
     pageSize,
     setPageSize,
     filterStatus,
-    setFilterStatus,
-    filtersPanel,
-    applyFilters,
+    applySearch,
+    applyStatus,
+    isRefreshing,
     total,
     isLoading,
     isFetching,
     isError,
     error,
-    isEmpty,
     refetch,
     confirmAction,
     setConfirmAction,

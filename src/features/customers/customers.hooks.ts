@@ -1,10 +1,10 @@
-import { keepPreviousData,useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
-getCustomerByLegajo,
-listCustomers,
-type CustomerFilters,
+  getCustomerByLegajo,
+  listCustomers,
+  type CustomerFilters,
 } from "@/features/customers/customers.supabase";
-import type { Customer,Page } from "@/infrastructure/supabase/legacy/types";
+import type { Customer, Page } from "@/infrastructure/supabase/legacy/types";
 import { useRealtimeInvalidation } from "@/infrastructure/supabase/use-realtime-invalidation";
 
 export function useCustomers(filters: CustomerFilters) {
@@ -27,6 +27,8 @@ export function useCustomers(filters: CustomerFilters) {
     pageSize: filters.pageSize,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
+    /** Datos del filtro anterior mientras llegan los nuevos. */
+    isRefreshing: query.isPlaceholderData,
     isError: query.isError,
     error: query.error as Error | null,
     isEmpty: !query.isLoading && rows.length === 0,

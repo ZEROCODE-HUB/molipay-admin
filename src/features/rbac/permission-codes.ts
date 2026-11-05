@@ -14,6 +14,8 @@ export const PERMISSION_CODES = [
   "customers.cvu.manage",
   "customers.balance.adjust",
   "customers.legal_entities.read",
+  "customers.kyc.review",
+  "customers.compliance.review",
   "movements.read",
   "movements.export",
   "movements.status.update",

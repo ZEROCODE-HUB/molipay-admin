@@ -13,7 +13,7 @@ import { Link } from "@tanstack/react-router";
 import { formatCuit } from "@/features/customers/customers.supabase";
 import { isAppError } from "@/shared/lib/errors";
 import { PageHeader } from "@/shared/ui/page-header";
-import { AlertTriangle,ChevronLeft,Inbox } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Inbox } from "lucide-react";
 import { PermissionGuard } from "@/features/rbac/access-gate";
 import { DataTable } from "@/shared/ui/data-table";
 import { ModalDialog } from "@/shared/ui/modal-dialog";
@@ -22,15 +22,16 @@ import { NewBlockDialog } from "@/features/alerts/components/new-block-dialog";
 import { DetailModal } from "@/features/movements/components/movement-detail";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
-TABS,
-fmtDate,
-historyColumns,
-operationLabel,
+  TABS,
+  fmtDate,
+  historyColumns,
+  operationLabel,
 } from "@/features/customers/customer-detail.rules";
 import { RateAsignada } from "./customer-detail-parts";
 import { CustomerSection } from "./customer-section";
 import { SubaccountsTab } from "./customer-detail-subaccounts-tab";
 import { DocumentsTab } from "./documents-tab";
+import { CustomerOnboardingTab } from "./customer-onboarding-tab";
 import { ApiDetailModal } from "./api-detail-modal";
 import { PlaftRiskModal } from "./plaft-risk-modal";
 import { PlaftProfileModal } from "./plaft-profile-modal";
@@ -248,6 +249,15 @@ export function CustomerDetailPage() {
           )}
 
           {activeTab === "documentos" && <DocumentsTab legajo={customer.legajo} />}
+
+          {activeTab === "onboarding" && (
+            <CustomerOnboardingTab
+              customerId={customer.id}
+              legajo={customer.legajo}
+              customerStatus={customer.estado}
+              onCustomerChanged={() => void refetch()}
+            />
+          )}
 
           <CustomerValidationsTab {...view} />
 

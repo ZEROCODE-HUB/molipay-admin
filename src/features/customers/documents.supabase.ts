@@ -1,13 +1,25 @@
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
 
-export type DocumentKind = "id_frente" | "id_dorso" | "servicio" | "selfie";
+export type DocumentKind =
+  | "id_frente"
+  | "id_dorso"
+  | "servicio"
+  | "selfie"
+  | "poder"
+  | "estatuto"
+  | "acta_autoridades"
+  | "constancia_afip";
 
 export const DOCUMENT_LABELS: Record<DocumentKind, string> = {
   id_frente: "DNI anverso",
   id_dorso: "DNI reverso",
   servicio: "Comprobante de servicio",
   selfie: "Selfie de verificación",
+  poder: "Poder",
+  estatuto: "Estatuto o contrato social",
+  acta_autoridades: "Acta de designación de autoridades",
+  constancia_afip: "Constancia de inscripción en AFIP",
 };
 
 export type Document = {
@@ -47,6 +59,7 @@ export async function listDocuments(customerLegajo: string): Promise<Document[]>
     .from("documentos")
     .select(COLUMNS)
     .eq("cliente_legajo", customerLegajo)
+    .neq("status", "superseded")
     .order("created_at", { ascending: false });
   if (error) throw toAppError(error);
   return ((data as DocumentRow[]) ?? []).map(toDocument);

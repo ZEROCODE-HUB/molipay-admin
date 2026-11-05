@@ -1,5 +1,6 @@
 import { CustomersTable } from "./customers-table";
 import { useCustomersPage } from "./use-customers-page";
+import { CustomerListFilters } from "./customer-list-filters";
 import { PermissionGuard } from "@/features/rbac/access-gate";
 import { PageHeader } from "@/shared/ui/page-header";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -17,6 +18,12 @@ export function CustomersPage() {
         description="Personas físicas — flujo homologado: Pendiente → Registrado → Preactivado → Activado."
       />
 
+      <CustomerListFilters
+        placeholder="Buscar por nombre, correo, CUIT o legajo"
+        status={vm.filterStatus}
+        onSearchChange={vm.applySearch}
+        onStatusChange={vm.applyStatus}
+      />
       <CustomersTable {...vm} />
 
       {confirmAction && (

@@ -1,5 +1,5 @@
 import { Badge } from "@/shared/ui/badge";
-import { statusLabel,statusTone } from "@/features/customers/customer-detail.rules";
+import { statusLabel, statusTone } from "@/features/customers/customer-detail.rules";
 
 import type { CustomerDetailPageVm } from "./use-customer-detail-page";
 
@@ -9,9 +9,10 @@ export function CustomerActionBar({
   setConfirmAction,
   changeStatusHomologado,
   can,
+  setActiveTab,
 }: Pick<
   CustomerDetailPageVm,
-  "customer" | "canUpdate" | "setConfirmAction" | "changeStatusHomologado" | "can"
+  "customer" | "canUpdate" | "setConfirmAction" | "changeStatusHomologado" | "can" | "setActiveTab"
 >) {
   return (
     <div className="min-w-0 mt-4 flex flex-wrap items-start justify-between gap-3">
@@ -41,7 +42,16 @@ export function CustomerActionBar({
             norm === "deshabilitado" || norm === "eliminado" || norm === "rechazado";
           return (
             <>
-              {isRegistered && canUpdate && (
+              {isRegistered && canUpdate && customer.tipoPersona === "juridica" && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("onboarding")}
+                  className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Revisar onboarding
+                </button>
+              )}
+              {isRegistered && canUpdate && customer.tipoPersona !== "juridica" && (
                 <button
                   type="button"
                   onClick={() =>
