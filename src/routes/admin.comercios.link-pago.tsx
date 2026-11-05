@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
 
 export const Route = createFileRoute("/admin/comercios/link-pago")({
-  component: LinkPagoLayout,
+  component: LinkPaymentLayout,
   head: () => ({
     meta: [
       { title: "Link de pago — Admin — Moli" },
@@ -22,7 +22,7 @@ const tabs: Tab[] = [
   { label: "Parámetros", to: "/admin/comercios/link-pago/parametros" },
 ];
 
-function LinkPagoLayout() {
+function LinkPaymentLayout() {
   return (
     <TabLayout tabs={tabs}>
       <Outlet />

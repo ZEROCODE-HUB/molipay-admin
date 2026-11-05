@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { ComerciosProvider } from "@/contexts/comercios";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { MerchantsProvider } from "@/features/merchants/merchants-context";
 
 export const Route = createFileRoute("/admin/comercios")({
-  component: ComerciosLayout,
+  component: MerchantsLayout,
   head: () => ({
     meta: [
       { title: "Comercios — Admin — Moli" },
@@ -11,10 +11,10 @@ export const Route = createFileRoute("/admin/comercios")({
   }),
 });
 
-function ComerciosLayout() {
+function MerchantsLayout() {
   return (
-    <ComerciosProvider>
+    <MerchantsProvider>
       <Outlet />
-    </ComerciosProvider>
+    </MerchantsProvider>
   );
 }

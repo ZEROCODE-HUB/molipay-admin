@@ -1,5 +1,5 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
 
 const tabs: Tab[] = [
   { label: "Listado de alertas", to: "/admin/general/alertas" },
@@ -15,10 +15,10 @@ export const Route = createFileRoute("/admin/general/alertas")({
       { name: "description", content: "Gestión de alertas y bloqueos del sistema." },
     ],
   }),
-  component: AlertasLayout,
+  component: AlertsLayout,
 });
 
-function AlertasLayout() {
+function AlertsLayout() {
   return (
     <TabLayout tabs={tabs}>
       <Outlet />

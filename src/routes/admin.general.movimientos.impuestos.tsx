@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/page-header";
-import { PermissionGuard } from "@/components/permission-guard";
-import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
+import { PageHeader } from "@/shared/ui/page-header";
+import { MovementsLinesTable } from "@/features/movements/components/movement-lines-table";
+import { PermissionGuard } from "@/features/rbac/access-gate";
 
 export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
   head: () => ({
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/general/movimientos/impuestos")({
         title="Impuestos cobrados"
         description="Solo las líneas de impuesto (IVA sobre comisiones, etc.) de todas las operaciones. Clic en el TXID para ver la operación completa."
       />
-      <MovimientosLineasTable tipoLinea="impuesto" />
+      <MovementsLinesTable tipoLinea="impuesto" />
     </PermissionGuard>
   ),
 });

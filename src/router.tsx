@@ -1,9 +1,11 @@
-import { QueryClient } from "@tanstack/react-query";
+import { createQueryClient } from "./app/query-client";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { bindQueryCacheToSession } from "./app/session-cache";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  const queryClient = createQueryClient();
+  bindQueryCacheToSession(queryClient);
 
   const router = createRouter({
     routeTree,

@@ -1,5 +1,5 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
 
 export const Route = createFileRoute("/admin/administracion/registros")({
   component: Layout,

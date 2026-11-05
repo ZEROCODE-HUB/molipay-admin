@@ -1,79 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { KeyRound, ShieldCheck } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
-import { NoAccess } from "@/components/permission-guard";
-import { RouteSkeleton } from "@/components/route-skeleton";
-import { SecurityEventsTab } from "@/components/activity/security-events-tab";
-import { RbacAuditTab } from "@/components/activity/rbac-audit-tab";
-import { usePermissions } from "@/lib/permissions";
-import type { PermissionCode } from "@/lib/permission-codes";
-
-/**
- * Actividad del backoffice:
- *  - Seguridad: security_events (autenticacion, API keys, usuarios, accesos denegados).
- *  - Roles y permisos: rbac_audit_log (cambios al sistema de autorizacion).
- * Cada pestaña exige su permiso; la base lo vuelve a validar en la RPC.
- */
-
-type ActivityTab = "security" | "rbac";
-
-const TABS: {
-  key: ActivityTab;
-  label: string;
-  icon: typeof ShieldCheck;
-  permission: PermissionCode;
-}[] = [
-  {
-    key: "security",
-    label: "Eventos de seguridad",
-    icon: ShieldCheck,
-    permission: "backoffice.security_events.read",
-  },
-  { key: "rbac", label: "Roles y permisos", icon: KeyRound, permission: "backoffice.audit.read" },
-];
+import { createFileRoute } from "@tanstack/react-router";
+import { ActivityPage,type ActivityTab } from "@/features/activity/activity-page";
 
 export const Route = createFileRoute("/admin/administracion/usuarios/actividad")({
   validateSearch: (s: Record<string, unknown>): { tab?: ActivityTab } =>
     s.tab === "security" || s.tab === "rbac" ? { tab: s.tab } : {},
   head: () => ({ meta: [{ title: "Actividad en backoffice — Admin Panel" }] }),
-  component: Page,
+  component: ActivityPage,
 });
-
-function Page() {
-  const { status, has } = usePermissions();
-  const { tab } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-
-  if (status === "loading") return <RouteSkeleton />;
-
-  const available = TABS.filter((t) => has(t.permission));
-  if (available.length === 0) return <NoAccess />;
-  const active = available.find((t) => t.key === tab) ?? available[0];
-
-  return (
-    <>
-      <PageHeader
-        title="Actividad en backoffice"
-        description="Eventos de seguridad y cambios de roles y permisos. Los registros no se pueden modificar ni borrar."
-      />
-      <div className="mb-3 flex flex-wrap gap-1 border-b border-border">
-        {available.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => navigate({ search: { tab: t.key }, replace: true })}
-            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
-              active.key === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <t.icon size={15} />
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {active.key === "security" ? <SecurityEventsTab /> : <RbacAuditTab />}
-    </>
-  );
-}

@@ -1,5 +1,5 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
 
 export const Route = createFileRoute("/admin/general/movimientos")({
   head: () => ({
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/general/movimientos")({
       { name: "description", content: "Historial de movimientos de la plataforma Moli." },
     ],
   }),
-  component: MovimientosLayout,
+  component: MovementsLayout,
 });
 
 const tabs: Tab[] = [
@@ -20,7 +20,7 @@ const tabs: Tab[] = [
   { label: "Pagos con tarjeta", to: "/admin/general/movimientos/pagos-tarjeta" },
 ];
 
-function MovimientosLayout() {
+function MovementsLayout() {
   return (
     <TabLayout tabs={tabs}>
       <Outlet />

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CategoriaComercioPage } from "@/components/categoria-comercio-page";
+import { CategoryMerchantPage } from "@/features/merchants/components/merchant-category-page";
 
 export const Route = createFileRoute("/admin/comercios/gestion/categoria")({
-  component: CategoriaComercioPage,
+  component: CategoryMerchantPage,
   head: () => ({
     meta: [
       { title: "Códigos de categoría — Admin — Moli" },

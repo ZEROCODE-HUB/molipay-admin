@@ -1,38 +1,34 @@
-import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { createFileRoute,Outlet,useNavigate,useRouterState } from "@tanstack/react-router";
+import { useEffect,useMemo } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  Activity,
-  Bell,
-  Headphones,
-  Shield,
-  FileBarChart2,
-  BookOpen,
-  Puzzle,
-  CreditCard,
-  Link2,
-  Receipt,
-  Code2,
-  Settings,
-  Cable,
-  BellRing,
-  Bot,
-  ChevronDown,
-  UserCog,
-  Store,
-  type LucideIcon,
+LayoutDashboard,
+Users,
+Activity,
+Bell,
+Headphones,
+Shield,
+FileBarChart2,
+BookOpen,
+Puzzle,
+Link2,
+Receipt,
+Code2,
+Settings,
+Cable,
+BellRing,
+UserCog,
+Store,
 } from "lucide-react";
-import { PortalShell, type NavItem } from "@/components/portal-shell";
-import { useDemoMode } from "@/contexts/demo-mode";
-import { RouteSkeleton } from "@/components/route-skeleton";
-import { AdminChatbot } from "@/components/admin-chatbot";
-import { AlertasHeader } from "@/components/alertas/alertas-header";
-import { isSupabaseConfigured } from "@/lib/supabase";
-import { useAuth } from "@/lib/auth";
-import { usePermissions } from "@/lib/permissions";
-import { routePermissions } from "@/lib/route-permissions";
-import { NoAccess } from "@/components/permission-guard";
+import { PortalShell,type NavItem } from "@/app/portal-shell";
+import { useDemoMode } from "@/app/demo-mode";
+import { RouteSkeleton } from "@/shared/ui/route-skeleton";
+import { AdminChatbot } from "@/features/support/components/admin-chatbot";
+import { AlertsHeader } from "@/features/alerts/components/alerts-header";
+import { isSupabaseConfigured } from "@/infrastructure/supabase/client";
+import { useAuth } from "@/features/auth/auth.hooks";
+import { routePermissions } from "@/features/rbac/route-permissions";
+import { usePermissions } from "@/features/rbac/rbac.hooks";
+import { NoAccess } from "@/features/rbac/access-gate";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -55,7 +51,6 @@ const nav: NavItem[] = [
     icon: Store,
     items: [
       { to: "/admin/comercios/gestion", label: "Gestión de comercios", icon: Store },
-      // { to: "/admin/comercios/transferencia", label: "Pagos con QR", icon: CreditCard },
       { to: "/admin/comercios/link-pago", label: "Enlaces de pago", icon: Link2 },
       { to: "/admin/comercios/impuestos", label: "Impuestos", icon: Receipt },
       { to: "/admin/comercios/apis", label: "APIs externas", icon: Code2 },
@@ -158,7 +153,7 @@ function AdminLayout() {
     <PortalShell
       nav={isSupabaseConfigured ? visibleNav : nav}
       title="Backoffice Molly"
-      headerActions={<AlertasHeader />}
+      headerActions={<AlertsHeader />}
       account={
         session
           ? {

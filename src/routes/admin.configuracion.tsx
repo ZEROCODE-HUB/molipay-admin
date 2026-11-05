@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
-import { PageHeader } from "@/components/portal-shell";
-import { DeveloperModeToggle } from "@/components/developer-mode-toggle";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
+import { PageHeader } from "@/shared/ui/page-header";
+import { DeveloperModeToggle } from "@/app/developer-mode-toggle";
 
 export const Route = createFileRoute("/admin/configuracion")({
   component: ConfiguracionLayout,

@@ -318,7 +318,9 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  button:not(:disabled), a, [role="button"] {
+  button:not(:disabled),
+  a,
+  [role="button"] {
     cursor: pointer;
   }
 
@@ -344,7 +346,19 @@
   }
 
   /* textos seleccionables - fix reportado: permitir copiar legajos, emails, montos */
-  p, span, div, td, th, h1, h2, h3, h4, label, li, dd, dt {
+  p,
+  span,
+  div,
+  td,
+  th,
+  h1,
+  h2,
+  h3,
+  h4,
+  label,
+  li,
+  dd,
+  dt {
     -webkit-user-select: text;
     user-select: text;
   }

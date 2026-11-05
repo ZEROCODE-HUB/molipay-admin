@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/page-header";
-import { PermissionGuard } from "@/components/permission-guard";
-import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
+import { PageHeader } from "@/shared/ui/page-header";
+import { MovementsLinesTable } from "@/features/movements/components/movement-lines-table";
+import { PermissionGuard } from "@/features/rbac/access-gate";
 
 export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")({
   head: () => ({
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/general/movimientos/pagos-tarjeta")
         title="Pagos con tarjeta"
         description="Pagos con tarjeta, una fila por concepto. Las líneas de un mismo pago comparten el TXID."
       />
-      <MovimientosLineasTable tiposOperacion={["tarjeta"]} />
+      <MovementsLinesTable tiposOperacion={["tarjeta"]} />
     </PermissionGuard>
   ),
 });

@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/notificaciones")({
-  component: NotificacionesLayout,
+  component: NotificationsLayout,
   head: () => ({
     meta: [
       { title: "Sistema de Notificaciones — Admin — Moli" },
@@ -10,6 +10,6 @@ export const Route = createFileRoute("/admin/notificaciones")({
   }),
 });
 
-function NotificacionesLayout() {
+function NotificationsLayout() {
   return <Outlet />;
 }

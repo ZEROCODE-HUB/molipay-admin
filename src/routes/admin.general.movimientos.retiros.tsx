@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/page-header";
-import { PermissionGuard } from "@/components/permission-guard";
-import { MovimientosLineasTable } from "@/components/movimientos/movimientos-lineas-table";
+import { PageHeader } from "@/shared/ui/page-header";
+import { MovementsLinesTable } from "@/features/movements/components/movement-lines-table";
+import { PermissionGuard } from "@/features/rbac/access-gate";
 
 export const Route = createFileRoute("/admin/general/movimientos/retiros")({
   head: () => ({
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/general/movimientos/retiros")({
         title="Retiros"
         description="Retiros y transferencias salientes (sin las internas entre subcuentas propias), una fila por concepto (egreso, comisión, impuesto)."
       />
-      <MovimientosLineasTable tiposOperacion={["retiro", "transferencia"]} excluirInternas />
+      <MovementsLinesTable tiposOperacion={["retiro", "transferencia"]} excluirInternas />
     </PermissionGuard>
   ),
 });

@@ -1,12 +1,15 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { TabLayout, type Tab } from "@/components/tab-layout";
+import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
 
 export const Route = createFileRoute("/admin/comercios/apis")({
   component: Layout,
   head: () => ({
     meta: [
       { title: "APIs externas — Admin — Moli" },
-      { name: "description", content: "API de MoliPay para comercios: credenciales, permisos y catálogo de endpoints." },
+      {
+        name: "description",
+        content: "API de MoliPay para comercios: credenciales, permisos y catálogo de endpoints.",
+      },
     ],
   }),
 });

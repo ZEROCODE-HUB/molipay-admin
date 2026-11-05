@@ -1,21 +1,21 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient,QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
+Outlet,
+Link,
+createRootRouteWithContext,
+useRouter,
+HeadContent,
+Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect,type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { DemoModeProvider } from "../contexts/demo-mode";
-import { AuthProvider } from "../lib/auth";
-import { PermissionsProvider } from "../lib/permissions";
-import { Toaster } from "@/components/ui/sonner";
+import { DemoModeProvider } from "@/app/demo-mode";
+import { AuthProvider } from "@/features/auth/auth-provider";
+import { Toaster } from "@/shared/ui/sonner";
 import ogImageSrc from "@/assets/miniaturaadminfinal.png";
+import { PermissionsProvider } from "@/features/rbac/permissions-provider";
+import { ConfirmProvider } from "@/shared/ui/confirm-provider";
 
 function NotFoundComponent() {
   return (
@@ -39,11 +39,13 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error: thrown, reset }: { error: unknown; reset: () => void }) {
+  const error = thrown instanceof Error ? thrown : new Error(String(thrown));
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // Queda en la consola del navegador para diagnosticar (sin datos sensibles agregados).
+    console.error("[root-error-boundary]", error);
   }, [error]);
 
   return (
@@ -100,7 +102,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -132,7 +137,9 @@ function RootComponent() {
         <AuthProvider>
           <PermissionsProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
+            <ConfirmProvider>
+              <Outlet />
+            </ConfirmProvider>
             <Toaster position="top-right" richColors />
           </PermissionsProvider>
         </AuthProvider>

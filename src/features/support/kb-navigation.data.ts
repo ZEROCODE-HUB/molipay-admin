@@ -1,0 +1,329 @@
+/* eslint-disable */
+// Archivo generado automáticamente por scripts/generate-kb-nav.mjs (disparado por el hook git post-commit).
+// No editar manualmente: se regenera en cada commit a partir de src/routeTree.gen.ts.
+
+export const KB_NAVIGATION = `Estructura actual del panel administrativo (se genera automáticamente en cada cambio):
+
+• Root:
+   - Admin  (/admin)
+
+• Administración:
+   - Registros  (/admin/administracion/registros)
+   - Total de fondos — Admin Panel  (/admin/administracion/registros/total)
+   - Reportes — Admin Panel  (/admin/administracion/reportes)
+   - Soporte  (/admin/administracion/soporte)
+   - Bloqueo de funciones — Admin Panel  (/admin/administracion/soporte/bloqueo)
+   - Usuarios  (/admin/administracion/usuarios)
+   - Actividad en backoffice — Admin Panel  (/admin/administracion/usuarios/actividad)
+   - Roles y permisos — Admin Panel  (/admin/administracion/usuarios/roles)
+
+• Comercios:
+   - Comercios — Admin — Moli  (/admin/comercios)
+   - APIs externas — Admin — Moli  (/admin/comercios/apis)
+   - APIs externas — Endpoints — Admin — Moli  (/admin/comercios/apis/endpoints)
+   - Resolvers — APIs externas — Admin — Moli  (/admin/comercios/apis/resolvers)
+   - APIs externas — Restricciones — Admin — Moli  (/admin/comercios/apis/restricciones)
+   - Gestión — Admin — Moli  (/admin/comercios/gestion)
+   - Códigos de categoría — Admin — Moli  (/admin/comercios/gestion/categoria)
+   - Métodos de pago — Gestión — Admin — Moli  (/admin/comercios/gestion/metodos-pago)
+   - Impuestos — Admin — Moli  (/admin/comercios/impuestos)
+   - Débitos y créditos — Admin — Moli  (/admin/comercios/impuestos/debitos-creditos)
+   - Ingresos Brutos — Admin — Moli  (/admin/comercios/impuestos/ingresos-brutos)
+   - Usuarios con impuestos — Admin — Moli  (/admin/comercios/impuestos/usuarios)
+   - Link de pago — Admin — Moli  (/admin/comercios/link-pago)
+   - Adelantos de Dinero — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/adelantos)
+   - Contracargos — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/contracargos)
+   - Lotes de Acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes)
+   - Acreditaciones por día — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/acreditaciones)
+   - Calendario de acreditaciones — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/calendario-acreditaciones)
+   - Ejecución masiva — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/ejecucion)
+   - Excepciones de importación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/excepciones)
+   - Carga de liquidaciones — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/liquidaciones)
+   - Lotes de Venta — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/lotes-venta)
+   - Parámetros de acreditación — Links de Pago — Admin — Moli  (/admin/comercios/link-pago/parametros)
+   - Resumen general — Link de Pago — Admin — Moli  (/admin/comercios/link-pago/resumen)
+
+• Configuración:
+   - Configuración — Admin — Moli  (/admin/configuracion)
+   - Configuraciones de login — Admin — Moli  (/admin/configuracion/configuraciones)
+   - Logins configurados — Admin — Moli  (/admin/configuracion/logins)
+
+• General:
+   - Alertas — Admin Molly  (/admin/general/alertas)
+   - Listado de bloqueos — Admin Panel  (/admin/general/alertas/bloqueos)
+   - Parámetros de alertas — Admin Panel  (/admin/general/alertas/parametros-alertas)
+   - Parámetros de bloqueos — Admin Panel  (/admin/general/alertas/parametros-bloqueos)
+   - Movimientos — Admin Molly  (/admin/general/movimientos)
+   - Cobro de comisiones — Movimientos — Admin Molly  (/admin/general/movimientos/comisiones)
+   - Depósitos — Movimientos — Admin Molly  (/admin/general/movimientos/depositos)
+   - Impuestos cobrados — Movimientos — Admin Molly  (/admin/general/movimientos/impuestos)
+   - Pagos con tarjeta — Movimientos — Admin Molly  (/admin/general/movimientos/pagos-tarjeta)
+   - Retiros — Movimientos — Admin Molly  (/admin/general/movimientos/retiros)
+   - Usuarios — Admin Molly  (/admin/general/usuarios)
+   - Ficha de cliente — Admin Molly  (/admin/general/usuarios/$legajo)
+   - Carga de comisiones — Usuarios — Admin Molly  (/admin/general/usuarios/comisiones)
+   - Usuarios con CBU/CVU — Usuarios — Admin Molly  (/admin/general/usuarios/cvu)
+   - Personas jurídicas — Usuarios — Admin Molly  (/admin/general/usuarios/juridicas)
+
+• Comunicación:
+   - Comunicación de incidentes — Admin Panel  (/admin/incidentes)
+
+• Sistema:
+   - Salud de módulos — Admin — Moli  (/admin/modulos)
+
+• Sistema:
+   - Sistema de Notificaciones — Admin — Moli  (/admin/notificaciones)
+   - Centro de alertas — Admin — Moli  (/admin/centro-alertas)
+
+• Registros:
+   - Registros  (/administracion/registros)
+
+• Reportes:
+   - Reportes  (/administracion/reportes)
+
+• Soporte:
+   - Soporte  (/administracion/soporte)
+
+• Usuarios:
+   - Usuarios  (/administracion/usuarios)
+
+`;
+
+export const KB_ROUTES: { path: string; title: string }[] = [
+  {
+    path: "/admin",
+    title: "Admin",
+  },
+  {
+    path: "/admin/administracion/registros",
+    title: "Registros",
+  },
+  {
+    path: "/admin/administracion/registros/total",
+    title: "Total de fondos — Admin Panel",
+  },
+  {
+    path: "/admin/administracion/reportes",
+    title: "Reportes — Admin Panel",
+  },
+  {
+    path: "/admin/administracion/soporte",
+    title: "Soporte",
+  },
+  {
+    path: "/admin/administracion/soporte/bloqueo",
+    title: "Bloqueo de funciones — Admin Panel",
+  },
+  {
+    path: "/admin/administracion/usuarios",
+    title: "Usuarios",
+  },
+  {
+    path: "/admin/administracion/usuarios/actividad",
+    title: "Actividad en backoffice — Admin Panel",
+  },
+  {
+    path: "/admin/administracion/usuarios/roles",
+    title: "Roles y permisos — Admin Panel",
+  },
+  {
+    path: "/admin/comercios",
+    title: "Comercios — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/apis",
+    title: "APIs externas — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/apis/endpoints",
+    title: "APIs externas — Endpoints — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/apis/resolvers",
+    title: "Resolvers — APIs externas — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/apis/restricciones",
+    title: "APIs externas — Restricciones — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/gestion",
+    title: "Gestión — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/gestion/categoria",
+    title: "Códigos de categoría — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/gestion/metodos-pago",
+    title: "Métodos de pago — Gestión — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/impuestos",
+    title: "Impuestos — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/impuestos/debitos-creditos",
+    title: "Débitos y créditos — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/impuestos/ingresos-brutos",
+    title: "Ingresos Brutos — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/impuestos/usuarios",
+    title: "Usuarios con impuestos — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago",
+    title: "Link de pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/adelantos",
+    title: "Adelantos de Dinero — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/contracargos",
+    title: "Contracargos — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/lotes",
+    title: "Lotes de Acreditación — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/acreditaciones",
+    title: "Acreditaciones por día — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/calendario-acreditaciones",
+    title: "Calendario de acreditaciones — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/ejecucion",
+    title: "Ejecución masiva — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/excepciones",
+    title: "Excepciones de importación — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/liquidaciones",
+    title: "Carga de liquidaciones — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/lotes-venta",
+    title: "Lotes de Venta — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/centro-alertas",
+    title: "Centro de alertas — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/parametros",
+    title: "Parámetros de acreditación — Links de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/comercios/link-pago/resumen",
+    title: "Resumen general — Link de Pago — Admin — Moli",
+  },
+  {
+    path: "/admin/configuracion",
+    title: "Configuración — Admin — Moli",
+  },
+  {
+    path: "/admin/configuracion/configuraciones",
+    title: "Configuraciones de login — Admin — Moli",
+  },
+  {
+    path: "/admin/configuracion/logins",
+    title: "Logins configurados — Admin — Moli",
+  },
+  {
+    path: "/admin/general/alertas",
+    title: "Alertas — Admin Molly",
+  },
+  {
+    path: "/admin/general/alertas/bloqueos",
+    title: "Listado de bloqueos — Admin Panel",
+  },
+  {
+    path: "/admin/general/alertas/parametros-alertas",
+    title: "Parámetros de alertas — Admin Panel",
+  },
+  {
+    path: "/admin/general/alertas/parametros-bloqueos",
+    title: "Parámetros de bloqueos — Admin Panel",
+  },
+  {
+    path: "/admin/general/movimientos",
+    title: "Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/movimientos/comisiones",
+    title: "Cobro de comisiones — Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/movimientos/depositos",
+    title: "Depósitos — Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/movimientos/impuestos",
+    title: "Impuestos cobrados — Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/movimientos/pagos-tarjeta",
+    title: "Pagos con tarjeta — Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/movimientos/retiros",
+    title: "Retiros — Movimientos — Admin Molly",
+  },
+  {
+    path: "/admin/general/usuarios",
+    title: "Usuarios — Admin Molly",
+  },
+  {
+    path: "/admin/general/usuarios/$legajo",
+    title: "Ficha de cliente — Admin Molly",
+  },
+  {
+    path: "/admin/general/usuarios/comisiones",
+    title: "Carga de comisiones — Usuarios — Admin Molly",
+  },
+  {
+    path: "/admin/general/usuarios/cvu",
+    title: "Usuarios con CBU/CVU — Usuarios — Admin Molly",
+  },
+  {
+    path: "/admin/general/usuarios/juridicas",
+    title: "Personas jurídicas — Usuarios — Admin Molly",
+  },
+  {
+    path: "/admin/incidentes",
+    title: "Comunicación de incidentes — Admin Panel",
+  },
+  {
+    path: "/admin/modulos",
+    title: "Salud de módulos — Admin — Moli",
+  },
+  {
+    path: "/admin/notificaciones",
+    title: "Sistema de Notificaciones — Admin — Moli",
+  },
+  {
+    path: "/administracion/registros",
+    title: "Registros",
+  },
+  {
+    path: "/administracion/reportes",
+    title: "Reportes",
+  },
+  {
+    path: "/administracion/soporte",
+    title: "Soporte",
+  },
+  {
+    path: "/administracion/usuarios",
+    title: "Usuarios",
+  },
+];

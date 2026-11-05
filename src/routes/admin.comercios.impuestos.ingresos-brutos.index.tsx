@@ -1,9 +1,9 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/page-header";
-import { useCan } from "@/lib/permissions";
-import { PermissionGuard } from "@/components/permission-guard";
-import { GestionPadrones } from "@/components/impuestos/padron-iibb";
-import { ReportesImpuestos } from "@/components/impuestos/reportes-impuestos";
+import { createFileRoute } from "@tanstack/react-router";
+import { PageHeader } from "@/shared/ui/page-header";
+import { RegistriesManagement } from "@/features/taxes/components/registries-management";
+import { ReportsTaxes } from "@/features/taxes/components/tax-reports";
+import { useCan } from "@/features/rbac/rbac.hooks";
+import { PermissionGuard } from "@/features/rbac/access-gate";
 
 export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos/")({
   head: () => ({ meta: [{ title: "Ingresos Brutos — Admin — Moli" }] }),
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin/comercios/impuestos/ingresos-brutos
 
 function Page() {
   const { can } = useCan();
-  const puedeCrear = can("crear", "impuestos");
+  const canCreate = can("crear", "impuestos");
 
   return (
     <PermissionGuard recurso="impuestos">
@@ -22,11 +22,11 @@ function Page() {
       />
 
       <section className="bg-card border rounded-lg p-5 mb-6">
-        <GestionPadrones puedeEditar={puedeCrear} />
+        <RegistriesManagement puedeEditar={canCreate} />
       </section>
 
       <section className="bg-card border rounded-lg p-5">
-        <ReportesImpuestos puedeEditar={puedeCrear} />
+        <ReportsTaxes puedeEditar={canCreate} />
       </section>
     </PermissionGuard>
   );
