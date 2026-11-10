@@ -4,7 +4,7 @@ import { PageHeader } from "@/shared/ui/page-header";
 import { Link } from "@tanstack/react-router";
 import { Card } from "@/shared/ui/card";
 import { Amount } from "@/features/payment-links/components/credits-common";
-import { KIND_EXCEPCION_LABEL,QK_ACRED } from "@/features/payment-links/credits.supabase";
+import { KIND_EXCEPCION_LABEL, QK_ACRED } from "@/features/payment-links/credits.supabase";
 import { ExceptionsList } from "@/features/payment-links/components/exceptions-list";
 import { ExceptionsBulkActions } from "@/features/payment-links/components/exceptions-bulk-actions";
 import { ResolverDialog } from "./resolver-dialog";

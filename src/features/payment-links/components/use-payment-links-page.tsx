@@ -1,16 +1,16 @@
-import { isAppError,userMessage } from "@/shared/lib/errors";
+import { isAppError, userMessage } from "@/shared/lib/errors";
 import { useState } from "react";
-import { Eye,Ban,XCircle,Trash2,AlertTriangle,Link2,CheckCircle } from "lucide-react";
+import { Eye, Ban, XCircle, Trash2, AlertTriangle, Link2, CheckCircle } from "lucide-react";
 import { type TableServerFilters } from "@/shared/ui/data-table";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { type ActionItem } from "@/shared/ui/actions-dropdown";
 import { Badge } from "@/shared/ui/badge";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-listLinks,
-updateLinkStatus,
-deleteLink,
-STATUSES_LINK,
+  listLinks,
+  updateLinkStatus,
+  deleteLink,
+  STATUSES_LINK,
 } from "@/features/payment-links/payment-link-urls.supabase";
 import type { LinkPayment } from "@/features/payment-links/payment-link-urls.supabase";
 import { useRealtimeInvalidation } from "@/infrastructure/supabase/use-realtime-invalidation";

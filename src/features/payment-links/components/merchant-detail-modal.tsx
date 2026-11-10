@@ -2,16 +2,16 @@ import { Modal } from "@/shared/ui/modal";
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
 import { useQuery } from "@tanstack/react-query";
 import { listAdvancesByMerchant } from "@/features/payment-links/advances.supabase";
-import { Store,Wallet } from "lucide-react";
+import { Store, Wallet } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { formatMoney } from "@/shared/lib/format";
 import { Badge } from "@/shared/ui/badge";
 import { type SummaryMerchant } from "@/features/payment-links/batches.types";
 import {
-netBatch,
-parseDateLocal,
-statusMostrado,
-tone,
+  netBatch,
+  parseDateLocal,
+  statusMostrado,
+  tone,
 } from "@/features/payment-links/batches.rules";
 
 export function MerchantDetailModal({
@@ -76,14 +76,25 @@ export function MerchantDetailModal({
             </Card>
             {data.totalContracargo > 0 && (
               <Card className="p-3 border-red-200 bg-red-50">
-                <div className="text-xs text-red-700">Contracargo retenido</div>
+                <div className="text-xs text-red-700">Contracargos y deudas</div>
                 <div className="font-mono font-semibold mt-1 text-red-600">
                   - {formatMoney(data.totalContracargo)}
                 </div>
                 <div className="text-[11px] text-red-600">Restado del total a acreditar</div>
               </Card>
             )}
-            <Card className={`p-3 ${data.totalContracargo > 0 ? "" : "col-span-2"}`}>
+            {data.totalAdelantos > 0 && (
+              <Card className="p-3 border-amber-200 bg-amber-50">
+                <div className="text-xs text-amber-800">Adelantos compensados</div>
+                <div className="font-mono font-semibold mt-1 text-amber-800">
+                  - {formatMoney(data.totalAdelantos)}
+                </div>
+                <div className="text-[11px] text-amber-800">Ya cobrados antes por el comercio</div>
+              </Card>
+            )}
+            <Card
+              className={`p-3 ${(data.totalContracargo > 0 ? 1 : 0) + (data.totalAdelantos > 0 ? 1 : 0) === 1 ? "" : "col-span-2"}`}
+            >
               <div className="text-xs text-muted-foreground">Total a pagar al comercio</div>
               <div className="font-mono font-semibold mt-1 text-emerald-700">
                 {formatMoney(data.totalFinal)}

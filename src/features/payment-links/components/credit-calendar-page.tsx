@@ -1,22 +1,22 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { QK_ACRED,calendarioV3,saveSelection } from "@/features/payment-links/credits.supabase";
+import { QK_ACRED, calendarioV3, saveSelection } from "@/features/payment-links/credits.supabase";
 import {
-Amount,
-MerchantPicker,
-date,
-errMsg,
+  Amount,
+  MerchantPicker,
+  date,
+  errMsg,
 } from "@/features/payment-links/components/credits-common";
 import { downloadXlsx } from "@/shared/lib/download";
 import { PermissionGuard } from "@/features/rbac/access-gate";
 import { PageHeader } from "@/shared/ui/page-header";
 import { BtnOutline } from "@/shared/ui/button";
-import { ChevronLeft,ChevronRight,Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { BatchBreakdown } from "@/features/payment-links/components/batch-breakdown";
 import { type Capa } from "@/features/payment-links/credit-calendar.types";
-import { CAPAS,DAYS,iso } from "@/features/payment-links/credit-calendar.rules";
+import { CAPAS, DAYS, iso } from "@/features/payment-links/credit-calendar.rules";
 import { MONTHS } from "@/shared/lib/months";
 import { Celda } from "./credit-calendar-parts";
 import { BatchesDelDay } from "./batches-del-day";

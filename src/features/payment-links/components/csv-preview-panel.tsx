@@ -1,6 +1,6 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
 import { Badge } from "@/shared/ui/badge";
-import { formatMoney,formatIsoDate } from "@/shared/lib/format";
+import { formatMoney, formatIsoDate } from "@/shared/lib/format";
 import { RESULT } from "@/features/payment-links/upload-csv-modal.rules";
 import type { UploadCsvModalVm } from "./use-upload-csv-modal";
 

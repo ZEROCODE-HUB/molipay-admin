@@ -1,19 +1,19 @@
 import { StatusMessage } from "@/shared/ui/status-message";
 import {
-salesDelDay,
-type SaleDay,
-type SaleDetail,
+  salesDelDay,
+  type SaleDay,
+  type SaleDetail,
 } from "@/features/payment-links/credits.supabase";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DataTable,type Column } from "@/shared/ui/data-table";
+import { DataTable, type Column } from "@/shared/ui/data-table";
 import { formatMoney } from "@/shared/lib/format";
 import { Badge } from "@/shared/ui/badge";
 import { ModalDialog } from "@/shared/ui/modal-dialog";
-import { Inbox,Search } from "lucide-react";
+import { Inbox, Search } from "lucide-react";
 import { Input } from "@/shared/ui/form-controls";
 import { Pagination } from "@/shared/ui/pagination";
-import { PAGE_SIZES,fmtDateTime,statusBatch } from "@/features/payment-links/sale-batches.rules";
+import { PAGE_SIZES, fmtDateTime, statusBatch } from "@/features/payment-links/sale-batches.rules";
 import { parseDateLocal } from "@/features/payment-links/batches.rules";
 
 // ============================ Detalle del lote ============================

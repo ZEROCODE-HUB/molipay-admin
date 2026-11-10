@@ -3,15 +3,16 @@ import { type Column } from "@/shared/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { formatMoney } from "@/shared/lib/format";
 import {
-SUBESTADO_TXT,
-esBatchEstimated,
-esDelFile,
-fmtDateCorta,
-netBatch,
-parseDateLocal,
-statusMostrado,
-tone,
-totalDescuentos,
+  SUBESTADO_TXT,
+  esBatchEstimated,
+  esDelFile,
+  fmtDateCorta,
+  netBatch,
+  parseDateLocal,
+  statusMostrado,
+  tone,
+  totalCompensaciones,
+  totalDescuentos,
 } from "@/features/payment-links/batches.rules";
 import { type SummaryMerchant } from "@/features/payment-links/batches.types";
 
@@ -88,6 +89,7 @@ export const BATCH_COLUMNS: Column<BatchCredit>[] = [
     minWidth: 160,
     render: (r) => {
       const estimated = esBatchEstimated(r);
+      const compensations = totalCompensaciones(r);
       return (
         <span
           className={`font-mono tabular-nums ${estimated ? "text-muted-foreground/60" : "text-red-600"}`}
@@ -96,6 +98,20 @@ export const BATCH_COLUMNS: Column<BatchCredit>[] = [
           {estimated && (
             <span className="ml-1 text-[10px] text-muted-foreground/70">(sin 0,45%)</span>
           )}
+          {compensations > 0 &&
+            (
+              [
+                [r.compensacionAdelantos, "adelanto compensado"],
+                [r.retencionContracargos, "retenido por contracargo"],
+                [r.recuperacionDeuda, "recupero de deuda"],
+              ] as const
+            )
+              .filter(([monto]) => Number(monto ?? 0) > 0)
+              .map(([monto, label]) => (
+                <span key={label} className="block text-[10px] text-amber-700">
+                  - {formatMoney(Number(monto))} {label}
+                </span>
+              ))}
         </span>
       );
     },

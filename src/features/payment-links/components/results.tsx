@@ -1,13 +1,13 @@
 import {
-QK_ACRED,
-itemsDeExecution,
-type ResultExecution,
+  QK_ACRED,
+  itemsDeExecution,
+  type ResultExecution,
 } from "@/features/payment-links/credits.supabase";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
-import { Amount,date } from "@/features/payment-links/components/credits-common";
+import { Amount, date } from "@/features/payment-links/components/credits-common";
 import { BtnOutline } from "@/shared/ui/button";
 import { RotateCcw } from "lucide-react";
 import { Link } from "@tanstack/react-router";

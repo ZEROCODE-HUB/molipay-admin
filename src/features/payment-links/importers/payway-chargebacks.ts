@@ -1,10 +1,11 @@
 import { AppError } from "@/shared/lib/errors";
 import * as XLSX from "xlsx";
 import {
-buildHeaderMap,
-normalizeHeader,
-type PaywayField,
-type ParsedPaywayRow,
+  PAYWAY_DISPUTE_HEADERS,
+  buildHeaderMap,
+  normalizeHeader,
+  type PaywayField,
+  type ParsedPaywayRow,
 } from "@/features/payment-links/importers/payway-headers";
 
 /**
@@ -78,7 +79,43 @@ async function readRows(file: File, format: "csv" | "xlsx"): Promise<Record<stri
  * de headers: devuelve TODO en orden. Lo usamos para encontrar la
  * fila de headers aunque haya un título arriba.
  */
+/** Parte una linea de CSV respetando comillas ("a;b" es un solo campo). */
+function splitCsvLine(line: string, sep: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cur += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === sep) {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/**
+ * CSV de Payway: separador ";" y a veces una linea de titulo arriba. El
+ * separador se toma de la linea que mas columnas tiene, no de la primera
+ * (el titulo no tiene separadores).
+ */
+function readCsvMatrix(text: string): string[][] {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+  const count = (sep: string) => Math.max(0, ...lines.map((l) => l.split(sep).length - 1));
+  const sep = [";", ",", "\t"].reduce((best, c) => (count(c) > count(best) ? c : best), ";");
+  return lines.map((l) => splitCsvLine(l, sep));
+}
+
 async function readMatrix(file: File, format: "csv" | "xlsx"): Promise<string[][]> {
+  if (format === "csv") return readCsvMatrix(await file.text());
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", raw: false });
   const sheetName = wb.SheetNames[0];
@@ -96,26 +133,14 @@ async function readMatrix(file: File, format: "csv" | "xlsx"): Promise<string[][
  * ningún match (cae a la primera fila).
  */
 function findHeaderRow(matrix: string[][]): number {
-  const criticalAliases: string[] = [
-    "id_transaccion",
-    "tid",
-    "id_tx",
-    "id_transaccion_payway",
-    "site_transaction_id",
-    "monto_de_tram",
-    "monto",
-    "total_bruto",
-    "amount",
-    "importe",
-    "fecha_de_trans",
-    "fecha",
-    "fecha_transaccion",
-    "date",
-  ];
+  const critical = new Set(
+    (["idTransaccion", "monto"] as const).flatMap((f) =>
+      PAYWAY_DISPUTE_HEADERS[f].map((a) => normalizeHeader(a)),
+    ),
+  );
   for (let i = 0; i < matrix.length; i++) {
-    const row = matrix[i] ?? [];
-    const normalized = row.map((c) => normalizeHeader(String(c ?? "")));
-    if (normalized.some((h) => criticalAliases.includes(h))) {
+    const normalized = (matrix[i] ?? []).map((c) => normalizeHeader(String(c ?? "")));
+    if (normalized.some((h) => critical.has(h))) {
       return i;
     }
   }
@@ -270,11 +295,19 @@ export async function parsePaywayFile(file: File): Promise<ParsedPaywayFile> {
     if (!parsed.idTransaccion) {
       errors.push(`Fila ${idx + 2}: falta ID_TRANSACCION (TID).`);
     }
+    // El reporte detallado trae el débito en negativo (-1000,00).
     const amount = parseAmount(parsed.monto);
     if (amount == null) {
       errors.push(`Fila ${idx + 2}: monto inválido "${parsed.monto ?? ""}".`);
-    } else if (amount <= 0) {
-      errors.push(`Fila ${idx + 2}: monto debe ser mayor a 0.`);
+    } else if (amount === 0) {
+      errors.push(`Fila ${idx + 2}: el monto no puede ser 0.`);
+    }
+    // Reporte de movimientos: solo los contracargos son reclamos.
+    const kind = (parsed.tipoMovimiento ?? "").toLowerCase();
+    if (/compra|venta/.test(kind)) {
+      errors.push(`Fila ${idx + 2}: es una compra, no un contracargo.`);
+    } else if (/anula|devol/.test(kind)) {
+      errors.push(`Fila ${idx + 2}: es una anulación o devolución, no un contracargo.`);
     }
 
     const date = parseDate(parsed.fechaTransaccion);

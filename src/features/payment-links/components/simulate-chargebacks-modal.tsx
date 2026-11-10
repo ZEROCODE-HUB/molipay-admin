@@ -1,13 +1,13 @@
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download,Info } from "lucide-react";
+import { Download, Info } from "lucide-react";
 import { ModalDialog } from "@/shared/ui/modal-dialog";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { QK_ACRED,listBatchesV2,type BatchV2 } from "@/features/payment-links/credits.supabase";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { QK_ACRED, listBatchesV2, type BatchV2 } from "@/features/payment-links/credits.supabase";
 import { downloadCsv } from "@/features/payment-links/importers/chargeback-real-csv";
 import { generateSimulationChargebacks } from "@/features/payment-links/importers/chargeback-batches-csv";
-import { Amount,errMsg,date } from "@/features/payment-links/components/credits-common";
+import { Amount, errMsg, date } from "@/features/payment-links/components/credits-common";
 
 /**
  * Descarga un reporte de contracargos simulado (formato Payway) con ventas

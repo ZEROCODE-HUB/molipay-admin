@@ -1,7 +1,7 @@
 import { type StatusBatch } from "@/infrastructure/supabase/legacy/types";
 import { Search } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 
 import type { BatchesPageVm } from "./use-batches-page";
 

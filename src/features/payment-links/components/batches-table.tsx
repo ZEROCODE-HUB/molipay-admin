@@ -1,7 +1,7 @@
 import { StatusMessage } from "@/shared/ui/status-message";
 import { LoadingBlock } from "@/shared/ui/loading-block";
 import { ActionsDropdown } from "@/shared/ui/actions-dropdown";
-import { Eye,Inbox,Upload } from "lucide-react";
+import { Eye, Inbox, Upload } from "lucide-react";
 import { DataTable } from "@/shared/ui/data-table";
 import { BtnPrimary } from "@/shared/ui/button";
 import { Pagination } from "@/shared/ui/pagination";

@@ -1,10 +1,11 @@
 import { AppError } from "@/shared/lib/errors";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
+import { env } from "@/app/env";
 import {
-uploadAttachment,
-deleteAttachment,
-type FileAttachment,
+  uploadAttachment,
+  deleteAttachment,
+  type FileAttachment,
 } from "@/features/payment-links/chargeback-storage";
 
 export type StatusContra =
@@ -24,6 +25,11 @@ export const STATUS_CONTRA_DB: Record<StatusContra, StatusContra> = {
   Cerrado_acreditado: "Cerrado_acreditado",
   Cerrado_retenido: "Cerrado_retenido",
 };
+
+type OneOrMany<T> = T | T[] | null;
+
+const one = <T>(v: OneOrMany<T> | undefined): T | null =>
+  Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
 
 export type ContraRow = {
   id: string;
@@ -59,11 +65,18 @@ export type ContraRow = {
   created_by: string | null;
   cliente_legajo: string | null;
   url_origen: string | null;
-  // joins
-  comercios?:
-    | { id: string; usuario: string; legajo: string; nombre_comercio: string | null }[]
-    | null;
-  cliente_links_pago_pagos?: { link_id: string; site_transaction_id: string }[] | null;
+  lote_descuento_id: string | null;
+  retencion_estado: string | null;
+  tipo: string | null;
+  origen: string | null;
+  // joins (PostgREST devuelve objeto en las relaciones muchos-a-uno)
+  comercios?: OneOrMany<{
+    id: string;
+    usuario: string;
+    legajo: string;
+    nombre_comercio: string | null;
+  }>;
+  cliente_links_pago_pagos?: OneOrMany<{ link_id: string; site_transaction_id: string }>;
 };
 
 export type Contra = {
@@ -106,6 +119,14 @@ export type Contra = {
   createdBy: string | null;
   clienteLegajo: string | null;
   urlOrigen: string | null;
+  /** Lote negativo del archivo diario que trajo este contracargo. */
+  loteDescuentoId: string | null;
+  /** no_aplica | pendiente | retenido | aplicado_payway | liberado */
+  retencionEstado: string;
+  /** contracargo | devolucion (devuelto por API de Payway) */
+  tipo: string;
+  /** reporte | liquidacion | polling | manual | devolucion */
+  origen: string | null;
 };
 
 const COLUMNS = `
@@ -118,7 +139,8 @@ const COLUMNS = `
   nro_tarjeta_masked, marca_tarjeta, fecha_transaccion,
   site_transaction_id, site_id, cco_origen,
   fecha_limite, enviado_payway_at, archivos_adjuntos,
-  created_by, cliente_legajo, url_origen,
+  created_by, cliente_legajo, url_origen, lote_descuento_id,
+  retencion_estado, tipo, origen,
   comercios(id, usuario, legajo, nombre_comercio),
   cliente_links_pago_pagos(link_id, site_transaction_id)
 `;
@@ -136,13 +158,13 @@ export function statusUiToDb(status: StatusContra): string {
 }
 
 function toContra(r: ContraRow): Contra {
-  const com = Array.isArray(r.comercios) ? r.comercios[0] : null;
-  const payment = Array.isArray(r.cliente_links_pago_pagos) ? r.cliente_links_pago_pagos[0] : null;
+  const com = one(r.comercios);
+  const payment = one(r.cliente_links_pago_pagos);
   return {
     id: r.id,
     comercioId: r.comercio_id,
-    comercioNombre: com?.nombre_comercio ?? com?.usuario ?? "—",
-    comercioLegajo: com?.legajo ?? r.comercio_id,
+    comercioNombre: com?.nombre_comercio || com?.usuario || "Comercio sin nombre",
+    comercioLegajo: com?.legajo ?? r.cliente_legajo ?? "—",
     pagoId: r.pago_id ?? "",
     linkId: payment?.link_id ?? "",
     movimientoId: r.movimiento_id ?? "",
@@ -175,6 +197,10 @@ function toContra(r: ContraRow): Contra {
     createdBy: r.created_by ?? null,
     clienteLegajo: r.cliente_legajo ?? null,
     urlOrigen: r.url_origen ?? null,
+    loteDescuentoId: r.lote_descuento_id ?? null,
+    retencionEstado: r.retencion_estado ?? "no_aplica",
+    tipo: r.tipo ?? "contracargo",
+    origen: r.origen ?? (r.lote_descuento_id && !r.site_transaction_id ? "liquidacion" : null),
   };
 }
 
@@ -478,3 +504,168 @@ export async function listBatchesForCloseHeld(
 
   return mapped;
 }
+
+// ---------------------------------------------------------------------------
+// Contracargo del archivo diario: identificar la venta
+// ---------------------------------------------------------------------------
+
+export type SaleCandidate = {
+  transactionId: string;
+  fecha: string;
+  monto: number;
+  siteTransactionId: string | null;
+  bandera: string | null;
+  exacto: boolean;
+  loteCodigo: string | null;
+  loteEstado: string | null;
+};
+
+/** Ventas que pueden ser la del contracargo: primero las del mismo importe. */
+export async function listSaleCandidates(contraId: string): Promise<SaleCandidate[]> {
+  const { data, error } = await requireSupabase().rpc("contracargo_ventas_candidatas", {
+    p_contracargo_id: contraId,
+  });
+  if (error) throw toAppError(error);
+  return (
+    (data ?? []) as {
+      transaction_id: string;
+      fecha: string;
+      monto: number;
+      site_transaction_id: string | null;
+      bandera: string | null;
+      exacto: boolean;
+      lote_codigo: string | null;
+      lote_estado: string | null;
+    }[]
+  ).map((r) => ({
+    transactionId: r.transaction_id,
+    fecha: r.fecha,
+    monto: Number(r.monto),
+    siteTransactionId: r.site_transaction_id,
+    bandera: r.bandera,
+    exacto: !!r.exacto,
+    loteCodigo: r.lote_codigo,
+    loteEstado: r.lote_estado,
+  }));
+}
+
+/** Vincula la venta (o la quita con null). No mueve plata: la cobra el lote negativo. */
+export async function identifySale(contraId: string, transactionId: string | null) {
+  const { error } = await requireSupabase().rpc("contracargo_identificar_venta", {
+    p_contracargo_id: contraId,
+    p_transaction_id: transactionId,
+  });
+  if (error) throw toAppError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Devolucion al comprador por la API de Payway
+// ---------------------------------------------------------------------------
+
+export type Refund = {
+  id: string;
+  monto: number;
+  estado: "solicitada" | "enviada" | "aprobada" | "rechazada" | "incierta";
+  origen: "backoffice" | "payway";
+  motivo: string;
+  error: string | null;
+  createdAt: string;
+};
+
+export type RefundsOfSale = { montoVenta: number; devuelto: number; devoluciones: Refund[] };
+
+export async function listRefunds(pagoId: string): Promise<RefundsOfSale> {
+  const { data, error } = await requireSupabase().rpc("devoluciones_de_venta", {
+    p_pago_id: pagoId,
+  });
+  if (error) throw toAppError(error);
+  const r = data as {
+    monto_venta: number;
+    devuelto: number;
+    devoluciones: {
+      id: string;
+      monto: number;
+      estado: Refund["estado"];
+      origen: Refund["origen"];
+      motivo: string;
+      error: string | null;
+      created_at: string;
+    }[];
+  };
+  return {
+    montoVenta: Number(r.monto_venta ?? 0),
+    devuelto: Number(r.devuelto ?? 0),
+    devoluciones: (r.devoluciones ?? []).map((d) => ({
+      id: d.id,
+      monto: Number(d.monto),
+      estado: d.estado,
+      origen: d.origen,
+      motivo: d.motivo,
+      error: d.error,
+      createdAt: d.created_at,
+    })),
+  };
+}
+
+/**
+ * Pide la devolucion (la base valida permiso y monto) y el backend la manda a
+ * Payway. Devuelve el estado: aprobada, rechazada o incierta (Payway no
+ * respondio: la confirma el polling).
+ */
+export async function requestRefund(input: {
+  pagoId: string;
+  contraId: string | null;
+  monto: number | null;
+  motivo: string;
+}): Promise<{ estado: Refund["estado"]; message: string; detalle: RefundDetail | null }> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("devolucion_solicitar", {
+    p_pago_id: input.pagoId,
+    p_monto: input.monto,
+    p_motivo: input.motivo,
+    p_contracargo_id: input.contraId,
+  });
+  if (error) throw toAppError(error);
+  const devolucionId = (data as { devolucion_id: string }).devolucion_id;
+
+  const { data: session } = await sb.auth.getSession();
+  const token = session.session?.access_token;
+  if (!token) throw new AppError("permission", "Sesión vencida: volvé a ingresar");
+  let res: Response;
+  try {
+    res = await fetch(`${env.BACKEND_URL}/api/payway/refunds`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ devolucionId }),
+    });
+  } catch {
+    throw new AppError(
+      "network",
+      `No se pudo conectar con el backend (${env.BACKEND_URL}). La devolución quedó pedida pero no se envió a Payway.`,
+    );
+  }
+  const body = (await res.json().catch(() => null)) as {
+    estado?: Refund["estado"];
+    message?: string;
+    detalle?: RefundDetail;
+  } | null;
+  if (!res.ok && !body?.estado) {
+    throw new AppError("unknown", body?.message ?? `El backend respondió ${res.status}`);
+  }
+  return {
+    estado: body?.estado ?? "incierta",
+    message: body?.message ?? "",
+    detalle: body?.detalle ?? null,
+  };
+}
+
+/** Lo que contesto Payway a la devolucion (lo arma el backend). */
+export type RefundDetail = {
+  paywayPaymentId: string;
+  monto: number;
+  total: boolean;
+  refundId: string | null;
+  paywayStatus: string | null;
+  motivo: string | null;
+  requestId: string | null;
+};

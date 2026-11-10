@@ -3,6 +3,7 @@ import { PermissionGuard } from "@/features/rbac/access-gate";
 import { PageHeader } from "@/shared/ui/page-header";
 import { ChevronRight } from "lucide-react";
 import { date } from "@/features/payment-links/components/credits-common";
+import { BalanceCheckCard } from "./balance-check-card";
 import { ListDays } from "./list-days";
 import { DetailDay } from "./detail-day";
 import { DetailMerchant } from "./detail-merchant";
@@ -41,6 +42,7 @@ export function CreditsPage() {
         )}
       </nav>
 
+      {!search.fecha && <BalanceCheckCard />}
       {!search.fecha && (
         <ListDays
           desde={from}

@@ -1,5 +1,5 @@
 import { AppError } from "@/shared/lib/errors";
-import { establishmentDeBatch,salesDeBatch } from "@/features/payment-links/credits.supabase";
+import { establishmentDeBatch, salesDeBatch } from "@/features/payment-links/credits.supabase";
 import type { CsvGenerado } from "@/features/payment-links/importers/chargeback-real-csv";
 
 /**

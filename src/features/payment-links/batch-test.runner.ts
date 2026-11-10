@@ -56,7 +56,9 @@ const money = (v: number | null | undefined) => formatMoney(Number(v ?? 0));
 const pct = (v: number) => `${v.toLocaleString("es-AR", { maximumFractionDigits: 2 })}%`;
 
 const todayAr = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(
+    new Date(),
+  );
 
 function failOnMismatch(mismatches: CalcMismatch[]) {
   if (mismatches.length === 0) return;
@@ -90,7 +92,11 @@ export const TEST_STEPS: TestStep[] = [
       const first = round2(ctx.monto * 0.6);
       ctx.products = [
         await createTestProduct(ctx.merchant.legajo, `Producto A ${ctx.runId}`, first),
-        await createTestProduct(ctx.merchant.legajo, `Producto B ${ctx.runId}`, round2(ctx.monto - first)),
+        await createTestProduct(
+          ctx.merchant.legajo,
+          `Producto B ${ctx.runId}`,
+          round2(ctx.monto - first),
+        ),
       ];
       return ctx.products.map((p) => ({ label: p.nombre, value: money(p.precio) }));
     },
@@ -149,16 +155,29 @@ export const TEST_STEPS: TestStep[] = [
         { label: "Acredita", value: ctx.programmed.fecha },
         { label: "Importe bruto del lote", value: money(p.bruto) },
         { label: `Arancel Payway (${pct(p.paywayPct)})`, value: `- ${money(p.paywayMonto)}` },
-        { label: `Impuestos Payway (${pct(p.impuestosPct)})`, value: `- ${money(p.impuestosMonto)}` },
+        {
+          label: `Impuestos Payway (${pct(p.impuestosPct)})`,
+          value: `- ${money(p.impuestosMonto)}`,
+        },
         { label: "Subtotal neto estimado", value: money(p.netoPayway) },
         { label: `Tasa MoliPay (${pct(p.tasaPct)})`, value: `- ${money(p.tasaMonto)}` },
         { label: `IVA sobre tasa (${pct(p.ivaPct)})`, value: `- ${money(p.ivaMonto)}` },
         { label: `Cierre de lote (${pct(p.cierrePct)})`, value: `- ${money(p.cierreMonto)}` },
         ...(p.iibb
-          ? [{ label: `Retención IIBB (${pct(p.iibb.alicuota)})`, value: `- ${money(p.iibb.monto)}` }]
+          ? [
+              {
+                label: `Retención IIBB (${pct(p.iibb.alicuota)})`,
+                value: `- ${money(p.iibb.monto)}`,
+              },
+            ]
           : []),
         ...(p.dyc
-          ? [{ label: `Débitos y Créditos (${pct(p.dyc.alicuota)})`, value: `- ${money(p.dyc.monto)}` }]
+          ? [
+              {
+                label: `Débitos y Créditos (${pct(p.dyc.alicuota)})`,
+                value: `- ${money(p.dyc.monto)}`,
+              },
+            ]
           : []),
         { label: "Compensación de adelanto", value: `- ${money(p.compensacionAdelantos)}` },
         { label: "Estimado final a acreditar", value: money(p.netoFinal) },
@@ -233,7 +252,10 @@ export const TEST_STEPS: TestStep[] = [
         { label: "Costo de servicio Payway", value: `- ${money(batch.costoServicioPayway)}` },
         { label: "Impuestos Payway", value: `- ${money(batch.impuestosPayway)}` },
         { label: "Neto liquidado Payway", value: money(batch.netoPayway) },
-        { label: `Tasa MoliPay (${pct(Number(batch.tasaMolipayPct))})`, value: `- ${money(batch.tasaMolipayMonto)}` },
+        {
+          label: `Tasa MoliPay (${pct(Number(batch.tasaMolipayPct))})`,
+          value: `- ${money(batch.tasaMolipayMonto)}`,
+        },
         { label: "IVA sobre tasa", value: `- ${money(batch.ivaTasaMonto)}` },
         { label: "Cierre de lote", value: `- ${money(batch.comisionCierreLoteMonto)}` },
         { label: "Importe final a acreditar", value: money(batch.importeNeto) },
@@ -284,9 +306,15 @@ export const TEST_STEPS: TestStep[] = [
       return [
         { label: "Bruto", value: money(calc.bruto) },
         { label: "Neto Payway", value: money(calc.neto_payway) },
-        { label: `Tasa MoliPay (${pct(calc.tasa_pct)} s/ bruto)`, value: `- ${money(calc.tasa_monto)}` },
+        {
+          label: `Tasa MoliPay (${pct(calc.tasa_pct)} s/ bruto)`,
+          value: `- ${money(calc.tasa_monto)}`,
+        },
         { label: `IVA (${pct(calc.iva_pct)} s/ tasa)`, value: `- ${money(calc.iva_tasa_monto)}` },
-        { label: `Cierre (${pct(calc.cierre_pct)} s/ bruto)`, value: `- ${money(calc.cierre_monto)}` },
+        {
+          label: `Cierre (${pct(calc.cierre_pct)} s/ bruto)`,
+          value: `- ${money(calc.cierre_monto)}`,
+        },
         { label: "Impuestos asignados e IIBB", value: `- ${money(calc.impuestos_monto)}` },
         { label: "Contracargos retenidos", value: `- ${money(calc.retencion_contracargos)}` },
         { label: "Compensación de adelantos", value: `- ${money(calc.compensacion_adelantos)}` },

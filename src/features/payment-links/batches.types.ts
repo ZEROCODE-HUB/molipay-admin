@@ -19,6 +19,7 @@ export type SummaryMerchant = {
   totalPayWay: number;
   totalMoliPay: number;
   totalContracargo: number;
+  totalAdelantos: number;
   totalFinal: number;
   pendienteAcreditar: number;
   pendienteImpuestos: number;

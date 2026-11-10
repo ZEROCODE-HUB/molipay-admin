@@ -5,7 +5,7 @@ import { useAdvancesPage } from "./use-advances-page";
 import { type StatusAdvance } from "@/infrastructure/supabase/legacy/types";
 import { formatMoney } from "@/shared/lib/format";
 import { ActionsDropdown } from "@/shared/ui/actions-dropdown";
-import { Building2,X } from "lucide-react";
+import { Building2, X } from "lucide-react";
 import { DataTable } from "@/shared/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { PermissionGuard } from "@/features/rbac/access-gate";
@@ -13,7 +13,7 @@ import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
 import { Label } from "@/shared/ui/form-controls";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { label,tone } from "@/features/payment-links/advances.rules";
+import { label, tone } from "@/features/payment-links/advances.rules";
 import { AdvanceDetail } from "./advance-detail";
 
 export function AdvancesPage() {

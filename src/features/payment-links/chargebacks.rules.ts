@@ -42,7 +42,7 @@ export function daysHabilesRestantes(dateLimit: string): number {
   const sentido = dLimit.getTime() > dToday.getTime() ? 1 : -1;
   const cursor = new Date(dToday);
   let count = 0;
-  // eslint-disable-next-line no-constant-condition
+
   while (true) {
     cursor.setDate(cursor.getDate() + sentido);
     const dow = cursor.getDay();
@@ -52,3 +52,30 @@ export function daysHabilesRestantes(dateLimit: string): number {
   }
   return count;
 }
+
+/** Paso del stepper: 0 abierto, 1 en mediacion, 2 resuelto. */
+export function chargebackStep(e: StatusContra): number {
+  if (e === "En_mediación" || e === "En_mediacion") return 1;
+  if (e === "Cerrado_acreditado" || e === "Cerrado_retenido") return 2;
+  return 0;
+}
+
+/** Que paso con la plata del comercio (contracargos.retencion_estado). */
+export const RETENTION_LABEL: Record<
+  string,
+  { label: string; tone: "success" | "warn" | "danger" | "neutral" }
+> = {
+  pendiente: { label: "Se retiene al acreditar", tone: "warn" },
+  retenido: { label: "Retenido al comercio", tone: "danger" },
+  aplicado_payway: { label: "Descontado por Payway", tone: "neutral" },
+  liberado: { label: "Devuelto al comercio", tone: "success" },
+  no_aplica: { label: "Lo descuenta Payway", tone: "neutral" },
+};
+
+export const ORIGIN_LABEL: Record<string, string> = {
+  reporte: "Reporte de Payway",
+  liquidacion: "Archivo diario",
+  polling: "Consulta a Payway",
+  manual: "Carga manual",
+  devolucion: "Devolución",
+};

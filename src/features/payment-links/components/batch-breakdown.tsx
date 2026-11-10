@@ -1,23 +1,23 @@
 import { Modal } from "@/shared/ui/modal";
-import { useEffect,useState,type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2,RefreshCw,X } from "lucide-react";
+import { Loader2, RefreshCw, X } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { BtnOutline } from "@/shared/ui/button";
 import {
-CadenaAmounts,
-StatusBatch,
-Amount,
-date,
-errMsg,
+  CadenaAmounts,
+  StatusBatch,
+  Amount,
+  date,
+  errMsg,
 } from "@/features/payment-links/components/credits-common";
 import {
-QK_ACRED,
-getBatchV2,
-recalcularBatch,
-salesDeBatch,
+  QK_ACRED,
+  getBatchV2,
+  recalcularBatch,
+  salesDeBatch,
 } from "@/features/payment-links/credits.supabase";
 import { formatDateTime } from "@/shared/lib/format";
 import { useCan } from "@/features/rbac/rbac.hooks";

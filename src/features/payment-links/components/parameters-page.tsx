@@ -1,18 +1,18 @@
 import { Select } from "@/shared/ui/form-controls";
-import { useEffect,useState } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2,Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
 import { BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { errMsg } from "@/features/payment-links/components/credits-common";
 import {
-QK_ACRED,
-saveParameterCredit,
-historyParameters,
-listParametersCredit,
-type ParameterCredit,
+  QK_ACRED,
+  saveParameterCredit,
+  historyParameters,
+  listParametersCredit,
+  type ParameterCredit,
 } from "@/features/payment-links/credits.supabase";
 import { formatDateTime } from "@/shared/lib/format";
 import { useCan } from "@/features/rbac/rbac.hooks";

@@ -515,7 +515,7 @@ export type MovementForCsvTestInput = {
 
 export function generateCsvSettlementTestForBatch(
   batch: BatchForCsvTestInput,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _Movements: MovementForCsvTestInput[] = [],
 ): { filename: string; contenido: string } {
   return generateCsvSettlementTest(

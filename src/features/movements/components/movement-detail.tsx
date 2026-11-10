@@ -4,6 +4,8 @@ import { Badge } from "@/shared/ui/badge";
 import { LegajoCell } from "@/shared/ui/legajo-label";
 import { type Desglose } from "@/shared/lib/fee-schedule";
 import { formatMoney } from "@/shared/lib/format";
+import { CreditBreakdown } from "@/features/payment-links/components/credit-breakdown";
+import { SaleBreakdown } from "@/features/payment-links/components/sale-breakdown";
 
 export type Movimiento = {
   clienteId: string;
@@ -65,10 +67,12 @@ export function DetailModal({
   title,
   rows,
   onClose,
+  children,
 }: {
   title: string;
   rows: DetailRow[];
   onClose: () => void;
+  children?: ReactNode;
 }) {
   return (
     <Modal open onClose={onClose} size="custom" className="max-w-lg">
@@ -87,6 +91,7 @@ export function DetailModal({
             </div>
           ))}
         </dl>
+        {children}
       </div>
     </Modal>
   );
@@ -141,6 +146,9 @@ export function MovementDetail({ m, onClose }: { m: Movimiento; onClose: () => v
         { label: "Fecha", value: <span className="font-mono">{m.fecha}</span> },
         { label: "Estado", value: statusBadge(m.estado) },
       ]}
-    />
+    >
+      {m.tipo === "acreditacion_lote" && <CreditBreakdown idTxn={m.id} />}
+      {m.tipo === "tarjeta" && <SaleBreakdown idTxn={m.id} />}
+    </DetailModal>
   );
 }

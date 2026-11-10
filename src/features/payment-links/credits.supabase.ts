@@ -474,6 +474,8 @@ export const SUBESTADO_LABEL: Record<string, string> = {
 export type BatchesFilters = {
   desde?: string;
   hasta?: string;
+  /** Filtra por fecha de acreditacion si el lote ya se acredito; si no, por fecha de pago. */
+  fechaEfectiva?: boolean;
   comercioId?: string;
   bandera?: string;
   estado?: string;
@@ -491,8 +493,15 @@ export async function listBatchesV2(f: BatchesFilters, page = 0, pageSize = 50) 
   const sb = requireSupabase();
   let q = sb.from("v_lotes_acreditacion").select("*", { count: "exact" });
   if (f.ids?.length) q = q.in("id", f.ids);
-  if (f.desde) q = q.gte("fecha", f.desde);
-  if (f.hasta) q = q.lte("fecha", f.hasta);
+  if (f.fechaEfectiva && f.desde && f.hasta) {
+    // Acreditados por su fecha de acreditacion; el resto por la fecha de pago (igual que resumen_acreditaciones).
+    q = q.or(
+      `and(fecha_acreditacion.gte.${f.desde},fecha_acreditacion.lte.${f.hasta}),and(fecha_acreditacion.is.null,fecha.gte.${f.desde},fecha.lte.${f.hasta})`,
+    );
+  } else {
+    if (f.desde) q = q.gte("fecha", f.desde);
+    if (f.hasta) q = q.lte("fecha", f.hasta);
+  }
   if (f.comercioId) q = q.eq("comercio_id", f.comercioId);
   if (f.bandera) q = q.ilike("bandera", f.bandera);
   if (f.estado) q = q.eq("estado", f.estado);
@@ -825,6 +834,17 @@ export type AdvanceV2 = {
   created_at: string;
 };
 
+/** Adelantos que esperan al backoffice: Solicitados (ofertar) y Aceptados (acreditar). */
+export async function countAdvancesNeedingAction(): Promise<number> {
+  const { count, error } = await requireSupabase()
+    .from("adelantos")
+    .select("id", { count: "exact", head: true })
+    .eq("modelo", "v2")
+    .in("estado", ["Pendiente", "Aceptado"]);
+  if (error) throw toAppError(error);
+  return count ?? 0;
+}
+
 export async function listAdvancesV2(f: {
   estado?: string;
   comercioId?: string;
@@ -970,6 +990,19 @@ export type ChargebackRecupero = {
   es_simulacion: boolean;
   created_at: string;
 };
+
+/** Descuento y recupero de un contracargo (vista v_contracargos_recupero). */
+export async function getChargebackRecupero(id: string): Promise<ChargebackRecupero | null> {
+  const { data, error } = await requireSupabase()
+    .from("v_contracargos_recupero")
+    .select(
+      "id, comercio_id, comercio_nombre, importe, estado, marca_tarjeta, site_id, motivo_payway, ticket_payway, movimiento_id, fecha_transaccion, lote_descuento_id, lote_descuento_codigo, lote_descuento_fecha, lote_descuento_estado, estado_recupero, deuda_monto, deuda_recuperado, pendiente_recuperar, es_simulacion, created_at, retencion_estado, retenido_monto, lote_venta_codigo, lote_venta_estado, retencion_lote_codigo",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw toAppError(error);
+  return (data as ChargebackRecupero | null) ?? null;
+}
 
 export async function listChargebacksRecupero(): Promise<ChargebackRecupero[]> {
   const sb = requireSupabase();
@@ -1297,4 +1330,43 @@ export async function historyParameters(limit = 50): Promise<ChangeParameter[]> 
     .limit(limit);
   if (error) throw toAppError(error);
   return ((data ?? []) as Omit<ChangeParameter, "admin">[]).map((r) => ({ ...r, admin: null }));
+}
+
+// ---------------------------------------------------------------------------
+// Control de saldos: cada saldo contra el ledger y contra su detalle
+// ---------------------------------------------------------------------------
+
+export type BalanceCheck = {
+  ok: boolean;
+  revisado_at: string;
+  subcuentas: {
+    subcuenta_id: string;
+    legajo: string;
+    nombre: string;
+    disponible: number;
+    disponible_ledger: number;
+    retenido: number;
+    retenido_ledger: number;
+    conciliado: number;
+  }[];
+  adelantos: {
+    adelanto_id: string;
+    estado: string;
+    monto: number;
+    compensado: number;
+    compensaciones: number;
+  }[];
+  deudas: {
+    deuda_id: string;
+    origen: string;
+    monto: number;
+    recuperado: number;
+    recuperos: number;
+  }[];
+  lotes: { lote_id: string; codigo: string; neto_a_acreditar: number; acreditado_ledger: number }[];
+  cuentas_puente: { cuenta: string; ledger: number; detalle: number; diferencia: number }[];
+};
+
+export function balanceCheck() {
+  return rpc<BalanceCheck>("saldos_conciliacion");
 }

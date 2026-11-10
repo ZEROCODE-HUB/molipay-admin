@@ -1,5 +1,5 @@
 import { formatMoney } from "@/shared/lib/format";
-import { Building2,Calendar,Clock } from "lucide-react";
+import { Building2, Calendar, Clock } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 
 import type { DetailVm } from "./use-advance-detail";

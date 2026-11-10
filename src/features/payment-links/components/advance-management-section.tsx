@@ -1,8 +1,8 @@
 import { formatMoney } from "@/shared/lib/format";
-import { Banknote,CheckCircle2,XCircle } from "lucide-react";
+import { Banknote, CheckCircle2, XCircle } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Input, Label } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { DetailVm } from "./use-advance-detail";
 

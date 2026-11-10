@@ -122,8 +122,10 @@ export function toMovement(
   },
 ): Movement {
   const cli = Array.isArray(r.clientes) ? (r.clientes[0] ?? null) : (r.clientes ?? null);
-  const statusArr = Array.isArray(r.estados_movimiento) ? r.estados_movimiento : null;
-  const status = statusArr && statusArr.length ? statusArr[0] : null;
+  // PostgREST devuelve el embed many-to-one como objeto; se acepta array por compatibilidad.
+  const status = Array.isArray(r.estados_movimiento)
+    ? (r.estados_movimiento[0] ?? null)
+    : (r.estados_movimiento ?? null);
   return {
     id: r.id,
     clienteId: r.cliente_id,

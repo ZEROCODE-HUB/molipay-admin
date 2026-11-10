@@ -6,8 +6,8 @@ import { moneyInputToNumber } from "@/shared/lib/money";
 import { toast } from "sonner";
 import { createChargeback } from "@/features/payment-links/chargebacks.supabase";
 import { userMessage } from "@/shared/lib/errors";
-import { Plus,X } from "lucide-react";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Plus, X } from "lucide-react";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 
 // ---------------------------------------------------------------------------
 // Crear simulación

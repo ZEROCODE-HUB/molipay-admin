@@ -23,13 +23,7 @@ export function BatchTestModal({ onClose }: { onClose: () => void }) {
   const running = vm.phase === "running";
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      dismissible={!running}
-      size="custom"
-      className="max-w-3xl"
-    >
+    <Modal open onClose={onClose} dismissible={!running} size="custom" className="max-w-3xl">
       <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
         <div>
           <h3 className="font-display text-lg font-semibold flex items-center gap-2">

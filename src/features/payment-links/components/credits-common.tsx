@@ -1,5 +1,5 @@
 import { userMessage } from "@/shared/lib/errors";
-import { useState,type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
@@ -7,10 +7,10 @@ import { Card } from "@/shared/ui/card";
 import { HeaderHint } from "@/shared/ui/header-hint";
 import { listMerchants } from "@/features/merchants/merchants.supabase";
 import {
-SUBESTADO_LABEL,
-type CalculoBatch,
-type TaxAplicado,
-type BatchV2,
+  SUBESTADO_LABEL,
+  type CalculoBatch,
+  type TaxAplicado,
+  type BatchV2,
 } from "@/features/payment-links/credits.supabase";
 import { esDyc } from "@/features/payment-links/batches.rules";
 import { formatDateTime } from "@/shared/lib/format";

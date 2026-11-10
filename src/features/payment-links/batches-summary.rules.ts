@@ -1,5 +1,5 @@
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
-import { esDelFile,netBatch } from "@/features/payment-links/batches.rules";
+import { esDelFile, netBatch } from "@/features/payment-links/batches.rules";
 import { type SummaryMerchant } from "@/features/payment-links/batches.types";
 
 /** Agrega por comercio los lotes recibidos (hoy, los de la pagina actual). */
@@ -21,8 +21,11 @@ export function summarizeBatchesByMerchant(batches: BatchCredit[]): SummaryMerch
         Number(l.comisionCierreLoteMonto ?? 0)
       : l.tasaMolipayMonto;
     const contra = file
-      ? (l.esNegativo ? -Number(l.netoPayway ?? 0) : 0) + l.recuperacionDeuda
+      ? (l.esNegativo ? -Number(l.netoPayway ?? 0) : 0) +
+        Number(l.retencionContracargos ?? 0) +
+        l.recuperacionDeuda
       : (l.contracargoMonto ?? 0);
+    const advances = file ? Number(l.compensacionAdelantos ?? 0) : 0;
     const net = netBatch(l);
     const pending = l.estado === "Acreditado" ? 0 : net;
     const imp = file ? Number(l.impuestos ?? 0) : l.impuestos;
@@ -39,6 +42,7 @@ export function summarizeBatchesByMerchant(batches: BatchCredit[]): SummaryMerch
         totalPayWay: pay,
         totalMoliPay: moli,
         totalContracargo: contra,
+        totalAdelantos: advances,
         totalFinal: net,
         pendienteAcreditar: pending,
         pendienteImpuestos: l.estado === "Acreditado" ? 0 : imp,
@@ -51,6 +55,7 @@ export function summarizeBatchesByMerchant(batches: BatchCredit[]): SummaryMerch
       prev.totalPayWay += pay;
       prev.totalMoliPay += moli;
       prev.totalContracargo += contra;
+      prev.totalAdelantos += advances;
       prev.totalFinal += net;
       prev.pendienteAcreditar += pending;
       prev.pendienteImpuestos += l.estado === "Acreditado" ? 0 : imp;

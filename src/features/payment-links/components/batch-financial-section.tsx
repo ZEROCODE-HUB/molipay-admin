@@ -1,8 +1,8 @@
-import { Percent,Receipt,Wallet } from "lucide-react";
+import { Percent, Receipt, Wallet } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { formatMoney } from "@/shared/lib/format";
-import { fmtDateCorta,statusMostrado } from "@/features/payment-links/batches.rules";
+import { fmtDateCorta, statusMostrado } from "@/features/payment-links/batches.rules";
 import { userMessage } from "@/shared/lib/errors";
 import { RowDescuento } from "./batches-parts";
 

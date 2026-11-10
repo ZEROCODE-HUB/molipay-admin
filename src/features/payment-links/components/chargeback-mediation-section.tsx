@@ -1,4 +1,4 @@
-import { Eye,FileText,Paperclip,Send,Trash2,Upload } from "lucide-react";
+import { Eye, FileText, Paperclip, Send, Trash2, Upload } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 
 import type { ChargebacksDetailVm } from "./use-chargebacks-detail";

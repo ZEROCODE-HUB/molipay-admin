@@ -1,24 +1,24 @@
-import { useMemo,useState } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/shared/ui/badge";
 import { type Column } from "@/shared/ui/data-table";
-import { Amount,date,errMsg } from "@/features/payment-links/components/credits-common";
-import { parseFileSettlement,type ResultParseo } from "@/features/payment-links/settlements-parse";
+import { Amount, date, errMsg } from "@/features/payment-links/components/credits-common";
+import { parseFileSettlement, type ResultParseo } from "@/features/payment-links/settlements-parse";
 import {
-QK_ACRED,
-confirmSettlement,
-huellaFile,
-listImportaciones,
-previsualizarSettlement,
-rangeDelHeader,
-type PreviewSettlement,
-type LinePreview,
-type ResultImportacion,
+  QK_ACRED,
+  confirmSettlement,
+  huellaFile,
+  listImportaciones,
+  previsualizarSettlement,
+  rangeDelHeader,
+  type PreviewSettlement,
+  type LinePreview,
+  type ResultImportacion,
 } from "@/features/payment-links/credits.supabase";
 import { useCan } from "@/features/rbac/rbac.hooks";
 import { type Step } from "@/features/payment-links/settlements.types";
-import { RESULT_LABEL,RESULT_TONE } from "@/features/payment-links/settlements.rules";
+import { RESULT_LABEL, RESULT_TONE } from "@/features/payment-links/settlements.rules";
 
 /** Estado y acciones de SettlementsPage: el componente solo dibuja. */
 export function useSettlementsPage() {

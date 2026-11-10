@@ -1,9 +1,9 @@
-import { AlertTriangle,Download,FileUp,Loader2,ArrowLeft } from "lucide-react";
+import { AlertTriangle, Download, FileUp, Loader2, ArrowLeft } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { BtnPrimary,BtnOutline } from "@/shared/ui/button";
+import { BtnPrimary, BtnOutline } from "@/shared/ui/button";
 import { DataTable } from "@/shared/ui/data-table";
-import { Amount,date } from "@/features/payment-links/components/credits-common";
-import { StatusImportacion,Dato } from "@/features/payment-links/components/settlements-parts";
+import { Amount, date } from "@/features/payment-links/components/credits-common";
+import { StatusImportacion, Dato } from "@/features/payment-links/components/settlements-parts";
 import type { SettlementsPageVm } from "./use-settlements-page";
 
 export function SettlementImportPreview({

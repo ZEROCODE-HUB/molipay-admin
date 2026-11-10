@@ -1,18 +1,18 @@
 import { listOpenMerchantDebts } from "@/features/payment-links/advances.supabase";
 import { userMessage } from "@/shared/lib/errors";
-import { useState,useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
-import { DataTable,type Column } from "@/shared/ui/data-table";
-import { Wallet,Landmark,Percent,ArrowUpRight,Calendar } from "lucide-react";
+import { DataTable, type Column } from "@/shared/ui/data-table";
+import { Wallet, Landmark, Percent, ArrowUpRight, Calendar } from "lucide-react";
 import {
-QK_ACRED,
-listAdvancesV2,
-listBatchesV2,
-summaryCredits,
-type AdvanceV2,
+  QK_ACRED,
+  listAdvancesV2,
+  listBatchesV2,
+  summaryCredits,
+  type AdvanceV2,
 } from "@/features/payment-links/credits.supabase";
 import { formatMoney } from "@/shared/lib/format";
 import { PermissionGuard } from "@/features/rbac/access-gate";
@@ -48,7 +48,15 @@ type RowMerchant = {
   adelanto: { monto: number; estado: string } | null;
   acreditacion: number;
   contracargo: number;
+  /** Desglose de impuestos y de lo que se descontó del neto en los lotes del período. */
+  iibb: number;
+  dyc: number;
+  retenido: number;
+  compensado: number;
+  recupero: number;
 };
+
+const EMPTY_TOTALS = { iibb: 0, dyc: 0, retenido: 0, compensado: 0, recupero: 0, neto: 0 };
 
 export function SummaryPage() {
   const [period, setPeriod] = useState<Period>("hoy");
@@ -67,7 +75,14 @@ export function SummaryPage() {
         Number(r.por_acreditar.no_conciliado) +
         Number(r.por_acreditar.listo)
       : 0,
+    // Saldo actual del libro mayor (no depende del periodo): suma el neto de Payway de cada
+    // lote conciliado y no baja al acreditar, porque la plata sigue en la cuenta.
     recaudadora: r ? Number(r.recaudadora.saldo_conciliado) : 0,
+    recPendiente: r ? Number(r.recaudadora.pendiente_acreditar) : 0,
+    recAdelantos: r ? Number(r.recaudadora.adelantos_sin_compensar) : 0,
+    recDeuda: r ? Number(r.recaudadora.deuda_comercios) : 0,
+    // Lo que todavia no entro a la recaudadora (lo "listo" ya esta adentro).
+    porEntrar: r ? Number(r.por_acreditar.programado) + Number(r.por_acreditar.no_conciliado) : 0,
     netoMoliPay: r ? Number(r.descuentos.tasa) + Number(r.descuentos.cierre) : 0,
     netoPayWay: r ? Number(r.liquidado.costo_servicio) : 0,
     impuestos: r
@@ -82,7 +97,7 @@ export function SummaryPage() {
   // vigente y deuda por contracargos.
   const batchesQ = useQuery({
     queryKey: [...QK_ACRED, "resumen-general-lotes", from, to],
-    queryFn: () => listBatchesV2({ desde: from, hasta: to, origen: "archivo" }, 0, 2000),
+    queryFn: () => listBatchesV2({ desde: from, hasta: to, origen: "archivo", fechaEfectiva: true }, 0, 2000),
   });
   const advancesQ = useQuery({
     queryKey: [...QK_ACRED, "resumen-general-adelantos"],
@@ -109,9 +124,23 @@ export function SummaryPage() {
           adelanto: null,
           acreditacion: 0,
           contracargo: 0,
+          iibb: 0,
+          dyc: 0,
+          retenido: 0,
+          compensado: 0,
+          recupero: 0,
         } as RowMerchant);
       const net = Number(l.neto_a_acreditar ?? 0);
-      f.pendiente += Number(l.iva_tasa_monto ?? 0) + Number(l.impuestos ?? 0);
+      f.pendiente +=
+        Number(l.iva_tasa_monto ?? 0) + Number(l.impuestos ?? 0) + Number(l.impuestos_payway ?? 0);
+      for (const t of l.impuestos_detalle ?? []) {
+        if ((t as { fuente?: string }).fuente === "taxpayer_registry") f.iibb += Number(t.monto);
+        else if (["DEBITOS_CREDITOS", "DC"].includes((t.codigo ?? "").toUpperCase()))
+          f.dyc += Number(t.monto);
+      }
+      f.retenido += Number(l.retencion_contracargos ?? 0);
+      f.compensado += Number(l.compensacion_adelantos ?? 0);
+      f.recupero += Number(l.recuperacion_deuda ?? 0);
       f.comisionMoli +=
         Number(l.tasa_molipay_monto ?? 0) + Number(l.comision_cierre_lote_monto ?? 0);
       f.comisionPayway += Number(l.costo_servicio_payway ?? 0);
@@ -139,6 +168,23 @@ export function SummaryPage() {
     return [...m.values()];
   }, [batchesQ.data, advancesQ.data, deudasQ.data]);
 
+  // Totales del período desde los mismos lotes de la tabla.
+  const totals = useMemo(
+    () =>
+      data.reduce(
+        (t, r) => ({
+          iibb: t.iibb + r.iibb,
+          dyc: t.dyc + r.dyc,
+          retenido: t.retenido + r.retenido,
+          compensado: t.compensado + r.compensado,
+          recupero: t.recupero + r.recupero,
+          neto: t.neto + r.acreditacion + r.pendienteNeto,
+        }),
+        EMPTY_TOTALS,
+      ),
+    [data],
+  );
+
   const cols: Column<RowMerchant>[] = [
     {
       key: "comercio",
@@ -154,8 +200,18 @@ export function SummaryPage() {
     {
       key: "pendiente",
       label: "Impuestos",
-      hint: "IVA de la tasa + impuestos asignados al comercio en el período.",
-      render: (r) => <span className="font-mono text-amber-700">{formatMoney(r.pendiente)}</span>,
+      hint: "IVA de la tasa + impuestos asignados (incluye IIBB y Débitos y Créditos) + impuestos de Payway.",
+      render: (r) => (
+        <div>
+          <span className="font-mono text-amber-700">{formatMoney(r.pendiente)}</span>
+          {r.iibb > 0 && (
+            <div className="text-[10px] text-muted-foreground">IIBB {formatMoney(r.iibb)}</div>
+          )}
+          {r.dyc > 0 && (
+            <div className="text-[10px] text-muted-foreground">DyC {formatMoney(r.dyc)}</div>
+          )}
+        </div>
+      ),
     },
     {
       key: "comisionMoli",
@@ -197,7 +253,14 @@ export function SummaryPage() {
             >
               {r.adelanto.estado}
             </Badge>
+            {r.compensado > 0 && (
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                {formatMoney(r.compensado)} compensado en lotes
+              </div>
+            )}
           </div>
+        ) : r.compensado > 0 ? (
+          <div className="font-mono text-xs">{formatMoney(r.compensado)} compensado en lotes</div>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -215,10 +278,20 @@ export function SummaryPage() {
     {
       key: "contracargo",
       label: "Contracargo retenido",
-      hint: "Deuda pendiente por contracargos o liquidaciones negativas.",
+      hint: "Retenido en los lotes del período por contracargos, y deuda abierta (contracargos o lotes negativos).",
       render: (r) =>
-        r.contracargo ? (
-          <span className="font-mono text-red-600">{formatMoney(r.contracargo)}</span>
+        r.retenido || r.contracargo || r.recupero ? (
+          <div className="font-mono text-xs">
+            {r.retenido > 0 && (
+              <div className="text-red-600">{formatMoney(r.retenido)} retenido</div>
+            )}
+            {r.recupero > 0 && (
+              <div className="text-emerald-700">{formatMoney(r.recupero)} deuda recuperada</div>
+            )}
+            {r.contracargo > 0 && (
+              <div className="text-amber-700">{formatMoney(r.contracargo)} deuda abierta</div>
+            )}
+          </div>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -273,10 +346,41 @@ export function SummaryPage() {
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1">
-            <Landmark size={12} /> Total disponible en cuenta recaudadora
+            <Landmark size={12} /> Fondos de Payway en la recaudadora de MoliPay
           </div>
           <div className="font-mono text-xl font-semibold mt-1">{formatMoney(kpi.recaudadora)}</div>
-          <div className="text-xs text-muted-foreground mt-1">Fondos en cuenta (conciliado)</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Saldo actual · no depende del período
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Suma el neto de Payway de cada lote conciliado. No baja al acreditar: la plata sigue en
+            la cuenta y pasa a ser saldo de los comercios, adelantos recuperados y comisiones e
+            impuestos de MoliPay.
+          </p>
+          <dl className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>Conciliado sin acreditar</dt>
+              <dd className="font-mono">{formatMoney(kpi.recPendiente)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Ya acreditado (comercios, adelantos y comisiones)</dt>
+              <dd className="font-mono">
+                {formatMoney(Math.max(kpi.recaudadora - kpi.recPendiente, 0))}
+              </dd>
+            </div>
+            {kpi.recAdelantos > 0 && (
+              <div className="flex justify-between">
+                <dt>Adelantos sin compensar</dt>
+                <dd className="font-mono">{formatMoney(kpi.recAdelantos)}</dd>
+              </div>
+            )}
+            {kpi.recDeuda > 0 && (
+              <div className="flex justify-between">
+                <dt>Deuda de comercios</dt>
+                <dd className="font-mono">{formatMoney(kpi.recDeuda)}</dd>
+              </div>
+            )}
+          </dl>
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Total bruto</div>
@@ -329,14 +433,44 @@ export function SummaryPage() {
             <span className="text-muted-foreground">Neto PayWay</span>
             <span className="font-mono text-red-600">- {formatMoney(kpi.netoPayWay)}</span>
           </div>
+          {(totals.iibb > 0 || totals.dyc > 0) && (
+            <div className="flex justify-between text-[11px] pl-3">
+              <span className="text-muted-foreground">
+                de los cuales IIBB {formatMoney(totals.iibb)} · Débitos y Créditos{" "}
+                {formatMoney(totals.dyc)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Neto MoliPay</span>
             <span className="font-mono text-emerald-700">{formatMoney(kpi.netoMoliPay)}</span>
           </div>
+          {totals.retenido > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Retenido por contracargos</span>
+              <span className="font-mono text-red-600">- {formatMoney(totals.retenido)}</span>
+            </div>
+          )}
+          {totals.compensado > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Adelantos compensados</span>
+              <span className="font-mono text-red-600">- {formatMoney(totals.compensado)}</span>
+            </div>
+          )}
+          {totals.recupero > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Recupero de deuda</span>
+              <span className="font-mono text-red-600">- {formatMoney(totals.recupero)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-xs font-semibold">
+            <span>Neto para comercios (acreditado + por acreditar)</span>
+            <span className="font-mono">{formatMoney(totals.neto)}</span>
+          </div>
           <div className="border-t my-2" />
           <div className="flex justify-between font-semibold">
-            <span>Disponible + pendiente</span>
-            <span className="font-mono">{formatMoney(kpi.recaudadora + kpi.pendiente)}</span>
+            <span>En cuenta + por entrar de Payway</span>
+            <span className="font-mono">{formatMoney(kpi.recaudadora + kpi.porEntrar)}</span>
           </div>
         </div>
       </Card>

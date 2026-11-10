@@ -5,7 +5,7 @@ import { BatchSimulationActions } from "./batch-simulation-actions";
 import { useBatchDetail } from "./use-batch-detail";
 import { Modal } from "@/shared/ui/modal";
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
-import { CheckCircle2,Download,Gavel,Receipt } from "lucide-react";
+import { CheckCircle2, Download, Gavel, Receipt } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { parseDateLocal } from "@/features/payment-links/batches.rules";
 

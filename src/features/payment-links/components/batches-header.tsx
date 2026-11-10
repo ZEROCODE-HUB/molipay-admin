@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { saveSelection } from "@/features/payment-links/credits.supabase";
-import { AlertTriangle,Calendar,Download,FlaskConical,Upload,Wallet } from "lucide-react";
+import { AlertTriangle, Calendar, Download, FlaskConical, Upload, Wallet } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { BatchesPageVm } from "./use-batches-page";
 

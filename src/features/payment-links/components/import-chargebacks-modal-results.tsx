@@ -1,5 +1,5 @@
 import { type ImportRowResult } from "@/features/payment-links/chargebacks-import.supabase";
-import { StatusBadge,SummaryCard } from "./import-chargebacks-modal-parts";
+import { StatusBadge, SummaryCard } from "./import-chargebacks-modal-parts";
 
 export function Results({
   summary,

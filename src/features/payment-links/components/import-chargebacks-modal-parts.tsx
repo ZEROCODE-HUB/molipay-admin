@@ -1,5 +1,5 @@
 import { type ImportRowResult } from "@/features/payment-links/chargebacks-import.supabase";
-import { AlertCircle,AlertTriangle,CheckCircle2,Copy } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Copy } from "lucide-react";
 
 export function SummaryCard({
   label,

@@ -3,11 +3,11 @@ import { AdvanceManagementSection } from "./advance-management-section";
 import { useAdvanceDetail } from "./use-advance-detail";
 import { Modal } from "@/shared/ui/modal";
 import { formatMoney } from "@/shared/lib/format";
-import { Banknote,Wallet } from "lucide-react";
+import { Banknote, Wallet } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { Card } from "@/shared/ui/card";
 import { type AdvanceUI } from "@/features/payment-links/advances.types";
-import { label,shortId,tone } from "@/features/payment-links/advances.rules";
+import { label, shortId, tone } from "@/features/payment-links/advances.rules";
 
 export function AdvanceDetail(props: {
   a: AdvanceUI;

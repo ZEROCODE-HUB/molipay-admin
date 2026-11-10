@@ -187,6 +187,11 @@ export type MovementRow = {
         codigo: string;
         nombre: string;
         es_final: boolean;
+      }
+    | {
+        codigo: string;
+        nombre: string;
+        es_final: boolean;
       }[]
     | null;
   clientes?:

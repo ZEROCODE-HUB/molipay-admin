@@ -1,5 +1,7 @@
-import { createFileRoute,Outlet } from "@tanstack/react-router";
-import { TabLayout,type Tab } from "@/shared/ui/tab-layout";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { QK_ACRED, countAdvancesNeedingAction } from "@/features/payment-links/credits.supabase";
+import { TabLayout, type Tab } from "@/shared/ui/tab-layout";
 
 export const Route = createFileRoute("/admin/comercios/link-pago")({
   component: LinkPaymentLayout,
@@ -23,8 +25,17 @@ const tabs: Tab[] = [
 ];
 
 function LinkPaymentLayout() {
+  // Adelantos nuevos o aceptados: aviso en la pestaña. Se refresca con el resto de acreditaciones.
+  const pendingAdvances = useQuery({
+    queryKey: [...QK_ACRED, "adelantos-por-atender"],
+    queryFn: countAdvancesNeedingAction,
+    refetchInterval: 60_000,
+  });
+  const withBadges = tabs.map((t) =>
+    t.to === "/admin/comercios/link-pago/adelantos" ? { ...t, badge: pendingAdvances.data } : t,
+  );
   return (
-    <TabLayout tabs={tabs}>
+    <TabLayout tabs={withBadges}>
       <Outlet />
     </TabLayout>
   );

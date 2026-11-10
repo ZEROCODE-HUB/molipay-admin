@@ -51,11 +51,14 @@ export async function createTestProduct(
   nombre: string,
   precio: number,
 ): Promise<TestProduct> {
-  const { data, error } = await requireSupabase().rpc("lote_prueba_crear_producto" as never, {
-    p_legajo: legajo,
-    p_nombre: nombre,
-    p_precio: precio,
-  } as never);
+  const { data, error } = await requireSupabase().rpc(
+    "lote_prueba_crear_producto" as never,
+    {
+      p_legajo: legajo,
+      p_nombre: nombre,
+      p_precio: precio,
+    } as never,
+  );
   if (error) throw toAppError(error);
   return data as unknown as TestProduct;
 }

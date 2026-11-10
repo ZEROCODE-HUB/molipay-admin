@@ -1,9 +1,10 @@
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
 import {
-esDelFile,
-netBatch,
-statusMostrado,
-totalDescuentos,
+  esDelFile,
+  netBatch,
+  statusMostrado,
+  totalCompensaciones,
+  totalDescuentos,
 } from "@/features/payment-links/batches.rules";
 
 /** CSV de lotes con separador `;` y coma decimal, para Excel. */
@@ -17,6 +18,7 @@ export function batchesToCsvLines(rows: BatchCredit[]): string[] {
     "Ops",
     "Monto bruto liquidado",
     "Descuentos e impuestos",
+    "Adelantos, deudas y contracargos",
     "Neto a acreditar",
     "Fecha de acreditación",
     "Estado",
@@ -33,6 +35,7 @@ export function batchesToCsvLines(rows: BatchCredit[]): string[] {
         l.cantidadOperaciones,
         l.importeBruto.toFixed(2).replace(".", ","),
         totalDescuentos(l).toFixed(2).replace(".", ","),
+        totalCompensaciones(l).toFixed(2).replace(".", ","),
         netBatch(l).toFixed(2).replace(".", ","),
         l.fechaAcreditacion ?? "",
         statusMostrado(l),

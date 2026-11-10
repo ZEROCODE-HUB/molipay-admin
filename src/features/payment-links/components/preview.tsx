@@ -1,5 +1,5 @@
 import { type ParsedPaywayFile } from "@/features/payment-links/importers/payway-chargebacks";
-import { AlertCircle,CheckCircle2,Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 
 export function Preview({ parsed }: { parsed: ParsedPaywayFile }) {
   const preview = parsed.rows.slice(0, 10);

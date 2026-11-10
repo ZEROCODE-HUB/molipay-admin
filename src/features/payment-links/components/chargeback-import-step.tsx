@@ -1,6 +1,6 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
-import { Upload,X,FileSpreadsheet,Loader2 } from "lucide-react";
-import { BtnPrimary,BtnOutline } from "@/shared/ui/button";
+import { Upload, X, FileSpreadsheet, Loader2 } from "lucide-react";
+import { BtnPrimary, BtnOutline } from "@/shared/ui/button";
 import { phaseLabel } from "@/features/payment-links/import-chargebacks-modal.rules";
 import { Preview } from "@/features/payment-links/components/preview";
 import { Results } from "@/features/payment-links/components/import-chargebacks-modal-results";
@@ -50,7 +50,7 @@ export function ChargebackImportStep({
             <Upload size={18} /> Importar reporte de PayWay
           </h3>
           <p className="text-sm text-muted-foreground">
-            Alertas Tempranas de Contracargos (.csv / .xlsx, máx 10MB).
+            Contracargos y Devoluciones o Alertas Tempranas (.csv / .xlsx, máx 10MB).
           </p>
         </div>
         <button

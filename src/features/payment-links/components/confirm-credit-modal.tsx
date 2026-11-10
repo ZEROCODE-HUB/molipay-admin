@@ -1,18 +1,18 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
 import { userMessage } from "@/shared/lib/errors";
-import { useEffect,useState } from "react";
-import { AlertTriangle,Info,Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Info, Wallet } from "lucide-react";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { Badge } from "@/shared/ui/badge";
 import { Label } from "@/shared/ui/form-controls";
 import {
-ConfirmacionesCredit,
-confirmacionesCompletas,
-type Confirmaciones,
+  ConfirmacionesCredit,
+  confirmacionesCompletas,
+  type Confirmaciones,
 } from "@/features/payment-links/components/batch-breakdown";
 import type { BatchCredit } from "@/infrastructure/supabase/legacy/types";
-import { runCredit,revisarCredit,type Revision } from "@/features/payment-links/credits.supabase";
-import { formatMoney,formatIsoDate } from "@/shared/lib/format";
+import { runCredit, revisarCredit, type Revision } from "@/features/payment-links/credits.supabase";
+import { formatMoney, formatIsoDate } from "@/shared/lib/format";
 
 // Confirmacion de la acreditacion de un lote Pendiente.
 //

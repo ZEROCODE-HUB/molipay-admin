@@ -1,16 +1,16 @@
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import {
-listChargebacks,
-statusUiToDb,
-type Contra,
-type StatusContra,
+  listChargebacks,
+  statusUiToDb,
+  type Contra,
+  type StatusContra,
 } from "@/features/payment-links/chargebacks.supabase";
 import { useCan } from "@/features/rbac/rbac.hooks";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRealtimeInvalidation } from "@/infrastructure/supabase/use-realtime-invalidation";
-import { ActionsDropdown,type ActionItem } from "@/shared/ui/actions-dropdown";
-import { AlertTriangle,Download,Eye,Plus,UploadCloud } from "lucide-react";
-import { DataTable,type Column } from "@/shared/ui/data-table";
+import { ActionsDropdown, type ActionItem } from "@/shared/ui/actions-dropdown";
+import { AlertTriangle, Download, Eye, Plus, UploadCloud } from "lucide-react";
+import { DataTable, type Column } from "@/shared/ui/data-table";
 import { formatMoney } from "@/shared/lib/format";
 import { Badge } from "@/shared/ui/badge";
 import { PermissionGuard } from "@/features/rbac/access-gate";
@@ -19,7 +19,13 @@ import { Card } from "@/shared/ui/card";
 import { ImportarChargebacksModal } from "@/features/payment-links/components/import-chargebacks-modal";
 import { SimulateChargebacksModal } from "@/features/payment-links/components/simulate-chargebacks-modal";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { STATUS_LABEL,STATUS_OPTIONS_UI,tone } from "@/features/payment-links/chargebacks.rules";
+import {
+  ORIGIN_LABEL,
+  RETENTION_LABEL,
+  STATUS_LABEL,
+  STATUS_OPTIONS_UI,
+  tone,
+} from "@/features/payment-links/chargebacks.rules";
 import { Detail } from "./chargebacks-detail";
 import { CreateModal } from "./create-modal";
 
@@ -72,36 +78,37 @@ export function ChargebacksPage() {
 
   const columns: Column<Contra>[] = [
     {
-      key: "id",
-      label: "ID",
+      key: "comercioNombre",
+      label: "Comercio",
       filterable: true,
       render: (r) => (
-        <div className="flex items-center gap-1.5">
-          {r.esSimulacion && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 font-medium">
-              sim
-            </span>
-          )}
-          {r.siteTransactionId && (
-            <span
-              className="text-[10px] px-1 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 font-medium"
-              title="Importado de PayWay"
-            >
-              PW
-            </span>
-          )}
-          <span className="font-mono text-xs">{r.id.slice(0, 8)}…</span>
+        <div className="min-w-0">
+          <div className="max-w-[200px] truncate text-sm font-semibold" title={r.comercioNombre}>
+            {r.comercioNombre}
+          </div>
+          <div className="font-mono text-xs text-muted-foreground">{r.comercioLegajo}</div>
         </div>
       ),
     },
     {
-      key: "comercio",
-      label: "Comercio",
+      key: "siteTransactionId",
+      label: "Venta",
       filterable: true,
       render: (r) => (
-        <div>
-          <div className="font-semibold text-sm truncate max-w-[140px]">{r.comercioNombre}</div>
-          <div className="font-mono text-xs text-muted-foreground">{r.comercioLegajo}</div>
+        <div className="space-y-0.5">
+          {r.siteTransactionId ? (
+            <span
+              className="block max-w-[170px] truncate font-mono text-xs"
+              title={r.siteTransactionId}
+            >
+              {r.siteTransactionId}
+            </span>
+          ) : (
+            <span className="text-xs text-amber-700">Sin identificar</span>
+          )}
+          <span className="block text-[11px] text-muted-foreground">
+            {[r.marcaTarjeta, r.nroTarjetaMasked].filter(Boolean).join(" · ") || "—"}
+          </span>
         </div>
       ),
     },
@@ -109,36 +116,40 @@ export function ChargebacksPage() {
       key: "importe",
       label: "Importe",
       render: (r) => (
-        <span className="font-mono tabular-nums font-semibold text-red-600">
+        <span className="font-mono font-semibold tabular-nums text-red-600">
           -{formatMoney(r.importe)}
         </span>
       ),
     },
     {
-      key: "ticketPayway",
-      label: "Ticket / TID",
-      filterable: true,
-      render: (r) => (
-        <div className="space-y-0.5">
-          {r.ticketPayway && <span className="font-mono text-xs block">{r.ticketPayway}</span>}
-          {r.siteTransactionId && (
-            <span
-              className="font-mono text-[10px] text-muted-foreground block truncate max-w-[160px]"
-              title={r.siteTransactionId}
-            >
-              TID: {r.siteTransactionId.slice(0, 12)}…
-            </span>
-          )}
-          {!r.ticketPayway && !r.siteTransactionId && "—"}
-        </div>
-      ),
+      key: "origen",
+      label: "Origen",
+      render: (r) =>
+        r.esSimulacion ? (
+          <Badge tone="neutral">Simulación</Badge>
+        ) : (
+          <span className="text-xs">{(r.origen && ORIGIN_LABEL[r.origen]) ?? "—"}</span>
+        ),
     },
     {
       key: "estado",
       label: "Estado",
       filterable: "enum",
       filterOptions: STATUS_OPTIONS_UI.map((s) => STATUS_LABEL[s]),
-      render: (r) => <Badge tone={tone(r.estado)}>{STATUS_LABEL[r.estado]}</Badge>,
+      render: (r) => {
+        const retention = RETENTION_LABEL[r.retencionEstado];
+        return (
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-1">
+              <Badge tone={tone(r.estado)}>{STATUS_LABEL[r.estado]}</Badge>
+              {r.tipo === "devolucion" && <Badge tone="neutral">Devolución</Badge>}
+            </div>
+            {!r.esSimulacion && retention && (
+              <span className="block text-[11px] text-muted-foreground">{retention.label}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "createdAt",
@@ -169,9 +180,10 @@ export function ChargebacksPage() {
         description="Gestión de contracargos de links de pago. Simular impacto → confirmar para aplicar."
       />
       <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground mb-4">
-        <strong>Flujo:</strong> Simular (carga manual) → Confirmar (aplica descuento al lote) → En
-        mediación (doc) → Cerrado acreditado / retenido. Los contracargos de simulación no afectan
-        la caja ni los lotes.
+        <strong>Flujo:</strong> el reporte de contracargos de Payway (Importar) dice qué venta se
+        reclama y el monto se retiene en el lote de esa venta → En mediación (documentación) →
+        Ganado (se devuelve al comercio) o Perdido. También se puede devolver al comprador por la
+        API de Payway. Las simulaciones no mueven plata.
       </div>
 
       <div className="flex items-center justify-between mb-4 gap-3">
@@ -194,9 +206,9 @@ export function ChargebacksPage() {
             <button
               onClick={() => setShowImportar(true)}
               className="flex items-center gap-1.5 h-8 px-3 rounded-md border bg-card text-xs font-semibold hover:bg-muted"
-              title="Importar reporte de Alertas Tempranas de PayWay"
+              title="Importar el reporte de Contracargos y Devoluciones de Payway"
             >
-              <UploadCloud size={14} /> Importar PayWay
+              <UploadCloud size={14} /> Importar reporte
             </button>
           )}
           {canGestionar && (

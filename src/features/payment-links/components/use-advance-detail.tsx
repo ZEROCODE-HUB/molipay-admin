@@ -1,12 +1,12 @@
 import { getAdvanceMerchantId } from "@/features/payment-links/advances.supabase";
-import { useEffect,useMemo,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-aprobarAdvance,
-calcularCapAvailable,
-creditAdvance,
-obtenerPoolRecaudacion,
-rechazarAdvance,
-type PoolRecaudacion,
+  aprobarAdvance,
+  calcularCapAvailable,
+  creditAdvance,
+  obtenerPoolRecaudacion,
+  rechazarAdvance,
+  type PoolRecaudacion,
 } from "@/features/payment-links/advances.supabase";
 import { moneyInputToNumber } from "@/shared/lib/money";
 import { useQuery } from "@tanstack/react-query";

@@ -1,29 +1,29 @@
 import { useCan } from "@/features/rbac/rbac.hooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect,useMemo,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-QK_ACRED,
-limpiarSelection,
-readSelection,
-revisarCredit,
-runCredit,
-type ResultExecution,
-type Revision,
+  QK_ACRED,
+  limpiarSelection,
+  readSelection,
+  revisarCredit,
+  runCredit,
+  type ResultExecution,
+  type Revision,
 } from "@/features/payment-links/credits.supabase";
-import { Amount,date,errMsg,todayIso } from "@/features/payment-links/components/credits-common";
+import { Amount, date, errMsg, todayIso } from "@/features/payment-links/components/credits-common";
 import {
-ConfirmacionesCredit,
-confirmacionesCompletas,
-type Confirmaciones,
+  ConfirmacionesCredit,
+  confirmacionesCompletas,
+  type Confirmaciones,
 } from "@/features/payment-links/components/batch-breakdown";
 import { toast } from "sonner";
 import { Card } from "@/shared/ui/card";
-import { AlertTriangle,ArrowLeft,ArrowRight,CheckCircle2,Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/format";
-import { Input,Select } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Input, Select } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { type Step } from "@/features/payment-links/execution.types";
-import { Line,Steps } from "./execution-parts";
+import { Line, Steps } from "./execution-parts";
 import { Selection } from "./selection";
 import { Results } from "./results";
 

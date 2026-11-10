@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
-import { Amount,date,errMsg } from "@/features/payment-links/components/credits-common";
+import { Amount, date, errMsg } from "@/features/payment-links/components/credits-common";
 import { formatDateTime } from "@/shared/lib/format";
 
 import type { SettlementsPageVm } from "./use-settlements-page";

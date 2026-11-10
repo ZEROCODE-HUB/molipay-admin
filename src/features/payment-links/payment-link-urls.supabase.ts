@@ -1,6 +1,6 @@
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
-import type { Page,Pagination } from "@/infrastructure/supabase/legacy/types";
+import type { Page, Pagination } from "@/infrastructure/supabase/legacy/types";
 
 export type StatusLink =
   | "Pendiente de aprobación"

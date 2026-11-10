@@ -1,4 +1,4 @@
-import { CheckCircle2,Store,XCircle } from "lucide-react";
+import { CheckCircle2, Store, XCircle } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { DataTable } from "@/shared/ui/data-table";

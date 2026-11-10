@@ -1,21 +1,21 @@
 import { StatusMessage } from "@/shared/ui/status-message";
 import { LoadingBlock } from "@/shared/ui/loading-block";
 import { useState } from "react";
-import { listSalesDayPaginado,type SaleDay } from "@/features/payment-links/credits.supabase";
+import { listSalesDayPaginado, type SaleDay } from "@/features/payment-links/credits.supabase";
 import { useMerchants } from "@/features/merchants/merchants.hooks";
 import { useQuery } from "@tanstack/react-query";
 import { listBrands } from "@/features/merchants/card-brands.supabase";
-import { DataTable,type Column } from "@/shared/ui/data-table";
+import { DataTable, type Column } from "@/shared/ui/data-table";
 import { formatMoney } from "@/shared/lib/format";
 import { Badge } from "@/shared/ui/badge";
 import { PermissionGuard } from "@/features/rbac/access-gate";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
-import { Calendar,Download,Eye,Inbox,Search,Store } from "lucide-react";
+import { Input, Label } from "@/shared/ui/form-controls";
+import { Calendar, Download, Eye, Inbox, Search, Store } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Pagination } from "@/shared/ui/pagination";
-import { PAGE_SIZES,statusBatch } from "@/features/payment-links/sale-batches.rules";
+import { PAGE_SIZES, statusBatch } from "@/features/payment-links/sale-batches.rules";
 import { parseDateLocal } from "@/features/payment-links/batches.rules";
 import { DetailBatchModal } from "./detail-batch-modal";
 

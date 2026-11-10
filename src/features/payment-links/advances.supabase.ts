@@ -1,8 +1,8 @@
 import type { MerchantSummary } from "./advances.types";
-import { AppError,isAppError } from "@/shared/lib/errors";
+import { AppError, isAppError } from "@/shared/lib/errors";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
-import type { Advance,AdvanceRow,StatusAdvance } from "@/infrastructure/supabase/legacy/types";
+import type { Advance, AdvanceRow, StatusAdvance } from "@/infrastructure/supabase/legacy/types";
 
 // Adelantos de dinero (modulo de acreditaciones).
 //

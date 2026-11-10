@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { resolverExcepciones } from "@/features/payment-links/credits.supabase";
-import { MerchantPicker,errMsg } from "@/features/payment-links/components/credits-common";
+import { MerchantPicker, errMsg } from "@/features/payment-links/components/credits-common";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { type Action } from "@/features/payment-links/exceptions.types";
 

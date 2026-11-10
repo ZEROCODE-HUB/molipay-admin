@@ -1,26 +1,26 @@
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
-import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { userMessage } from "@/shared/lib/errors";
 import { recalcularBatch } from "@/features/payment-links/credits.supabase";
 import {
-getBatch,
-getBatchProjection,
-listBatchMovements,
-setBatchUsaDyc,
-setBatchUsaIibb,
+  getBatch,
+  getBatchProjection,
+  listBatchMovements,
+  setBatchUsaDyc,
+  setBatchUsaIibb,
 } from "@/features/payment-links/batches.supabase";
 import { downloadXlsx } from "@/shared/lib/download";
 import {
-esBatchEstimated,
-esDelFile,
-fmtDateCorta,
-netBatch,
-parseDateLocal,
-ratesCalculadas,
-statusMostrado,
-totalDescuentos,
-esDyc,
+  esBatchEstimated,
+  esDelFile,
+  fmtDateCorta,
+  netBatch,
+  parseDateLocal,
+  ratesCalculadas,
+  statusMostrado,
+  totalDescuentos,
+  esDyc,
 } from "@/features/payment-links/batches.rules";
 import { round2 } from "@/shared/lib/money-round";
 
@@ -83,7 +83,9 @@ export function useBatchDetail({
     onError: (e) => toast.error(userMessage(e)),
   });
   // El checkbox solo aplica a lotes todavia sin acreditar.
-  const iibbEditable = esDelFile(batch) ? batch.estado === "Pendiente" : batch.estado === "Programado";
+  const iibbEditable = esDelFile(batch)
+    ? batch.estado === "Pendiente"
+    : batch.estado === "Programado";
   const chargeback = batch.contracargoMonto ?? 0;
   const feeClosing = batch.comisionCierreLoteMonto ?? 0;
   // Los lotes Programado guardan comisionCierreLotePct=0 porque el

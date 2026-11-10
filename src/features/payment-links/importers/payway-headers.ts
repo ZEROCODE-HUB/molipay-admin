@@ -10,16 +10,33 @@
  * observadas / razonables.
  */
 export const PAYWAY_DISPUTE_HEADERS = {
-  idTransaccion: ["ID_TRANSACCION", "TID", "ID_TX", "ID_TRANSACCION_PAYWAY", "SITE_TRANSACTION_ID"],
+  idTransaccion: [
+    "ID_TRANSACCION",
+    "ID_TRANSACC",
+    "TID",
+    "ID_TX",
+    "ID_TRANSACCION_PAYWAY",
+    "SITE_TRANSACTION_ID",
+  ],
   establecimiento: ["ESTABLECIMIENTO", "SITE_ID", "NRO_ESTABLECIMIENTO", "COMERCIO"],
   fechaTransaccion: ["FECHA_DE_TRANS", "FECHA", "FECHA_TRANSACCION", "DATE", "FECHA_OPERACION"],
   marca: ["MEDIO_DE_PAGO", "MARCA", "BRAND", "MEDIO_PAGO"],
-  nroTarjeta: ["NRO_DE_TARJETA", "TARJETA", "CARD_NUMBER", "ULTIMOS4"],
-  monto: ["MONTO_DE_TRAM", "MONTO", "TOTAL_BRUTO", "AMOUNT", "IMPORTE"],
-  autorizacion: ["CODIGO_DE_AUT", "AUTORIZACION", "NRO_DE_CUPON", "AUTH_CODE", "NRO_CUPON"],
+  nroTarjeta: ["NRO_DE_TARJETA", "NRO_TARJETA", "TARJETA", "CARD_NUMBER", "ULTIMOS4"],
+  monto: ["MONTO_DE_TRAM", "MONTO_TRAM", "MONTO", "TOTAL_BRUTO", "AMOUNT", "IMPORTE"],
+  autorizacion: [
+    "CODIGO_DE_AUT",
+    "COD_OPERACION",
+    "COD_OP",
+    "AUTORIZACION",
+    "NRO_DE_CUPON",
+    "AUTH_CODE",
+    "NRO_CUPON",
+  ],
   ccoOrigen: ["CCO_ORIGEN", "ORIGEN", "ORIGIN", "CANAL_ORIGEN"],
   ccoMotivo: ["CCO_MOTIVO", "MOTIVO", "REASON", "DESCRIPCION_MOTIVO", "MOTIVO_DESCONOCIMIENTO"],
   estado: ["ESTADO", "STATUS", "ESTADO_PRESENTACION"],
+  /** Reporte de movimientos: Compra, Anulación o Contracargo. */
+  tipoMovimiento: ["TIPO_MOVIM", "TIPO_MOVIMIENTO", "TIPO_DE_MOVIMIENTO"],
 } as const;
 
 export type PaywayField = keyof typeof PAYWAY_DISPUTE_HEADERS;

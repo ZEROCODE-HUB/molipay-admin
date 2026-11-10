@@ -1,20 +1,20 @@
 import { listAdvanceMerchants } from "@/features/payment-links/advances.supabase";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
-import { useNavigate,useSearch } from "@tanstack/react-router";
-import { useEffect,useMemo,useState } from "react";
-import { type Advance,type StatusAdvance } from "@/infrastructure/supabase/legacy/types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { type Advance, type StatusAdvance } from "@/infrastructure/supabase/legacy/types";
 import {
-listAdvances,
-obtenerPoolRecaudacion,
-type PoolRecaudacion,
+  listAdvances,
+  obtenerPoolRecaudacion,
+  type PoolRecaudacion,
 } from "@/features/payment-links/advances.supabase";
 import { formatMoney } from "@/shared/lib/format";
 import { type ActionItem } from "@/shared/ui/actions-dropdown";
 import { Eye } from "lucide-react";
 import { type Column } from "@/shared/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
-import { type AdvanceUI,type MerchantSummary } from "@/features/payment-links/advances.types";
-import { label,shortId,tone } from "@/features/payment-links/advances.rules";
+import { type AdvanceUI, type MerchantSummary } from "@/features/payment-links/advances.types";
+import { label, shortId, tone } from "@/features/payment-links/advances.rules";
 
 /** Estado y acciones de AdvancesPage: el componente solo dibuja. */
 export function useAdvancesPage() {

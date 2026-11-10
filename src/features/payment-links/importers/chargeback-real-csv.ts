@@ -189,3 +189,81 @@ export async function generateCsvChargebackDemo(quantity = 5): Promise<CsvGenera
 export function downloadCsv(csvGenerado: CsvGenerado): void {
   downloadText(csvGenerado.filename, csvGenerado.csv, "text/csv;charset=utf-8");
 }
+
+/**
+ * Reporte de Contracargos de Payway de prueba para un lote: una venta real
+ * del lote, elegida al azar, con el formato del reporte detallado
+ * (ID_TRANSACC, TIPO_MOVIM = Contracargo, MONTO_TRAM en negativo).
+ * Se sube en Contracargos > Importar: la base encuentra la venta por su
+ * ID_TRANSACC y retiene el importe en ese mismo lote.
+ * La tarjeta y el codigo de operacion son simulados (no estan en la base).
+ */
+export async function generateChargebackReportForBatch(
+  batch: { codigo: string; bandera: string },
+  movementIds: string[],
+): Promise<CsvGenerado & { siteTransactionId: string; monto: number }> {
+  if (movementIds.length === 0) {
+    throw new AppError(
+      "validation",
+      "El lote todavía no tiene ventas: no hay de cuál simular el contracargo.",
+    );
+  }
+  const { data, error } = await requireSupabase()
+    .from("transactions")
+    .select("id, site_transaction_id, monto_operacion, fecha, bandera")
+    .in("id", movementIds)
+    .not("site_transaction_id", "is", null);
+  if (error) throw toAppError(error);
+  const sales = (data ?? []) as {
+    id: string;
+    site_transaction_id: string;
+    monto_operacion: number;
+    fecha: string;
+    bandera: string | null;
+  }[];
+  if (sales.length === 0) {
+    throw new AppError("validation", "Las ventas del lote no tienen ID de transacción de Payway.");
+  }
+
+  const sale = sales[Math.floor(Math.random() * sales.length)]!;
+  const reason = REASONS_DEMO[Math.floor(Math.random() * REASONS_DEMO.length)]!;
+  const amount = Number(sale.monto_operacion);
+  const last4 = parseInt(sale.site_transaction_id.slice(-4), 36) % 10000;
+  const today = new Date();
+  const p2 = (x: number) => String(x).padStart(2, "0");
+  const stamp = `${today.getFullYear()}${p2(today.getMonth() + 1)}${p2(today.getDate())}`;
+
+  const lines = [
+    `Reporte de Contracargos y Devoluciones de Payway Test - Lote ${batch.codigo}`,
+    buildCsvLine([
+      "ID_TRANSACC",
+      "FECHA",
+      "MEDIO_DE_PAGO",
+      "NRO_TARJETA",
+      "TIPO_MOVIM",
+      "MONTO_TRAM",
+      "COD_OPERACION",
+      "CCO_ORIGEN",
+      "CCO_MOTIVO",
+    ]),
+    buildCsvLine([
+      sale.site_transaction_id,
+      sale.fecha.slice(0, 10).split("-").reverse().join("/"),
+      sale.bandera ?? batch.bandera,
+      `***${String(last4).padStart(4, "0")}`,
+      "Contracargo",
+      (-amount).toFixed(2).replace(".", ","),
+      String(Math.floor(100000 + Math.random() * 900000)),
+      reason.origen,
+      reason.motivo,
+    ]),
+  ];
+  return {
+    csv: "\uFEFF" + lines.join("\r\n") + "\r\n",
+    filename: `contracargos_test_${batch.codigo}_${stamp}.csv`,
+    filas: 1,
+    pagosUsados: 1,
+    siteTransactionId: sale.site_transaction_id,
+    monto: amount,
+  };
+}

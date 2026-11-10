@@ -1,13 +1,13 @@
-import { Link,useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-QK_ACRED,
-listBatchesV2,
-saveSelection,
-type BatchV2,
+  QK_ACRED,
+  listBatchesV2,
+  saveSelection,
+  type BatchV2,
 } from "@/features/payment-links/credits.supabase";
-import { DataTable,type Column } from "@/shared/ui/data-table";
-import { Amount,StatusBatch,date } from "@/features/payment-links/components/credits-common";
+import { DataTable, type Column } from "@/shared/ui/data-table";
+import { Amount, StatusBatch, date } from "@/features/payment-links/components/credits-common";
 import { BtnPrimary } from "@/shared/ui/button";
 import { Send } from "lucide-react";
 

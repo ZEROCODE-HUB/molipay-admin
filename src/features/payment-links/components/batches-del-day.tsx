@@ -1,13 +1,13 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-QK_ACRED,
-calendarioDayDetail,
-type BatchDelDay,
+  QK_ACRED,
+  calendarioDayDetail,
+  type BatchDelDay,
 } from "@/features/payment-links/credits.supabase";
-import { Amount,errMsg } from "@/features/payment-links/components/credits-common";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Amount, errMsg } from "@/features/payment-links/components/credits-common";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { Send } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { SimulateChargebacksModal } from "@/features/payment-links/components/simulate-chargebacks-modal";

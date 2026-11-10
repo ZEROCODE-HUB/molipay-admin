@@ -1,11 +1,11 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
 import { type LinkPayment } from "@/features/payment-links/payment-link-urls.supabase";
 import { Modal } from "@/shared/ui/modal";
-import { CheckCircle,Copy,Link2,XCircle } from "lucide-react";
+import { CheckCircle, Copy, Link2, XCircle } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/shared/ui/badge";
-import { fmtMoney,tone } from "@/features/payment-links/payment-links.rules";
+import { fmtMoney, tone } from "@/features/payment-links/payment-links.rules";
 
 export function LinkDetail({
   enlace: link,

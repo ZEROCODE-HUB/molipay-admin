@@ -1,24 +1,24 @@
-import { batchRowActions,BatchRowButton,type BatchRowHandlers } from "./batch-row-actions";
-import { BATCH_COLUMNS,SUMMARY_COLUMNS } from "./batches-columns";
+import { batchRowActions, BatchRowButton, type BatchRowHandlers } from "./batch-row-actions";
+import { BATCH_COLUMNS, SUMMARY_COLUMNS } from "./batches-columns";
 import { batchesToCsvLines } from "@/features/payment-links/batches-csv";
 import { summarizeBatchesByMerchant } from "@/features/payment-links/batches-summary.rules";
 import { downloadBlob } from "@/shared/lib/download";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect,useMemo,useState } from "react";
-import { type BatchCredit,type StatusBatch } from "@/infrastructure/supabase/legacy/types";
+import { useEffect, useMemo, useState } from "react";
+import { type BatchCredit, type StatusBatch } from "@/infrastructure/supabase/legacy/types";
 import { useCan } from "@/features/rbac/rbac.hooks";
 import { useMerchants } from "@/features/merchants/merchants.hooks";
 import {
-exportBatchesCredit,
-getBatch,
-listBatches,
-summaryBatches,
+  exportBatchesCredit,
+  getBatch,
+  listBatches,
+  summaryBatches,
 } from "@/features/payment-links/batches.supabase";
 import { listBrands } from "@/features/merchants/card-brands.supabase";
 import { toast } from "sonner";
 import { QK_ACRED } from "@/features/payment-links/credits.supabase";
-import { isAppError,userMessage } from "@/shared/lib/errors";
+import { isAppError, userMessage } from "@/shared/lib/errors";
 import { route } from "@/features/payment-links/batches.rules";
 import { type SummaryMerchant } from "@/features/payment-links/batches.types";
 
@@ -133,6 +133,8 @@ export function useBatchesPage() {
     queryClient.invalidateQueries({ queryKey: ["lotes"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-resumen"] });
     queryClient.invalidateQueries({ queryKey: ["lotes-detalle"] });
+    queryClient.invalidateQueries({ queryKey: ["lote-detalle-recalculado"] });
+    queryClient.invalidateQueries({ queryKey: ["lote-movimientos"] });
     setConfirmCredit(null);
   };
 

@@ -1,13 +1,13 @@
-import { Calendar,Store } from "lucide-react";
+import { Calendar, Store } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import {
-SUBESTADO_TXT,
-esDelFile,
-fmtDateCorta,
-parseDateLocal,
-statusMostrado,
-tone,
+  SUBESTADO_TXT,
+  esDelFile,
+  fmtDateCorta,
+  parseDateLocal,
+  statusMostrado,
+  tone,
 } from "@/features/payment-links/batches.rules";
 
 import type { BatchDetailVm } from "./use-batch-detail";

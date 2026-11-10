@@ -2,9 +2,9 @@ import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import type { PaywayDisputeRow } from "@/features/payment-links/importers/payway-chargebacks";
 import {
-parseAmount,
-parseDate,
-parseTarjetaMasked,
+  parseAmount,
+  parseDate,
+  parseTarjetaMasked,
 } from "@/features/payment-links/importers/payway-chargebacks";
 
 /**
@@ -97,7 +97,7 @@ export async function importChargebacksFromPayway(
         fecha: parseDate(row.parsed.fechaTransaccion),
         marca: row.parsed.marca ?? null,
         tarjeta: parseTarjetaMasked(row.parsed.nroTarjeta),
-        monto: parseAmount(row.parsed.monto),
+        monto: Math.abs(parseAmount(row.parsed.monto) ?? 0),
         autorizacion: row.parsed.autorizacion ?? null,
         cco_origen: row.parsed.ccoOrigen ?? null,
         cco_motivo: row.parsed.ccoMotivo ?? null,

@@ -1,10 +1,10 @@
 import {
-QK_ACRED,
-salesDeBatch,
-type BatchDelDay,
+  QK_ACRED,
+  salesDeBatch,
+  type BatchDelDay,
 } from "@/features/payment-links/credits.supabase";
 import { useQuery } from "@tanstack/react-query";
-import { Amount,errMsg } from "@/features/payment-links/components/credits-common";
+import { Amount, errMsg } from "@/features/payment-links/components/credits-common";
 import { formatDateTime } from "@/shared/lib/format";
 import { STATUSES_DAY } from "@/features/payment-links/credit-calendar.rules";
 

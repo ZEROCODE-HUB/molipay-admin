@@ -5,12 +5,12 @@ import { PageHeader } from "@/shared/ui/page-header";
 import { Link } from "@tanstack/react-router";
 import { Card } from "@/shared/ui/card";
 import { FileDropzone } from "@/shared/ui/file-dropzone";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { ArrowRight,CheckCircle2,Loader2 } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { SettlementImportPreview } from "@/features/payment-links/components/settlement-import-preview";
 import { Amount } from "@/features/payment-links/components/credits-common";
 import { SettlementImportHistory } from "@/features/payment-links/components/settlement-import-history";
-import { Dato,Steps } from "./settlements-parts";
+import { Dato, Steps } from "./settlements-parts";
 
 export function SettlementsPage() {
   const vm = useSettlementsPage();

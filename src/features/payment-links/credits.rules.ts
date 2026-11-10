@@ -1,6 +1,6 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { z } from "zod";
-import { type BatchV2,type DayCredit } from "@/features/payment-links/credits.supabase";
+import { type BatchV2, type DayCredit } from "@/features/payment-links/credits.supabase";
 import { type RowMerchant } from "./credits.types";
 
 export const route = getRouteApi("/admin/comercios/link-pago/acreditaciones");

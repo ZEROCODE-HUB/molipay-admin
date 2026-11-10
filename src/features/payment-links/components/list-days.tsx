@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { QK_ACRED,creditsByDay,type DayCredit } from "@/features/payment-links/credits.supabase";
-import { DataTable,type Column } from "@/shared/ui/data-table";
-import { Amount,date,errMsg } from "@/features/payment-links/components/credits-common";
+import { QK_ACRED, creditsByDay, type DayCredit } from "@/features/payment-links/credits.supabase";
+import { DataTable, type Column } from "@/shared/ui/data-table";
+import { Amount, date, errMsg } from "@/features/payment-links/components/credits-common";
 import { Badge } from "@/shared/ui/badge";
 import { Card } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/form-controls";

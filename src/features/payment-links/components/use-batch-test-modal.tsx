@@ -1,10 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { userMessage } from "@/shared/lib/errors";
-import {
-  listTestBrands,
-  listTestMerchants,
-} from "@/features/payment-links/batch-test.supabase";
+import { listTestBrands, listTestMerchants } from "@/features/payment-links/batch-test.supabase";
 import {
   newTestContext,
   TEST_STEPS,

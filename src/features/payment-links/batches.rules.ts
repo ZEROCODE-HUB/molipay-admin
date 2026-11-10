@@ -1,7 +1,7 @@
 import { round2 } from "@/shared/lib/money-round";
 import { getRouteApi } from "@tanstack/react-router";
 import { z } from "zod";
-import { type BatchCredit,type StatusBatch } from "@/infrastructure/supabase/legacy/types";
+import { type BatchCredit, type StatusBatch } from "@/infrastructure/supabase/legacy/types";
 import { type StatusMostrado } from "./batches.types";
 
 export const route = getRouteApi("/admin/comercios/link-pago/lotes");
@@ -28,6 +28,8 @@ export function tone(e: StatusBatch | StatusMostrado): "success" | "warn" | "dan
 }
 
 export function statusMostrado(l: BatchCredit): StatusMostrado {
+  // Acreditado gana: un contracargo posterior se ve en su propia sección.
+  if (l.estado === "Acreditado") return "Acreditado";
   if (l.estado === "Contracargo" || l.esNegativo || l.contracargos > 0) return "Contracargo";
   if (l.estado === "Pendiente" && l.compensacionAdelantos > 0) return "Adelantado";
   return l.estado;
@@ -65,8 +67,15 @@ export function statusMovementTone(
 ): "success" | "warn" | "danger" | "neutral" {
   if (!code) return "neutral";
   const c = code.toUpperCase();
-  if (c === "APROBADO" || c === "ACREDITADO" || c === "COMPLETADO") return "success";
-  if (c === "RECHAZADO" || c === "CANCELADO" || c === "DEVUELTO") return "danger";
+  if (
+    c === "APROBADO" ||
+    c === "ACREDITADO" ||
+    c === "COMPLETADO" ||
+    c === "CONTRACARGO_GANADO"
+  )
+    return "success";
+  if (c === "RECHAZADO" || c === "CANCELADO" || c === "DEVUELTO" || c === "CONTRACARGO")
+    return "danger";
   if (c === "PENDIENTE" || c === "EN_PROGRESO" || c === "EN_REVISION" || c === "REQUIERE_ACCION")
     return "warn";
   return "warn";
@@ -139,10 +148,16 @@ export function totalDescuentos(l: BatchCredit): number {
   // Lote del archivo: impuestos y tasa de Payway (CSV) + tasa MoliPay (+ IVA
   // si esta configurado) + cierre de lote (lo calcula la base). Las
   // compensaciones de adelantos y deudas se muestran aparte.
+  // Mismo total que el detalle: sin compensaciones (ver totalCompensaciones).
   if (esDelFile(l)) {
-    // Siempre bruto - importe final: el detalle cierra aunque haya
-    // retenciones, compensaciones o recuperos.
-    return round2(Number(l.importeBruto ?? 0) - Number(netBatch(l)));
+    return round2(
+      Number(l.costoServicioPayway ?? 0) +
+        Number(l.impuestosPayway ?? 0) +
+        Number(l.tasaMolipayMonto ?? 0) +
+        Number(l.ivaTasaMonto ?? 0) +
+        Number(l.comisionCierreLoteMonto ?? 0) +
+        Number(l.impuestos ?? 0),
+    );
   }
   // Proyeccion del flujo nuevo: el neto estimado ya descuenta Payway, tasa,
   // IVA y cierre (trigger lote_proyeccion_neto), igual que el detalle.
@@ -164,6 +179,20 @@ export function totalDescuentos(l: BatchCredit): number {
     (l.costoPaywayPagoUnico ?? 0) +
     closing +
     (l.contracargoMonto ?? 0)
+  );
+}
+
+/**
+ * Lo que el lote de archivo descuenta aparte de los descuentos: contracargos
+ * retenidos, adelantos compensados y deudas recuperadas. Bruto - descuentos -
+ * compensaciones = neto a acreditar.
+ */
+export function totalCompensaciones(l: BatchCredit): number {
+  if (!esDelFile(l)) return 0;
+  return round2(
+    Number(l.retencionContracargos ?? 0) +
+      Number(l.compensacionAdelantos ?? 0) +
+      Number(l.recuperacionDeuda ?? 0),
   );
 }
 

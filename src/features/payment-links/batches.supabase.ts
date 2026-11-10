@@ -1,13 +1,13 @@
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import type {
-StatusBatch,
-BatchCredit,
-BatchCreditRow,
-Movement,
-MovementRow,
-Page,
-Pagination,
+  StatusBatch,
+  BatchCredit,
+  BatchCreditRow,
+  Movement,
+  MovementRow,
+  Page,
+  Pagination,
 } from "@/infrastructure/supabase/legacy/types";
 import { toMovement } from "@/infrastructure/supabase/legacy/mappers";
 
@@ -292,7 +292,10 @@ export async function setBatchUsaIibb(id: string, usa: boolean): Promise<void> {
 /** Prende o apaga Debitos y Creditos en un lote. La base recalcula. */
 export async function setBatchUsaDyc(id: string, usa: boolean): Promise<void> {
   const sb = requireSupabase();
-  const { error } = await sb.rpc("lote_set_usa_dyc" as never, { p_lote_id: id, p_usa: usa } as never);
+  const { error } = await sb.rpc(
+    "lote_set_usa_dyc" as never,
+    { p_lote_id: id, p_usa: usa } as never,
+  );
   if (error) throw toAppError(error);
 }
 
@@ -318,12 +321,43 @@ export async function listBatchMovements(batchId: string): Promise<Movement[]> {
     .select(COLUMNS)
     .in("id", movementIds);
   if (movError) throw toAppError(movError);
-  return (movements ?? []).map((r) =>
-    toMovement(
-      r as MovementRow & { clientes?: { correo: string; nombre: string; cuit: string }[] | null },
+  // Una venta con contracargo o devolucion se muestra con ese estado, no con el del pago.
+  const { data: disputes, error: dispError } = await sb
+    .from("contracargos")
+    .select("movimiento_id, estado, tipo, created_at")
+    .in("movimiento_id", movementIds)
+    .order("created_at", { ascending: true });
+  if (dispError) throw toAppError(dispError);
+  const disputeBySale = new Map(
+    ((disputes ?? []) as { movimiento_id: string; estado: string; tipo: string | null }[]).map(
+      (d) => [d.movimiento_id, d],
     ),
   );
+  return (movements ?? []).map((r) => {
+    const m = toMovement(
+      r as MovementRow & { clientes?: { correo: string; nombre: string; cuit: string }[] | null },
+    );
+    const d = disputeBySale.get(m.id);
+    if (!d) return m;
+    const refund = d.tipo === "devolucion";
+    return {
+      ...m,
+      estadoCodigo: refund
+        ? "DEVUELTO"
+        : d.estado === "Cerrado_acreditado"
+          ? "CONTRACARGO_GANADO"
+          : "CONTRACARGO",
+      estadoNombre: refund ? "Devolución" : (DISPUTE_LABEL[d.estado] ?? "Contracargo"),
+    };
+  });
 }
+
+const DISPUTE_LABEL: Record<string, string> = {
+  Abierto: "Contracargo",
+  En_mediacion: "Contracargo · en mediación",
+  Cerrado_acreditado: "Contracargo ganado",
+  Cerrado_retenido: "Contracargo perdido",
+};
 
 export async function getBatchPaywaySnapshotForMovements(
   movementIds: string[],
@@ -450,3 +484,36 @@ export async function exportBatchesCredit(
 // Las escrituras sobre lotes (updateLote, aplicarLiquidacionLote, acreditarLote,
 // resolverContracargo) se quitaron: el modulo de acreditaciones las reemplaza
 // por RPCs que calculan en la base (lib/api/acreditaciones.ts).
+
+/** Desglose de una venta dentro de su lote (RPC venta_desglose). */
+export type SaleBreakdown = {
+  estado: string;
+  monto: number;
+  lote?: {
+    id: string;
+    codigo: string;
+    bandera: string;
+    fecha: string;
+    fecha_acreditacion: string | null;
+    bruto: number;
+    ventas: number;
+  };
+  lineas?: {
+    concepto: string;
+    clase: "payway" | "molipay" | "impuesto" | "iibb" | "dyc";
+    monto: number;
+    total_lote: number;
+  }[];
+  descuentos?: number;
+  contracargo_retenido?: number;
+  adelanto_compensado?: number;
+  neto?: number;
+  otros_del_lote?: number;
+  contracargo: { estado: string; tipo: string | null; importe: number } | null;
+};
+
+export async function getSaleBreakdown(idTxn: string): Promise<SaleBreakdown | null> {
+  const { data, error } = await requireSupabase().rpc("venta_desglose", { p_id_txn: idTxn });
+  if (error) throw toAppError(error);
+  return (data as SaleBreakdown | null) ?? null;
+}

@@ -1,13 +1,13 @@
 import { userMessage } from "@/shared/lib/errors";
-import { useCallback,useEffect,useMemo,useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { parseFileSettlement,type ResultParseo } from "@/features/payment-links/settlements-parse";
+import { parseFileSettlement, type ResultParseo } from "@/features/payment-links/settlements-parse";
 import {
-confirmSettlement,
-huellaFile,
-previsualizarSettlement,
-rangeDelHeader,
-type PreviewSettlement,
+  confirmSettlement,
+  huellaFile,
+  previsualizarSettlement,
+  rangeDelHeader,
+  type PreviewSettlement,
 } from "@/features/payment-links/credits.supabase";
 import { type Props } from "@/features/payment-links/upload-csv-modal.types";
 

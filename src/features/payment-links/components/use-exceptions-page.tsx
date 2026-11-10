@@ -1,17 +1,17 @@
-import { useMemo,useState } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/shared/ui/badge";
 import { type Column } from "@/shared/ui/data-table";
-import { Amount,date } from "@/features/payment-links/components/credits-common";
+import { Amount, date } from "@/features/payment-links/components/credits-common";
 import {
-QK_ACRED,
-KIND_EXCEPCION_LABEL,
-listExcepciones,
-type Excepcion,
+  QK_ACRED,
+  KIND_EXCEPCION_LABEL,
+  listExcepciones,
+  type Excepcion,
 } from "@/features/payment-links/credits.supabase";
 import { useCan } from "@/features/rbac/rbac.hooks";
 import { type Action } from "@/features/payment-links/exceptions.types";
-import { esAccionable,daysHabiles } from "@/features/payment-links/exceptions.rules";
+import { esAccionable, daysHabiles } from "@/features/payment-links/exceptions.rules";
 
 /** Estado y acciones de ExceptionsPage: el componente solo dibuja. */
 export function useExceptionsPage() {

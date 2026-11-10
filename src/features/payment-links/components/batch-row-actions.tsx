@@ -1,10 +1,10 @@
 import {
-ArrowUpRight,
-CheckCircle2,
-Eye,
-FileUp,
-Gavel,
-Receipt as ReceiptIcon,
+  ArrowUpRight,
+  CheckCircle2,
+  Eye,
+  FileUp,
+  Gavel,
+  Receipt as ReceiptIcon,
 } from "lucide-react";
 import { type BatchCredit } from "@/infrastructure/supabase/legacy/types";
 import { statusMostrado } from "@/features/payment-links/batches.rules";

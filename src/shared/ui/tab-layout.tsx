@@ -1,9 +1,11 @@
-import { Link,useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 export type Tab = {
   label: string;
   to: string;
+  /** Pendientes de atender; se muestra si es mayor a 0. */
+  badge?: number;
 };
 
 function matchesPath(path: string, to: string) {
@@ -35,6 +37,11 @@ export function TabLayout({ tabs, children }: { tabs: Tab[]; children: ReactNode
               }`}
             >
               {tab.label}
+              {!!tab.badge && tab.badge > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-5 text-primary-foreground">
+                  {tab.badge > 99 ? "99+" : tab.badge}
+                </span>
+              )}
             </Link>
           );
         })}

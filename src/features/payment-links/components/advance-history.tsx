@@ -1,10 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { QK_ACRED,listExecutions,saveSelection } from "@/features/payment-links/credits.supabase";
-import { useEffect,useState } from "react";
+import { QK_ACRED, listExecutions, saveSelection } from "@/features/payment-links/credits.supabase";
+import { useEffect, useState } from "react";
 import { Card } from "@/shared/ui/card";
 import { formatDateTime } from "@/shared/lib/format";
-import { Amount,date } from "@/features/payment-links/components/credits-common";
+import { Amount, date } from "@/features/payment-links/components/credits-common";
 import { Badge } from "@/shared/ui/badge";
 import { XCircle } from "lucide-react";
 import { Results } from "./results";
